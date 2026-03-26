@@ -19,20 +19,56 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from extractor import TenderExtractor, read_document
-from doc_generator import BidDocGenerator
-from nascent_checker import NascentChecker
+try:
+    from extractor import TenderExtractor, read_document
+except ImportError:
+    class TenderExtractor:
+        def process_documents(self, files): return {}
+    def read_document(p): return ""
+
+try:
+    from doc_generator import BidDocGenerator
+except ImportError:
+    class BidDocGenerator:
+        def generate(self, *a, **k): return None
+
+try:
+    from nascent_checker import NascentChecker
+except ImportError:
+    class NascentChecker:
+        def check_all(self, items): return items
+
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config
 from excel_processor import process_excel, quick_classify
-from prebid_generator import generate_prebid_queries
-from chatbot import process_message, load_history
+
+try:
+    from prebid_generator import generate_prebid_queries
+except ImportError:
+    def generate_prebid_queries(data): return []
+
+try:
+    from chatbot import process_message, load_history
+except ImportError:
+    def process_message(msg, tid, hist): return "Chatbot not available."
+    def load_history(tid): return []
+
 from gdrive_sync import (init_drive, save_to_drive, load_from_drive,
     drive_available, upload_tender_file)
 from tracker import (get_deadline_alerts, get_pipeline_stats,
                      get_win_loss_stats, generate_doc_checklist,
                      PIPELINE_STAGES, STAGE_COLORS)
-from corrigendum_analyzer import analyze_corrigendum, apply_corrigendum_to_tender
-from submission_doc_generator import generate_submission_package, merge_docs_to_pdf
+
+try:
+    from corrigendum_analyzer import analyze_corrigendum, apply_corrigendum_to_tender
+except ImportError:
+    def analyze_corrigendum(orig, corr): return {"changes": []}
+    def apply_corrigendum_to_tender(t, c): return t
+
+try:
+    from submission_doc_generator import generate_submission_package, merge_docs_to_pdf
+except ImportError:
+    def generate_submission_package(t, d): return []
+    def merge_docs_to_pdf(files, out): return None
 try:
     from technical_proposal_generator import generate_technical_proposal, match_projects
     TP_GEN_AVAILABLE = True
