@@ -7,837 +7,1172 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#0f1117;color:#e0e0e0;display:flex;height:100vh;overflow:hidden}
-#nav{width:210px;background:#1a1d27;padding:16px 12px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column}
-#nav-brand{margin-bottom:20px}
-#nav-brand h2{font-size:15px;font-weight:700;color:#fff}
-#nav-brand p{font-size:11px;color:#555;margin-top:2px}
-.nav-section{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:1px;margin:12px 0 4px 8px}
-.nav-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;
-color:#888;padding:7px 10px;cursor:pointer;border-radius:6px;font-size:13px;margin-bottom:1px}
+#nav{width:220px;background:#1a1d27;padding:16px 10px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column}
+#nav-brand{margin-bottom:16px;padding:0 6px}
+#nav-brand h2{font-size:14px;font-weight:700;color:#fff}
+#nav-brand p{font-size:10px;color:#444;margin-top:2px}
+.nav-section{font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1px;margin:10px 0 3px 8px}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;color:#777;padding:7px 10px;cursor:pointer;border-radius:6px;font-size:12px;margin-bottom:1px;transition:all .12s}
 .nav-btn:hover{background:#252830;color:#ccc}
 .nav-btn.active{background:#1e3a5f;color:#60a5fa}
-.nav-btn .icon{font-size:14px;width:18px;text-align:center}
-.nav-badge{margin-left:auto;background:#1e3a5f;color:#60a5fa;border-radius:10px;padding:1px 6px;font-size:10px;min-width:18px;text-align:center}
-#nav-footer{margin-top:auto;padding-top:12px;border-top:1px solid #1e2130}
-.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.nav-btn .icon{font-size:13px;width:16px;text-align:center}
+.nav-badge{margin-left:auto;background:#1e3a5f;color:#60a5fa;border-radius:8px;padding:1px 6px;font-size:10px;min-width:16px;text-align:center}
+.nav-badge.red{background:#450a0a;color:#ef4444}
+#nav-footer{margin-top:auto;padding-top:10px;border-top:1px solid #1e2130;font-size:10px}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
 .dot-green{background:#22c55e}.dot-red{background:#ef4444}.dot-gray{background:#444}
 #main{flex:1;overflow-y:auto;background:#0f1117}
 .page{display:none;min-height:100%}.page.active{display:block}
-.topbar{display:flex;justify-content:space-between;align-items:center;
-padding:16px 24px;border-bottom:1px solid #1a1d27;background:#12141e;position:sticky;top:0;z-index:10}
-.topbar h1{font-size:18px;font-weight:600;color:#fff}
-.topbar-actions{display:flex;gap:8px}
-.page-body{padding:20px 24px}
-.stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.stat{background:#1a1d27;border-radius:10px;padding:14px 18px;min-width:110px;cursor:pointer;
-border:1px solid #1e2130;transition:border-color .15s}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid #1a1d27;background:#12141e;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:17px;font-weight:600;color:#fff}
+.topbar-actions{display:flex;gap:6px;flex-wrap:wrap}
+.page-body{padding:18px 22px}
+.stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.stat{background:#1a1d27;border-radius:10px;padding:12px 16px;min-width:100px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
 .stat:hover{border-color:#3b82f6}
-.stat-num{font-size:26px;font-weight:700;line-height:1}
-.stat-lbl{font-size:11px;color:#666;margin-top:5px}
-.c-white{color:#fff}.c-green{color:#22c55e}.c-amber{color:#f59e0b}
-.c-red{color:#ef4444}.c-blue{color:#3b82f6}
-.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.fbtn{padding:5px 12px;border-radius:16px;border:1px solid #252830;background:none;
-color:#666;cursor:pointer;font-size:12px;transition:all .15s}
+.stat.on{border-color:#3b82f6;background:#0f1f3d}
+.stat-num{font-size:24px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;color:#555;margin-top:4px}
+.c-w{color:#fff}.c-g{color:#22c55e}.c-a{color:#f59e0b}.c-r{color:#ef4444}.c-b{color:#3b82f6}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.fbtn{padding:4px 12px;border-radius:14px;border:1px solid #252830;background:none;color:#555;cursor:pointer;font-size:11px;transition:all .12s}
 .fbtn:hover{border-color:#3b82f6;color:#3b82f6}
-.fbtn.active{background:#1e3a5f;color:#60a5fa;border-color:#1e3a5f}
-.search-wrap{position:relative;margin-bottom:16px}
-.search-wrap input{width:100%;padding:10px 14px 10px 38px;background:#1a1d27;border:1px solid #252830;
-color:#fff;border-radius:8px;font-size:13px;outline:none}
-.search-wrap input:focus{border-color:#3b82f6}
-.search-wrap::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px}
-table{width:100%;border-collapse:collapse}
+.fbtn.on{background:#1e3a5f;color:#60a5fa;border-color:#1e3a5f}
+.search-box{flex:1;position:relative;min-width:200px}
+.search-box input{width:100%;padding:7px 12px 7px 32px;background:#1a1d27;border:1px solid #252830;color:#fff;border-radius:7px;font-size:12px;outline:none}
+.search-box input:focus{border-color:#3b82f6}
+.search-box::before{content:"🔍";position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none}
 .table-wrap{background:#1a1d27;border-radius:10px;overflow:hidden;border:1px solid #1e2130}
-th{background:#12141e;padding:10px 14px;text-align:left;font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
-td{padding:10px 14px;border-top:1px solid #151820;font-size:13px;vertical-align:middle}
+table{width:100%;border-collapse:collapse}
+th{background:#12141e;padding:9px 12px;text-align:left;font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:#888}
+th .sort-icon{margin-left:4px;opacity:.4}
+th.sort-asc .sort-icon::after{content:"↑";opacity:1}
+th.sort-desc .sort-icon::after{content:"↓";opacity:1}
+td{padding:9px 12px;border-top:1px solid #151820;font-size:12px;vertical-align:middle}
 tr:hover td{background:#1e2130}
-.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
-.badge-BID{background:#14532d;color:#22c55e}
-.badge-NO-BID{background:#450a0a;color:#ef4444}
-.badge-CONDITIONAL{background:#451a03;color:#f59e0b}
-.badge-REVIEW,.badge-{background:#1e3a5f;color:#3b82f6}
-.c-urgent{color:#ef4444;font-weight:600}.c-warn{color:#f59e0b}.c-muted{color:#555}
-.brief-cell .brief{font-size:13px;color:#ddd;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brief-cell .org{font-size:11px;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
-.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:#3b82f6;color:#fff}.btn-primary:hover{background:#2563eb}
-.btn-ghost{background:none;border:1px solid #252830;color:#888}.btn-ghost:hover{border-color:#3b82f6;color:#3b82f6}
-.btn-sm{padding:4px 10px;font-size:12px}
-.card{background:#1a1d27;border-radius:10px;padding:20px;margin-bottom:16px;border:1px solid #1e2130}
-.card-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
-label{font-size:11px;color:#666;display:block;margin-bottom:4px;margin-top:12px;text-transform:uppercase;letter-spacing:.3px}
-input[type=text],input[type=password],input[type=number],select,textarea{background:#12141e;border:1px solid #252830;color:#fff;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;outline:none}
+.badge{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;white-space:nowrap}
+.bg-BID{background:#14532d;color:#22c55e}
+.bg-NO-BID{background:#450a0a;color:#ef4444}
+.bg-CONDITIONAL{background:#451a03;color:#f59e0b}
+.bg-REVIEW,.bg-{background:#1e3a5f;color:#3b82f6}
+.c-urg{color:#ef4444;font-weight:600}.c-warn{color:#f59e0b}.c-dim{color:#444}
+.brief-wrap .b1{font-size:12px;color:#ddd;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brief-wrap .b2{font-size:10px;color:#444;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.btn{padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+.btn-p{background:#3b82f6;color:#fff}.btn-p:hover{background:#2563eb}
+.btn-g{background:none;border:1px solid #252830;color:#777}.btn-g:hover{border-color:#3b82f6;color:#3b82f6}
+.btn-sm{padding:3px 9px;font-size:11px}
+.act-btn{padding:2px 8px;border-radius:4px;border:none;cursor:pointer;font-size:10px;font-weight:600;transition:all .12s}
+.ab-blue{background:#1e3a5f;color:#60a5fa}.ab-blue:hover{background:#1e40af}
+.ab-green{background:#14532d;color:#22c55e}.ab-green:hover{background:#166534}
+.ab-gray{background:#1e2130;color:#666}.ab-gray:hover{background:#252830}
+.card{background:#1a1d27;border-radius:10px;padding:18px;margin-bottom:14px;border:1px solid #1e2130}
+.card-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+label{font-size:10px;color:#555;display:block;margin-bottom:3px;margin-top:10px;text-transform:uppercase;letter-spacing:.3px}
+input[type=text],input[type=password],input[type=number],select,textarea{background:#12141e;border:1px solid #252830;color:#fff;padding:7px 10px;border-radius:5px;font-size:12px;width:100%;outline:none}
 input:focus,select:focus,textarea:focus{border-color:#3b82f6}
-.row{display:flex;gap:12px;flex-wrap:wrap}
-.row .card{flex:1;min-width:200px}
-.alert-bar{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:8px;background:#1e3a5f;border-left:3px solid #3b82f6;color:#93c5fd}
-.alert-bar.red{background:#450a0a;border-color:#ef4444;color:#fca5a5}
-.alert-bar.amber{background:#451a03;border-color:#f59e0b;color:#fcd34d}
-#toast{position:fixed;bottom:20px;right:20px;background:#1e2130;border:1px solid #252830;
-padding:12px 20px;border-radius:8px;font-size:13px;display:none;z-index:9999;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
-.empty-state{text-align:center;padding:50px 20px;color:#444;font-size:14px}
-.mono{font-family:monospace;font-size:11px;color:#666}
-.upload-zone{border:2px dashed #252830;border-radius:8px;padding:30px;text-align:center;cursor:pointer;color:#555;font-size:13px;transition:border-color .15s}
-.upload-zone:hover{border-color:#3b82f6;color:#3b82f6}
-.checklist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #151820}
-.checklist-item:last-child{border-bottom:none}
-.checklist-item input[type=checkbox]{width:16px;height:16px;accent-color:#3b82f6;flex-shrink:0}
-.checklist-item.done .cl-label{color:#444;text-decoration:line-through}
-.cl-label{font-size:13px;flex:1}
-.cl-cat{font-size:10px;color:#444;background:#12141e;padding:2px 6px;border-radius:4px}
-.progress-bar{background:#12141e;border-radius:4px;height:6px;overflow:hidden;margin-top:6px}
+.row-2{display:flex;gap:12px;flex-wrap:wrap}
+.row-2 .card{flex:1;min-width:200px}
+.alert-bar{padding:9px 12px;border-radius:7px;font-size:11px;margin-bottom:7px;border-left:3px solid #3b82f6;background:#0c1a2e;color:#93c5fd}
+.alert-bar.r{background:#1a0505;border-color:#ef4444;color:#fca5a5}
+.alert-bar.a{background:#1a0e03;border-color:#f59e0b;color:#fcd34d}
+.empty{text-align:center;padding:40px 20px;color:#333;font-size:13px}
+.mono{font-family:monospace;font-size:10px;color:#555}
+.upload-zone{border:2px dashed #252830;border-radius:7px;padding:24px;text-align:center;cursor:pointer;color:#444;font-size:12px;transition:border-color .15s}
+.upload-zone:hover,.upload-zone.drag{border-color:#3b82f6;color:#3b82f6}
+.progress-bar{background:#12141e;border-radius:4px;height:5px;overflow:hidden;margin-top:5px}
 .progress-fill{height:100%;background:#3b82f6;border-radius:4px;transition:width .3s}
-.tab-row{display:flex;gap:0;border-bottom:1px solid #1e2130;margin-bottom:20px}
-.tab{padding:8px 16px;cursor:pointer;font-size:13px;color:#666;border-bottom:2px solid transparent}
+.tab-row{display:flex;border-bottom:1px solid #1e2130;margin-bottom:16px}
+.tab{padding:7px 14px;cursor:pointer;font-size:12px;color:#555;border-bottom:2px solid transparent;transition:all .12s}
 .tab:hover{color:#aaa}
-.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
-.tab-panel{display:none}.tab-panel.active{display:block}
-#loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
-#loading-overlay.show{display:flex}
-.spinner{width:36px;height:36px;border:3px solid #1e2130;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite}
+.tab.on{color:#3b82f6;border-bottom-color:#3b82f6}
+.tab-panel{display:none}.tab-panel.on{display:block}
+.pipe-col{background:#1a1d27;border-radius:8px;padding:12px;border:1px solid #1e2130;min-width:130px;flex:1}
+.pipe-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #1e2130}
+.pipe-count{font-size:22px;font-weight:700}
+.pipe-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+#toast{position:fixed;bottom:18px;right:18px;background:#1e2130;border:1px solid #252830;padding:10px 18px;border-radius:7px;font-size:12px;display:none;z-index:9999;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.5);border-left:3px solid #3b82f6}
+#loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+#loading-overlay.on{display:flex}
+.spinner{width:32px;height:32px;border:3px solid #1e2130;border-top-color:#3b82f6;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.actions-cell{display:flex;gap:4px;flex-wrap:wrap}
-.action-btn{padding:3px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600}
-.action-btn.blue{background:#1e3a5f;color:#60a5fa}.action-btn.blue:hover{background:#1e40af}
-.action-btn.green{background:#14532d;color:#22c55e}.action-btn.green:hover{background:#166534}
-.action-btn.gray{background:#1e2130;color:#888}.action-btn.gray:hover{background:#252830}
-.detail-panel{position:fixed;top:0;right:0;width:480px;height:100vh;background:#12141e;border-left:1px solid #1e2130;z-index:500;overflow-y:auto;padding:24px;transform:translateX(100%);transition:transform .25s}
-.detail-panel.open{transform:translateX(0)}
+/* Detail Panel */
+#detail-panel{position:fixed;top:0;right:0;width:460px;height:100vh;background:#12141e;border-left:1px solid #1e2130;z-index:500;overflow-y:auto;padding:22px;transform:translateX(100%);transition:transform .22s ease}
+#detail-panel.open{transform:translateX(0)}
+/* Copy button flash */
+.copy-field{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#0f1117;border-radius:6px;margin-bottom:6px;cursor:pointer;border:1px solid #1e2130;transition:border-color .12s}
+.copy-field:hover{border-color:#3b82f6}
+.copy-field .cf-label{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.5px}
+.copy-field .cf-val{font-size:13px;font-weight:700;color:#fff;font-family:monospace}
+.copy-field .cf-btn{font-size:10px;color:#555;padding:2px 7px;background:#1e2130;border-radius:4px;flex-shrink:0}
+.copy-field.copied{border-color:#22c55e}
+/* Chatbot */
+#chat-fab{position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:#3b82f6;border-radius:50%;border:none;cursor:pointer;font-size:18px;z-index:8000;box-shadow:0 4px 16px rgba(59,130,246,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+#chat-fab:hover{transform:scale(1.1)}
+#chat-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;display:none}
+#chat-win{position:fixed;bottom:72px;right:20px;width:340px;max-height:480px;background:#12141e;border:1px solid #1e2130;border-radius:12px;z-index:8000;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+#chat-win.open{display:flex}
+#chat-head{padding:12px 16px;border-bottom:1px solid #1e2130;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:#fff}
+#chat-msgs{flex:1;overflow-y:auto;padding:12px;min-height:160px;max-height:320px}
+.cmsg{margin-bottom:10px;font-size:12px;line-height:1.5}
+.cmsg.user{text-align:right}.cmsg.user span{background:#1e3a5f;color:#93c5fd;padding:6px 10px;border-radius:8px 8px 2px 8px;display:inline-block;max-width:85%;text-align:left}
+.cmsg.bot span{background:#1e2130;color:#ccc;padding:6px 10px;border-radius:8px 8px 8px 2px;display:inline-block;max-width:85%}
+.csugg{display:flex;flex-wrap:wrap;gap:5px;padding:8px 12px;border-top:1px solid #1e2130}
+.csugg button{padding:3px 9px;border-radius:12px;border:1px solid #252830;background:none;color:#666;cursor:pointer;font-size:10px}
+.csugg button:hover{border-color:#3b82f6;color:#3b82f6}
+#chat-input-row{display:flex;padding:10px 12px;border-top:1px solid #1e2130;gap:6px}
+#chat-input{flex:1;background:#0f1117;border:1px solid #252830;color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;outline:none}
+#chat-input:focus{border-color:#3b82f6}
+#chat-send{background:#3b82f6;border:none;color:#fff;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px}
 </style>
 </head>
 <body>
 
-<div id="loading-overlay"><div class="spinner"></div><div id="loading-text" style="font-size:13px;color:#888">Loading...</div></div>
+<div id="loading-overlay"><div class="spinner"></div><div id="loading-text" style="font-size:12px;color:#777">Loading...</div></div>
 
+<!-- SIDEBAR -->
 <div id="nav">
   <div id="nav-brand"><h2>BID / NO-BID</h2><p>Nascent Info Technologies</p></div>
   <div class="nav-section">Main</div>
-  <button class="nav-btn active" onclick="showPage('dashboard')"><span class="icon">📊</span>Dashboard<span class="nav-badge" id="nb-total">0</span></button>
-  <button class="nav-btn" onclick="showPage('tenders')"><span class="icon">📋</span>All Tenders</button>
+  <button class="nav-btn active" onclick="go('dashboard')"><span class="icon">📊</span>Dashboard<span class="nav-badge" id="nb-total">0</span></button>
+  <button class="nav-btn" onclick="go('tenders')"><span class="icon">📋</span>All Tenders</button>
   <div class="nav-section">Analysis</div>
-  <button class="nav-btn" onclick="showPage('analyse')"><span class="icon">🔍</span>Analyse Tender</button>
-  <button class="nav-btn" onclick="showPage('checklist')"><span class="icon">✅</span>Checklist</button>
-  <div class="nav-section">Reports</div>
-  <button class="nav-btn" onclick="showPage('reports')"><span class="icon">📑</span>Reports</button>
+  <button class="nav-btn" onclick="go('analyse')"><span class="icon">🔍</span>Analyse Tender</button>
+  <button class="nav-btn" onclick="go('prebid')"><span class="icon">✉️</span>Pre-Bid Queries</button>
+  <button class="nav-btn" onclick="go('checklist')"><span class="icon">✅</span>Checklist</button>
+  <button class="nav-btn" onclick="go('reports')"><span class="icon">📑</span>Reports</button>
   <div class="nav-section">Pipeline</div>
-  <button class="nav-btn" onclick="showPage('analytics')"><span class="icon">📈</span>Analytics</button>
+  <button class="nav-btn" onclick="go('tracker')"><span class="icon">🎯</span>Bid Tracker<span class="nav-badge" id="nb-alerts">0</span></button>
+  <button class="nav-btn" onclick="go('winloss')"><span class="icon">🏆</span>Win / Loss</button>
   <div class="nav-section">System</div>
-  <button class="nav-btn" onclick="showPage('settings')"><span class="icon">⚙️</span>Settings</button>
+  <button class="nav-btn" onclick="go('profile')"><span class="icon">🏢</span>Nascent Profile</button>
+  <button class="nav-btn" onclick="go('settings')"><span class="icon">⚙️</span>Settings</button>
   <div id="nav-footer">
-    <div style="font-size:11px;margin-bottom:4px"><span class="status-dot dot-gray" id="drive-dot"></span><span id="drive-label">Drive: checking...</span></div>
-    <div style="font-size:11px;color:#444" id="api-status">AI: checking...</div>
+    <div style="margin-bottom:3px"><span class="status-dot dot-gray" id="drive-dot"></span><span id="drive-lbl" style="color:#444">Drive: checking...</span></div>
+    <div id="ai-lbl" style="color:#333">AI: checking...</div>
   </div>
 </div>
 
+<!-- MAIN -->
 <div id="main">
 
-  <!-- DASHBOARD -->
-  <div id="page-dashboard" class="page active">
-    <div class="topbar">
-      <h1>Dashboard</h1>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Import Excel</button>
-        <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
-        <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">🔃 Refresh</button>
-      </div>
-    </div>
-    <div class="page-body">
-      <div id="alert-container"></div>
-      <div class="stats">
-        <div class="stat" onclick="setFilter('')"><div class="stat-num c-white" id="s-total">—</div><div class="stat-lbl">Total</div></div>
-        <div class="stat" onclick="setFilter('BID')"><div class="stat-num c-green" id="s-bid">—</div><div class="stat-lbl">BID</div></div>
-        <div class="stat" onclick="setFilter('CONDITIONAL')"><div class="stat-num c-amber" id="s-cond">—</div><div class="stat-lbl">Conditional</div></div>
-        <div class="stat" onclick="setFilter('NO-BID')"><div class="stat-num c-red" id="s-nobid">—</div><div class="stat-lbl">No-Bid</div></div>
-        <div class="stat" onclick="setFilter('REVIEW')"><div class="stat-num c-blue" id="s-review">—</div><div class="stat-lbl">Review</div></div>
-      </div>
-      <div class="filters">
-        <button class="fbtn active" onclick="setFilter('')">All</button>
-        <button class="fbtn" onclick="setFilter('BID')">✓ BID</button>
-        <button class="fbtn" onclick="setFilter('CONDITIONAL')">△ Conditional</button>
-        <button class="fbtn" onclick="setFilter('NO-BID')">✗ No-Bid</button>
-        <button class="fbtn" onclick="setFilter('REVIEW')">? Review</button>
-        <button class="fbtn" onclick="setFilter('urgent')">🔴 Urgent ≤7d</button>
-        <button class="fbtn" onclick="setFilter('analysed')">🔬 Analysed</button>
-      </div>
-      <div class="search-wrap"><input id="dash-search" placeholder="Search tenders — T247 ID, brief, org, location..." oninput="renderDash()"></div>
-      <div id="dash-count" style="font-size:12px;color:#444;margin-bottom:8px"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Deadline</th><th>Days Left</th><th>Verdict</th><th>Actions</th></tr></thead>
-          <tbody id="dash-table"><tr><td colspan="6" class="empty-state">Loading tenders...</td></tr></tbody>
-        </table>
-      </div>
+<!-- ═══ DASHBOARD ═══ -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <h1>Dashboard</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-g btn-sm" onclick="document.getElementById('xl-input').click()">📥 Import Excel</button>
+      <input type="file" id="xl-input" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+      <button class="btn btn-g btn-sm" onclick="syncDrive()">☁ Sync</button>
+      <button class="btn btn-g btn-sm" onclick="loadDash()">🔃</button>
     </div>
   </div>
+  <div class="page-body">
+    <div id="alert-box"></div>
+    <div class="stats">
+      <div class="stat" id="s-all" onclick="setF('')"><div class="stat-num c-w" id="s-total">—</div><div class="stat-lbl">Total</div></div>
+      <div class="stat" id="s-bid" onclick="setF('BID')"><div class="stat-num c-g" id="s-bid-n">—</div><div class="stat-lbl">BID</div></div>
+      <div class="stat" id="s-cond" onclick="setF('CONDITIONAL')"><div class="stat-num c-a" id="s-cond-n">—</div><div class="stat-lbl">Conditional</div></div>
+      <div class="stat" id="s-nobid" onclick="setF('NO-BID')"><div class="stat-num c-r" id="s-nobid-n">—</div><div class="stat-lbl">No-Bid</div></div>
+      <div class="stat" id="s-rev" onclick="setF('REVIEW')"><div class="stat-num c-b" id="s-rev-n">—</div><div class="stat-lbl">Review</div></div>
+    </div>
+    <div class="filter-row">
+      <button class="fbtn on" onclick="setF('')">All</button>
+      <button class="fbtn" onclick="setF('BID')">✓ BID</button>
+      <button class="fbtn" onclick="setF('CONDITIONAL')">△ Conditional</button>
+      <button class="fbtn" onclick="setF('NO-BID')">✗ No-Bid</button>
+      <button class="fbtn" onclick="setF('REVIEW')">? Review</button>
+      <button class="fbtn" onclick="setF('urgent')">🔴 Urgent</button>
+      <button class="fbtn" onclick="setF('analysed')">🔬 Analysed</button>
+      <div class="search-box"><input id="dash-q" placeholder="Search T247 ID, brief, org, location..." oninput="renderDash()"></div>
+    </div>
+    <div id="dash-info" style="font-size:11px;color:#333;margin-bottom:8px"></div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th onclick="sortDash('t247_id')">T247 ID<span class="sort-icon"></span></th>
+        <th onclick="sortDash('brief')">Brief / Org<span class="sort-icon"></span></th>
+        <th onclick="sortDash('deadline')">Deadline<span class="sort-icon"></span></th>
+        <th onclick="sortDash('days')">Days<span class="sort-icon"></span></th>
+        <th onclick="sortDash('verdict')">Verdict<span class="sort-icon"></span></th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody id="dash-tbody"><tr><td colspan="6" class="empty">Loading tenders...</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
 
-  <!-- ALL TENDERS -->
-  <div id="page-tenders" class="page">
-    <div class="topbar"><h1>All Tenders</h1>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export Excel</button>
+<!-- ═══ ALL TENDERS ═══ -->
+<div id="page-tenders" class="page">
+  <div class="topbar"><h1>All Tenders</h1>
+    <div class="topbar-actions"><button class="btn btn-g btn-sm" onclick="exportTenders()">⬇ Export Excel</button></div>
+  </div>
+  <div class="page-body">
+    <div class="filter-row">
+      <button class="fbtn on" onclick="setTF('')">All</button>
+      <button class="fbtn" onclick="setTF('BID')">BID</button>
+      <button class="fbtn" onclick="setTF('CONDITIONAL')">Conditional</button>
+      <button class="fbtn" onclick="setTF('NO-BID')">No-Bid</button>
+      <button class="fbtn" onclick="setTF('urgent')">Urgent</button>
+      <div class="search-box"><input id="tl-q" placeholder="Search..." oninput="renderTenders()"></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th onclick="sortTl('t247_id')">T247 ID<span class="sort-icon"></span></th>
+        <th onclick="sortTl('ref_no')">Ref No<span class="sort-icon"></span></th>
+        <th onclick="sortTl('brief')">Brief / Org<span class="sort-icon"></span></th>
+        <th onclick="sortTl('estimated_cost_cr')">Value (Cr)<span class="sort-icon"></span></th>
+        <th onclick="sortTl('deadline')">Deadline<span class="sort-icon"></span></th>
+        <th onclick="sortTl('verdict')">Verdict<span class="sort-icon"></span></th>
+        <th>Actions</th>
+      </tr></thead>
+      <tbody id="tl-tbody"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══ ANALYSE ═══ -->
+<div id="page-analyse" class="page">
+  <div class="topbar"><h1>Analyse Tender</h1></div>
+  <div class="page-body">
+    <div id="ctx-bar" style="display:none;background:#1e3a5f;border-radius:7px;padding:9px 14px;margin-bottom:14px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
+      <span>Active: <b id="ctx-id"></b></span>
+      <button class="btn btn-g btn-sm" onclick="clearCtx()">✕</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Upload Tender Documents</div>
+      <label>T247 ID (optional — links result to dashboard)</label>
+      <input type="text" id="an-tid" placeholder="e.g. 97290989">
+      <label style="margin-top:12px">Files (ZIP / PDF / DOCX — multiple OK)</label>
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('an-files').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleDrop(event)">
+        📦 Drop files here or click to browse<br>
+        <span style="font-size:10px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
+      </div>
+      <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
+      <div id="an-filelist" style="font-size:11px;color:#444;margin-top:5px"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-p" onclick="doAnalyse()">🔍 Analyse with AI</button>
       </div>
     </div>
-    <div class="page-body">
-      <div class="search-wrap"><input id="tl-search" placeholder="Search..." oninput="renderTenders()"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>Deadline</th><th>Verdict</th><th>Actions</th></tr></thead>
-          <tbody id="tenders-table"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
-        </table>
-      </div>
+    <div id="an-result"></div>
+    <div id="pq-section" style="display:none" class="card">
+      <div class="card-title">PQ / TQ Criteria</div>
+      <div id="pq-table"></div>
     </div>
   </div>
+</div>
 
-  <!-- ANALYSE -->
-  <div id="page-analyse" class="page">
-    <div class="topbar"><h1>Analyse Tender</h1></div>
-    <div class="page-body">
-      <div id="ctx-banner" style="display:none;background:#1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;justify-content:space-between;align-items:center">
-        <span>Active: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
-        <button class="btn btn-ghost btn-sm" onclick="clearCtx()">✕ Clear</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Upload Tender Documents</div>
-        <label>T247 ID (links result to dashboard)</label>
-        <input type="text" id="an-tid" placeholder="e.g. 97290989">
-        <label style="margin-top:12px">Documents (ZIP, PDF, DOCX — multiple allowed)</label>
-        <div class="upload-zone" onclick="document.getElementById('an-files').click()">
-          📦 Drop files here or click to browse<br>
-          <span style="font-size:11px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
-        </div>
-        <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
-        <div id="an-filelist" style="font-size:12px;color:#555;margin-top:6px"></div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="analyseTender()">🔍 Analyse with AI</button>
-        </div>
-      </div>
-      <div id="an-result"></div>
-      <div id="prebid-section" style="display:none" class="card">
-        <div class="card-title">Pre-bid Queries</div>
-        <div id="prebid-list"><div class="empty-state">Analyse a tender to generate pre-bid queries.</div></div>
-      </div>
+<!-- ═══ PRE-BID ═══ -->
+<div id="page-prebid" class="page">
+  <div class="topbar"><h1>Pre-Bid Queries</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <label>Select Tender</label>
+      <select id="pb-sel" onchange="loadPrebid()"><option value="">-- Select --</option></select>
     </div>
+    <div id="pb-content"><div class="empty">Select a tender to view pre-bid queries.</div></div>
   </div>
+</div>
 
-  <!-- CHECKLIST -->
-  <div id="page-checklist" class="page">
-    <div class="topbar"><h1>Submission Checklist</h1></div>
-    <div class="page-body">
-      <div class="card">
-        <div class="card-title">Select Tender</div>
-        <select id="cl-select" onchange="loadChecklist()"><option value="">-- Select a tender --</option></select>
-      </div>
-      <div id="cl-content"><div class="empty-state">Select a tender to view checklist.</div></div>
+<!-- ═══ CHECKLIST ═══ -->
+<div id="page-checklist" class="page">
+  <div class="topbar"><h1>Submission Checklist</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <label>Select Tender</label>
+      <select id="cl-sel" onchange="loadChecklist()"><option value="">-- Select --</option></select>
     </div>
+    <div id="cl-content"><div class="empty">Select a tender to view checklist.</div></div>
   </div>
+</div>
 
-  <!-- REPORTS -->
-  <div id="page-reports" class="page">
-    <div class="topbar"><h1>Reports</h1><div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadReports()">↺ Refresh</button></div></div>
-    <div class="page-body">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Filename</th><th>Tender</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
-          <tbody id="reports-table"><tr><td colspan="5" class="empty-state">No reports yet.</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+<!-- ═══ REPORTS ═══ -->
+<div id="page-reports" class="page">
+  <div class="topbar"><h1>Reports</h1><div class="topbar-actions"><button class="btn btn-g btn-sm" onclick="loadReports()">↺ Refresh</button></div></div>
+  <div class="page-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Filename</th><th>Tender / Org</th><th>Verdict</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
+      <tbody id="rep-tbody"><tr><td colspan="6" class="empty">No reports yet.</td></tr></tbody>
+    </table></div>
   </div>
+</div>
 
-  <!-- ANALYTICS -->
-  <div id="page-analytics" class="page">
-    <div class="topbar"><h1>Analytics</h1><div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↺ Refresh</button></div></div>
-    <div class="page-body">
-      <div id="analytics-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px"></div>
-      <div class="card">
-        <div class="card-title">Record Bid Result</div>
-        <label>T247 ID</label><input type="text" id="res-tid" placeholder="T247 ID">
+<!-- ═══ BID TRACKER ═══ -->
+<div id="page-tracker" class="page">
+  <div class="topbar"><h1>Bid Tracker</h1></div>
+  <div class="page-body">
+    <div id="pipe-row" class="pipe-row"></div>
+    <div id="alerts-section"></div>
+    <div class="table-wrap" style="margin-top:16px"><table>
+      <thead><tr><th>T247 ID</th><th>Brief</th><th>Deadline</th><th>Verdict</th><th>Stage</th><th>Checklist</th></tr></thead>
+      <tbody id="tracker-tbody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══ WIN / LOSS ═══ -->
+<div id="page-winloss" class="page">
+  <div class="topbar"><h1>Win / Loss</h1></div>
+  <div class="page-body">
+    <div class="stats" id="wl-stats"></div>
+    <div class="row-2">
+      <div class="card" style="flex:1;min-width:220px">
+        <div class="card-title">Record Outcome</div>
+        <label>T247 ID</label><input type="text" id="wl-tid" placeholder="T247 ID">
         <label>Outcome</label>
-        <select id="res-outcome">
+        <select id="wl-outcome">
           <option value="Won">Won</option><option value="Lost">Lost</option>
-          <option value="Submitted">Submitted — Awaiting Result</option>
+          <option value="Submitted">Submitted — Awaiting</option><option value="Disqualified">Disqualified</option>
         </select>
-        <label>Contract Value (Rs. Cr) if Won</label><input type="number" id="res-value" placeholder="0.00" step="0.01">
-        <label>Notes</label><textarea id="res-notes" rows="2" placeholder="Any notes..."></textarea>
-        <button class="btn btn-primary" onclick="saveBidResult()" style="margin-top:14px;width:auto">Save Result</button>
+        <label>Contract Value (Cr) if Won</label><input type="number" id="wl-val" placeholder="0.00" step="0.01">
+        <label>Competitor (if known)</label><input type="text" id="wl-comp" placeholder="Competitor">
+        <label>Notes</label><textarea id="wl-notes" rows="2" placeholder="..."></textarea>
+        <button class="btn btn-p" onclick="saveOutcome()" style="margin-top:12px;width:auto">Save</button>
+      </div>
+      <div class="card" style="flex:2;min-width:300px">
+        <div class="card-title">History</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>T247</th><th>Brief</th><th>Outcome</th><th>Value</th></tr></thead>
+          <tbody id="wl-tbody"><tr><td colspan="4" class="empty">No results yet.</td></tr></tbody>
+        </table></div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- SETTINGS -->
-  <div id="page-settings" class="page">
-    <div class="topbar"><h1>Settings</h1></div>
-    <div class="page-body">
-      <div class="row">
-        <div class="card">
-          <div class="card-title">Gemini AI Keys</div>
-          <p style="font-size:12px;color:#555;margin-bottom:8px">Get free keys at aistudio.google.com/apikey</p>
-          <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
-          <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
-          <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
-          <button class="btn btn-primary" onclick="saveKeys()" style="margin-top:14px;width:auto">💾 Save Keys</button>
-          <button class="btn btn-ghost" onclick="testAI()" style="margin-top:8px;width:auto">🔬 Test AI</button>
-          <div id="ai-test-result" style="font-size:12px;margin-top:8px"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">Database Sync</div>
-          <p style="font-size:12px;color:#555;margin-bottom:12px">Upload your tenders_db.json to restore data permanently to Google Drive.</p>
-          <div class="upload-zone" onclick="document.getElementById('db-file').click()">
-            📤 Upload tenders_db.json
-          </div>
-          <input type="file" id="db-file" accept=".json" style="display:none" onchange="uploadDB(this)">
-          <div id="db-upload-result" style="font-size:12px;margin-top:8px;color:#555"></div>
-          <button class="btn btn-ghost" onclick="syncDrive()" style="margin-top:12px;width:auto">☁ Force Sync to Drive</button>
-        </div>
+<!-- ═══ PROFILE ═══ -->
+<div id="page-profile" class="page">
+  <div class="topbar"><h1>Nascent Profile</h1><div class="topbar-actions"><button class="btn btn-p btn-sm" onclick="saveProfile()">💾 Save</button></div></div>
+  <div class="page-body">
+    <div class="tab-row">
+      <div class="tab on" onclick="ptab('company',this)">Company</div>
+      <div class="tab" onclick="ptab('finance',this)">Finance</div>
+      <div class="tab" onclick="ptab('certs',this)">Certifications</div>
+      <div class="tab" onclick="ptab('projects',this)">Projects</div>
+      <div class="tab" onclick="ptab('team',this)">Team</div>
+    </div>
+    <div id="ptab-company" class="tab-panel on">
+      <div class="card">
+        <div class="card-title">Company Details</div>
+        <label>Company Name</label><input type="text" id="p-name" value="Nascent Info Technologies Pvt. Ltd.">
+        <label>CIN</label><input type="text" id="p-cin" value="U72200GJ2006PTC048723">
+        <label>PAN</label><input type="text" id="p-pan" value="AACCN3670J">
+        <label>GSTIN</label><input type="text" id="p-gst" value="24AACCN3670J1ZG">
+        <label>MSME / UDYAM No.</label><input type="text" id="p-msme" value="UDYAM-GJ-01-0007420">
+        <label>Authorized Signatory</label><input type="text" id="p-sign" value="Hitesh Patel (CAO)">
+        <label>MD / Director</label><input type="text" id="p-md" value="Maulik Bhagat">
+        <label>HQ Address</label><textarea id="p-addr" rows="2">Ahmedabad, Gujarat</textarea>
+      </div>
+    </div>
+    <div id="ptab-finance" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Financial Details</div>
+        <label>Turnover FY 2022-23 (Cr)</label><input type="number" id="p-t1" value="16.36" step="0.01">
+        <label>Turnover FY 2023-24 (Cr)</label><input type="number" id="p-t2" value="16.36" step="0.01">
+        <label>Turnover FY 2024-25 (Cr)</label><input type="number" id="p-t3" value="18.83" step="0.01">
+        <label>Net Worth (Cr)</label><input type="number" id="p-nw" value="26.09" step="0.01">
+        <label>CA Firm Name</label><input type="text" id="p-ca" value="Anuj J. Sharedalal">
+      </div>
+    </div>
+    <div id="ptab-certs" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Certifications</div>
+        <label>CMMI Level</label><input type="text" id="p-cmmi" value="CMMI V2.0 Level 3">
+        <label>CMMI Valid Till</label><input type="text" id="p-cmmi-d" value="19-Dec-2026">
+        <label>ISO 9001:2015 Valid Till</label><input type="text" id="p-iso1" value="08-Sep-2028">
+        <label>ISO 27001:2022 Valid Till</label><input type="text" id="p-iso2" value="08-Sep-2028">
+        <label>ISO 20000-1:2018 Valid Till</label><input type="text" id="p-iso3" value="08-Sep-2028">
+        <label>Total Employees</label><input type="number" id="p-emp" value="67">
+        <label>IT/Dev Employees</label><input type="number" id="p-emp-it" value="21">
+      </div>
+    </div>
+    <div id="ptab-projects" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Key Projects</div>
+        <textarea id="p-projects" rows="12" style="font-size:11px;font-family:monospace">AMC GIS | Ahmedabad MC | Rs.10.55 Cr | Completed | Web GIS
+PCSCL Smart City | Pimpri-Chinchwad | Rs.61.19 Cr | Ongoing | GIS+ERP
+KVIC Geo Portal | KVIC | Rs.5.15 Cr | Completed | Mobile GIS
+TCGL Tourism Portal | Tourism Corp Gujarat | Rs.9.31 Cr | Completed | Web+GIS
+JuMC GIS | Junagadh MC | Rs.9.78 Cr | Ongoing | Web GIS
+VMC GIS+ERP | Vadodara MC | Rs.20.5 Cr | Completed | GIS+ERP
+BMC GIS Mobile | Bhavnagar MC | Rs.4.2 Cr | Completed | Mobile GIS
+AMC Heritage App | Ahmedabad MC | Rs.4.72 Cr | Completed | Mobile App
+CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
+      </div>
+    </div>
+    <div id="ptab-team" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Team Capabilities</div>
+        <label>Technology Stack</label>
+        <textarea id="p-tech" rows="4">Java/Spring Boot (Primary), Python, Node.js, React.js, Angular, Android Native, Flutter, PostgreSQL, MySQL, AWS, Azure, QGIS, ArcGIS, GeoServer</textarea>
+        <label>NOT Available</label>
+        <textarea id="p-not" rows="2">CERT-In, STQC, SAP Partnership, Oracle Partnership, .NET Primary Stack</textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div id="page-settings" class="page">
+  <div class="topbar"><h1>Settings</h1></div>
+  <div class="page-body">
+    <div class="row-2">
+      <div class="card">
+        <div class="card-title">Gemini AI Keys <span style="font-size:10px;color:#555">(aistudio.google.com/apikey)</span></div>
+        <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
+        <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
+        <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
+        <label>Groq Key (free backup)</label><input type="password" id="groq-key" placeholder="gsk_...">
+        <button class="btn btn-p" onclick="saveKeys()" style="margin-top:12px;width:auto">💾 Save Keys</button>
+        <button class="btn btn-g" onclick="testAI()" style="margin-top:6px;width:auto">🔬 Test AI</button>
+        <div id="ai-test" style="font-size:11px;margin-top:7px"></div>
       </div>
       <div class="card">
-        <div class="card-title">System Info</div>
-        <div id="sys-info" style="font-size:12px;color:#666;display:flex;gap:20px;flex-wrap:wrap">
-          <span>Version: <b style="color:#fff">7.0</b></span>
-          <span>Drive: <b id="sys-drive" style="color:#fff">checking...</b></span>
-          <span>Tenders loaded: <b id="sys-tenders" style="color:#fff">—</b></span>
-          <span>AI: <b id="sys-ai" style="color:#fff">—</b></span>
-        </div>
+        <div class="card-title">Database</div>
+        <p style="font-size:11px;color:#444;margin-bottom:10px">Upload your tenders_db.json to restore data permanently to Google Drive.</p>
+        <div class="upload-zone" onclick="document.getElementById('db-inp').click()">📤 Upload tenders_db.json</div>
+        <input type="file" id="db-inp" accept=".json" style="display:none" onchange="uploadDB(this)">
+        <div id="db-result" style="font-size:11px;margin-top:7px;color:#555"></div>
+        <button class="btn btn-g" onclick="syncDrive()" style="margin-top:10px;width:auto">☁ Force Sync Drive</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">System Status</div>
+      <div style="font-size:11px;color:#555;display:flex;gap:18px;flex-wrap:wrap">
+        <span>Version: <b style="color:#fff">7.0</b></span>
+        <span>Drive: <b id="sys-drive" style="color:#fff">—</b></span>
+        <span>Tenders: <b id="sys-tenders" style="color:#fff">—</b></span>
+        <span>AI: <b id="sys-ai" style="color:#fff">—</b></span>
       </div>
     </div>
   </div>
+</div>
 
-</div><!-- end #main -->
+</div><!-- /#main -->
 
-<!-- TENDER DETAIL PANEL -->
-<div id="detail-panel" class="detail-panel">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-    <div style="font-size:16px;font-weight:700;color:#fff">Tender Details</div>
-    <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Close</button>
+<!-- DETAIL PANEL -->
+<div id="detail-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <div style="font-size:15px;font-weight:700;color:#fff">Tender Details</div>
+    <button class="btn btn-g btn-sm" onclick="closeDetail()">✕ Close</button>
   </div>
-  <div id="detail-content"></div>
+  <div id="detail-body"></div>
+</div>
+
+<!-- CHATBOT -->
+<button id="chat-fab" onclick="toggleChat()">💬<span id="chat-badge"></span></button>
+<div id="chat-win">
+  <div id="chat-head">
+    <span>🤖 Bid Assistant</span>
+    <button onclick="toggleChat()" style="background:none;border:none;color:#555;cursor:pointer;font-size:16px">×</button>
+  </div>
+  <div id="chat-msgs">
+    <div class="cmsg bot"><span>Hi! I know all your tenders, Nascent's profile, and bid rules. Ask me anything.</span></div>
+  </div>
+  <div class="csugg" id="chat-sugg">
+    <button onclick="sendQ(this)">Urgent deadlines?</button>
+    <button onclick="sendQ(this)">BID tenders count?</button>
+    <button onclick="sendQ(this)">Nascent turnover?</button>
+    <button onclick="sendQ(this)">Pending pre-bid?</button>
+  </div>
+  <div id="chat-input-row">
+    <input id="chat-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button id="chat-send" onclick="sendChat()">➤</button>
+  </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // GLOBALS
-// ═══════════════════════════════════════
-var allTenders = [];
-var currentFilter = '';
-var currentTenderId = '';
+// ═══════════════════════════════════════════════════
+var T = [];          // all tenders
+var dashF = '';      // dashboard filter
+var tlF = '';        // tenders page filter
+var dashSort = {col:'days', dir:1};
+var tlSort = {col:'deadline', dir:1};
+var chatOpen = false;
 
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // NAVIGATION
-// ═══════════════════════════════════════
-function showPage(name) {
+// ═══════════════════════════════════════════════════
+function go(name) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
-  var page = document.getElementById('page-' + name);
-  if (page) page.classList.add('active');
+  var pg = document.getElementById('page-' + name);
+  if (pg) pg.classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){
-    if ((b.getAttribute('onclick') || '').includes("'" + name + "'")) b.classList.add('active');
+    if ((b.getAttribute('onclick')||'').includes("'" + name + "'")) b.classList.add('active');
   });
-  if (name === 'tenders') renderTenders();
-  if (name === 'checklist') populateSelects();
+  if (name === 'tenders') renderTL();
+  if (name === 'checklist') fillSelects();
+  if (name === 'prebid') fillSelects();
   if (name === 'reports') loadReports();
-  if (name === 'analytics') loadAnalytics();
+  if (name === 'tracker') loadTracker();
+  if (name === 'winloss') loadWL();
   if (name === 'settings') loadSettings();
 }
 
-function switchTab(prefix, tab) {
-  var container = document.getElementById('page-' + (prefix === 'docs' ? 'documents' : prefix));
-  if (!container) return;
-  container.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
-  container.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-  if (event && event.target) event.target.classList.add('active');
-  var panel = document.getElementById(prefix + '-tab-' + tab);
-  if (panel) panel.classList.add('active');
+function ptab(name, el) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('#page-profile .tab').forEach(function(t){ t.classList.remove('on'); });
+  var panel = document.getElementById('ptab-' + name);
+  if (panel) panel.classList.add('on');
+  if (el) el.classList.add('on');
 }
 
-// ═══════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
 function toast(msg, type) {
   var el = document.getElementById('toast');
   el.textContent = msg;
   el.style.display = 'block';
-  el.style.borderLeft = '3px solid ' + (type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#3b82f6');
+  el.style.borderLeftColor = type==='error'?'#ef4444':type==='success'?'#22c55e':'#3b82f6';
   clearTimeout(el._t);
-  el._t = setTimeout(function(){ el.style.display = 'none'; }, 4000);
+  el._t = setTimeout(function(){ el.style.display='none'; }, 4000);
 }
+function showLoad(msg) { document.getElementById('loading-text').textContent = msg||'Processing...'; document.getElementById('loading-overlay').classList.add('on'); }
+function hideLoad() { document.getElementById('loading-overlay').classList.remove('on'); }
 
-function showLoading(msg) {
-  document.getElementById('loading-text').textContent = msg || 'Processing...';
-  document.getElementById('loading-overlay').classList.add('show');
-}
-
-function hideLoading() {
-  document.getElementById('loading-overlay').classList.remove('show');
-}
-
-function getVerdict(t) {
-  return t.verdict || t.bid_no_bid || t.recommendation || 'REVIEW';
-}
-
-function getDaysLeft(t) {
-  if (t.days_left !== undefined && t.days_left !== null && t.days_left !== 999) return t.days_left;
+function verd(t) { return t.verdict || t.bid_no_bid || t.recommendation || 'REVIEW'; }
+function dl(t) {
+  if (t.days_left !== undefined && t.days_left !== null && t.days_left !== 999) return parseInt(t.days_left);
   if (!t.deadline) return 999;
   try {
-    var s = t.deadline.split(' ')[0];
-    var parts = s.split(/[-\/]/);
-    var d;
-    if (parts[0].length === 4) d = new Date(+parts[0], +parts[1]-1, +parts[2]);
-    else d = new Date(+parts[2], +parts[1]-1, +parts[0]);
+    var s = t.deadline.split(' ')[0], p = s.split(/[-\/]/), d;
+    if (p[0].length===4) d = new Date(+p[0], +p[1]-1, +p[2]);
+    else d = new Date(+p[2], +p[1]-1, +p[0]);
     return Math.ceil((d - new Date()) / 86400000);
-  } catch(e) { return 999; }
+  } catch(e){ return 999; }
+}
+function dlDisp(n) {
+  if (n===999||n==null) return '<span class="c-dim">—</span>';
+  if (n<0) return '<span class="c-dim">Expired</span>';
+  if (n===0) return '<span class="c-urg">TODAY</span>';
+  if (n<=3) return '<span class="c-urg">'+n+'d</span>';
+  if (n<=7) return '<span class="c-warn">'+n+'d</span>';
+  return '<span>'+n+'d</span>';
+}
+function badge(v) { return '<span class="badge bg-'+(v||'REVIEW')+'">'+(v||'REVIEW')+'</span>'; }
+
+function copyText(txt, el) {
+  navigator.clipboard.writeText(txt).catch(function(){ var t=document.createElement('textarea'); t.value=txt; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); });
+  if (el) { el.classList.add('copied'); setTimeout(function(){ el.classList.remove('copied'); }, 1200); }
+  toast('Copied: ' + txt, 'success');
 }
 
-function daysDisplay(dl) {
-  if (dl === 999 || dl === null || dl === undefined) return '<span class="c-muted">—</span>';
-  if (dl < 0) return '<span class="c-muted">Expired</span>';
-  if (dl === 0) return '<span class="c-urgent">TODAY</span>';
-  if (dl <= 3) return '<span class="c-urgent">' + dl + 'd</span>';
-  if (dl <= 7) return '<span class="c-warn">' + dl + 'd</span>';
-  return '<span>' + dl + 'd</span>';
-}
-
-function verdictBadge(v) {
-  return '<span class="badge badge-' + (v||'REVIEW') + '">' + (v||'REVIEW') + '</span>';
-}
-
-function setFilter(f) {
-  currentFilter = f;
-  document.querySelectorAll('.fbtn').forEach(function(b){
-    b.classList.remove('active');
-    var oc = b.getAttribute('onclick') || '';
-    if (f === '' ? oc.includes("''") : oc.includes("'" + f + "'")) b.classList.add('active');
+function sortArr(arr, col, dir) {
+  return arr.slice().sort(function(a,b){
+    var av = col==='days'?dl(a):(a[col]||''), bv = col==='days'?dl(b):(b[col]||'');
+    if (typeof av==='number'&&typeof bv==='number') return (av-bv)*dir;
+    return String(av).localeCompare(String(bv))*dir;
   });
+}
+
+function setSortIcon(tbodyId, col, dir) {
+  var tbl = document.getElementById(tbodyId);
+  if (!tbl) return;
+  tbl.closest('table').querySelectorAll('th').forEach(function(th){
+    th.classList.remove('sort-asc','sort-desc');
+    var si = th.querySelector('.sort-icon'); if(si) si.textContent='';
+  });
+  // Find the right th
+  tbl.closest('table').querySelectorAll('th').forEach(function(th){
+    var oc = th.getAttribute('onclick')||'';
+    if (oc.includes("'"+col+"'") || oc.includes('"'+col+'"')) {
+      th.classList.add(dir===1?'sort-asc':'sort-desc');
+      var si = th.querySelector('.sort-icon'); if(si) si.textContent = dir===1?' ↑':' ↓';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+function setF(f) {
+  dashF = f;
+  document.querySelectorAll('.fbtn').forEach(function(b){ b.classList.remove('on'); });
+  // find matching button on dashboard
+  document.querySelectorAll('#page-dashboard .fbtn').forEach(function(b){
+    var oc = b.getAttribute('onclick')||'';
+    if (f===''?oc.includes("''"):oc.includes("'"+f+"'")) b.classList.add('on');
+  });
+  ['s-all','s-bid','s-cond','s-nobid','s-rev'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('on'); });
+  var map={'':'s-all','BID':'s-bid','CONDITIONAL':'s-cond','NO-BID':'s-nobid','REVIEW':'s-rev'};
+  if (map[f]) { var el=document.getElementById(map[f]); if(el) el.classList.add('on'); }
   renderDash();
 }
-
-// ═══════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════
+function sortDash(col) {
+  if (dashSort.col===col) dashSort.dir*=-1; else { dashSort.col=col; dashSort.dir=1; }
+  renderDash();
+}
 function renderDash() {
-  var q = (document.getElementById('dash-search').value || '').toLowerCase();
-  var arr = allTenders.filter(function(t){ return t.status !== 'Not Interested'; });
-  if (currentFilter === 'urgent') arr = arr.filter(function(t){ var d=getDaysLeft(t); return d>=0&&d<=7; });
-  else if (currentFilter === 'analysed') arr = arr.filter(function(t){ return t.bid_no_bid_done; });
-  else if (currentFilter) arr = arr.filter(function(t){ return getVerdict(t)===currentFilter; });
-  if (q) arr = arr.filter(function(t){
+  var q = (document.getElementById('dash-q').value||'').toLowerCase().trim();
+  var arr = T.filter(function(t){ return t.status!=='Not Interested'; });
+  if (dashF==='urgent') arr=arr.filter(function(t){ var d=dl(t); return d>=0&&d<=7; });
+  else if (dashF==='analysed') arr=arr.filter(function(t){ return t.bid_no_bid_done; });
+  else if (dashF) arr=arr.filter(function(t){ return verd(t)===dashF; });
+  if (q) arr=arr.filter(function(t){
     return (t.brief||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||
            (t.t247_id||'').toLowerCase().includes(q)||(t.location||'').toLowerCase().includes(q)||
-           (t.ref_no||'').toLowerCase().includes(q);
+           (t.ref_no||'').toLowerCase().includes(q)||(t.deadline||'').includes(q);
   });
-  arr.sort(function(a,b){ return getDaysLeft(a)-getDaysLeft(b); });
-  document.getElementById('dash-count').textContent = arr.length + ' tender' + (arr.length!==1?'s':'') + (currentFilter?' · filtered':'');
-  var tbody = document.getElementById('dash-table');
-  if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' + (allTenders.length ? 'No tenders match filter' : 'Import Excel to load tenders') + '</td></tr>';
-    return;
-  }
-  tbody.innerHTML = arr.map(function(t) {
-    var v = getVerdict(t);
-    var dl = getDaysLeft(t);
-    var tid = t.t247_id || '';
-    var brief = (t.brief || '—').replace(/'/g, '&#39;');
-    return '<tr>' +
-      '<td class="mono">' + tid + '</td>' +
-      '<td class="brief-cell"><div class="brief">' + (t.brief||'—') + '</div><div class="org">' + (t.org_name||'') + (t.location?' · '+t.location:'') + '</div></td>' +
-      '<td style="white-space:nowrap;color:#666;font-size:12px">' + (t.deadline||'—') + '</td>' +
-      '<td>' + daysDisplay(dl) + '</td>' +
-      '<td>' + verdictBadge(v) + '</td>' +
-      '<td class="actions-cell">' +
-        '<button class="action-btn blue" onclick="openAnalyse(\'' + tid + '\')">Analyse</button>' +
-        '<button class="action-btn blue" onclick="viewDetail(\'' + tid + '\')">View</button>' +
-        (t.bid_no_bid_done ? '<button class="action-btn green" onclick="openChecklist(\'' + tid + '\')">Checklist</button>' : '') +
-        '<button class="action-btn gray" onclick="skipTender(\'' + tid + '\')">Skip</button>' +
-      '</td>' +
+  arr = sortArr(arr, dashSort.col, dashSort.dir);
+  setSortIcon('dash-tbody', dashSort.col, dashSort.dir);
+  document.getElementById('dash-info').textContent = arr.length + ' tender'+(arr.length!==1?'s':'')+(dashF||q?' · filtered':'');
+  var tb = document.getElementById('dash-tbody');
+  if (!arr.length) { tb.innerHTML='<tr><td colspan="6" class="empty">'+(T.length?'No match':'Import Excel to load tenders')+'</td></tr>'; return; }
+  tb.innerHTML = arr.map(function(t){
+    var tid = t.t247_id||'', v = verd(t), d = dl(t);
+    return '<tr>'+
+      '<td class="mono">'+tid+'</td>'+
+      '<td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div><div class="b2">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div></td>'+
+      '<td style="color:#555;font-size:11px">'+(t.deadline||'—')+'</td>'+
+      '<td>'+dlDisp(d)+'</td>'+
+      '<td>'+badge(v)+'</td>'+
+      '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
+        '<button class="act-btn ab-blue" onclick="setAnalyse(\''+tid+'\')">Analyse</button>'+
+        '<button class="act-btn ab-blue" onclick="showDetail(\''+tid+'\')">View</button>'+
+        (t.bid_no_bid_done?'<button class="act-btn ab-green" onclick="openCL(\''+tid+'\')">Checklist</button>':'')+
+        '<button class="act-btn ab-gray" onclick="skipT(\''+tid+'\')">Skip</button>'+
+      '</td>'+
     '</tr>';
   }).join('');
 }
 
-function renderTenders() {
-  var q = (document.getElementById('tl-search') ? document.getElementById('tl-search').value : '').toLowerCase();
-  var arr = q ? allTenders.filter(function(t){
-    return (t.brief||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q);
-  }) : allTenders;
-  var tbody = document.getElementById('tenders-table');
-  if (!arr.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No tenders</td></tr>'; return; }
-  tbody.innerHTML = arr.map(function(t) {
-    var tid = t.t247_id || '';
-    return '<tr>' +
-      '<td class="mono">' + tid + '</td>' +
-      '<td class="mono" style="font-size:11px">' + (t.ref_no||'—') + '</td>' +
-      '<td class="brief-cell"><div class="brief">' + (t.brief||'—') + '</div><div class="org">' + (t.org_name||'') + '</div></td>' +
-      '<td style="color:#888">' + (t.estimated_cost_cr ? '₹'+t.estimated_cost_cr+'Cr' : '—') + '</td>' +
-      '<td style="color:#666;font-size:12px">' + (t.deadline||'—') + '</td>' +
-      '<td>' + verdictBadge(getVerdict(t)) + '</td>' +
-      '<td><button class="action-btn blue" onclick="openAnalyse(\'' + tid + '\')">Analyse</button></td>' +
+// ═══════════════════════════════════════════════════
+// ALL TENDERS
+// ═══════════════════════════════════════════════════
+function setTF(f) {
+  tlF = f;
+  document.querySelectorAll('#page-tenders .fbtn').forEach(function(b){ b.classList.remove('on'); });
+  document.querySelectorAll('#page-tenders .fbtn').forEach(function(b){
+    var oc = b.getAttribute('onclick')||'';
+    if (f===''?oc.includes("''"):oc.includes("'"+f+"'")) b.classList.add('on');
+  });
+  renderTL();
+}
+function sortTl(col) {
+  if (tlSort.col===col) tlSort.dir*=-1; else { tlSort.col=col; tlSort.dir=1; }
+  renderTL();
+}
+function renderTL() {
+  var q = (document.getElementById('tl-q')?document.getElementById('tl-q').value||'':'').toLowerCase().trim();
+  var arr = T.slice();
+  if (tlF==='urgent') arr=arr.filter(function(t){ var d=dl(t); return d>=0&&d<=7; });
+  else if (tlF) arr=arr.filter(function(t){ return verd(t)===tlF; });
+  if (q) arr=arr.filter(function(t){
+    return (t.brief||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||(t.ref_no||'').toLowerCase().includes(q);
+  });
+  arr = sortArr(arr, tlSort.col, tlSort.dir);
+  setSortIcon('tl-tbody', tlSort.col, tlSort.dir);
+  var tb = document.getElementById('tl-tbody');
+  if (!arr.length) { tb.innerHTML='<tr><td colspan="7" class="empty">No tenders</td></tr>'; return; }
+  tb.innerHTML = arr.map(function(t){
+    var tid = t.t247_id||'';
+    return '<tr>'+
+      '<td class="mono">'+tid+'</td>'+
+      '<td class="mono" style="font-size:10px">'+(t.ref_no||'—')+'</td>'+
+      '<td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div><div class="b2">'+(t.org_name||'')+'</div></td>'+
+      '<td style="color:#666">'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
+      '<td style="color:#555;font-size:11px">'+(t.deadline||'—')+'</td>'+
+      '<td>'+badge(verd(t))+'</td>'+
+      '<td><button class="act-btn ab-blue" onclick="setAnalyse(\''+tid+'\')">Analyse</button> <button class="act-btn ab-blue" onclick="showDetail(\''+tid+'\')">View</button></td>'+
     '</tr>';
   }).join('');
 }
 
-function populateSelects() {
-  var opts = '<option value="">-- Select a tender --</option>' + allTenders.map(function(t){
-    return '<option value="' + t.t247_id + '">[' + t.t247_id + '] ' + (t.brief||'').substring(0,50) + '</option>';
-  }).join('');
-  var el = document.getElementById('cl-select');
-  if (el) el.innerHTML = opts;
-  if (currentTenderId && el) el.value = currentTenderId;
-}
-
-function openAnalyse(tid) {
-  currentTenderId = tid;
-  document.getElementById('an-tid').value = tid;
-  var banner = document.getElementById('ctx-banner');
-  if (banner) { banner.style.display = 'flex'; document.getElementById('ctx-id').textContent = tid; }
-  showPage('analyse');
-}
-
-function openChecklist(tid) {
-  currentTenderId = tid;
-  showPage('checklist');
-  setTimeout(function(){ populateSelects(); loadChecklist(); }, 100);
-}
-
-function clearCtx() {
-  currentTenderId = '';
-  document.getElementById('ctx-banner').style.display = 'none';
-  document.getElementById('an-tid').value = '';
-}
-
-// DETAIL PANEL
-function viewDetail(tid) {
-  var t = allTenders.find(function(x){ return x.t247_id === tid; });
-  if (!t) { toast('Tender not found', 'error'); return; }
-  var v = getVerdict(t);
+// ═══════════════════════════════════════════════════
+// DETAIL PANEL — shows ALL Excel fields
+// ═══════════════════════════════════════════════════
+function showDetail(tid) {
+  var t = T.find(function(x){ return x.t247_id===tid; });
+  if (!t) { toast('Not found','error'); return; }
+  var v = verd(t);
   var col = v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
   var rows = [
-    ['T247 ID', t.t247_id||'—'], ['Ref No', t.ref_no||'—'],
-    ['Deadline', t.deadline||'—'], ['Days Left', getDaysLeft(t)===999?'—':getDaysLeft(t)+'d'],
-    ['Value', t.estimated_cost_cr?'₹'+t.estimated_cost_cr+' Cr':'—'],
-    ['EMD', t.emd||'—'], ['Doc Fee', t.doc_fee||'—'],
-    ['Location', t.location||'—'], ['MSME Exempt', t.msme_exemption||'—']
+    ['T247 ID', t.t247_id||'—'],['Ref No', t.ref_no||'—'],
+    ['Deadline', t.deadline||'—'],['Days Left', dl(t)===999?'—':dl(t)+'d'],
+    ['Estimated Value', t.estimated_cost_cr?'₹'+t.estimated_cost_cr+' Cr':'—'],
+    ['EMD', t.emd||'—'],['Doc Fee', t.doc_fee||'—'],
+    ['MSME Exempt', t.msme_exemption||'—'],
+    ['Location', (t.location||'')+(t.state?' ('+t.state+')':'')],
+    ['Category', t.category||'—'],
+    ['Is GEM', t.is_gem?'Yes':'No'],
   ];
-  document.getElementById('detail-content').innerHTML =
-    '<div style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:12px">'+v+'</div>' +
-    '<div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px">' + (t.brief||'—') + '</div>' +
-    '<div style="font-size:12px;color:#555;margin-bottom:16px">' + (t.org_name||'') + (t.location?' · '+t.location:'') + '</div>' +
-    '<table style="width:100%;font-size:13px"><tbody>' +
-    rows.map(function(r){ return '<tr><td style="color:#555;padding:5px 0;width:110px">'+r[0]+'</td><td style="color:#ccc">'+r[1]+'</td></tr>'; }).join('') +
-    '</tbody></table>' +
-    (t.reason ? '<div style="margin-top:12px;font-size:12px;color:#f59e0b">Reason: ' + t.reason + '</div>' : '') +
-    '<div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">' +
-    '<button class="btn btn-primary btn-sm" onclick="openAnalyse(\'' + tid + '\')">🔍 Analyse</button>' +
-    '<button class="btn btn-ghost btn-sm" onclick="openChecklist(\'' + tid + '\')">✅ Checklist</button>' +
+  // GeM-specific fields
+  if (t.is_gem) {
+    if (t.ministry) rows.push(['Ministry', t.ministry]);
+    if (t.department) rows.push(['Department', t.department]);
+    if (t.turnover_required) rows.push(['Turnover Req.', t.turnover_required]);
+    if (t.experience_years) rows.push(['Experience Req.', t.experience_years]);
+    if (t.contract_period) rows.push(['Contract Period', t.contract_period]);
+    if (t.evaluation_method) rows.push(['Eval Method', t.evaluation_method]);
+    if (t.pbg_percentage) rows.push(['PBG %', t.pbg_percentage]);
+    if (t.mse_preference) rows.push(['MSE Preference', t.mse_preference]);
+  }
+  // Bid opening, validity
+  if (t.bid_opening_date) rows.push(['Bid Opening', t.bid_opening_date]);
+  if (t.bid_validity) rows.push(['Bid Validity', t.bid_validity]);
+
+  var html =
+    '<div style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:10px">'+v+'</div>'+
+    '<div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:3px">'+(t.brief||'—')+'</div>'+
+    '<div style="font-size:11px;color:#444;margin-bottom:14px">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div>'+
+    // Copy fields
+    '<div class="copy-field" onclick="copyText(\''+tid+'\',this)"><div><div class="cf-label">T247 ID — click to copy</div><div class="cf-val">'+tid+'</div></div><div class="cf-btn">Copy</div></div>'+
+    (t.ref_no&&t.ref_no!=='—'?'<div class="copy-field" onclick="copyText(\''+t.ref_no.replace(/'/g,'')+'\ ',this)"><div><div class="cf-label">Reference No — click to copy</div><div class="cf-val">'+(t.ref_no||'')+'</div></div><div class="cf-btn">Copy</div></div>':'')+
+    // Details table
+    '<table style="width:100%;font-size:11px;margin-top:12px"><tbody>'+
+    rows.map(function(r){ return '<tr><td style="color:#444;padding:4px 0;width:115px;vertical-align:top">'+r[0]+'</td><td style="color:#ccc">'+r[1]+'</td></tr>'; }).join('')+
+    '</tbody></table>'+
+    // Reason / eligibility
+    (t.reason?'<div style="margin-top:10px;font-size:11px;color:#f59e0b;padding:8px;background:#1a1203;border-radius:5px">⚡ '+t.reason+'</div>':'')+
+    (t.eligibility?'<div style="margin-top:10px"><div style="font-size:10px;color:#444;text-transform:uppercase;margin-bottom:4px">Eligibility</div><div style="font-size:11px;color:#aaa;line-height:1.5">'+t.eligibility+'</div></div>':'')+
+    // Actions
+    '<div style="margin-top:16px;display:flex;gap:7px;flex-wrap:wrap">'+
+    '<button class="btn btn-p btn-sm" onclick="setAnalyse(\''+tid+'\');closeDetail()">🔍 Analyse</button>'+
+    '<button class="btn btn-g btn-sm" onclick="openCL(\''+tid+'\');closeDetail()">✅ Checklist</button>'+
     '</div>';
+
+  document.getElementById('detail-body').innerHTML = html;
   document.getElementById('detail-panel').classList.add('open');
 }
+function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
 
-function closeDetail() {
-  document.getElementById('detail-panel').classList.remove('open');
+// ═══════════════════════════════════════════════════
+// ANALYSE
+// ═══════════════════════════════════════════════════
+var currentTid = '';
+function setAnalyse(tid) {
+  currentTid = tid;
+  document.getElementById('an-tid').value = tid;
+  document.getElementById('ctx-bar').style.display = 'flex';
+  document.getElementById('ctx-id').textContent = tid;
+  go('analyse');
 }
-
-// ═══════════════════════════════════════
-// API CALLS
-// ═══════════════════════════════════════
-async function loadDashboard() {
-  try {
-    var r = await fetch('/dashboard');
-    var d = await r.json();
-    var s = d.stats || {};
-    document.getElementById('s-total').textContent = s.total || 0;
-    document.getElementById('s-bid').textContent = s.bid || 0;
-    document.getElementById('s-cond').textContent = s.conditional || 0;
-    document.getElementById('s-nobid').textContent = s.no_bid || 0;
-    document.getElementById('s-review').textContent = s.review || 0;
-    document.getElementById('nb-total').textContent = s.total || 0;
-    document.getElementById('sys-tenders').textContent = s.total || 0;
-    allTenders = d.tenders || [];
-    renderDash();
-    var ac = document.getElementById('alert-container'); ac.innerHTML = '';
-    if ((s.deadline_today||0) > 0) ac.innerHTML += '<div class="alert-bar red">🔴 ' + s.deadline_today + ' tender(s) due TODAY</div>';
-    if ((s.deadline_3days||0) > 0) ac.innerHTML += '<div class="alert-bar amber">⚠ ' + s.deadline_3days + ' tender(s) due within 3 days</div>';
-  } catch(e) {
-    document.getElementById('dash-table').innerHTML = '<tr><td colspan="6" class="empty-state" style="color:#ef4444">Error loading: ' + e.message + '</td></tr>';
+function clearCtx() {
+  currentTid = '';
+  document.getElementById('ctx-bar').style.display = 'none';
+  document.getElementById('an-tid').value = '';
+}
+function updateFileList(inp) {
+  var el = document.getElementById('an-filelist');
+  if (el) el.textContent = Array.from(inp.files).map(function(f){return f.name;}).join(', ');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  var dt = e.dataTransfer;
+  if (dt && dt.files.length) {
+    document.getElementById('an-files').files = dt.files;
+    updateFileList(document.getElementById('an-files'));
   }
 }
-
-async function checkDriveStatus() {
-  try {
-    var r = await fetch('/drive-status');
-    var d = await r.json();
-    var dot = document.getElementById('drive-dot');
-    var lbl = document.getElementById('drive-label');
-    if (d.drive_connected) {
-      dot.className = 'status-dot dot-green'; lbl.textContent = 'Drive: ' + d.tenders_in_memory + ' tenders';
-      if (document.getElementById('sys-drive')) document.getElementById('sys-drive').textContent = 'Connected';
-    } else {
-      dot.className = 'status-dot dot-red'; lbl.textContent = 'Drive: offline';
-      if (document.getElementById('sys-drive')) document.getElementById('sys-drive').textContent = 'Not connected';
-    }
-  } catch(e) {}
-}
-
-async function checkAIStatus() {
-  try {
-    var r = await fetch('/health');
-    var d = await r.json();
-    var txt = d.ai_configured ? '✅ Configured' : '❌ No key set';
-    document.getElementById('api-status').textContent = 'AI: ' + (d.ai_configured ? 'On' : 'Off');
-    if (document.getElementById('sys-ai')) document.getElementById('sys-ai').textContent = txt;
-  } catch(e) {}
-}
-
-async function loadSettings() {
-  try {
-    var r = await fetch('/config');
-    var d = await r.json();
-    if (d.gemini_api_key) document.getElementById('key1').value = d.gemini_api_key;
-    checkAIStatus();
-    checkDriveStatus();
-  } catch(e) {}
-}
-
-async function saveKeys() {
-  var body = {
-    gemini_api_key: document.getElementById('key1').value,
-    gemini_api_key_2: document.getElementById('key2').value,
-    gemini_api_key_3: document.getElementById('key3').value
-  };
-  try {
-    await fetch('/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    toast('Keys saved ✅', 'success');
-    checkAIStatus();
-  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
-}
-
-async function testAI() {
-  var el = document.getElementById('ai-test-result');
-  el.textContent = 'Testing...'; el.style.color = '#555';
-  try {
-    var r = await fetch('/test-ai');
-    var d = await r.json();
-    el.textContent = d.status === 'ok' ? '✅ AI working' : '❌ ' + (d.error||d.message||'Failed');
-    el.style.color = d.status === 'ok' ? '#22c55e' : '#ef4444';
-  } catch(e) { el.textContent = 'Error: ' + e.message; el.style.color = '#ef4444'; }
-}
-
-async function importExcel(input) {
-  var file = input.files[0]; if (!file) return;
-  showLoading('Importing Excel and classifying tenders...');
-  var fd = new FormData(); fd.append('file', file);
-  try {
-    var r = await fetch('/import-excel', {method:'POST', body:fd});
-    var d = await r.json();
-    hideLoading();
-    var total = d.total || d.imported || 0;
-    toast('✅ Imported ' + total + ' tenders (' + (d.added||0) + ' new, ' + (d.updated||0) + ' updated)', 'success');
-    loadDashboard();
-  } catch(e) { hideLoading(); toast('Import failed: ' + e.message, 'error'); }
-  input.value = '';
-}
-
-async function syncDrive() {
-  showLoading('Syncing with Google Drive...');
-  try {
-    var r = await fetch('/sync-drive', {method:'POST'});
-    var d = await r.json();
-    hideLoading();
-    toast(d.message || 'Synced ✅', 'success');
-    checkDriveStatus();
-  } catch(e) { hideLoading(); toast('Sync failed: ' + e.message, 'error'); }
-}
-
-async function uploadDB(input) {
-  var file = input.files[0]; if (!file) return;
-  showLoading('Uploading database...');
-  var fd = new FormData(); fd.append('file', file);
-  try {
-    var r = await fetch('/upload-db', {method:'POST', body:fd});
-    var d = await r.json();
-    hideLoading();
-    document.getElementById('db-upload-result').textContent = d.message || 'Uploaded ' + d.tenders + ' tenders';
-    document.getElementById('db-upload-result').style.color = '#22c55e';
-    loadDashboard();
-    toast(d.message || '✅ Database uploaded', 'success');
-  } catch(e) { hideLoading(); toast('Upload failed: ' + e.message, 'error'); }
-  input.value = '';
-}
-
-async function exportTenders() {
-  toast('Preparing export...', 'info');
-  window.location.href = '/export-tenders';
-}
-
-async function skipTender(tid) {
-  if (!confirm('Skip this tender?')) return;
-  try {
-    await fetch('/tender/' + tid + '/skip', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reason:'Not interested'})});
-    toast('Tender skipped', 'success');
-    loadDashboard();
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
-}
-
-// ANALYSE
-function updateFileList(input) {
-  var el = document.getElementById('an-filelist');
-  if (el) el.textContent = Array.from(input.files).map(function(f){ return f.name; }).join(', ');
-}
-
-async function analyseTender() {
+async function doAnalyse() {
   var tid = document.getElementById('an-tid').value.trim();
   var files = document.getElementById('an-files').files;
-  if (!files.length && !tid) { toast('Upload files or enter T247 ID', 'info'); return; }
-  if (!files.length) { toast('Please upload tender documents (ZIP, PDF, or DOCX)', 'info'); return; }
-  showLoading('Analysing tender with AI...');
+  if (!files.length) { toast('Upload files first (ZIP, PDF, or DOCX)', 'info'); return; }
+  showLoad('Analysing with AI — this may take 30-60 seconds...');
   var fd = new FormData();
   if (tid) fd.append('t247_id', tid);
-  for (var i = 0; i < files.length; i++) fd.append('files', files[i]);
+  for (var i=0;i<files.length;i++) fd.append('files', files[i]);
   try {
     var r = await fetch('/process-files', {method:'POST', body:fd});
     var d = await r.json();
-    hideLoading();
+    hideLoad();
     var td = d.tender_data || d;
-    var v = (td.overall_verdict && td.overall_verdict.verdict) || d.bid_no_bid || d.verdict || 'REVIEW';
-    var col = v.includes('BID') && !v.includes('NO') ? '#22c55e' : v.includes('NO') ? '#ef4444' : v.includes('CONDITIONAL') ? '#f59e0b' : '#3b82f6';
-    var reason = (td.overall_verdict && td.overall_verdict.reason) || td.recommendation_reason || '';
-    document.getElementById('an-result').innerHTML =
-      '<div class="card" style="border-color:' + col + '">' +
-      '<div style="font-size:20px;font-weight:700;color:' + col + ';margin-bottom:8px">' + v + '</div>' +
-      '<div style="font-size:13px;color:#888;margin-bottom:12px">' + reason + '</div>' +
-      (td.ai_warning ? '<div style="font-size:12px;color:#f59e0b;margin-bottom:8px">⚠ ' + td.ai_warning + '</div>' : '') +
-      (d.ai_used ? '<div style="font-size:11px;color:#22c55e">✅ AI analysis complete</div>' : '<div style="font-size:11px;color:#f59e0b">⚠ Basic extraction only (no AI key)</div>') +
-      '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
-      (d.download_file ? '<a href="/download/' + d.download_file + '" class="btn btn-ghost btn-sm">⬇ Download Report</a>' : '') +
-      '</div></div>';
-    if (tid) {
-      currentTenderId = tid;
-      document.getElementById('ctx-banner').style.display = 'flex';
-      document.getElementById('ctx-id').textContent = tid;
+    var ov = td.overall_verdict || {};
+    var v = ov.verdict || d.verdict || 'REVIEW';
+    var col = v.includes('BID')&&!v.includes('NO')?'#22c55e':v.includes('NO')?'#ef4444':v.includes('COND')?'#f59e0b':'#3b82f6';
+    var html = '<div class="card" style="border-color:'+col+'">'+
+      '<div style="font-size:18px;font-weight:700;color:'+col+';margin-bottom:6px">'+v+'</div>'+
+      '<div style="font-size:12px;color:#888;margin-bottom:10px">'+(ov.reason||td.recommendation_reason||'')+'</div>'+
+      (td.ai_warning?'<div style="font-size:11px;color:#f59e0b;margin-bottom:8px;padding:7px;background:#1a1203;border-radius:5px">⚠ '+td.ai_warning+'</div>':'')+
+      '<div style="font-size:11px;margin-bottom:10px;color:'+(d.ai_used?'#22c55e':'#f59e0b')+'">'+(d.ai_used?'✅ AI analysis complete':'⚠ Basic extraction only (add Gemini key in Settings)')+'</div>'+
+      (d.download_file?'<a href="/download/'+d.download_file+'" class="btn btn-g btn-sm" style="text-decoration:none">⬇ Download Report (.docx)</a>':'')+
+    '</div>';
+    // PQ/TQ table
+    var pq = (td.pq_criteria&&td.pq_criteria.length)?td.pq_criteria:[];
+    var tq = (td.tq_criteria&&td.tq_criteria.length)?td.tq_criteria:[];
+    if (pq.length || tq.length) {
+      document.getElementById('pq-section').style.display = 'block';
+      var ptbl = '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:#aaa;margin-bottom:8px">PQ Criteria ('+pq.length+')</div>';
+      if (pq.length) {
+        ptbl += '<div class="table-wrap"><table><thead><tr><th>Sr</th><th>Criteria</th><th>Status</th><th>Remark</th></tr></thead><tbody>';
+        pq.forEach(function(p){
+          var sc = p.nascent_color==='GREEN'?'#22c55e':p.nascent_color==='RED'?'#ef4444':p.nascent_color==='AMBER'?'#f59e0b':'#3b82f6';
+          ptbl += '<tr><td class="mono" style="width:40px">'+(p.sl_no||'')+'</td>'+
+            '<td style="font-size:11px;max-width:220px">'+(p.criteria||'')+'</td>'+
+            '<td><span style="color:'+sc+';font-weight:700;font-size:11px">'+(p.nascent_status||'—')+'</span></td>'+
+            '<td style="font-size:10px;color:#666">'+(p.nascent_remark||'').substring(0,80)+'</td></tr>';
+        });
+        ptbl += '</tbody></table></div>';
+      }
+      if (tq.length) {
+        ptbl += '<div style="font-size:12px;font-weight:600;color:#aaa;margin:12px 0 8px">TQ Criteria ('+tq.length+')</div>';
+        ptbl += '<div class="table-wrap"><table><thead><tr><th>Sr</th><th>Criteria</th><th>Marks</th><th>Status</th></tr></thead><tbody>';
+        tq.forEach(function(p){
+          var sc = p.nascent_color==='GREEN'?'#22c55e':p.nascent_color==='RED'?'#ef4444':p.nascent_color==='AMBER'?'#f59e0b':'#3b82f6';
+          ptbl += '<tr><td class="mono" style="width:40px">'+(p.sl_no||'')+'</td>'+
+            '<td style="font-size:11px;max-width:220px">'+(p.criteria||'')+'</td>'+
+            '<td style="font-size:11px;color:#888">'+(p.details||'').substring(0,30)+'</td>'+
+            '<td><span style="color:'+sc+';font-weight:700;font-size:11px">'+(p.nascent_status||'—')+'</span></td></tr>';
+        });
+        ptbl += '</tbody></table></div>';
+      }
+      document.getElementById('pq-table').innerHTML = ptbl + '</div>';
     }
-    document.getElementById('prebid-section').style.display = 'block';
-    loadPrebidQueries();
-    loadDashboard();
-    toast('Analysis complete: ' + v, v.includes('BID') && !v.includes('NO') ? 'success' : 'info');
+    document.getElementById('an-result').innerHTML = html;
+    if (tid) currentTid = tid;
+    loadDash();
+    toast('Analysis: '+v, v.includes('BID')&&!v.includes('NO')?'success':'info');
   } catch(e) {
-    hideLoading();
-    toast('Analysis failed: ' + e.message, 'error');
-    document.getElementById('an-result').innerHTML = '<div class="card" style="border-color:#ef4444"><div style="color:#ef4444">Error: ' + e.message + '</div></div>';
+    hideLoad();
+    toast('Failed: '+e.message, 'error');
+    document.getElementById('an-result').innerHTML = '<div class="card" style="border-color:#ef4444"><div style="color:#ef4444">Error: '+e.message+'</div></div>';
   }
 }
 
-async function loadPrebidQueries() {
-  var tid = currentTenderId || document.getElementById('an-tid').value.trim();
-  var el = document.getElementById('prebid-list'); if (!el) return;
-  if (!tid) { el.innerHTML = '<div class="empty-state">Select a tender first.</div>'; return; }
+// ═══════════════════════════════════════════════════
+// PRE-BID QUERIES
+// ═══════════════════════════════════════════════════
+function fillSelects() {
+  var opts = '<option value="">-- Select a tender --</option>' + T.map(function(t){
+    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
+  }).join('');
+  ['pb-sel','cl-sel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  if (currentTid) {
+    ['pb-sel','cl-sel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=currentTid; });
+  }
+}
+async function loadPrebid() {
+  var tid = document.getElementById('pb-sel').value; if(!tid) return;
+  var el = document.getElementById('pb-content');
   try {
-    var r = await fetch('/prebid-queries/' + tid);
+    var r = await fetch('/prebid-queries/'+tid);
     var d = await r.json();
-    var qs = d.queries || [];
-    if (!qs.length) { el.innerHTML = '<div class="empty-state">No pre-bid queries generated yet.</div>'; return; }
-    el.innerHTML = qs.map(function(q, i){
-      var qtext = typeof q === 'string' ? q : (q.query || JSON.stringify(q));
-      var clause = typeof q === 'object' ? (q.clause || '') : '';
-      return '<div style="padding:10px 0;border-bottom:1px solid #151820">' +
-        '<div style="font-size:12px;font-weight:600;color:#60a5fa">Q'+(i+1)+(clause?' — '+clause:'')+'</div>' +
-        '<div style="font-size:13px;color:#ccc;margin-top:4px">' + qtext + '</div></div>';
-    }).join('');
-  } catch(e) { el.innerHTML = '<div style="color:#ef4444;font-size:12px">Error loading queries</div>'; }
+    var qs = d.queries||[];
+    if (!qs.length) { el.innerHTML='<div class="empty">No pre-bid queries yet. Analyse the tender first.</div>'; return; }
+    el.innerHTML = '<div class="card"><div class="card-title">Pre-Bid Queries ('+qs.length+')</div>'+
+      qs.map(function(q,i){
+        var qt = typeof q==='string'?q:(q.query||'');
+        var cl = typeof q==='object'?(q.clause||''):'';
+        return '<div style="padding:10px 0;border-bottom:1px solid #151820">'+
+          '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:3px">Q'+(i+1)+(cl?' — Clause '+cl:'')+'</div>'+
+          '<div style="font-size:12px;color:#ccc">'+qt+'</div></div>';
+      }).join('')+'</div>';
+  } catch(e) { el.innerHTML='<div style="color:#ef4444;font-size:12px">Error: '+e.message+'</div>'; }
 }
 
+// ═══════════════════════════════════════════════════
 // CHECKLIST
+// ═══════════════════════════════════════════════════
+function openCL(tid) { currentTid=tid; go('checklist'); setTimeout(function(){ fillSelects(); document.getElementById('cl-sel').value=tid; loadChecklist(); },100); }
 async function loadChecklist() {
-  var tid = document.getElementById('cl-select') ? document.getElementById('cl-select').value : currentTenderId;
-  if (!tid) return;
+  var tid = document.getElementById('cl-sel').value; if(!tid) return;
   var el = document.getElementById('cl-content');
-  el.innerHTML = '<div class="empty-state">Loading...</div>';
+  el.innerHTML = '<div class="empty">Loading...</div>';
   try {
-    var r = await fetch('/checklist/' + tid);
+    var r = await fetch('/checklist/'+tid);
     var d = await r.json();
-    var items = d.checklist || [];
-    if (!items.length) { el.innerHTML = '<div class="empty-state">No checklist yet. Analyse the tender first.</div>'; return; }
-    var done = items.filter(function(i){ return i.done; }).length;
-    el.innerHTML = '<div class="card">' +
-      '<div class="card-title">Checklist (' + done + '/' + items.length + ')</div>' +
-      '<div class="progress-bar"><div class="progress-fill" style="width:' + (100*done/items.length) + '%"></div></div>' +
-      '<div style="margin-top:14px">' +
+    var items = d.checklist||[];
+    if (!items.length) { el.innerHTML='<div class="empty">No checklist yet. Analyse this tender first.</div>'; return; }
+    var done = items.filter(function(i){return i.done;}).length;
+    el.innerHTML = '<div class="card">'+
+      '<div class="card-title">Checklist ('+done+'/'+items.length+')<span style="font-size:11px;color:#3b82f6">'+Math.round(100*done/items.length)+'%</span></div>'+
+      '<div class="progress-bar"><div class="progress-fill" style="width:'+Math.round(100*done/items.length)+'%"></div></div>'+
+      '<div style="margin-top:12px">'+
       items.map(function(item){
-        return '<div class="checklist-item' + (item.done?' done':'') + '">' +
-          '<input type="checkbox" ' + (item.done?'checked':'') + ' onchange="toggleItem(\'' + tid + '\',\'' + (item.id||item.label) + '\',this.checked)">' +
-          '<span class="cl-label">' + (item.label||item.title||item.description||'') + '</span>' +
-          '<span class="cl-cat">' + (item.category||'') + '</span>' +
+        var iid = (item.id||item.label||'').replace(/'/g,'');
+        return '<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #151820;'+(item.done?'opacity:.6':'')+'">'+
+          '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCL(\''+tid+'\',\''+iid+'\',this.checked)" style="width:15px;height:15px;accent-color:#3b82f6;flex-shrink:0">'+
+          '<span style="font-size:12px;flex:1;'+(item.done?'text-decoration:line-through;color:#444':'')+'"> '+(item.label||item.title||'')+'</span>'+
+          '<span style="font-size:9px;color:#333;background:#12141e;padding:1px 5px;border-radius:3px">'+(item.category||'')+'</span>'+
           '</div>';
-      }).join('') + '</div></div>';
-  } catch(e) { el.innerHTML = '<div style="color:#ef4444">Error: ' + e.message + '</div>'; }
+      }).join('')+'</div></div>';
+  } catch(e) { el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>'; }
+}
+async function toggleCL(tid, itemId, done) {
+  try { await fetch('/checklist/'+tid+'/item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:itemId,done:done})}); }
+  catch(e){}
 }
 
-async function toggleItem(tid, itemId, done) {
-  try {
-    await fetch('/checklist/' + tid + '/item', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:itemId, done:done})});
-  } catch(e) {}
-}
-
+// ═══════════════════════════════════════════════════
 // REPORTS
+// ═══════════════════════════════════════════════════
 async function loadReports() {
   try {
     var r = await fetch('/reports-list');
     var d = await r.json();
-    var tbody = document.getElementById('reports-table');
-    if (!d.reports || !d.reports.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No reports yet.</td></tr>'; return; }
-    tbody.innerHTML = d.reports.map(function(rep){
-      return '<tr>' +
-        '<td style="font-size:12px;color:#aaa">' + rep.filename + '</td>' +
-        '<td style="font-size:12px;color:#666">' + (rep.tender_name||rep.t247_id||'—') + '</td>' +
-        '<td style="font-size:12px;color:#555">' + rep.created + '</td>' +
-        '<td style="font-size:12px;color:#555">' + rep.size_kb + ' KB</td>' +
-        '<td><a href="/download/' + rep.filename + '" class="action-btn blue">⬇ Download</a></td>' +
+    var tb = document.getElementById('rep-tbody');
+    if (!d.reports||!d.reports.length) { tb.innerHTML='<tr><td colspan="6" class="empty">No reports yet.</td></tr>'; return; }
+    tb.innerHTML = d.reports.map(function(rep){
+      return '<tr>'+
+        '<td style="font-size:11px;color:#aaa;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+rep.filename+'</td>'+
+        '<td style="font-size:11px;color:#666">'+(rep.tender_name||rep.t247_id||'—')+'</td>'+
+        '<td>'+badge(rep.verdict||'—')+'</td>'+
+        '<td style="font-size:11px;color:#444">'+rep.created+'</td>'+
+        '<td style="font-size:11px;color:#444">'+rep.size_kb+' KB</td>'+
+        '<td><a href="/download/'+rep.filename+'" class="act-btn ab-blue" style="text-decoration:none">⬇ Download</a></td>'+
       '</tr>';
     }).join('');
   } catch(e) {}
 }
 
-// ANALYTICS
-async function loadAnalytics() {
+// ═══════════════════════════════════════════════════
+// BID TRACKER
+// ═══════════════════════════════════════════════════
+var STAGES = ['Identified','Pre-bid Sent','Documents Ready','Submitted','Evaluation','Won','Lost','Disqualified','Not Interested'];
+var STAGE_COL = {'Won':'#22c55e','Lost':'#ef4444','Disqualified':'#f59e0b','Identified':'#3b82f6','Submitted':'#a78bfa'};
+async function loadTracker() {
   try {
-    var r = await fetch('/dashboard');
-    var d = await r.json();
-    var s = d.stats || {};
-    var grid = document.getElementById('analytics-grid');
-    if (!grid) return;
-    var metrics = [
-      ['Total Tenders', s.total||0, '#60a5fa'],
-      ['BID Recommended', s.bid||0, '#22c55e'],
-      ['Conditional', s.conditional||0, '#f59e0b'],
-      ['No-Bid', s.no_bid||0, '#ef4444'],
-      ['AI Analysed', s.analysed||0, '#a78bfa'],
-      ['Due Today', s.deadline_today||0, '#ef4444'],
-    ];
-    grid.innerHTML = metrics.map(function(m){
-      return '<div style="background:#1a1d27;border-radius:10px;padding:16px;border:1px solid #1e2130;text-align:center">' +
-        '<div style="font-size:28px;font-weight:700;color:'+m[2]+'">'+m[1]+'</div>' +
-        '<div style="font-size:11px;color:#555;margin-top:4px">'+m[0]+'</div>' +
-        '</div>';
+    var r = await fetch('/pipeline'); var d = await r.json();
+    var prow = document.getElementById('pipe-row');
+    var stages = d.stages||{};
+    prow.innerHTML = STAGES.map(function(s){
+      var cnt = stages[s]||0;
+      var col = STAGE_COL[s]||'#3b82f6';
+      return '<div class="pipe-col">'+
+        '<div class="pipe-head" style="color:'+col+'">'+s+'</div>'+
+        '<div class="pipe-count" style="color:'+col+'">'+cnt+'</div>'+
+        '<div style="font-size:10px;color:#333">tenders</div>'+
+      '</div>';
+    }).join('');
+    // Alerts
+    var ar = await fetch('/alerts'); var ad = await r.json();
+    var alerts = (await (await fetch('/alerts')).json()).alerts||[];
+    var nb = document.getElementById('nb-alerts');
+    if(nb) nb.textContent = alerts.length||'';
+    var as = document.getElementById('alerts-section'); if(!as) return;
+    if (alerts.length) {
+      as.innerHTML = '<div style="margin-bottom:12px">'+alerts.map(function(a){
+        var cls = a.days_left<=0?'r':a.days_left<=3?'r':'a';
+        return '<div class="alert-bar '+cls+'">'+
+          (a.days_left<=0?'🔴':'⚠')+' <b>'+a.t247_id+'</b> — '+(a.brief||'').substring(0,60)+
+          ' — <b>'+(a.days_left<=0?'EXPIRED':a.days_left+'d left')+'</b></div>';
+      }).join('')+'</div>';
+    }
+    // Tracker table
+    var bid_tenders = T.filter(function(t){ return verd(t)==='BID'||verd(t)==='CONDITIONAL'; });
+    var tb = document.getElementById('tracker-tbody');
+    if (!bid_tenders.length) { tb.innerHTML='<tr><td colspan="6" class="empty">No BID/Conditional tenders yet.</td></tr>'; return; }
+    tb.innerHTML = bid_tenders.slice(0,50).map(function(t){
+      var tid=t.t247_id||'', pct=t.checklist_pct||0;
+      var stageOpts = STAGES.map(function(s){ return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+s+'</option>'; }).join('');
+      return '<tr>'+
+        '<td class="mono">'+tid+'</td>'+
+        '<td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div></td>'+
+        '<td style="font-size:11px;color:#555">'+(t.deadline||'—')+'</td>'+
+        '<td>'+badge(verd(t))+'</td>'+
+        '<td><select onchange="updateStage(\''+tid+'\',this.value)" style="font-size:11px;padding:3px 6px;background:#12141e;border:1px solid #252830;color:#aaa;border-radius:4px">'+stageOpts+'</select></td>'+
+        '<td><div style="font-size:10px;color:#555;margin-bottom:2px">'+pct+'%</div><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:'+pct+'%"></div></div></td>'+
+      '</tr>';
+    }).join('');
+  } catch(e) { console.error('Tracker error:', e); }
+}
+async function updateStage(tid, stage) {
+  try { await fetch('/tender/'+tid+'/stage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:stage})}); toast('Stage updated','success'); }
+  catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════
+// WIN / LOSS
+// ═══════════════════════════════════════════════════
+async function loadWL() {
+  try {
+    var r = await fetch('/win-loss'); var d = await r.json();
+    var stats = d.stats||{};
+    var sg = document.getElementById('wl-stats');
+    sg.innerHTML = [
+      ['Won', stats.won||0, '#22c55e'],['Lost', stats.lost||0, '#ef4444'],
+      ['Win Rate', (stats.win_rate||0)+'%', '#3b82f6'],['Total Value Won', '₹'+(stats.total_value||0)+' Cr', '#a78bfa']
+    ].map(function(s){ return '<div class="stat"><div class="stat-num" style="color:'+s[2]+'">'+s[1]+'</div><div class="stat-lbl">'+s[0]+'</div></div>'; }).join('');
+    var results = d.results||[];
+    var tb = document.getElementById('wl-tbody');
+    if (!results.length) { tb.innerHTML='<tr><td colspan="4" class="empty">No outcomes recorded.</td></tr>'; return; }
+    tb.innerHTML = results.map(function(r){
+      return '<tr><td class="mono">'+(r.t247_id||'—')+'</td><td style="font-size:11px">'+(r.brief||'—')+'</td><td>'+badge(r.outcome)+'</td><td style="font-size:11px;color:#888">'+(r.outcome_value?'₹'+r.outcome_value+' Cr':'—')+'</td></tr>';
     }).join('');
   } catch(e) {}
 }
-
-async function saveBidResult() {
-  var body = {outcome: document.getElementById('res-outcome').value, outcome_value: document.getElementById('res-value').value, outcome_notes: document.getElementById('res-notes').value};
-  var tid = document.getElementById('res-tid').value.trim();
-  if (!tid) { toast('Enter T247 ID', 'info'); return; }
+async function saveOutcome() {
+  var tid = document.getElementById('wl-tid').value.trim();
+  if (!tid) { toast('Enter T247 ID','info'); return; }
+  var body = { status: document.getElementById('wl-outcome').value, outcome_value: document.getElementById('wl-val').value, outcome_notes: document.getElementById('wl-notes').value };
   try {
-    await fetch('/tender/' + tid + '/stage', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    toast('Result saved ✅', 'success');
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+    await fetch('/tender/'+tid+'/stage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast('Outcome saved','success'); loadWL();
+  } catch(e){ toast('Error: '+e.message,'error'); }
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// SETTINGS / PROFILE
+// ═══════════════════════════════════════════════════
+async function loadSettings() {
+  try {
+    var r = await fetch('/config'); var d = await r.json();
+    if (d.gemini_api_key) document.getElementById('key1').value = d.gemini_api_key;
+    var h = await (await fetch('/health')).json();
+    document.getElementById('sys-ai').textContent = h.ai_configured?'✅ Configured':'❌ No key';
+    document.getElementById('sys-tenders').textContent = h.tenders_loaded||'—';
+    var ds = await (await fetch('/drive-status')).json();
+    document.getElementById('sys-drive').textContent = ds.drive_connected?'Connected ('+ds.tenders_in_memory+')':'Offline';
+    document.getElementById('ai-lbl').textContent = 'AI: '+(h.ai_configured?'On':'Off');
+    var dot = document.getElementById('drive-dot');
+    dot.className = 'status-dot '+(ds.drive_connected?'dot-green':'dot-red');
+    document.getElementById('drive-lbl').textContent = 'Drive: '+(ds.drive_connected?ds.tenders_in_memory+' tenders':'offline');
+  } catch(e){}
+}
+async function saveKeys() {
+  var body = {gemini_api_key:document.getElementById('key1').value, gemini_api_key_2:document.getElementById('key2').value, gemini_api_key_3:document.getElementById('key3').value, groq_api_key:document.getElementById('groq-key').value};
+  try { await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Keys saved ✅','success'); loadSettings(); }
+  catch(e){ toast('Failed: '+e.message,'error'); }
+}
+async function testAI() {
+  var el = document.getElementById('ai-test'); el.textContent='Testing...'; el.style.color='#555';
+  try { var r=await fetch('/test-ai'); var d=await r.json(); el.textContent=d.status==='ok'?'✅ AI working':'❌ '+(d.error||d.message||'Failed'); el.style.color=d.status==='ok'?'#22c55e':'#ef4444'; }
+  catch(e){ el.textContent='Error: '+e.message; el.style.color='#ef4444'; }
+}
+async function uploadDB(inp) {
+  var f=inp.files[0]; if(!f) return;
+  showLoad('Uploading database...');
+  var fd=new FormData(); fd.append('file',f);
+  try {
+    var r=await fetch('/upload-db',{method:'POST',body:fd}); var d=await r.json();
+    hideLoad();
+    document.getElementById('db-result').textContent = d.message||'Uploaded '+d.tenders+' tenders';
+    document.getElementById('db-result').style.color = '#22c55e';
+    loadDash(); toast(d.message||'✅ Uploaded','success');
+  } catch(e){ hideLoad(); toast('Failed: '+e.message,'error'); }
+  inp.value='';
+}
+async function saveProfile() {
+  var data = {
+    name:document.getElementById('p-name').value, cin:document.getElementById('p-cin').value,
+    pan:document.getElementById('p-pan').value, gstin:document.getElementById('p-gst').value,
+    msme:document.getElementById('p-msme').value, signatory:document.getElementById('p-sign').value,
+    md:document.getElementById('p-md').value, address:document.getElementById('p-addr').value,
+    turnover_fy1:document.getElementById('p-t1').value, turnover_fy2:document.getElementById('p-t2').value,
+    turnover_fy3:document.getElementById('p-t3').value, net_worth:document.getElementById('p-nw').value,
+    ca_firm:document.getElementById('p-ca').value, cmmi:document.getElementById('p-cmmi').value,
+    cmmi_valid:document.getElementById('p-cmmi-d').value, iso_9001:document.getElementById('p-iso1').value,
+    iso_27001:document.getElementById('p-iso2').value, iso_20000:document.getElementById('p-iso3').value,
+    total_employees:document.getElementById('p-emp').value, it_employees:document.getElementById('p-emp-it').value,
+    projects:document.getElementById('p-projects').value, tech_stack:document.getElementById('p-tech').value,
+    not_available:document.getElementById('p-not').value
+  };
+  try { await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); toast('Profile saved ✅','success'); }
+  catch(e){ toast('Failed','error'); }
+}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD API CALLS
+// ═══════════════════════════════════════════════════
+async function loadDash() {
+  try {
+    var r = await fetch('/dashboard'); var d = await r.json(); var s = d.stats||{};
+    document.getElementById('s-total').textContent = s.total||0;
+    document.getElementById('s-bid-n').textContent = s.bid||0;
+    document.getElementById('s-cond-n').textContent = s.conditional||0;
+    document.getElementById('s-nobid-n').textContent = s.no_bid||0;
+    document.getElementById('s-rev-n').textContent = s.review||0;
+    document.getElementById('nb-total').textContent = s.total||0;
+    T = d.tenders||[];
+    renderDash();
+    var ac = document.getElementById('alert-box'); ac.innerHTML='';
+    if ((s.deadline_today||0)>0) ac.innerHTML+='<div class="alert-bar r">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
+    if ((s.deadline_3days||0)>0) ac.innerHTML+='<div class="alert-bar a">⚠ '+s.deadline_3days+' due within 3 days</div>';
+    // Update status bar
+    checkStatus();
+  } catch(e) { document.getElementById('dash-tbody').innerHTML='<tr><td colspan="6" class="empty" style="color:#ef4444">Error: '+e.message+'</td></tr>'; }
+}
+async function checkStatus() {
+  try {
+    var h = await (await fetch('/health')).json();
+    document.getElementById('ai-lbl').textContent = 'AI: '+(h.ai_configured?'On':'Off');
+    document.getElementById('ai-lbl').style.color = h.ai_configured?'#22c55e':'#555';
+    var ds = await (await fetch('/drive-status')).json();
+    var dot = document.getElementById('drive-dot');
+    dot.className = 'status-dot '+(ds.drive_connected?'dot-green':'dot-red');
+    document.getElementById('drive-lbl').textContent = 'Drive: '+(ds.drive_connected?ds.tenders_in_memory+' tenders':'offline');
+    document.getElementById('drive-lbl').style.color = ds.drive_connected?'#22c55e':'#555';
+  } catch(e){}
+}
+async function importExcel(inp) {
+  var f=inp.files[0]; if(!f) return;
+  showLoad('Importing Excel — classifying tenders...');
+  var fd=new FormData(); fd.append('file',f);
+  try {
+    var r=await fetch('/import-excel',{method:'POST',body:fd}); var d=await r.json();
+    hideLoad();
+    var tot=d.total||d.imported||0;
+    toast('✅ Imported '+tot+' tenders ('+d.added+' new, '+d.updated+' updated)','success');
+    loadDash();
+  } catch(e){ hideLoad(); toast('Import failed: '+e.message,'error'); }
+  inp.value='';
+}
+async function syncDrive() {
+  showLoad('Syncing to Google Drive...');
+  try {
+    var r=await fetch('/sync-drive',{method:'POST'}); var d=await r.json();
+    hideLoad(); toast(d.message||'Synced ✅','success'); checkStatus();
+  } catch(e){ hideLoad(); toast('Sync failed: '+e.message,'error'); }
+}
+async function exportTenders() {
+  toast('Preparing export...','info');
+  window.location.href='/export-tenders';
+}
+async function skipT(tid) {
+  if (!confirm('Skip this tender?')) return;
+  try { await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Not interested'})}); toast('Skipped','success'); loadDash(); }
+  catch(e){ toast('Error','error'); }
+}
+
+// ═══════════════════════════════════════════════════
+// CHATBOT
+// ═══════════════════════════════════════════════════
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat-win').classList.toggle('open', chatOpen);
+  if (chatOpen) { document.getElementById('chat-input').focus(); document.getElementById('chat-badge').style.display='none'; }
+}
+function sendQ(el) { document.getElementById('chat-input').value=el.textContent; sendChat(); }
+async function sendChat() {
+  var inp = document.getElementById('chat-input');
+  var msg = inp.value.trim(); if (!msg) return;
+  inp.value='';
+  var msgs = document.getElementById('chat-msgs');
+  // Remove suggestions
+  var sg = document.getElementById('chat-sugg'); if(sg) sg.style.display='none';
+  msgs.innerHTML += '<div class="cmsg user"><span>'+msg+'</span></div>';
+  msgs.innerHTML += '<div class="cmsg bot" id="chat-typing"><span style="color:#444">...</span></div>';
+  msgs.scrollTop = msgs.scrollHeight;
+  try {
+    var r = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    var d = await r.json();
+    var typing = document.getElementById('chat-typing'); if(typing) typing.remove();
+    var reply = d.reply||d.message||d.response||JSON.stringify(d);
+    msgs.innerHTML += '<div class="cmsg bot"><span>'+reply.replace(/\n/g,'<br>')+'</span></div>';
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) {
+    var typing = document.getElementById('chat-typing'); if(typing) typing.remove();
+    msgs.innerHTML += '<div class="cmsg bot"><span style="color:#ef4444">Error: '+e.message+'</span></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', function() {
-  loadDashboard();
-  checkDriveStatus();
-  checkAIStatus();
+  loadDash();
+  // Restore active tender if any
+  var saved = localStorage.getItem('atid'); if(saved) currentTid=saved;
 });
 </script>
 </body>
