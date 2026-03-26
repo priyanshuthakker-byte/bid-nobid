@@ -547,6 +547,8 @@ function go(name) {
   if (name === 'tracker') loadTracker();
   if (name === 'winloss') loadWL();
   if (name === 'settings') loadSettings();
+  if (name === 'submission') fillSubSelects();
+  if (name === 'winloss') { loadWL(); loadCompInsights(); }
 }
 
 function ptab(name, el) {
@@ -756,17 +758,13 @@ function showDetail(tid) {
     '<div style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:10px">'+v+'</div>'+
     '<div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:3px">'+(t.brief||'—')+'</div>'+
     '<div style="font-size:11px;color:#444;margin-bottom:14px">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div>'+
-    // Copy fields
     '<div class="copy-field" onclick="copyText(\''+tid+'\',this)"><div><div class="cf-label">T247 ID — click to copy</div><div class="cf-val">'+tid+'</div></div><div class="cf-btn">Copy</div></div>'+
-    (t.ref_no&&t.ref_no!=='—'?'<div class="copy-field" onclick="copyText(\''+t.ref_no.replace(/'/g,'')+'\ ',this)"><div><div class="cf-label">Reference No — click to copy</div><div class="cf-val">'+(t.ref_no||'')+'</div></div><div class="cf-btn">Copy</div></div>':'')+
-    // Details table
+    (t.ref_no&&t.ref_no!=='—'?'<div class="copy-field" onclick="copyText(\''+t.ref_no.replace(/'/g,'')+'\',this)"><div><div class="cf-label">Reference No — click to copy</div><div class="cf-val">'+(t.ref_no||'')+'</div></div><div class="cf-btn">Copy</div></div>':'')+
     '<table style="width:100%;font-size:11px;margin-top:12px"><tbody>'+
     rows.map(function(r){ return '<tr><td style="color:#444;padding:4px 0;width:115px;vertical-align:top">'+r[0]+'</td><td style="color:#ccc">'+r[1]+'</td></tr>'; }).join('')+
     '</tbody></table>'+
-    // Reason / eligibility
     (t.reason?'<div style="margin-top:10px;font-size:11px;color:#f59e0b;padding:8px;background:#1a1203;border-radius:5px">⚡ '+t.reason+'</div>':'')+
     (t.eligibility?'<div style="margin-top:10px"><div style="font-size:10px;color:#444;text-transform:uppercase;margin-bottom:4px">Eligibility</div><div style="font-size:11px;color:#aaa;line-height:1.5">'+t.eligibility+'</div></div>':'')+
-    // Actions
     '<div style="margin-top:16px;display:flex;gap:7px;flex-wrap:wrap">'+
     '<button class="btn btn-p btn-sm" onclick="setAnalyse(\''+tid+'\');closeDetail()">🔍 Analyse</button>'+
     '<button class="btn btn-g btn-sm" onclick="openCL(\''+tid+'\');closeDetail()">✅ Checklist</button>'+
@@ -1356,13 +1354,7 @@ async function checkNewTenders() {
   }
 }
 
-// ═══ Enhanced go() to handle new pages ═══
-var _origGo = go;
-go = function(name) {
-  _origGo(name);
-  if (name === 'submission') { fillSubSelects(); }
-  if (name === 'winloss') { loadCompInsights(); }
-};
+// go() already handles all pages — submission and winloss additions merged above
 
 </script>
 </body>
