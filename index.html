@@ -145,6 +145,7 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   <div class="nav-section">Pipeline</div>
   <button class="nav-btn" onclick="go('tracker')"><span class="icon">🎯</span>Bid Tracker<span class="nav-badge" id="nb-alerts">0</span></button>
   <button class="nav-btn" onclick="go('winloss')"><span class="icon">🏆</span>Win / Loss</button>
+  <button class="nav-btn" onclick="go('submission')"><span class="icon">📦</span>Submission Pkg</button>
   <div class="nav-section">System</div>
   <button class="nav-btn" onclick="go('profile')"><span class="icon">🏢</span>Nascent Profile</button>
   <button class="nav-btn" onclick="go('settings')"><span class="icon">⚙️</span>Settings</button>
@@ -166,6 +167,8 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
       <input type="file" id="xl-input" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
       <button class="btn btn-g btn-sm" onclick="syncDrive()">☁ Sync</button>
       <button class="btn btn-g btn-sm" onclick="loadDash()">🔃</button>
+      <button class="btn btn-g btn-sm" onclick="checkNewTenders()" title="Check T247 for new tenders">🔄 T247</button>
+      <span id="changes-badge" style="display:none;background:#f59e0b;color:#000;border-radius:10px;padding:2px 8px;font-size:11px;cursor:pointer" onclick="showChanges()">⚠ Changes</span>
     </div>
   </div>
   <div class="page-body">
@@ -451,6 +454,35 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
   </div>
 </div>
 
+
+<!-- ═══ SUBMISSION PACKAGE ═══ -->
+<div id="page-submission" class="page">
+  <div class="topbar"><h1>Submission Package</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Generate Full Bid Submission Package</div>
+      <p style="font-size:12px;color:#666;margin-bottom:14px">Select an analysed tender → one click generates all submission documents auto-filled with Nascent data.</p>
+      <label>Select Tender (must be analysed first)</label>
+      <select id="sub-sel" onchange="checkSubStatus()"><option value="">-- Select a tender --</option></select>
+      <div id="sub-status" style="margin-top:10px;font-size:12px;color:#555"></div>
+      <div style="margin-top:14px">
+        <button class="btn btn-p" onclick="genSubmissionPkg()">📦 Generate All Documents</button>
+      </div>
+      <div id="sub-result" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pre-Submission Checklist</div>
+      <select id="psc-sel" onchange="loadPreSubChecklist()"><option value="">-- Select a tender --</option></select>
+      <div id="psc-content" style="margin-top:12px"><div class="empty">Select a tender above.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Documents Included in Package</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+<div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">01 Cover Letter</div><div style="font-size:10px;color:#555">Auto-filled, letterhead</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">02 Non-Blacklisting</div><div style="font-size:10px;color:#555">CIN + signatory</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">03 MSME EMD Exemption</div><div style="font-size:10px;color:#555">UDYAM number</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">04 Financial Standing</div><div style="font-size:10px;color:#555">Turnover table (CA sign needed)</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">05 Employee Strength</div><div style="font-size:10px;color:#555">All 67 employees</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">06 Integrity Pact</div><div style="font-size:10px;color:#555">No-canvassing</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">07 MII Declaration</div><div style="font-size:10px;color:#555">Make in India</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">08 Bidder Details Form</div><div style="font-size:10px;color:#555">All company info</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">09 Project Experience</div><div style="font-size:10px;color:#555">9 key projects</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">10 Pre-Bid Letter</div><div style="font-size:10px;color:#555">From AI analysis gaps</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">00 Checklist</div><div style="font-size:10px;color:#555">Full submission checklist</div></div>
+      </div>
+    </div>
+  </div>
+</div>
 </div><!-- /#main -->
 
 <!-- DETAIL PANEL -->
@@ -1171,9 +1203,167 @@ async function sendChat() {
 // ═══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', function() {
   loadDash();
-  // Restore active tender if any
   var saved = localStorage.getItem('atid'); if(saved) currentTid=saved;
+  setTimeout(checkChanges, 3000); // Check for changes after dashboard loads
 });
+
+// ═══ SUBMISSION PACKAGE ═══
+async function fillSubSelects() {
+  var opts = '<option value="">-- Select a tender --</option>' + T.filter(function(t){ return t.bid_no_bid_done; }).map(function(t){
+    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
+  }).join('');
+  ['sub-sel','psc-sel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=opts; });
+}
+function checkSubStatus() {
+  var tid = document.getElementById('sub-sel').value;
+  var t = T.find(function(x){ return x.t247_id===tid; });
+  var el = document.getElementById('sub-status');
+  if (!t) { if(el) el.textContent=''; return; }
+  if (el) el.innerHTML = t.submission_package ?
+    '<span style="color:#22c55e">✅ Package already generated: ' + t.submission_package + '</span>' :
+    '<span style="color:#f59e0b">⚠ Not generated yet — click Generate</span>';
+}
+async function genSubmissionPkg() {
+  var tid = document.getElementById('sub-sel').value;
+  if (!tid) { toast('Select a tender first','info'); return; }
+  showLoad('Generating all submission documents...');
+  try {
+    var r = await fetch('/generate-submission-package/'+tid, {method:'POST'});
+    var d = await r.json();
+    hideLoad();
+    if (d.error) { toast('Error: '+d.error,'error'); return; }
+    var html = '<div style="background:#0d1f0d;border:1px solid #22c55e;border-radius:7px;padding:14px">' +
+      '<div style="font-size:14px;font-weight:700;color:#22c55e;margin-bottom:8px">✅ Package Generated — '+d.count+' documents</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:10px">'+d.files.join(' · ')+'</div>' +
+      '<a href="/download-package/'+d.zip_file+'" class="btn btn-p btn-sm" style="text-decoration:none">⬇ Download ZIP (all documents)</a>' +
+      (d.errors&&d.errors.length ? '<div style="font-size:10px;color:#f59e0b;margin-top:8px">⚠ Warnings: '+d.errors.join(', ')+'</div>' : '') +
+      '</div>';
+    document.getElementById('sub-result').innerHTML = html;
+    loadDash();
+    toast('✅ '+d.count+' documents generated!', 'success');
+  } catch(e) { hideLoad(); toast('Failed: '+e.message,'error'); }
+}
+async function loadPreSubChecklist() {
+  var tid = document.getElementById('psc-sel').value; if(!tid) return;
+  var el = document.getElementById('psc-content');
+  try {
+    var r = await fetch('/pre-submission-checklist/'+tid);
+    var d = await r.json();
+    var items = d.checklist||[];
+    el.innerHTML = '<div style="margin-bottom:8px;font-size:12px;color:'+(d.ready?'#22c55e':'#f59e0b')+';font-weight:600">' +
+      (d.ready ? '✅ READY TO SUBMIT' : d.pct+'% complete — '+d.done+'/'+d.total+' items done') + '</div>' +
+      '<div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:'+d.pct+'%"></div></div>' +
+      items.map(function(item){
+        return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #151820">' +
+          '<input type="checkbox" '+(item.done?'checked':'')+(item.auto?' disabled':'')+ 
+          ' onchange="togglePreSub(''+tid+'',''+item.id+'',this.checked)" style="width:15px;height:15px;accent-color:#3b82f6;flex-shrink:0">' +
+          '<span style="font-size:12px;flex:1;'+(item.done?'color:#444;text-decoration:line-through':'')+'">'+(item.label||'')+'</span>' +
+          '<span style="font-size:9px;padding:1px 5px;background:#12141e;border-radius:3px;color:'+(item.auto?'#3b82f6':'#444')+'">'+(item.category||'')+(item.auto?' ⚡':'')+'</span>' +
+          '</div>';
+      }).join('');
+  } catch(e) { el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>'; }
+}
+async function togglePreSub(tid, itemId, done) {
+  try { await fetch('/pre-submission-checklist/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:itemId,done:done})}); }
+  catch(e){}
+}
+
+// ═══ CORRIGENDUM / CHANGES ═══
+async function checkChanges() {
+  try {
+    var r = await fetch('/changes-summary'); var d = await r.json();
+    var badge = document.getElementById('changes-badge');
+    if (badge) {
+      if (d.count > 0) {
+        badge.textContent = '⚠ '+d.count+' Changes';
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  } catch(e){}
+}
+async function showChanges() {
+  try {
+    var r = await fetch('/changes-summary'); var d = await r.json();
+    if (!d.count) { toast('No changes detected','info'); return; }
+    var msg = d.changes.map(function(c){
+      var parts = [];
+      if (c.deadline_changed) parts.push('Deadline: '+c.old_deadline+' → '+c.new_deadline);
+      if (c.emd_changed) parts.push('EMD: '+c.old_emd+' → '+c.new_emd);
+      return c.t247_id+': '+parts.join(', ');
+    }).join('\n');
+    alert('Changes detected:\n\n'+msg+'\n\nClick OK to clear these alerts.');
+    await fetch('/clear-changes',{method:'POST'});
+    checkChanges();
+  } catch(e){}
+}
+
+// ═══ COMPETITOR TRACKING ═══
+async function saveCompetitor() {
+  var tid = document.getElementById('comp-tid').value.trim();
+  if (!tid) { toast('Enter T247 ID','info'); return; }
+  var body = {
+    outcome: document.getElementById('comp-outcome').value,
+    our_price: document.getElementById('comp-our').value,
+    competitor_name: document.getElementById('comp-name').value,
+    competitor_price: document.getElementById('comp-l1').value,
+    outcome_notes: document.getElementById('comp-notes').value,
+  };
+  try {
+    await fetch('/tender/'+tid+'/competitor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast('Saved ✅','success');
+    loadCompInsights();
+    loadWL();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+async function loadCompInsights() {
+  try {
+    var r = await fetch('/competitor-insights'); var d = await r.json();
+    var el = document.getElementById('comp-insights'); if(!el) return;
+    if (d.total_bids < 3) {
+      el.innerHTML = '<div style="font-weight:600;color:#fff;margin-bottom:8px">💡 Pricing Insights</div><div style="color:#555;font-size:11px">Record '+( 3-d.total_bids)+' more outcomes to see insights</div>';
+      return;
+    }
+    el.innerHTML = '<div style="font-weight:600;color:#fff;margin-bottom:10px">💡 Pricing Insights</div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div><div style="font-size:18px;font-weight:700;color:#22c55e">'+d.win_rate+'%</div><div style="font-size:10px;color:#555">Win Rate</div></div>' +
+      '<div><div style="font-size:18px;font-weight:700;color:#3b82f6">'+d.won+'</div><div style="font-size:10px;color:#555">Won</div></div>' +
+      '<div><div style="font-size:18px;font-weight:700;color:#ef4444">'+d.lost+'</div><div style="font-size:10px;color:#555">Lost</div></div>' +
+      '</div>' +
+      (d.avg_price_gap_pct ? '<div style="font-size:12px;color:#f59e0b;background:#1a1203;padding:8px;border-radius:5px;margin-bottom:8px">⚡ '+d.insight+'</div>' : '') +
+      (d.top_competitors.length ? '<div style="font-size:11px;color:#555;margin-top:6px">Top competitors: ' + d.top_competitors.map(function(c){ return c.name+' ('+c.times_won+'x)'; }).join(', ')+'</div>' : '');
+  } catch(e){}
+}
+
+// ═══ T247 AUTO-REFRESH ═══
+async function checkNewTenders() {
+  var btn = document.getElementById ? document.getElementById('t247-refresh-btn') : null;
+  if (btn) { btn.textContent = '⏳ Checking...'; btn.disabled = true; }
+  try {
+    var r = await fetch('/check-new-tenders',{method:'POST'});
+    var d = await r.json();
+    if (btn) { btn.textContent = '🔄 T247'; btn.disabled = false; }
+    if (d.new_tenders > 0) {
+      toast('🎉 Found '+d.new_tenders+' new tenders on T247!','success');
+      loadDash();
+    } else {
+      toast('No new tenders found. ' + (d.error||''),'info');
+    }
+  } catch(e) {
+    if (btn) { btn.textContent = '🔄 T247'; btn.disabled = false; }
+    toast('T247 check failed: '+e.message,'error');
+  }
+}
+
+// ═══ Enhanced go() to handle new pages ═══
+var _origGo = go;
+go = function(name) {
+  _origGo(name);
+  if (name === 'submission') { fillSubSelects(); }
+  if (name === 'winloss') { loadCompInsights(); }
+};
+
 </script>
 </body>
 </html>
