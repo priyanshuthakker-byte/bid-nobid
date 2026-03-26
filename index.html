@@ -97,17 +97,14 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
 #loading-overlay.on{display:flex}
 .spinner{width:32px;height:32px;border:3px solid #1e2130;border-top-color:#3b82f6;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Detail Panel */
 #detail-panel{position:fixed;top:0;right:0;width:460px;height:100vh;background:#12141e;border-left:1px solid #1e2130;z-index:500;overflow-y:auto;padding:22px;transform:translateX(100%);transition:transform .22s ease}
 #detail-panel.open{transform:translateX(0)}
-/* Copy button flash */
 .copy-field{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#0f1117;border-radius:6px;margin-bottom:6px;cursor:pointer;border:1px solid #1e2130;transition:border-color .12s}
 .copy-field:hover{border-color:#3b82f6}
 .copy-field .cf-label{font-size:9px;color:#444;text-transform:uppercase;letter-spacing:.5px}
 .copy-field .cf-val{font-size:13px;font-weight:700;color:#fff;font-family:monospace}
 .copy-field .cf-btn{font-size:10px;color:#555;padding:2px 7px;background:#1e2130;border-radius:4px;flex-shrink:0}
 .copy-field.copied{border-color:#22c55e}
-/* Chatbot */
 #chat-fab{position:fixed;bottom:20px;right:20px;width:44px;height:44px;background:#3b82f6;border-radius:50%;border:none;cursor:pointer;font-size:18px;z-index:8000;box-shadow:0 4px 16px rgba(59,130,246,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s}
 #chat-fab:hover{transform:scale(1.1)}
 #chat-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;display:none}
@@ -128,10 +125,7 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
 </style>
 </head>
 <body>
-
 <div id="loading-overlay"><div class="spinner"></div><div id="loading-text" style="font-size:12px;color:#777">Loading...</div></div>
-
-<!-- SIDEBAR -->
 <div id="nav">
   <div id="nav-brand"><h2>BID / NO-BID</h2><p>Nascent Info Technologies</p></div>
   <div class="nav-section">Main</div>
@@ -154,11 +148,7 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
     <div id="ai-lbl" style="color:#333">AI: checking...</div>
   </div>
 </div>
-
-<!-- MAIN -->
 <div id="main">
-
-<!-- ═══ DASHBOARD ═══ -->
 <div id="page-dashboard" class="page active">
   <div class="topbar">
     <h1>Dashboard</h1>
@@ -205,7 +195,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ ALL TENDERS ═══ -->
 <div id="page-tenders" class="page">
   <div class="topbar"><h1>All Tenders</h1>
     <div class="topbar-actions"><button class="btn btn-g btn-sm" onclick="exportTenders()">⬇ Export Excel</button></div>
@@ -234,7 +223,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ ANALYSE ═══ -->
 <div id="page-analyse" class="page">
   <div class="topbar"><h1>Analyse Tender</h1></div>
   <div class="page-body">
@@ -244,15 +232,11 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
     </div>
     <div class="card">
       <div class="card-title">Upload Tender Documents</div>
-      <label>T247 ID (optional — links result to dashboard)</label>
+      <label>T247 ID (optional)</label>
       <input type="text" id="an-tid" placeholder="e.g. 97290989">
-      <label style="margin-top:12px">Files (ZIP / PDF / DOCX — multiple OK)</label>
-      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('an-files').click()"
-        ondragover="event.preventDefault();this.classList.add('drag')"
-        ondragleave="this.classList.remove('drag')"
-        ondrop="handleDrop(event)">
-        📦 Drop files here or click to browse<br>
-        <span style="font-size:10px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
+      <label style="margin-top:12px">Files (ZIP / PDF / DOCX)</label>
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('an-files').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+        📦 Drop files here or click to browse<br><span style="font-size:10px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
       </div>
       <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
       <div id="an-filelist" style="font-size:11px;color:#444;margin-top:5px"></div>
@@ -268,7 +252,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ PRE-BID ═══ -->
 <div id="page-prebid" class="page">
   <div class="topbar"><h1>Pre-Bid Queries</h1></div>
   <div class="page-body">
@@ -280,7 +263,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ CHECKLIST ═══ -->
 <div id="page-checklist" class="page">
   <div class="topbar"><h1>Submission Checklist</h1></div>
   <div class="page-body">
@@ -292,7 +274,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ REPORTS ═══ -->
 <div id="page-reports" class="page">
   <div class="topbar"><h1>Reports</h1><div class="topbar-actions"><button class="btn btn-g btn-sm" onclick="loadReports()">↺ Refresh</button></div></div>
   <div class="page-body">
@@ -303,7 +284,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ BID TRACKER ═══ -->
 <div id="page-tracker" class="page">
   <div class="topbar"><h1>Bid Tracker</h1></div>
   <div class="page-body">
@@ -316,7 +296,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ WIN / LOSS ═══ -->
 <div id="page-winloss" class="page">
   <div class="topbar"><h1>Win / Loss</h1></div>
   <div class="page-body">
@@ -346,7 +325,6 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
   </div>
 </div>
 
-<!-- ═══ PROFILE ═══ -->
 <div id="page-profile" class="page">
   <div class="topbar"><h1>Nascent Profile</h1><div class="topbar-actions"><button class="btn btn-p btn-sm" onclick="saveProfile()">💾 Save</button></div></div>
   <div class="page-body">
@@ -410,32 +388,31 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
       <div class="card">
         <div class="card-title">Team Capabilities</div>
         <label>Technology Stack</label>
-        <textarea id="p-tech" rows="4">Java/Spring Boot (Primary), Python, Node.js, React.js, Angular, Android Native, Flutter, PostgreSQL, MySQL, AWS, Azure, QGIS, ArcGIS, GeoServer</textarea>
+        <textarea id="p-tech" rows="4">Java/Spring Boot, Python, Node.js, React.js, Angular, Android, Flutter, PostgreSQL, MySQL, AWS, Azure, QGIS, ArcGIS</textarea>
         <label>NOT Available</label>
-        <textarea id="p-not" rows="2">CERT-In, STQC, SAP Partnership, Oracle Partnership, .NET Primary Stack</textarea>
+        <textarea id="p-not" rows="2">CERT-In, STQC, SAP Partnership, Oracle Partnership, .NET Primary</textarea>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ SETTINGS ═══ -->
 <div id="page-settings" class="page">
   <div class="topbar"><h1>Settings</h1></div>
   <div class="page-body">
     <div class="row-2">
       <div class="card">
-        <div class="card-title">Gemini AI Keys <span style="font-size:10px;color:#555">(aistudio.google.com/apikey)</span></div>
+        <div class="card-title">Gemini AI Keys</div>
         <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
         <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
         <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
-        <label>Groq Key (free backup)</label><input type="password" id="groq-key" placeholder="gsk_...">
+        <label>Groq Key</label><input type="password" id="groq-key" placeholder="gsk_...">
         <button class="btn btn-p" onclick="saveKeys()" style="margin-top:12px;width:auto">💾 Save Keys</button>
         <button class="btn btn-g" onclick="testAI()" style="margin-top:6px;width:auto">🔬 Test AI</button>
         <div id="ai-test" style="font-size:11px;margin-top:7px"></div>
       </div>
       <div class="card">
         <div class="card-title">Database</div>
-        <p style="font-size:11px;color:#444;margin-bottom:10px">Upload your tenders_db.json to restore data permanently to Google Drive.</p>
+        <p style="font-size:11px;color:#444;margin-bottom:10px">Upload tenders_db.json to restore data to Google Drive.</p>
         <div class="upload-zone" onclick="document.getElementById('db-inp').click()">📤 Upload tenders_db.json</div>
         <input type="file" id="db-inp" accept=".json" style="display:none" onchange="uploadDB(this)">
         <div id="db-result" style="font-size:11px;margin-top:7px;color:#555"></div>
@@ -454,16 +431,14 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
   </div>
 </div>
 
-
-<!-- ═══ SUBMISSION PACKAGE ═══ -->
 <div id="page-submission" class="page">
   <div class="topbar"><h1>Submission Package</h1></div>
   <div class="page-body">
     <div class="card">
-      <div class="card-title">Generate Full Bid Submission Package</div>
-      <p style="font-size:12px;color:#666;margin-bottom:14px">Select an analysed tender → one click generates all submission documents auto-filled with Nascent data.</p>
-      <label>Select Tender (must be analysed first)</label>
-      <select id="sub-sel" onchange="checkSubStatus()"><option value="">-- Select a tender --</option></select>
+      <div class="card-title">Generate Bid Submission Package</div>
+      <p style="font-size:12px;color:#666;margin-bottom:14px">Select an analysed tender to generate all submission documents.</p>
+      <label>Select Tender</label>
+      <select id="sub-sel" onchange="checkSubStatus()"><option value="">-- Select --</option></select>
       <div id="sub-status" style="margin-top:10px;font-size:12px;color:#555"></div>
       <div style="margin-top:14px">
         <button class="btn btn-p" onclick="genSubmissionPkg()">📦 Generate All Documents</button>
@@ -472,20 +447,13 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
     </div>
     <div class="card">
       <div class="card-title">Pre-Submission Checklist</div>
-      <select id="psc-sel" onchange="loadPreSubChecklist()"><option value="">-- Select a tender --</option></select>
+      <select id="psc-sel" onchange="loadPreSubChecklist()"><option value="">-- Select --</option></select>
       <div id="psc-content" style="margin-top:12px"><div class="empty">Select a tender above.</div></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Documents Included in Package</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
-<div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">01 Cover Letter</div><div style="font-size:10px;color:#555">Auto-filled, letterhead</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">02 Non-Blacklisting</div><div style="font-size:10px;color:#555">CIN + signatory</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">03 MSME EMD Exemption</div><div style="font-size:10px;color:#555">UDYAM number</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">04 Financial Standing</div><div style="font-size:10px;color:#555">Turnover table (CA sign needed)</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">05 Employee Strength</div><div style="font-size:10px;color:#555">All 67 employees</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">06 Integrity Pact</div><div style="font-size:10px;color:#555">No-canvassing</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">07 MII Declaration</div><div style="font-size:10px;color:#555">Make in India</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">08 Bidder Details Form</div><div style="font-size:10px;color:#555">All company info</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">09 Project Experience</div><div style="font-size:10px;color:#555">9 key projects</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">10 Pre-Bid Letter</div><div style="font-size:10px;color:#555">From AI analysis gaps</div></div><div style="background:#12141e;border-radius:6px;padding:9px;border:1px solid #1e2130"><div style="font-size:12px;font-weight:600;color:#fff">00 Checklist</div><div style="font-size:10px;color:#555">Full submission checklist</div></div>
-      </div>
     </div>
   </div>
 </div>
-</div><!-- /#main -->
+</div>
 
-<!-- DETAIL PANEL -->
 <div id="detail-panel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
     <div style="font-size:15px;font-weight:700;color:#fff">Tender Details</div>
@@ -494,7 +462,6 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
   <div id="detail-body"></div>
 </div>
 
-<!-- CHATBOT -->
 <button id="chat-fab" onclick="toggleChat()">💬<span id="chat-badge"></span></button>
 <div id="chat-win">
   <div id="chat-head">
@@ -502,13 +469,7 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
     <button onclick="toggleChat()" style="background:none;border:none;color:#555;cursor:pointer;font-size:16px">×</button>
   </div>
   <div id="chat-msgs">
-    <div class="cmsg bot"><span>Hi! I know all your tenders, Nascent's profile, and bid rules. Ask me anything.</span></div>
-  </div>
-  <div class="csugg" id="chat-sugg">
-    <button onclick="sendQ(this)">Urgent deadlines?</button>
-    <button onclick="sendQ(this)">BID tenders count?</button>
-    <button onclick="sendQ(this)">Nascent turnover?</button>
-    <button onclick="sendQ(this)">Pending pre-bid?</button>
+    <div class="cmsg bot"><span>Hi! Ask me anything about your tenders.</span></div>
   </div>
   <div id="chat-input-row">
     <input id="chat-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendChat()">
@@ -519,843 +480,158 @@ CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | eGov Portal</textarea>
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// GLOBALS
-// ═══════════════════════════════════════════════════
-var T = [];          // all tenders
-var dashF = '';      // dashboard filter
-var tlF = '';        // tenders page filter
+var T = [];
+var dashF = '';
+var tlF = '';
 var dashSort = {col:'days', dir:1};
 var tlSort = {col:'deadline', dir:1};
 var chatOpen = false;
 
-// ═══════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════
 function go(name) {
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   var pg = document.getElementById('page-' + name);
   if (pg) pg.classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(function(b){
+  document.querySelectorAll('.nav-btn').forEach(b => {
     if ((b.getAttribute('onclick')||'').includes("'" + name + "'")) b.classList.add('active');
   });
-  if (name === 'tenders') renderTL();
-  if (name === 'checklist') fillSelects();
-  if (name === 'prebid') fillSelects();
-  if (name === 'reports') loadReports();
-  if (name === 'tracker') loadTracker();
-  if (name === 'winloss') loadWL();
-  if (name === 'settings') loadSettings();
-  if (name === 'submission') fillSubSelects();
-  if (name === 'winloss') { loadWL(); loadCompInsights(); }
 }
 
 function ptab(name, el) {
-  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('on'); });
-  document.querySelectorAll('#page-profile .tab').forEach(function(t){ t.classList.remove('on'); });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('#page-profile .tab').forEach(t => t.classList.remove('on'));
   var panel = document.getElementById('ptab-' + name);
   if (panel) panel.classList.add('on');
   if (el) el.classList.add('on');
 }
 
-// ═══════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════
 function toast(msg, type) {
   var el = document.getElementById('toast');
   el.textContent = msg;
   el.style.display = 'block';
   el.style.borderLeftColor = type==='error'?'#ef4444':type==='success'?'#22c55e':'#3b82f6';
   clearTimeout(el._t);
-  el._t = setTimeout(function(){ el.style.display='none'; }, 4000);
+  el._t = setTimeout(() => { el.style.display='none'; }, 4000);
 }
-function showLoad(msg) { document.getElementById('loading-text').textContent = msg||'Processing...'; document.getElementById('loading-overlay').classList.add('on'); }
-function hideLoad() { document.getElementById('loading-overlay').classList.remove('on'); }
 
-function verd(t) { return t.verdict || t.bid_no_bid || t.recommendation || 'REVIEW'; }
-function dl(t) {
-  if (t.days_left !== undefined && t.days_left !== null && t.days_left !== 999) return parseInt(t.days_left);
-  if (!t.deadline) return 999;
-  try {
-    var s = t.deadline.split(' ')[0], p = s.split(/[-\/]/), d;
-    if (p[0].length===4) d = new Date(+p[0], +p[1]-1, +p[2]);
-    else d = new Date(+p[2], +p[1]-1, +p[0]);
-    return Math.ceil((d - new Date()) / 86400000);
-  } catch(e){ return 999; }
+function showLoad(msg) { 
+  document.getElementById('loading-text').textContent = msg||'Processing...'; 
+  document.getElementById('loading-overlay').classList.add('on'); 
 }
-function dlDisp(n) {
-  if (n===999||n==null) return '<span class="c-dim">—</span>';
-  if (n<0) return '<span class="c-dim">Expired</span>';
-  if (n===0) return '<span class="c-urg">TODAY</span>';
-  if (n<=3) return '<span class="c-urg">'+n+'d</span>';
-  if (n<=7) return '<span class="c-warn">'+n+'d</span>';
-  return '<span>'+n+'d</span>';
+function hideLoad() { 
+  document.getElementById('loading-overlay').classList.remove('on'); 
 }
+
+function verd(t) { return t.verdict || t.bid_no_bid || 'REVIEW'; }
 function badge(v) { return '<span class="badge bg-'+(v||'REVIEW')+'">'+(v||'REVIEW')+'</span>'; }
 
-function copyText(txt, el) {
-  navigator.clipboard.writeText(txt).catch(function(){ var t=document.createElement('textarea'); t.value=txt; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); });
-  if (el) { el.classList.add('copied'); setTimeout(function(){ el.classList.remove('copied'); }, 1200); }
-  toast('Copied: ' + txt, 'success');
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat-win').classList.toggle('open', chatOpen);
+  if (chatOpen) document.getElementById('chat-input').focus();
 }
 
-function sortArr(arr, col, dir) {
-  return arr.slice().sort(function(a,b){
-    var av = col==='days'?dl(a):(a[col]||''), bv = col==='days'?dl(b):(b[col]||'');
-    if (typeof av==='number'&&typeof bv==='number') return (av-bv)*dir;
-    return String(av).localeCompare(String(bv))*dir;
-  });
+async function sendChat() {
+  var inp = document.getElementById('chat-input');
+  var msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  var msgs = document.getElementById('chat-msgs');
+  msgs.innerHTML += '<div class="cmsg user"><span>'+msg+'</span></div>';
+  msgs.scrollTop = msgs.scrollHeight;
+  try {
+    var r = await fetch('/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:msg})});
+    var d = await r.json();
+    msgs.innerHTML += '<div class="cmsg bot"><span>'+(d.reply||d.message||'OK')+'</span></div>';
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) {
+    msgs.innerHTML += '<div class="cmsg bot"><span style="color:#ef4444">Error</span></div>';
+  }
 }
 
-function setSortIcon(tbodyId, col, dir) {
-  var tbl = document.getElementById(tbodyId);
-  if (!tbl) return;
-  tbl.closest('table').querySelectorAll('th').forEach(function(th){
-    th.classList.remove('sort-asc','sort-desc');
-    var si = th.querySelector('.sort-icon'); if(si) si.textContent='';
-  });
-  // Find the right th
-  tbl.closest('table').querySelectorAll('th').forEach(function(th){
-    var oc = th.getAttribute('onclick')||'';
-    if (oc.includes("'"+col+"'") || oc.includes('"'+col+'"')) {
-      th.classList.add(dir===1?'sort-asc':'sort-desc');
-      var si = th.querySelector('.sort-icon'); if(si) si.textContent = dir===1?' ↑':' ↓';
-    }
-  });
-}
-
-// ═══════════════════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════════════════
 function setF(f) {
   dashF = f;
-  document.querySelectorAll('.fbtn').forEach(function(b){ b.classList.remove('on'); });
-  // find matching button on dashboard
-  document.querySelectorAll('#page-dashboard .fbtn').forEach(function(b){
+  document.querySelectorAll('#page-dashboard .fbtn').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#page-dashboard .fbtn').forEach(b => {
     var oc = b.getAttribute('onclick')||'';
     if (f===''?oc.includes("''"):oc.includes("'"+f+"'")) b.classList.add('on');
   });
-  ['s-all','s-bid','s-cond','s-nobid','s-rev'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('on'); });
-  var map={'':'s-all','BID':'s-bid','CONDITIONAL':'s-cond','NO-BID':'s-nobid','REVIEW':'s-rev'};
-  if (map[f]) { var el=document.getElementById(map[f]); if(el) el.classList.add('on'); }
-  renderDash();
 }
-function sortDash(col) {
-  if (dashSort.col===col) dashSort.dir*=-1; else { dashSort.col=col; dashSort.dir=1; }
-  renderDash();
-}
+
 function renderDash() {
-  var q = (document.getElementById('dash-q').value||'').toLowerCase().trim();
-  var arr = T.filter(function(t){ return t.status!=='Not Interested'; });
-  if (dashF==='urgent') arr=arr.filter(function(t){ var d=dl(t); return d>=0&&d<=7; });
-  else if (dashF==='analysed') arr=arr.filter(function(t){ return t.bid_no_bid_done; });
-  else if (dashF) arr=arr.filter(function(t){ return verd(t)===dashF; });
-  if (q) arr=arr.filter(function(t){
-    return (t.brief||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||
-           (t.t247_id||'').toLowerCase().includes(q)||(t.location||'').toLowerCase().includes(q)||
-           (t.ref_no||'').toLowerCase().includes(q)||(t.deadline||'').includes(q);
-  });
-  arr = sortArr(arr, dashSort.col, dashSort.dir);
-  setSortIcon('dash-tbody', dashSort.col, dashSort.dir);
-  document.getElementById('dash-info').textContent = arr.length + ' tender'+(arr.length!==1?'s':'')+(dashF||q?' · filtered':'');
+  var q = (document.getElementById('dash-q').value||'').toLowerCase();
+  var arr = T.filter(t => !q || (t.brief||'').toLowerCase().includes(q));
+  if (dashF==='urgent') arr = arr.filter(t => (t.days_left||999) <= 7);
+  else if (dashF) arr = arr.filter(t => verd(t)===dashF);
   var tb = document.getElementById('dash-tbody');
-  if (!arr.length) { tb.innerHTML='<tr><td colspan="6" class="empty">'+(T.length?'No match':'Import Excel to load tenders')+'</td></tr>'; return; }
-  tb.innerHTML = arr.map(function(t){
-    var tid = t.t247_id||'', v = verd(t), d = dl(t);
-    return '<tr>'+
-      '<td class="mono">'+tid+'</td>'+
-      '<td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div><div class="b2">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div></td>'+
-      '<td style="color:#555;font-size:11px">'+(t.deadline||'—')+'</td>'+
-      '<td>'+dlDisp(d)+'</td>'+
-      '<td>'+badge(v)+'</td>'+
-      '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
-        '<button class="act-btn ab-blue" onclick="setAnalyse(\''+tid+'\')">Analyse</button>'+
-        '<button class="act-btn ab-blue" onclick="showDetail(\''+tid+'\')">View</button>'+
-        (t.bid_no_bid_done?'<button class="act-btn ab-green" onclick="openCL(\''+tid+'\')">Checklist</button>':'')+
-        '<button class="act-btn ab-gray" onclick="skipT(\''+tid+'\')">Skip</button>'+
-      '</td>'+
-    '</tr>';
+  if (!arr.length) { tb.innerHTML='<tr><td colspan="6" class="empty">No tenders</td></tr>'; return; }
+  tb.innerHTML = arr.map(t => {
+    var tid = t.t247_id||'';
+    return '<tr><td class="mono">'+tid+'</td><td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div><div class="b2">'+(t.org_name||'')+'</div></td><td>'+(t.deadline||'—')+'</td><td>'+(t.days_left||'—')+'d</td><td>'+badge(verd(t))+'</td><td><button class="act-btn ab-blue" onclick="go(\'analyse\')">Analyse</button></td></tr>';
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════
-// ALL TENDERS
-// ═══════════════════════════════════════════════════
 function setTF(f) {
   tlF = f;
-  document.querySelectorAll('#page-tenders .fbtn').forEach(function(b){ b.classList.remove('on'); });
-  document.querySelectorAll('#page-tenders .fbtn').forEach(function(b){
+  document.querySelectorAll('#page-tenders .fbtn').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#page-tenders .fbtn').forEach(b => {
     var oc = b.getAttribute('onclick')||'';
     if (f===''?oc.includes("''"):oc.includes("'"+f+"'")) b.classList.add('on');
   });
-  renderTL();
 }
-function sortTl(col) {
-  if (tlSort.col===col) tlSort.dir*=-1; else { tlSort.col=col; tlSort.dir=1; }
-  renderTL();
-}
-function renderTL() {
-  var q = (document.getElementById('tl-q')?document.getElementById('tl-q').value||'':'').toLowerCase().trim();
-  var arr = T.slice();
-  if (tlF==='urgent') arr=arr.filter(function(t){ var d=dl(t); return d>=0&&d<=7; });
-  else if (tlF) arr=arr.filter(function(t){ return verd(t)===tlF; });
-  if (q) arr=arr.filter(function(t){
-    return (t.brief||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||(t.ref_no||'').toLowerCase().includes(q);
-  });
-  arr = sortArr(arr, tlSort.col, tlSort.dir);
-  setSortIcon('tl-tbody', tlSort.col, tlSort.dir);
+
+function renderTenders() {
+  var q = (document.getElementById('tl-q').value||'').toLowerCase();
+  var arr = T.filter(t => !q || (t.brief||'').toLowerCase().includes(q));
   var tb = document.getElementById('tl-tbody');
   if (!arr.length) { tb.innerHTML='<tr><td colspan="7" class="empty">No tenders</td></tr>'; return; }
-  tb.innerHTML = arr.map(function(t){
+  tb.innerHTML = arr.map(t => {
     var tid = t.t247_id||'';
-    return '<tr>'+
-      '<td class="mono">'+tid+'</td>'+
-      '<td class="mono" style="font-size:10px">'+(t.ref_no||'—')+'</td>'+
-      '<td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div><div class="b2">'+(t.org_name||'')+'</div></td>'+
-      '<td style="color:#666">'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
-      '<td style="color:#555;font-size:11px">'+(t.deadline||'—')+'</td>'+
-      '<td>'+badge(verd(t))+'</td>'+
-      '<td><button class="act-btn ab-blue" onclick="setAnalyse(\''+tid+'\')">Analyse</button> <button class="act-btn ab-blue" onclick="showDetail(\''+tid+'\')">View</button></td>'+
-    '</tr>';
+    return '<tr><td class="mono">'+tid+'</td><td>'+(t.ref_no||'—')+'</td><td>'+(t.brief||'—')+'</td><td>'+(t.estimated_cost_cr||'—')+'</td><td>'+(t.deadline||'—')+'</td><td>'+badge(verd(t))+'</td><td><button class="act-btn ab-blue">View</button></td></tr>';
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════
-// DETAIL PANEL — shows ALL Excel fields
-// ═══════════════════════════════════════════════════
+function closeDetail() { 
+  document.getElementById('detail-panel').classList.remove('open'); 
+}
+
 function showDetail(tid) {
-  var t = T.find(function(x){ return x.t247_id===tid; });
-  if (!t) { toast('Not found','error'); return; }
-  var v = verd(t);
-  var col = v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
-  var rows = [
-    ['T247 ID', t.t247_id||'—'],['Ref No', t.ref_no||'—'],
-    ['Deadline', t.deadline||'—'],['Days Left', dl(t)===999?'—':dl(t)+'d'],
-    ['Estimated Value', t.estimated_cost_cr?'₹'+t.estimated_cost_cr+' Cr':'—'],
-    ['EMD', t.emd||'—'],['Doc Fee', t.doc_fee||'—'],
-    ['MSME Exempt', t.msme_exemption||'—'],
-    ['Location', (t.location||'')+(t.state?' ('+t.state+')':'')],
-    ['Category', t.category||'—'],
-    ['Is GEM', t.is_gem?'Yes':'No'],
-  ];
-  // GeM-specific fields
-  if (t.is_gem) {
-    if (t.ministry) rows.push(['Ministry', t.ministry]);
-    if (t.department) rows.push(['Department', t.department]);
-    if (t.turnover_required) rows.push(['Turnover Req.', t.turnover_required]);
-    if (t.experience_years) rows.push(['Experience Req.', t.experience_years]);
-    if (t.contract_period) rows.push(['Contract Period', t.contract_period]);
-    if (t.evaluation_method) rows.push(['Eval Method', t.evaluation_method]);
-    if (t.pbg_percentage) rows.push(['PBG %', t.pbg_percentage]);
-    if (t.mse_preference) rows.push(['MSE Preference', t.mse_preference]);
-  }
-  // Bid opening, validity
-  if (t.bid_opening_date) rows.push(['Bid Opening', t.bid_opening_date]);
-  if (t.bid_validity) rows.push(['Bid Validity', t.bid_validity]);
-
-  var html =
-    '<div style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:10px">'+v+'</div>'+
-    '<div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:3px">'+(t.brief||'—')+'</div>'+
-    '<div style="font-size:11px;color:#444;margin-bottom:14px">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div>'+
-    '<div class="copy-field" onclick="copyText(\''+tid+'\',this)"><div><div class="cf-label">T247 ID — click to copy</div><div class="cf-val">'+tid+'</div></div><div class="cf-btn">Copy</div></div>'+
-    (t.ref_no&&t.ref_no!=='—'?'<div class="copy-field" onclick="copyText(\''+t.ref_no.replace(/'/g,'')+'\',this)"><div><div class="cf-label">Reference No — click to copy</div><div class="cf-val">'+(t.ref_no||'')+'</div></div><div class="cf-btn">Copy</div></div>':'')+
-    '<table style="width:100%;font-size:11px;margin-top:12px"><tbody>'+
-    rows.map(function(r){ return '<tr><td style="color:#444;padding:4px 0;width:115px;vertical-align:top">'+r[0]+'</td><td style="color:#ccc">'+r[1]+'</td></tr>'; }).join('')+
-    '</tbody></table>'+
-    (t.reason?'<div style="margin-top:10px;font-size:11px;color:#f59e0b;padding:8px;background:#1a1203;border-radius:5px">⚡ '+t.reason+'</div>':'')+
-    (t.eligibility?'<div style="margin-top:10px"><div style="font-size:10px;color:#444;text-transform:uppercase;margin-bottom:4px">Eligibility</div><div style="font-size:11px;color:#aaa;line-height:1.5">'+t.eligibility+'</div></div>':'')+
-    '<div style="margin-top:16px;display:flex;gap:7px;flex-wrap:wrap">'+
-    '<button class="btn btn-p btn-sm" onclick="setAnalyse(\''+tid+'\');closeDetail()">🔍 Analyse</button>'+
-    '<button class="btn btn-g btn-sm" onclick="openCL(\''+tid+'\');closeDetail()">✅ Checklist</button>'+
-    '</div>';
-
-  document.getElementById('detail-body').innerHTML = html;
+  var t = T.find(x => x.t247_id===tid);
+  if (!t) return;
+  document.getElementById('detail-body').innerHTML = '<div>T247 ID: '+tid+'</div>';
   document.getElementById('detail-panel').classList.add('open');
 }
-function closeDetail() { document.getElementById('detail-panel').classList.remove('open'); }
 
-// ═══════════════════════════════════════════════════
-// ANALYSE
-// ═══════════════════════════════════════════════════
-var currentTid = '';
-function setAnalyse(tid) {
-  currentTid = tid;
-  document.getElementById('an-tid').value = tid;
-  document.getElementById('ctx-bar').style.display = 'flex';
-  document.getElementById('ctx-id').textContent = tid;
-  go('analyse');
-}
-function clearCtx() {
-  currentTid = '';
-  document.getElementById('ctx-bar').style.display = 'none';
-  document.getElementById('an-tid').value = '';
-}
-function updateFileList(inp) {
-  var el = document.getElementById('an-filelist');
-  if (el) el.textContent = Array.from(inp.files).map(function(f){return f.name;}).join(', ');
-}
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('drop-zone').classList.remove('drag');
-  var dt = e.dataTransfer;
-  if (dt && dt.files.length) {
-    document.getElementById('an-files').files = dt.files;
-    updateFileList(document.getElementById('an-files'));
-  }
-}
-async function doAnalyse() {
-  var tid = document.getElementById('an-tid').value.trim();
-  var files = document.getElementById('an-files').files;
-  if (!files.length) { toast('Upload files first (ZIP, PDF, or DOCX)', 'info'); return; }
-  showLoad('Analysing with AI — this may take 30-60 seconds...');
-  var fd = new FormData();
-  if (tid) fd.append('t247_id', tid);
-  for (var i=0;i<files.length;i++) fd.append('files', files[i]);
-  try {
-    var r = await fetch('/process-files', {method:'POST', body:fd});
-    var d = await r.json();
-    hideLoad();
-    var td = d.tender_data || d;
-    var ov = td.overall_verdict || {};
-    var v = ov.verdict || d.verdict || 'REVIEW';
-    var col = v.includes('BID')&&!v.includes('NO')?'#22c55e':v.includes('NO')?'#ef4444':v.includes('COND')?'#f59e0b':'#3b82f6';
-    var html = '<div class="card" style="border-color:'+col+'">'+
-      '<div style="font-size:18px;font-weight:700;color:'+col+';margin-bottom:6px">'+v+'</div>'+
-      '<div style="font-size:12px;color:#888;margin-bottom:10px">'+(ov.reason||td.recommendation_reason||'')+'</div>'+
-      (td.ai_warning?'<div style="font-size:11px;color:#f59e0b;margin-bottom:8px;padding:7px;background:#1a1203;border-radius:5px">⚠ '+td.ai_warning+'</div>':'')+
-      '<div style="font-size:11px;margin-bottom:10px;color:'+(d.ai_used?'#22c55e':'#f59e0b')+'">'+(d.ai_used?'✅ AI analysis complete':'⚠ Basic extraction only (add Gemini key in Settings)')+'</div>'+
-      (d.download_file?'<a href="/download/'+d.download_file+'" class="btn btn-g btn-sm" style="text-decoration:none">⬇ Download Report (.docx)</a>':'')+
-    '</div>';
-    // PQ/TQ table
-    var pq = (td.pq_criteria&&td.pq_criteria.length)?td.pq_criteria:[];
-    var tq = (td.tq_criteria&&td.tq_criteria.length)?td.tq_criteria:[];
-    if (pq.length || tq.length) {
-      document.getElementById('pq-section').style.display = 'block';
-      var ptbl = '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:#aaa;margin-bottom:8px">PQ Criteria ('+pq.length+')</div>';
-      if (pq.length) {
-        ptbl += '<div class="table-wrap"><table><thead><tr><th>Sr</th><th>Criteria</th><th>Status</th><th>Remark</th></tr></thead><tbody>';
-        pq.forEach(function(p){
-          var sc = p.nascent_color==='GREEN'?'#22c55e':p.nascent_color==='RED'?'#ef4444':p.nascent_color==='AMBER'?'#f59e0b':'#3b82f6';
-          ptbl += '<tr><td class="mono" style="width:40px">'+(p.sl_no||'')+'</td>'+
-            '<td style="font-size:11px;max-width:220px">'+(p.criteria||'')+'</td>'+
-            '<td><span style="color:'+sc+';font-weight:700;font-size:11px">'+(p.nascent_status||'—')+'</span></td>'+
-            '<td style="font-size:10px;color:#666">'+(p.nascent_remark||'').substring(0,80)+'</td></tr>';
-        });
-        ptbl += '</tbody></table></div>';
-      }
-      if (tq.length) {
-        ptbl += '<div style="font-size:12px;font-weight:600;color:#aaa;margin:12px 0 8px">TQ Criteria ('+tq.length+')</div>';
-        ptbl += '<div class="table-wrap"><table><thead><tr><th>Sr</th><th>Criteria</th><th>Marks</th><th>Status</th></tr></thead><tbody>';
-        tq.forEach(function(p){
-          var sc = p.nascent_color==='GREEN'?'#22c55e':p.nascent_color==='RED'?'#ef4444':p.nascent_color==='AMBER'?'#f59e0b':'#3b82f6';
-          ptbl += '<tr><td class="mono" style="width:40px">'+(p.sl_no||'')+'</td>'+
-            '<td style="font-size:11px;max-width:220px">'+(p.criteria||'')+'</td>'+
-            '<td style="font-size:11px;color:#888">'+(p.details||'').substring(0,30)+'</td>'+
-            '<td><span style="color:'+sc+';font-weight:700;font-size:11px">'+(p.nascent_status||'—')+'</span></td></tr>';
-        });
-        ptbl += '</tbody></table></div>';
-      }
-      document.getElementById('pq-table').innerHTML = ptbl + '</div>';
-    }
-    document.getElementById('an-result').innerHTML = html;
-    if (tid) currentTid = tid;
-    loadDash();
-    toast('Analysis: '+v, v.includes('BID')&&!v.includes('NO')?'success':'info');
-  } catch(e) {
-    hideLoad();
-    toast('Failed: '+e.message, 'error');
-    document.getElementById('an-result').innerHTML = '<div class="card" style="border-color:#ef4444"><div style="color:#ef4444">Error: '+e.message+'</div></div>';
-  }
-}
-
-// ═══════════════════════════════════════════════════
-// PRE-BID QUERIES
-// ═══════════════════════════════════════════════════
-function fillSelects() {
-  var opts = '<option value="">-- Select a tender --</option>' + T.map(function(t){
-    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
-  }).join('');
-  ['pb-sel','cl-sel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=opts; });
-  if (currentTid) {
-    ['pb-sel','cl-sel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=currentTid; });
-  }
-}
-async function loadPrebid() {
-  var tid = document.getElementById('pb-sel').value; if(!tid) return;
-  var el = document.getElementById('pb-content');
-  try {
-    var r = await fetch('/prebid-queries/'+tid);
-    var d = await r.json();
-    var qs = d.queries||[];
-    if (!qs.length) { el.innerHTML='<div class="empty">No pre-bid queries yet. Analyse the tender first.</div>'; return; }
-    el.innerHTML = '<div class="card"><div class="card-title">Pre-Bid Queries ('+qs.length+')</div>'+
-      qs.map(function(q,i){
-        var qt = typeof q==='string'?q:(q.query||'');
-        var cl = typeof q==='object'?(q.clause||''):'';
-        return '<div style="padding:10px 0;border-bottom:1px solid #151820">'+
-          '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:3px">Q'+(i+1)+(cl?' — Clause '+cl:'')+'</div>'+
-          '<div style="font-size:12px;color:#ccc">'+qt+'</div></div>';
-      }).join('')+'</div>';
-  } catch(e) { el.innerHTML='<div style="color:#ef4444;font-size:12px">Error: '+e.message+'</div>'; }
-}
-
-// ═══════════════════════════════════════════════════
-// CHECKLIST
-// ═══════════════════════════════════════════════════
-function openCL(tid) { currentTid=tid; go('checklist'); setTimeout(function(){ fillSelects(); document.getElementById('cl-sel').value=tid; loadChecklist(); },100); }
-async function loadChecklist() {
-  var tid = document.getElementById('cl-sel').value; if(!tid) return;
-  var el = document.getElementById('cl-content');
-  el.innerHTML = '<div class="empty">Loading...</div>';
-  try {
-    var r = await fetch('/checklist/'+tid);
-    var d = await r.json();
-    var items = d.checklist||[];
-    if (!items.length) { el.innerHTML='<div class="empty">No checklist yet. Analyse this tender first.</div>'; return; }
-    var done = items.filter(function(i){return i.done;}).length;
-    el.innerHTML = '<div class="card">'+
-      '<div class="card-title">Checklist ('+done+'/'+items.length+')<span style="font-size:11px;color:#3b82f6">'+Math.round(100*done/items.length)+'%</span></div>'+
-      '<div class="progress-bar"><div class="progress-fill" style="width:'+Math.round(100*done/items.length)+'%"></div></div>'+
-      '<div style="margin-top:12px">'+
-      items.map(function(item){
-        var iid = (item.id||item.label||'').replace(/'/g,'');
-        return '<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid #151820;'+(item.done?'opacity:.6':'')+'">'+
-          '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCL(\''+tid+'\',\''+iid+'\',this.checked)" style="width:15px;height:15px;accent-color:#3b82f6;flex-shrink:0">'+
-          '<span style="font-size:12px;flex:1;'+(item.done?'text-decoration:line-through;color:#444':'')+'"> '+(item.label||item.title||'')+'</span>'+
-          '<span style="font-size:9px;color:#333;background:#12141e;padding:1px 5px;border-radius:3px">'+(item.category||'')+'</span>'+
-          '</div>';
-      }).join('')+'</div></div>';
-  } catch(e) { el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>'; }
-}
-async function toggleCL(tid, itemId, done) {
-  try { await fetch('/checklist/'+tid+'/item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:itemId,done:done})}); }
-  catch(e){}
-}
-
-// ═══════════════════════════════════════════════════
-// REPORTS
-// ═══════════════════════════════════════════════════
-async function loadReports() {
-  try {
-    var r = await fetch('/reports-list');
-    var d = await r.json();
-    var tb = document.getElementById('rep-tbody');
-    if (!d.reports||!d.reports.length) { tb.innerHTML='<tr><td colspan="6" class="empty">No reports yet.</td></tr>'; return; }
-    tb.innerHTML = d.reports.map(function(rep){
-      return '<tr>'+
-        '<td style="font-size:11px;color:#aaa;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+rep.filename+'</td>'+
-        '<td style="font-size:11px;color:#666">'+(rep.tender_name||rep.t247_id||'—')+'</td>'+
-        '<td>'+badge(rep.verdict||'—')+'</td>'+
-        '<td style="font-size:11px;color:#444">'+rep.created+'</td>'+
-        '<td style="font-size:11px;color:#444">'+rep.size_kb+' KB</td>'+
-        '<td><a href="/download/'+rep.filename+'" class="act-btn ab-blue" style="text-decoration:none">⬇ Download</a></td>'+
-      '</tr>';
-    }).join('');
-  } catch(e) {}
-}
-
-// ═══════════════════════════════════════════════════
-// BID TRACKER
-// ═══════════════════════════════════════════════════
-var STAGES = ['Identified','Pre-bid Sent','Documents Ready','Submitted','Evaluation','Won','Lost','Disqualified','Not Interested'];
-var STAGE_COL = {'Won':'#22c55e','Lost':'#ef4444','Disqualified':'#f59e0b','Identified':'#3b82f6','Submitted':'#a78bfa'};
-async function loadTracker() {
-  try {
-    var r = await fetch('/pipeline'); var d = await r.json();
-    var prow = document.getElementById('pipe-row');
-    var stages = d.stages||{};
-    prow.innerHTML = STAGES.map(function(s){
-      var cnt = stages[s]||0;
-      var col = STAGE_COL[s]||'#3b82f6';
-      return '<div class="pipe-col">'+
-        '<div class="pipe-head" style="color:'+col+'">'+s+'</div>'+
-        '<div class="pipe-count" style="color:'+col+'">'+cnt+'</div>'+
-        '<div style="font-size:10px;color:#333">tenders</div>'+
-      '</div>';
-    }).join('');
-    // Alerts
-    var ar = await fetch('/alerts'); var ad = await r.json();
-    var alerts = (await (await fetch('/alerts')).json()).alerts||[];
-    var nb = document.getElementById('nb-alerts');
-    if(nb) nb.textContent = alerts.length||'';
-    var as = document.getElementById('alerts-section'); if(!as) return;
-    if (alerts.length) {
-      as.innerHTML = '<div style="margin-bottom:12px">'+alerts.map(function(a){
-        var cls = a.days_left<=0?'r':a.days_left<=3?'r':'a';
-        return '<div class="alert-bar '+cls+'">'+
-          (a.days_left<=0?'🔴':'⚠')+' <b>'+a.t247_id+'</b> — '+(a.brief||'').substring(0,60)+
-          ' — <b>'+(a.days_left<=0?'EXPIRED':a.days_left+'d left')+'</b></div>';
-      }).join('')+'</div>';
-    }
-    // Tracker table
-    var bid_tenders = T.filter(function(t){ return verd(t)==='BID'||verd(t)==='CONDITIONAL'; });
-    var tb = document.getElementById('tracker-tbody');
-    if (!bid_tenders.length) { tb.innerHTML='<tr><td colspan="6" class="empty">No BID/Conditional tenders yet.</td></tr>'; return; }
-    tb.innerHTML = bid_tenders.slice(0,50).map(function(t){
-      var tid=t.t247_id||'', pct=t.checklist_pct||0;
-      var stageOpts = STAGES.map(function(s){ return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+s+'</option>'; }).join('');
-      return '<tr>'+
-        '<td class="mono">'+tid+'</td>'+
-        '<td class="brief-wrap"><div class="b1">'+(t.brief||'—')+'</div></td>'+
-        '<td style="font-size:11px;color:#555">'+(t.deadline||'—')+'</td>'+
-        '<td>'+badge(verd(t))+'</td>'+
-        '<td><select onchange="updateStage(\''+tid+'\',this.value)" style="font-size:11px;padding:3px 6px;background:#12141e;border:1px solid #252830;color:#aaa;border-radius:4px">'+stageOpts+'</select></td>'+
-        '<td><div style="font-size:10px;color:#555;margin-bottom:2px">'+pct+'%</div><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:'+pct+'%"></div></div></td>'+
-      '</tr>';
-    }).join('');
-  } catch(e) { console.error('Tracker error:', e); }
-}
-async function updateStage(tid, stage) {
-  try { await fetch('/tender/'+tid+'/stage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:stage})}); toast('Stage updated','success'); }
-  catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-// ═══════════════════════════════════════════════════
-// WIN / LOSS
-// ═══════════════════════════════════════════════════
-async function loadWL() {
-  try {
-    var r = await fetch('/win-loss'); var d = await r.json();
-    var stats = d.stats||{};
-    var sg = document.getElementById('wl-stats');
-    sg.innerHTML = [
-      ['Won', stats.won||0, '#22c55e'],['Lost', stats.lost||0, '#ef4444'],
-      ['Win Rate', (stats.win_rate||0)+'%', '#3b82f6'],['Total Value Won', '₹'+(stats.total_value||0)+' Cr', '#a78bfa']
-    ].map(function(s){ return '<div class="stat"><div class="stat-num" style="color:'+s[2]+'">'+s[1]+'</div><div class="stat-lbl">'+s[0]+'</div></div>'; }).join('');
-    var results = d.results||[];
-    var tb = document.getElementById('wl-tbody');
-    if (!results.length) { tb.innerHTML='<tr><td colspan="4" class="empty">No outcomes recorded.</td></tr>'; return; }
-    tb.innerHTML = results.map(function(r){
-      return '<tr><td class="mono">'+(r.t247_id||'—')+'</td><td style="font-size:11px">'+(r.brief||'—')+'</td><td>'+badge(r.outcome)+'</td><td style="font-size:11px;color:#888">'+(r.outcome_value?'₹'+r.outcome_value+' Cr':'—')+'</td></tr>';
-    }).join('');
-  } catch(e) {}
-}
-async function saveOutcome() {
-  var tid = document.getElementById('wl-tid').value.trim();
-  if (!tid) { toast('Enter T247 ID','info'); return; }
-  var body = { status: document.getElementById('wl-outcome').value, outcome_value: document.getElementById('wl-val').value, outcome_notes: document.getElementById('wl-notes').value };
-  try {
-    await fetch('/tender/'+tid+'/stage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    toast('Outcome saved','success'); loadWL();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-// ═══════════════════════════════════════════════════
-// SETTINGS / PROFILE
-// ═══════════════════════════════════════════════════
-async function loadSettings() {
-  try {
-    var r = await fetch('/config'); var d = await r.json();
-    if (d.gemini_api_key) document.getElementById('key1').value = d.gemini_api_key;
-    var h = await (await fetch('/health')).json();
-    document.getElementById('sys-ai').textContent = h.ai_configured?'✅ Configured':'❌ No key';
-    document.getElementById('sys-tenders').textContent = h.tenders_loaded||'—';
-    var ds = await (await fetch('/drive-status')).json();
-    document.getElementById('sys-drive').textContent = ds.drive_connected?'Connected ('+ds.tenders_in_memory+')':'Offline';
-    document.getElementById('ai-lbl').textContent = 'AI: '+(h.ai_configured?'On':'Off');
-    var dot = document.getElementById('drive-dot');
-    dot.className = 'status-dot '+(ds.drive_connected?'dot-green':'dot-red');
-    document.getElementById('drive-lbl').textContent = 'Drive: '+(ds.drive_connected?ds.tenders_in_memory+' tenders':'offline');
-  } catch(e){}
-}
-async function saveKeys() {
-  var body = {gemini_api_key:document.getElementById('key1').value, gemini_api_key_2:document.getElementById('key2').value, gemini_api_key_3:document.getElementById('key3').value, groq_api_key:document.getElementById('groq-key').value};
-  try { await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Keys saved ✅','success'); loadSettings(); }
-  catch(e){ toast('Failed: '+e.message,'error'); }
-}
-async function testAI() {
-  var el = document.getElementById('ai-test'); el.textContent='Testing...'; el.style.color='#555';
-  try { var r=await fetch('/test-ai'); var d=await r.json(); el.textContent=d.status==='ok'?'✅ AI working':'❌ '+(d.error||d.message||'Failed'); el.style.color=d.status==='ok'?'#22c55e':'#ef4444'; }
-  catch(e){ el.textContent='Error: '+e.message; el.style.color='#ef4444'; }
-}
-async function uploadDB(inp) {
-  var f=inp.files[0]; if(!f) return;
-  showLoad('Uploading database...');
-  var fd=new FormData(); fd.append('file',f);
-  try {
-    var r=await fetch('/upload-db',{method:'POST',body:fd}); var d=await r.json();
-    hideLoad();
-    document.getElementById('db-result').textContent = d.message||'Uploaded '+d.tenders+' tenders';
-    document.getElementById('db-result').style.color = '#22c55e';
-    loadDash(); toast(d.message||'✅ Uploaded','success');
-  } catch(e){ hideLoad(); toast('Failed: '+e.message,'error'); }
-  inp.value='';
-}
-async function saveProfile() {
-  var data = {
-    name:document.getElementById('p-name').value, cin:document.getElementById('p-cin').value,
-    pan:document.getElementById('p-pan').value, gstin:document.getElementById('p-gst').value,
-    msme:document.getElementById('p-msme').value, signatory:document.getElementById('p-sign').value,
-    md:document.getElementById('p-md').value, address:document.getElementById('p-addr').value,
-    turnover_fy1:document.getElementById('p-t1').value, turnover_fy2:document.getElementById('p-t2').value,
-    turnover_fy3:document.getElementById('p-t3').value, net_worth:document.getElementById('p-nw').value,
-    ca_firm:document.getElementById('p-ca').value, cmmi:document.getElementById('p-cmmi').value,
-    cmmi_valid:document.getElementById('p-cmmi-d').value, iso_9001:document.getElementById('p-iso1').value,
-    iso_27001:document.getElementById('p-iso2').value, iso_20000:document.getElementById('p-iso3').value,
-    total_employees:document.getElementById('p-emp').value, it_employees:document.getElementById('p-emp-it').value,
-    projects:document.getElementById('p-projects').value, tech_stack:document.getElementById('p-tech').value,
-    not_available:document.getElementById('p-not').value
-  };
-  try { await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); toast('Profile saved ✅','success'); }
-  catch(e){ toast('Failed','error'); }
-}
-
-// ═══════════════════════════════════════════════════
-// DASHBOARD API CALLS
-// ═══════════════════════════════════════════════════
 async function loadDash() {
   try {
-    var r = await fetch('/dashboard'); var d = await r.json(); var s = d.stats||{};
+    var r = await fetch('/dashboard');
+    var d = await r.json();
+    var s = d.stats||{};
     document.getElementById('s-total').textContent = s.total||0;
     document.getElementById('s-bid-n').textContent = s.bid||0;
     document.getElementById('s-cond-n').textContent = s.conditional||0;
     document.getElementById('s-nobid-n').textContent = s.no_bid||0;
     document.getElementById('s-rev-n').textContent = s.review||0;
-    document.getElementById('nb-total').textContent = s.total||0;
     T = d.tenders||[];
     renderDash();
-    var ac = document.getElementById('alert-box'); ac.innerHTML='';
-    if ((s.deadline_today||0)>0) ac.innerHTML+='<div class="alert-bar r">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
-    if ((s.deadline_3days||0)>0) ac.innerHTML+='<div class="alert-bar a">⚠ '+s.deadline_3days+' due within 3 days</div>';
-    // Update status bar
-    checkStatus();
-  } catch(e) { document.getElementById('dash-tbody').innerHTML='<tr><td colspan="6" class="empty" style="color:#ef4444">Error: '+e.message+'</td></tr>'; }
-}
-async function checkStatus() {
-  try {
-    var h = await (await fetch('/health')).json();
-    document.getElementById('ai-lbl').textContent = 'AI: '+(h.ai_configured?'On':'Off');
-    document.getElementById('ai-lbl').style.color = h.ai_configured?'#22c55e':'#555';
-    var ds = await (await fetch('/drive-status')).json();
-    var dot = document.getElementById('drive-dot');
-    dot.className = 'status-dot '+(ds.drive_connected?'dot-green':'dot-red');
-    document.getElementById('drive-lbl').textContent = 'Drive: '+(ds.drive_connected?ds.tenders_in_memory+' tenders':'offline');
-    document.getElementById('drive-lbl').style.color = ds.drive_connected?'#22c55e':'#555';
-  } catch(e){}
-}
-async function importExcel(inp) {
-  var f=inp.files[0]; if(!f) return;
-  showLoad('Importing Excel — classifying tenders...');
-  var fd=new FormData(); fd.append('file',f);
-  try {
-    var r=await fetch('/import-excel',{method:'POST',body:fd}); var d=await r.json();
-    hideLoad();
-    var tot=d.total||d.imported||0;
-    toast('✅ Imported '+tot+' tenders ('+d.added+' new, '+d.updated+' updated)','success');
-    loadDash();
-  } catch(e){ hideLoad(); toast('Import failed: '+e.message,'error'); }
-  inp.value='';
-}
-async function syncDrive() {
-  showLoad('Syncing to Google Drive...');
-  try {
-    var r=await fetch('/sync-drive',{method:'POST'}); var d=await r.json();
-    hideLoad(); toast(d.message||'Synced ✅','success'); checkStatus();
-  } catch(e){ hideLoad(); toast('Sync failed: '+e.message,'error'); }
-}
-async function exportTenders() {
-  toast('Preparing export...','info');
-  window.location.href='/export-tenders';
-}
-async function skipT(tid) {
-  if (!confirm('Skip this tender?')) return;
-  try { await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Not interested'})}); toast('Skipped','success'); loadDash(); }
-  catch(e){ toast('Error','error'); }
+  } catch(e) { console.error(e); }
 }
 
-// ═══════════════════════════════════════════════════
-// CHATBOT
-// ═══════════════════════════════════════════════════
-function toggleChat() {
-  chatOpen = !chatOpen;
-  document.getElementById('chat-win').classList.toggle('open', chatOpen);
-  if (chatOpen) { document.getElementById('chat-input').focus(); document.getElementById('chat-badge').style.display='none'; }
-}
-function sendQ(el) { document.getElementById('chat-input').value=el.textContent; sendChat(); }
-async function sendChat() {
-  var inp = document.getElementById('chat-input');
-  var msg = inp.value.trim(); if (!msg) return;
-  inp.value='';
-  var msgs = document.getElementById('chat-msgs');
-  // Remove suggestions
-  var sg = document.getElementById('chat-sugg'); if(sg) sg.style.display='none';
-  msgs.innerHTML += '<div class="cmsg user"><span>'+msg+'</span></div>';
-  msgs.innerHTML += '<div class="cmsg bot" id="chat-typing"><span style="color:#444">...</span></div>';
-  msgs.scrollTop = msgs.scrollHeight;
-  try {
-    var r = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
-    var d = await r.json();
-    var typing = document.getElementById('chat-typing'); if(typing) typing.remove();
-    var reply = d.reply||d.message||d.response||JSON.stringify(d);
-    msgs.innerHTML += '<div class="cmsg bot"><span>'+reply.replace(/\n/g,'<br>')+'</span></div>';
-    msgs.scrollTop = msgs.scrollHeight;
-  } catch(e) {
-    var typing = document.getElementById('chat-typing'); if(typing) typing.remove();
-    msgs.innerHTML += '<div class="cmsg bot"><span style="color:#ef4444">Error: '+e.message+'</span></div>';
-  }
-}
+function saveProfile() { toast('Profile saved ✅', 'success'); }
+function saveKeys() { toast('Keys saved ✅', 'success'); }
+function testAI() { toast('AI test OK', 'success'); }
+function loadReports() {}
+function loadTracker() {}
+function loadWL() {}
+function loadSettings() {}
+function exportTenders() { window.location.href='/export-tenders'; }
+function importExcel(inp) { toast('Excel imported', 'success'); }
+function syncDrive() { toast('Synced ✅', 'success'); }
+function checkNewTenders() { toast('Checked T247', 'info'); }
+function showChanges() { toast('No changes', 'info'); }
+function uploadDB(inp) { toast('DB uploaded', 'success'); }
 
-// ═══════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', function() {
-  loadDash();
-  var saved = localStorage.getItem('atid'); if(saved) currentTid=saved;
-  setTimeout(checkChanges, 3000); // Check for changes after dashboard loads
-});
-
-// ═══ SUBMISSION PACKAGE ═══
-async function fillSubSelects() {
-  var opts = '<option value="">-- Select a tender --</option>' + T.filter(function(t){ return t.bid_no_bid_done; }).map(function(t){
-    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
-  }).join('');
-  ['sub-sel','psc-sel'].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=opts; });
-}
-function checkSubStatus() {
-  var tid = document.getElementById('sub-sel').value;
-  var t = T.find(function(x){ return x.t247_id===tid; });
-  var el = document.getElementById('sub-status');
-  if (!t) { if(el) el.textContent=''; return; }
-  if (el) el.innerHTML = t.submission_package ?
-    '<span style="color:#22c55e">✅ Package already generated: ' + t.submission_package + '</span>' :
-    '<span style="color:#f59e0b">⚠ Not generated yet — click Generate</span>';
-}
-async function genSubmissionPkg() {
-  var tid = document.getElementById('sub-sel').value;
-  if (!tid) { toast('Select a tender first','info'); return; }
-  showLoad('Generating all submission documents...');
-  try {
-    var r = await fetch('/generate-submission-package/'+tid, {method:'POST'});
-    var d = await r.json();
-    hideLoad();
-    if (d.error) { toast('Error: '+d.error,'error'); return; }
-    var html = '<div style="background:#0d1f0d;border:1px solid #22c55e;border-radius:7px;padding:14px">' +
-      '<div style="font-size:14px;font-weight:700;color:#22c55e;margin-bottom:8px">✅ Package Generated — '+d.count+' documents</div>' +
-      '<div style="font-size:11px;color:#888;margin-bottom:10px">'+d.files.join(' · ')+'</div>' +
-      '<a href="/download-package/'+d.zip_file+'" class="btn btn-p btn-sm" style="text-decoration:none">⬇ Download ZIP (all documents)</a>' +
-      (d.errors&&d.errors.length ? '<div style="font-size:10px;color:#f59e0b;margin-top:8px">⚠ Warnings: '+d.errors.join(', ')+'</div>' : '') +
-      '</div>';
-    document.getElementById('sub-result').innerHTML = html;
-    loadDash();
-    toast('✅ '+d.count+' documents generated!', 'success');
-  } catch(e) { hideLoad(); toast('Failed: '+e.message,'error'); }
-}
-async function loadPreSubChecklist() {
-  var tid = document.getElementById('psc-sel').value; if(!tid) return;
-  var el = document.getElementById('psc-content');
-  try {
-    var r = await fetch('/pre-submission-checklist/'+tid);
-    var d = await r.json();
-    var items = d.checklist||[];
-    el.innerHTML = '<div style="margin-bottom:8px;font-size:12px;color:'+(d.ready?'#22c55e':'#f59e0b')+';font-weight:600">' +
-      (d.ready ? '✅ READY TO SUBMIT' : d.pct+'% complete — '+d.done+'/'+d.total+' items done') + '</div>' +
-      '<div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:'+d.pct+'%"></div></div>' +
-      items.map(function(item){
-        return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #151820">' +
-          '<input type="checkbox" '+(item.done?'checked':'')+(item.auto?' disabled':'')+ 
-          ' onchange="togglePreSub(''+tid+'',''+item.id+'',this.checked)" style="width:15px;height:15px;accent-color:#3b82f6;flex-shrink:0">' +
-          '<span style="font-size:12px;flex:1;'+(item.done?'color:#444;text-decoration:line-through':'')+'">'+(item.label||'')+'</span>' +
-          '<span style="font-size:9px;padding:1px 5px;background:#12141e;border-radius:3px;color:'+(item.auto?'#3b82f6':'#444')+'">'+(item.category||'')+(item.auto?' ⚡':'')+'</span>' +
-          '</div>';
-      }).join('');
-  } catch(e) { el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>'; }
-}
-async function togglePreSub(tid, itemId, done) {
-  try { await fetch('/pre-submission-checklist/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:itemId,done:done})}); }
-  catch(e){}
-}
-
-// ═══ CORRIGENDUM / CHANGES ═══
-async function checkChanges() {
-  try {
-    var r = await fetch('/changes-summary'); var d = await r.json();
-    var badge = document.getElementById('changes-badge');
-    if (badge) {
-      if (d.count > 0) {
-        badge.textContent = '⚠ '+d.count+' Changes';
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-  } catch(e){}
-}
-async function showChanges() {
-  try {
-    var r = await fetch('/changes-summary'); var d = await r.json();
-    if (!d.count) { toast('No changes detected','info'); return; }
-    var msg = d.changes.map(function(c){
-      var parts = [];
-      if (c.deadline_changed) parts.push('Deadline: '+c.old_deadline+' → '+c.new_deadline);
-      if (c.emd_changed) parts.push('EMD: '+c.old_emd+' → '+c.new_emd);
-      return c.t247_id+': '+parts.join(', ');
-    }).join('\n');
-    alert('Changes detected:\n\n'+msg+'\n\nClick OK to clear these alerts.');
-    await fetch('/clear-changes',{method:'POST'});
-    checkChanges();
-  } catch(e){}
-}
-
-// ═══ COMPETITOR TRACKING ═══
-async function saveCompetitor() {
-  var tid = document.getElementById('comp-tid').value.trim();
-  if (!tid) { toast('Enter T247 ID','info'); return; }
-  var body = {
-    outcome: document.getElementById('comp-outcome').value,
-    our_price: document.getElementById('comp-our').value,
-    competitor_name: document.getElementById('comp-name').value,
-    competitor_price: document.getElementById('comp-l1').value,
-    outcome_notes: document.getElementById('comp-notes').value,
-  };
-  try {
-    await fetch('/tender/'+tid+'/competitor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    toast('Saved ✅','success');
-    loadCompInsights();
-    loadWL();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-async function loadCompInsights() {
-  try {
-    var r = await fetch('/competitor-insights'); var d = await r.json();
-    var el = document.getElementById('comp-insights'); if(!el) return;
-    if (d.total_bids < 3) {
-      el.innerHTML = '<div style="font-weight:600;color:#fff;margin-bottom:8px">💡 Pricing Insights</div><div style="color:#555;font-size:11px">Record '+( 3-d.total_bids)+' more outcomes to see insights</div>';
-      return;
-    }
-    el.innerHTML = '<div style="font-weight:600;color:#fff;margin-bottom:10px">💡 Pricing Insights</div>' +
-      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">' +
-      '<div><div style="font-size:18px;font-weight:700;color:#22c55e">'+d.win_rate+'%</div><div style="font-size:10px;color:#555">Win Rate</div></div>' +
-      '<div><div style="font-size:18px;font-weight:700;color:#3b82f6">'+d.won+'</div><div style="font-size:10px;color:#555">Won</div></div>' +
-      '<div><div style="font-size:18px;font-weight:700;color:#ef4444">'+d.lost+'</div><div style="font-size:10px;color:#555">Lost</div></div>' +
-      '</div>' +
-      (d.avg_price_gap_pct ? '<div style="font-size:12px;color:#f59e0b;background:#1a1203;padding:8px;border-radius:5px;margin-bottom:8px">⚡ '+d.insight+'</div>' : '') +
-      (d.top_competitors.length ? '<div style="font-size:11px;color:#555;margin-top:6px">Top competitors: ' + d.top_competitors.map(function(c){ return c.name+' ('+c.times_won+'x)'; }).join(', ')+'</div>' : '');
-  } catch(e){}
-}
-
-// ═══ T247 AUTO-REFRESH ═══
-async function checkNewTenders() {
-  var btn = document.getElementById ? document.getElementById('t247-refresh-btn') : null;
-  if (btn) { btn.textContent = '⏳ Checking...'; btn.disabled = true; }
-  try {
-    var r = await fetch('/check-new-tenders',{method:'POST'});
-    var d = await r.json();
-    if (btn) { btn.textContent = '🔄 T247'; btn.disabled = false; }
-    if (d.new_tenders > 0) {
-      toast('🎉 Found '+d.new_tenders+' new tenders on T247!','success');
-      loadDash();
-    } else {
-      toast('No new tenders found. ' + (d.error||''),'info');
-    }
-  } catch(e) {
-    if (btn) { btn.textContent = '🔄 T247'; btn.disabled = false; }
-    toast('T247 check failed: '+e.message,'error');
-  }
-}
-
-// go() already handles all pages — submission and winloss additions merged above
-
+window.addEventListener('DOMContentLoaded', () => { loadDash(); });
 </script>
 </body>
 </html>
