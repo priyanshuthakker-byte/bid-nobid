@@ -768,25 +768,23 @@ function clearCtx() {
 // API CALLS
 // ═══════════════════════════════════════════════════════════
 async function loadDashboard() {
-  try {
-    var r = await fetch('/dashboard'); var d = await r.json();
-    var s = d.stats || {};
-    document.getElementById('s-total').textContent = s.total || 0;
-    document.getElementById('s-bid').textContent   = s.bid || 0;
-    document.getElementById('s-cond').textContent  = s.conditional || 0;
-    document.getElementById('s-nobid').textContent = s.no_bid || 0;
-    document.getElementById('s-review').textContent= s.review || 0;
-    document.getElementById('nb-total').textContent= s.total || 0;
-    document.getElementById('sys-tenders').textContent = s.total || 0;
-    allTenders = d.tenders || [];
-    renderDash();
-    // alerts
-    var ac = document.getElementById('alert-container'); ac.innerHTML = '';
-    if ((s.deadline_today||0)>0) ac.innerHTML += '<div class="alert-bar red">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
-    if ((s.deadline_3days||0)>0) ac.innerHTML += '<div class="alert-bar amber">⚠ '+s.deadline_3days+' tender(s) due within 3 days</div>';
-  } catch(e) {
-    document.getElementById('dash-table').innerHTML = '<tr><td colspan="6" class="empty-state" style="color:#ef4444">Error: '+e.message+'</td></tr>';
-  }
+  var r = await fetch('/dashboard');
+  if(!r.ok) throw new Error('Server returned ' + r.status);
+  var d = await r.json();
+  var s = d.stats || {};
+  document.getElementById('s-total').textContent = s.total || 0;
+  document.getElementById('s-bid').textContent   = s.bid || 0;
+  document.getElementById('s-cond').textContent  = s.conditional || 0;
+  document.getElementById('s-nobid').textContent = s.no_bid || 0;
+  document.getElementById('s-review').textContent= s.review || 0;
+  document.getElementById('nb-total').textContent= s.total || 0;
+  document.getElementById('sys-tenders').textContent = s.total || 0;
+  allTenders = d.tenders || [];
+  renderDash();
+  // alerts
+  var ac = document.getElementById('alert-container'); if(ac) ac.innerHTML = '';
+  if ((s.deadline_today||0)>0) ac.innerHTML += '<div class="alert-bar red">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
+  if ((s.deadline_3days||0)>0) ac.innerHTML += '<div class="alert-bar amber">⚠ '+s.deadline_3days+' tender(s) due within 3 days</div>';
 }
 
 async function checkDriveStatus() {
@@ -1353,9 +1351,43 @@ async function unskipTender(tid) {
 // INIT
 // ═══════════════════════════════════════════════════════════
 async function init() {
+  // Show loading overlay while APIs load
+  showLoading('Starting up...');
+
   var saved = localStorage.getItem('activeTenderId');
-  if(saved) { currentTenderId = saved; document.getElementById('an-tid').value = saved; }
-  await Promise.allSettled([loadDashboard(), checkDriveStatus(), loadSettings(), loadQuota()]);
+  if(saved) { currentTenderId = saved; var el=document.getElementById('an-tid'); if(el) el.value = saved; }
+
+  // Safety timeout — always hide overlay after 8 seconds no matter what
+  var safetyTimer = setTimeout(function() { hideLoading(); }, 8000);
+
+  try {
+    // Try loading dashboard with retry for cold starts
+    var dashOk = false;
+    for(var attempt=0; attempt<3; attempt++) {
+      try {
+        showLoading(attempt===0 ? 'Loading dashboard...' : 'Connecting to server... (attempt '+(attempt+1)+')');
+        await loadDashboard();
+        dashOk = true;
+        break;
+      } catch(e) {
+        if(attempt < 2) await new Promise(function(r){setTimeout(r, 3000);}); // wait 3s between retries
+      }
+    }
+    if(!dashOk) {
+      // Show dashboard with empty state rather than hanging
+      var tb = document.getElementById('dash-table');
+      if(tb) tb.innerHTML = '<tr><td colspan="6" class="empty-state">Server is waking up — try refreshing in 30 seconds</td></tr>';
+    }
+
+    // Run other inits in parallel, don't block on them
+    Promise.allSettled([checkDriveStatus(), loadSettings(), loadQuota()]);
+
+  } catch(e) {
+    console.error('Init error:', e);
+  } finally {
+    clearTimeout(safetyTimer);
+    hideLoading();
+  }
 }
 
 init();
