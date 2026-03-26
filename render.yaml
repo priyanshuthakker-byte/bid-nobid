@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: bid-nobid
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GDRIVE_CREDENTIALS
+        sync: false
+      - key: GDRIVE_FOLDER_ID
+        sync: false

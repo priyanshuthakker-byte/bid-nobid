@@ -176,3 +176,12 @@ def load_from_drive(local_path, filename="tenders_db.json"):
 
 def is_available():
     return _drive_service is not None
+
+
+# Backward compatibility stub — some versions of main.py import this
+def upload_tender_file(local_path, filename=None):
+    """Alias for save_to_drive for backward compatibility"""
+    return save_to_drive(local_path, filename or local_path.name)
+
+# Also export drive_available as alias for is_available
+drive_available = is_available
