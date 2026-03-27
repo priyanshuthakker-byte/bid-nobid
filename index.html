@@ -1658,8 +1658,9 @@ async function loadSubChecklist(tid) {
     document.getElementById('sub-cl-progress').textContent = done+'/'+items.length+' complete';
     document.getElementById('sub-cl-bar').style.width=pct+'%';
     document.getElementById('sub-cl-items').innerHTML = items.map(function(item){
+      var iid = esc(item.id||item.label||'item');
       return '<div class="cl-item'+(item.done?' done':'')+'">'+
-        '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCl(\''+esc(tid)+'\',\''+esc(item.id||'\')+'\',this.checked,this)">'+
+        '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCl(\''+esc(tid)+'\',\''+iid+'\',this.checked,this)">'+
         '<span class="cl-label">'+esc(item.label||item.title||'')+'</span>'+
         '<span class="cl-cat">'+esc(item.category||'')+'</span>'+
       '</div>';
