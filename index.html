@@ -1172,6 +1172,44 @@ tbody tr:first-child td{border-top:none}
             <button class="btn btn-ghost btn-sm" onclick="forceSyncDrive()" style="margin-top:8px;display:flex;width:100%">☁ Force Sync to Google Drive</button>
           </div>
 
+          <!-- GOOGLE SHEET SYNC -->
+          <div class="card" style="grid-column:1/-1">
+            <div class="card-hd">
+              <div>
+                <div class="card-title">Google Sheet Sync</div>
+                <div class="card-sub">Nascent_Tender_Master_v4 — bidirectional sync on demand only</div>
+              </div>
+              <span id="sheet-status-badge" style="font-size:11px;padding:2px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-secondary)">checking...</span>
+            </div>
+
+            <div id="sheet-status-detail" style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px">
+              Click "Check Connection" to see Sheet status.
+            </div>
+
+            <!-- Tab status grid -->
+            <div id="sheet-tabs-grid" style="display:none;margin-bottom:14px">
+              <div style="font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Sheet tabs</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px" id="sheet-tabs-list"></div>
+            </div>
+
+            <!-- Sync buttons -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <button class="btn btn-ghost btn-sm" onclick="checkSheetStatus()">🔍 Check Connection</button>
+              <button class="btn btn-ghost btn-sm" onclick="sheetPull()" id="btn-pull">⬇ Sheet → App</button>
+              <button class="btn btn-ghost btn-sm" onclick="sheetPush()" id="btn-push">⬆ App → Sheet</button>
+              <button class="btn btn-primary btn-sm" onclick="sheetSyncBoth()" id="btn-sync-both">⇄ Sync Both</button>
+            </div>
+
+            <div id="sheet-sync-result" style="margin-top:10px;font-size:12px;display:none"></div>
+
+            <!-- What each button does -->
+            <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px;color:var(--color-text-secondary)">
+              <div><strong style="color:var(--color-text-primary)">Sheet → App</strong><br>Reads Firm_Identity, Financials, Projects, Certifications, Bid_Rules from Sheet → updates profile + rules in app</div>
+              <div><strong style="color:var(--color-text-primary)">App → Sheet</strong><br>Writes current bid rules, financials, projects from app → back into Sheet tabs</div>
+              <div><strong style="color:var(--color-text-primary)">Sync Both</strong><br>Pulls from Sheet first → then pushes app data back. Full reconcile. Use this normally.</div>
+            </div>
+          </div>
+
           <!-- SYSTEM STATUS -->
           <div class="card" style="grid-column:1/-1">
             <div class="card-hd">
@@ -2719,6 +2757,69 @@ window.addEventListener('DOMContentLoaded', function() {
   setTimeout(hideLoad, 20000);
   tryLoad();
 });
+
+// ── Google Sheet Sync ────────────────────────────────────────
+async function checkSheetStatus() {
+  var badge = document.getElementById('sheet-status-badge');
+  var detail = document.getElementById('sheet-status-detail');
+  if(badge) { badge.textContent = 'checking...'; badge.style.background='var(--color-background-secondary)'; badge.style.color='var(--color-text-secondary)'; }
+  try {
+    var r = await fetch('/sheet-status'); var d = await r.json();
+    if(d.connected) {
+      if(badge){ badge.textContent='connected'; badge.style.background='var(--color-background-success)'; badge.style.color='var(--color-text-success)'; }
+      var allTabs = Object.assign({}, d.required_tabs||{}, d.optional_tabs||{});
+      var grid = document.getElementById('sheet-tabs-list');
+      if(grid) grid.innerHTML = Object.entries(allTabs).map(function(e){
+        return '<div style="padding:5px 8px;border-radius:6px;font-size:11px;background:'+(e[1]?'var(--color-background-success)':'var(--color-background-secondary)')+';color:'+(e[1]?'var(--color-text-success)':'var(--color-text-tertiary)')+';border:1px solid '+(e[1]?'var(--color-border-success)':'var(--color-border-tertiary)')+'">'+(e[1]?'✓ ':'✗ ')+e[0]+'</div>';
+      }).join('');
+      var tg = document.getElementById('sheet-tabs-grid'); if(tg) tg.style.display='block';
+      var missing = Object.entries(d.optional_tabs||{}).filter(function(e){return !e[1];}).map(function(e){return e[0];});
+      if(detail) detail.innerHTML = (d.tabs||[]).length+' tabs found.'+(missing.length?' <span style="color:var(--color-text-warning)">Optional tabs not yet created: '+missing.join(', ')+'</span>':' All tabs ready.');
+    } else {
+      if(badge){ badge.textContent='not connected'; badge.style.background='var(--color-background-danger)'; badge.style.color='var(--color-text-danger)'; }
+      if(detail) detail.innerHTML = '<span style="color:var(--color-text-danger)">'+(d.reason||'Cannot connect')+'</span>';
+    }
+  } catch(e) {
+    if(badge) badge.textContent='error';
+    if(detail) detail.textContent = 'Error: '+e.message;
+  }
+}
+
+async function _sheetSync(endpoint, btnId, label) {
+  var btn = document.getElementById(btnId);
+  var res = document.getElementById('sheet-sync-result');
+  var origLabel = btn ? btn.textContent : '';
+  if(btn){ btn.disabled=true; btn.textContent='Syncing...'; }
+  if(res) res.style.display='none';
+  showLoad(label);
+  try {
+    var r = await fetch(endpoint,{method:'POST'}); var d = await r.json();
+    hideLoad();
+    if(btn){ btn.disabled=false; btn.textContent=origLabel; }
+    if(res){
+      res.style.display='block';
+      var ok = d.status==='success';
+      res.style.cssText = 'margin-top:10px;font-size:12px;padding:10px 12px;border-radius:8px;background:'+(ok?'var(--color-background-success)':'var(--color-background-danger)')+';color:'+(ok?'var(--color-text-success)':'var(--color-text-danger)');
+      var msg = d.message||d.error||'Done';
+      if(d.tabs_read&&d.tabs_read.length) msg += ' | Read: '+d.tabs_read.join(', ');
+      if(d.tabs_written&&d.tabs_written.length) msg += ' | Written: '+d.tabs_written.join(', ');
+      if(d.tabs_skipped&&d.tabs_skipped.length) msg += ' | Skipped: '+d.tabs_skipped.join(', ');
+      res.textContent = (ok?'✓ ':'✗ ')+msg;
+    }
+    toast(d.message||d.error||(d.status==='success'?'Sync done':'Sync failed'), d.status==='success'?'success':'error');
+    if(d.status==='success' && (endpoint.includes('pull')||endpoint.includes('both'))) setTimeout(loadDashboard,500);
+  } catch(e) {
+    hideLoad();
+    if(btn){ btn.disabled=false; btn.textContent=origLabel; }
+    if(res){ res.style.display='block'; res.style.cssText='margin-top:10px;font-size:12px;padding:10px 12px;border-radius:8px;background:var(--color-background-danger);color:var(--color-text-danger)'; res.textContent='✗ Error: '+e.message; }
+  }
+}
+
+function sheetPull()     { _sheetSync('/sheet-sync/pull','btn-pull','Pulling from Google Sheet...'); }
+function sheetPush()     { _sheetSync('/sheet-sync/push','btn-push','Pushing to Google Sheet...'); }
+function sheetSyncBoth() { _sheetSync('/sheet-sync/both','btn-sync-both','Syncing with Google Sheet...'); }
+// ────────────────────────────────────────────────────────────
+
 </script>
 </body>
 </html>
