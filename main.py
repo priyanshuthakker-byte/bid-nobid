@@ -171,7 +171,13 @@ async def startup_event():
 def load_db() -> dict:
     if DB_FILE.exists():
         try:
-            return json.loads(DB_FILE.read_text(encoding="utf-8"))
+            data = json.loads(DB_FILE.read_text(encoding="utf-8"))
+            # Always guarantee the tenders key exists
+            if not isinstance(data, dict):
+                data = {}
+            if "tenders" not in data:
+                data["tenders"] = {}
+            return data
         except Exception:
             pass
     return {"tenders": {}}
@@ -386,7 +392,7 @@ async def api_quota_status():
 @app.get("/dashboard")
 async def dashboard():
     db = load_db()
-    tenders = list(db["tenders"].values())
+    tenders = list(db.get("tenders", {}).values())
     stats = {
         "total": len(tenders),
         "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
@@ -416,7 +422,7 @@ async def import_excel(file: UploadFile = File(...)):
         for t in tenders:
             tid = str(t.get("t247_id", ""))
             if tid:
-                existing = db["tenders"].get(tid, {})
+                existing = db.get("tenders", {}).get(tid, {})
                 if existing:
                     excel_fields = ["ref_no", "brief", "org_name", "location",
                                     "estimated_cost_raw", "estimated_cost_cr",
@@ -611,7 +617,7 @@ async def update_status(t247_id: str, data: dict = Body(...)):
 @app.post("/tender/{t247_id}/stage")
 async def update_stage(t247_id: str, data: dict = Body(...)):
     db = load_db()
-    t = db["tenders"].get(t247_id, {})
+    t = db.get("tenders", {}).get(t247_id, {})
     if "status" in data: t["status"] = data["status"]
     if "notes" in data: t["notes_internal"] = data["notes"]
     if "outcome_value" in data: t["outcome_value"] = data["outcome_value"]
@@ -624,7 +630,7 @@ async def update_stage(t247_id: str, data: dict = Body(...)):
 @app.post("/tender/{t247_id}/skip")
 async def skip_tender(t247_id: str, data: dict = Body(default={})):
     db = load_db()
-    t = db["tenders"].get(t247_id, {"t247_id": t247_id})
+    t = db.get("tenders", {}).get(t247_id, {"t247_id": t247_id})
     t["status"] = "Not Interested"
     t["skip_reason"] = data.get("reason", "Not interested")
     t["skipped_at"] = datetime.now().isoformat()
@@ -635,7 +641,7 @@ async def skip_tender(t247_id: str, data: dict = Body(default={})):
 @app.post("/tender/{t247_id}/restore")
 async def restore_tender(t247_id: str):
     db = load_db()
-    t = db["tenders"].get(t247_id, {})
+    t = db.get("tenders", {}).get(t247_id, {})
     if t.get("status") == "Not Interested":
         t["status"] = "Identified"
         t.pop("skip_reason", None)
@@ -647,7 +653,7 @@ async def restore_tender(t247_id: str):
 @app.post("/tender/{t247_id}/favourite")
 async def toggle_favourite(t247_id: str):
     db = load_db()
-    t = db["tenders"].get(t247_id, {"t247_id": t247_id})
+    t = db.get("tenders", {}).get(t247_id, {"t247_id": t247_id})
     t["favourite"] = not t.get("favourite", False)
     db["tenders"][t247_id] = t
     save_db(db)
@@ -708,7 +714,7 @@ async def gen_prebid_letter(t247_id: str):
 @app.get("/checklist/{t247_id}")
 async def get_checklist(t247_id: str):
     db  = load_db()
-    t   = db["tenders"].get(t247_id, {})
+    t   = db.get("tenders", {}).get(t247_id, {})
 
     # 1. AI-generated checklist (most accurate — from analysed ZIP)
     if t.get("doc_checklist"):
@@ -756,7 +762,7 @@ def _parse_excel_checklist(text: str) -> list:
 @app.post("/checklist/{t247_id}")
 async def save_checklist(t247_id: str, data: dict = Body(...)):
     db = load_db()
-    t = db["tenders"].get(t247_id, {})
+    t = db.get("tenders", {}).get(t247_id, {})
     t["doc_checklist"] = data.get("checklist", [])
     pct = round(sum(1 for i in t["doc_checklist"] if i.get("done")) / max(len(t["doc_checklist"]), 1) * 100)
     t["checklist_pct"] = pct
@@ -767,7 +773,7 @@ async def save_checklist(t247_id: str, data: dict = Body(...)):
 @app.post("/checklist/{t247_id}/item")
 async def toggle_checklist_item(t247_id: str, data: dict = Body(...)):
     db = load_db()
-    t = db["tenders"].get(t247_id, {})
+    t = db.get("tenders", {}).get(t247_id, {})
     items = t.get("doc_checklist", [])
     item_id = data.get("id", "")
     done = data.get("done", False)
@@ -820,7 +826,7 @@ async def reports_list():
         reports = []
         for fname in sorted(OUTPUT_DIR.glob("BidNoBid_*.docx"), key=lambda f: f.stat().st_mtime, reverse=True):
             tender = None
-            for tid, t in db["tenders"].items():
+            for tid, t in db.get("tenders", {}).items():
                 if tid in fname.stem or (t.get("tender_no", "") and t.get("tender_no", "").replace("/", "_") in fname.stem):
                     tender = t
                     break
@@ -843,7 +849,7 @@ async def export_tenders(verdict: str = "", search: str = ""):
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
         db = load_db()
-        tenders = list(db["tenders"].values())
+        tenders = list(db.get("tenders", {}).values())
         if verdict and verdict != "ALL":
             tenders = [t for t in tenders if t.get("verdict") == verdict]
         if search:
@@ -1368,7 +1374,7 @@ async def get_workspace(t247_id: str):
 @app.post("/prebid-sent/{t247_id}")
 async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
     db = load_db()
-    t = db["tenders"].get(t247_id, {})
+    t = db.get("tenders", {}).get(t247_id, {})
     t["prebid_sent"] = True
     t["prebid_sent_at"] = datetime.now().isoformat()
     t["prebid_sent_to"] = data.get("email", "")
@@ -1389,7 +1395,7 @@ async def reclassify_all():
         raise HTTPException(500, "excel_processor not available")
     db = load_db()
     counts = {"bid": 0, "no_bid": 0, "conditional": 0, "review": 0, "count": 0}
-    for tid, t in db["tenders"].items():
+    for tid, t in db.get("tenders", {}).items():
         # Always re-classify (rules may have changed)
         brief = t.get("brief", "")
         cost_raw = t.get("estimated_cost_raw", 0)
@@ -1420,7 +1426,7 @@ async def get_skipped():
     """Return all skipped tenders."""
     db = load_db()
     skipped = [
-        t for t in db["tenders"].values()
+        t for t in db.get("tenders", {}).values()
         if t.get("status") == "Not Interested"
     ]
     return {"tenders": skipped}
@@ -1448,4 +1454,3 @@ async def reanalyse_tender(t247_id: str):
 
 
 # ── GENERATE PREBID LETTER ─────────────────────────────────────
-
