@@ -89,6 +89,64 @@ def _read_pdf(path: Path) -> str:
 
     return text
 
+    # OCR fallback for scanned PDFs (text < 200 chars means it's a scan)
+    if len(text.strip()) < 200:
+        logger.info("Text extraction yielded <200 chars — trying Gemini Vision OCR on " + path.name)
+        ocr_text = _ocr_with_gemini(path)
+        if ocr_text:
+            text = ocr_text
+
+    return text
+
+
+def _ocr_with_gemini(path) -> str:
+    """OCR fallback: converts PDF pages to images, sends to Gemini Vision."""
+    import base64, json, urllib.request
+    try:
+        from ai_analyzer import get_all_api_keys
+        api_keys = get_all_api_keys()
+        if not api_keys:
+            return ""
+        api_key = api_keys[0]
+
+        import fitz
+        doc = fitz.open(str(path))
+        all_text = []
+
+        for page_num in range(min(len(doc), 8)):
+            fitz_page = doc[page_num]
+            pix = fitz_page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            img_b64 = base64.b64encode(pix.tobytes("png")).decode()
+
+            payload = {
+                "contents": [{"parts": [
+                    {"text": "Extract ALL text from this government tender document page. Output only the raw text, preserve tables and numbers exactly."},
+                    {"inline_data": {"mime_type": "image/png", "data": img_b64}}
+                ]}],
+                "generationConfig": {"temperature": 0, "maxOutputTokens": 4096}
+            }
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + api_key
+            req = urllib.request.Request(
+                url, data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"}, method="POST"
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    result = json.loads(resp.read())
+                    page_text = result["candidates"][0]["content"]["parts"][0]["text"]
+                    all_text.append("--- Page " + str(page_num+1) + " ---\n" + page_text)
+            except Exception as e:
+                logger.warning("Gemini OCR page " + str(page_num+1) + " failed: " + str(e))
+
+        doc.close()
+        combined = "\n\n".join(all_text)
+        if combined.strip():
+            logger.info("Gemini Vision OCR extracted " + str(len(combined)) + " chars from " + path.name)
+        return combined
+    except Exception as e:
+        logger.warning("OCR fallback failed: " + str(e))
+        return ""
+
 
 def _read_docx(path: Path) -> str:
     """Extract text from DOCX file."""
