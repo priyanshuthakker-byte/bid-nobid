@@ -237,8 +237,9 @@ tbody tr:first-child td{border-top:none}
 .alert-success{background:var(--green-bg);border-left:3px solid var(--green);color:#86efac}
 
 /* ── BRIEF CELL ── */
-.brief-name{font-size:13px;color:var(--text);font-weight:400;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brief-org{font-size:11px;color:var(--text3);margin-top:2px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brief-name{font-size:13px;color:var(--text);font-weight:400;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
+.brief-org{font-size:11px;color:var(--text3);margin-top:2px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
+.brief-name:hover,.brief-org:hover{overflow:visible;white-space:normal;background:var(--bg2);position:relative;z-index:5;padding:2px 4px;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 
 /* ── ACTION BTNS ── */
 .act-btn{
@@ -419,7 +420,10 @@ tbody tr:first-child td{border-top:none}
 .kpi-trend{font-size:11px;margin-top:6px}
 .kpi-trend.up{color:var(--green)}.kpi-trend.down{color:var(--red)}
 
-/* ── RESPONSIVE ── */
+.sort-th{cursor:pointer;user-select:none;white-space:nowrap}
+.sort-th:hover{color:var(--text2)}
+.sort-th.asc::after{content:' ↑';color:var(--blue)}
+.sort-th.desc::after{content:' ↓';color:var(--blue)}
 @media(max-width:900px){
   .stats-row{grid-template-columns:repeat(3,1fr)}
   .settings-grid{grid-template-columns:1fr}
@@ -478,6 +482,9 @@ tbody tr:first-child td{border-top:none}
     </button>
     <button class="sb-btn" data-page="submission">
       <span class="ico">📦</span>Submission Pkg
+    </button>
+    <button class="sb-btn" data-page="vault">
+      <span class="ico">🗄️</span>Document Vault
     </button>
 
     <div class="sb-section">System</div>
@@ -549,6 +556,9 @@ tbody tr:first-child td{border-top:none}
           <button class="fpill" onclick="setDashFilter('REVIEW')">? Review</button>
           <button class="fpill" onclick="setDashFilter('urgent')">🔴 Urgent ≤7d</button>
           <button class="fpill" onclick="setDashFilter('analysed')">🔬 Analysed</button>
+          <button class="fpill" onclick="setDashFilter('favourite')">⭐ Favourites</button>
+          <button class="fpill" onclick="setDashFilter('skipped')" style="color:var(--red)">🚫 Skipped</button>
+          <button class="fpill" onclick="setDashFilter('expired')" style="color:var(--text3)">💀 Expired</button>
         </div>
         <div class="search-box">
           <span class="search-icon">🔍</span>
@@ -558,12 +568,12 @@ tbody tr:first-child td{border-top:none}
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th style="width:90px">T247 ID</th>
-              <th>Brief / Organisation</th>
-              <th style="width:110px">Deadline</th>
-              <th style="width:70px">Days</th>
-              <th style="width:100px">Verdict</th>
-              <th style="width:180px">Actions</th>
+              <th class="sort-th" onclick="sortDash('t247_id')" style="width:90px">T247 ID</th>
+              <th class="sort-th" onclick="sortDash('brief')">Brief / Organisation</th>
+              <th class="sort-th" onclick="sortDash('deadline')" style="width:110px">Deadline</th>
+              <th class="sort-th" onclick="sortDash('days')" style="width:70px">Days</th>
+              <th class="sort-th" onclick="sortDash('verdict')" style="width:110px">Verdict</th>
+              <th style="width:200px">Actions</th>
             </tr></thead>
             <tbody id="dash-tbody">
               <tr><td colspan="6" class="empty-row">Loading tenders...</td></tr>
@@ -664,6 +674,16 @@ tbody tr:first-child td{border-top:none}
           </div>
         </div>
         <div id="pq-section" style="display:none">
+          <!-- Fix #4: Post-analysis quick nav -->
+          <div id="an-post-nav" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:12px 14px;background:var(--green-bg);border:1px solid rgba(45,216,132,.2);border-radius:var(--radius);font-size:13px">
+            <span style="color:var(--green);font-weight:600">✓ Analysis saved</span>
+            <span style="color:var(--text3)" id="an-post-tid"></span>
+            <span style="color:var(--text3)">→ Go to:</span>
+            <button class="btn btn-ghost btn-sm" onclick="goToPage('prebid')">✉ Pre-bid Queries</button>
+            <button class="btn btn-ghost btn-sm" onclick="goToPage('checklist')">✅ Checklist</button>
+            <button class="btn btn-ghost btn-sm" onclick="goToPage('submission')">📦 Documents</button>
+            <button class="btn btn-ghost btn-sm" onclick="goToPage('tracker')">🎯 Tracker</button>
+          </div>
           <div class="card">
             <div class="card-hd">
               <div class="card-title">PQ / TQ Criteria Analysis</div>
@@ -705,11 +725,17 @@ tbody tr:first-child td{border-top:none}
       </div>
       <div class="page-body">
         <div class="card">
-          <div class="form-group">
-            <label>Select Tender</label>
-            <select id="pb-select" onchange="loadPrebidForTender()">
-              <option value="">-- Select --</option>
-            </select>
+          <div class="row2" style="align-items:flex-end">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Select Tender</label>
+              <select id="pb-select" onchange="loadPrebidForTender()">
+                <option value="">-- Select --</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Search tender</label>
+              <input type="text" id="pb-search" placeholder="Type T247 ID or brief..." oninput="filterSelect('pb-select','pb-search')">
+            </div>
           </div>
         </div>
         <div id="pb-content">
@@ -727,11 +753,17 @@ tbody tr:first-child td{border-top:none}
       </div>
       <div class="page-body">
         <div class="card">
-          <div class="form-group">
-            <label>Select Tender</label>
-            <select id="cl-select" onchange="loadChecklist()">
-              <option value="">-- Select --</option>
-            </select>
+          <div class="row2" style="align-items:flex-end">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Select Tender</label>
+              <select id="cl-select" onchange="loadChecklist()">
+                <option value="">-- Select --</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Search tender</label>
+              <input type="text" id="cl-search" placeholder="Type T247 ID or brief..." oninput="filterSelect('cl-select','cl-search')">
+            </div>
           </div>
         </div>
         <div id="cl-content">
@@ -873,7 +905,7 @@ tbody tr:first-child td{border-top:none}
       <div class="topbar">
         <div class="topbar-left"><span class="topbar-title">Nascent Profile</span></div>
         <div class="topbar-right">
-          <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save</button>
+          <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
         </div>
       </div>
       <div class="page-body">
@@ -883,65 +915,175 @@ tbody tr:first-child td{border-top:none}
           <div class="tab" onclick="switchProfileTab('certs')">Certifications</div>
           <div class="tab" onclick="switchProfileTab('projects')">Projects</div>
           <div class="tab" onclick="switchProfileTab('team')">Team</div>
+          <div class="tab" onclick="switchProfileTab('bidrules')">Bid Rules</div>
         </div>
+
+        <!-- COMPANY TAB -->
         <div id="profile-tab-company" class="tab-panel active">
           <div class="card">
             <div class="card-title" style="margin-bottom:14px">Company Details</div>
             <div class="row3">
-              <div class="form-group"><label>Company Name</label><input type="text" id="p-name" placeholder="Nascent Info Technologies Pvt. Ltd."></div>
+              <div class="form-group"><label>Company Name</label><input type="text" id="p-name"></div>
+              <div class="form-group"><label>Legal Status</label><input type="text" id="p-legal" placeholder="Private Limited Company"></div>
+              <div class="form-group"><label>Year of Incorporation</label><input type="number" id="p-year"></div>
               <div class="form-group"><label>CIN</label><input type="text" id="p-cin"></div>
               <div class="form-group"><label>PAN</label><input type="text" id="p-pan"></div>
               <div class="form-group"><label>GSTIN</label><input type="text" id="p-gstin"></div>
               <div class="form-group"><label>MSME / UDYAM No.</label><input type="text" id="p-udyam"></div>
-              <div class="form-group"><label>Authorized Signatory</label><input type="text" id="p-signatory"></div>
-              <div class="form-group"><label>MD / Director</label><input type="text" id="p-md"></div>
+              <div class="form-group"><label>Type / Domain</label><input type="text" id="p-type" placeholder="IT / GIS / Smart City"></div>
+              <div class="form-group"><label>Email</label><input type="text" id="p-email"></div>
+              <div class="form-group"><label>Tender Email</label><input type="text" id="p-tender-email"></div>
+              <div class="form-group"><label>Phone</label><input type="text" id="p-phone"></div>
+              <div class="form-group"><label>Website</label><input type="text" id="p-website"></div>
             </div>
             <div class="form-group"><label>HQ Address</label><input type="text" id="p-address"></div>
+            <div class="row3">
+              <div class="form-group"><label>Authorized Signatory</label><input type="text" id="p-signatory"></div>
+              <div class="form-group"><label>MD / Director</label><input type="text" id="p-md"></div>
+              <div class="form-group"><label>POA Valid Till</label><input type="text" id="p-poa"></div>
+            </div>
+            <div id="poa-alert" style="display:none" class="alert alert-danger">⚠ POA EXPIRY ALERT — Renew immediately before any submission</div>
           </div>
         </div>
+
+        <!-- FINANCE TAB -->
         <div id="profile-tab-finance" class="tab-panel">
           <div class="card">
             <div class="card-title" style="margin-bottom:14px">Financial Details</div>
             <div class="row3">
+              <div class="form-group"><label>Turnover FY 2019-20 (Cr)</label><input type="number" id="p-t1920" step="0.01"></div>
+              <div class="form-group"><label>Turnover FY 2020-21 (Cr)</label><input type="number" id="p-t2021" step="0.01"></div>
+              <div class="form-group"><label>Turnover FY 2021-22 (Cr)</label><input type="number" id="p-t2122" step="0.01"></div>
               <div class="form-group"><label>Turnover FY 2022-23 (Cr)</label><input type="number" id="p-t2223" step="0.01"></div>
               <div class="form-group"><label>Turnover FY 2023-24 (Cr)</label><input type="number" id="p-t2324" step="0.01"></div>
               <div class="form-group"><label>Turnover FY 2024-25 (Cr)</label><input type="number" id="p-t2425" step="0.01"></div>
               <div class="form-group"><label>Net Worth (Cr)</label><input type="number" id="p-nw" step="0.01"></div>
+              <div class="form-group"><label>Solvency Amount (Cr)</label><input type="number" id="p-solv" step="0.01"></div>
               <div class="form-group"><label>CA Firm Name</label><input type="text" id="p-ca"></div>
             </div>
+            <div id="finance-derived" style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:var(--radius);font-size:13px;color:var(--text2)"></div>
           </div>
         </div>
+
+        <!-- CERTIFICATIONS TAB -->
         <div id="profile-tab-certs" class="tab-panel">
           <div class="card">
             <div class="card-title" style="margin-bottom:14px">Certifications</div>
             <div class="row3">
-              <div class="form-group"><label>CMMI Level</label><input type="text" id="p-cmmi"></div>
+              <div class="form-group"><label>CMMI Level</label><input type="text" id="p-cmmi" placeholder="3"></div>
+              <div class="form-group"><label>CMMI Version</label><input type="text" id="p-cmmi-ver" placeholder="V2.0 (DEV)"></div>
               <div class="form-group"><label>CMMI Valid Till</label><input type="text" id="p-cmmi-valid"></div>
-              <div class="form-group"><label>ISO 9001:2015 Valid Till</label><input type="text" id="p-iso9001"></div>
-              <div class="form-group"><label>ISO 27001:2022 Valid Till</label><input type="text" id="p-iso27001"></div>
-              <div class="form-group"><label>ISO 20000-1:2018 Valid Till</label><input type="text" id="p-iso20000"></div>
+              <div class="form-group"><label>ISO 9001 Cert No.</label><input type="text" id="p-iso9001-no"></div>
+              <div class="form-group"><label>ISO 9001 Valid From</label><input type="text" id="p-iso9001-from"></div>
+              <div class="form-group"><label>ISO 9001 Valid Till</label><input type="text" id="p-iso9001"></div>
+              <div class="form-group"><label>ISO 27001 Cert No.</label><input type="text" id="p-iso27001-no"></div>
+              <div class="form-group"><label>ISO 27001 Valid From</label><input type="text" id="p-iso27001-from"></div>
+              <div class="form-group"><label>ISO 27001 Valid Till</label><input type="text" id="p-iso27001"></div>
+              <div class="form-group"><label>ISO 20000 Cert No.</label><input type="text" id="p-iso20000-no"></div>
+              <div class="form-group"><label>ISO 20000 Valid From</label><input type="text" id="p-iso20000-from"></div>
+              <div class="form-group"><label>ISO 20000 Valid Till</label><input type="text" id="p-iso20000"></div>
+            </div>
+            <div class="row3">
               <div class="form-group"><label>Total Employees</label><input type="number" id="p-emp"></div>
               <div class="form-group"><label>IT/Dev Employees</label><input type="number" id="p-itdev"></div>
+              <div class="form-group"><label>GIS Staff</label><input type="number" id="p-gis"></div>
             </div>
+            <div class="form-group"><label>NOT Available (CERT-In, STQC, SAP, Oracle, etc.)</label>
+              <input type="text" id="p-not" placeholder="CERT-In, STQC, SAP Partnership, Oracle Partnership, .NET Primary"></div>
           </div>
         </div>
+
+        <!-- PROJECTS TAB -->
         <div id="profile-tab-projects" class="tab-panel">
           <div class="card">
-            <div class="card-title" style="margin-bottom:14px">Key Projects</div>
-            <div class="table-wrap">
+            <div class="card-hd">
+              <div class="card-title">Key Projects</div>
+              <div style="font-size:12px;color:var(--text3)">Used for PQ/experience matching by AI</div>
+            </div>
+            <div class="table-wrap" style="overflow-x:auto">
               <table>
-                <thead><tr><th>Project Name</th><th>Client</th><th>Value (Cr)</th><th>Status</th><th>Type</th></tr></thead>
+                <thead><tr>
+                  <th>Project Name</th><th>Client</th><th>Type</th>
+                  <th>Value (Cr)</th><th>Status</th><th>Role</th><th>Tags</th>
+                </tr></thead>
                 <tbody id="profile-projects-tbody"></tbody>
               </table>
             </div>
           </div>
         </div>
+
+        <!-- TEAM TAB -->
         <div id="profile-tab-team" class="tab-panel">
           <div class="card">
-            <div class="card-title" style="margin-bottom:14px">Team Capabilities</div>
-            <div class="form-group"><label>Technology Stack</label><textarea id="p-tech" rows="3"></textarea></div>
-            <div class="form-group"><label>NOT Available (certifications/partnerships we don't have)</label><textarea id="p-not" rows="2"></textarea></div>
+            <div class="card-title" style="margin-bottom:14px">Technology Stack &amp; Capabilities</div>
+            <div class="form-group">
+              <label>Primary Technology Stack</label>
+              <textarea id="p-tech" rows="4" placeholder="Java/Spring Boot, Python, React.js, Angular, Android, Flutter..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>NOT Available / Check Before Bidding</label>
+              <textarea id="p-not-team" rows="2" placeholder=".NET Primary, MS SQL Server, SAP Partner, Oracle ERP Partner..."></textarea>
+            </div>
           </div>
+        </div>
+
+        <!-- BID RULES TAB -->
+        <div id="profile-tab-bidrules" class="tab-panel">
+          <div class="card">
+            <div class="card-hd">
+              <div>
+                <div class="card-title">Auto Bid/No-Bid Rules</div>
+                <div class="card-sub">These keywords trigger automatic NO-BID or CONDITIONAL decisions on Excel import</div>
+              </div>
+            </div>
+            <div class="row2">
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px">🚫 DO NOT BID — Keywords</div>
+                <div id="dnb-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+                <div class="form-group" style="margin-bottom:0">
+                  <input type="text" id="dnb-add" placeholder="Add keyword..." onkeydown="if(event.key==='Enter')addBidRule('dnb')">
+                </div>
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">⚠ CONDITIONAL — Keywords</div>
+                <div id="cond-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+                <div class="form-group" style="margin-bottom:0">
+                  <input type="text" id="cond-add" placeholder="Add keyword..." onkeydown="if(event.key==='Enter')addBidRule('cond')">
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:14px">
+              <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">✓ Preferred Sectors</div>
+              <div id="pref-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+              <div class="row2">
+                <div class="form-group" style="margin-bottom:0">
+                  <input type="text" id="pref-add" placeholder="Add sector..." onkeydown="if(event.key==='Enter')addBidRule('pref')">
+                </div>
+                <div class="row2" style="margin-bottom:0">
+                  <div class="form-group" style="margin-bottom:0"><label>Min Project Value (Cr)</label><input type="number" id="p-minval" step="0.1"></div>
+                  <div class="form-group" style="margin-bottom:0"><label>Max Project Value (Cr)</label><input type="number" id="p-maxval" step="1"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DOCUMENT VAULT ═══ -->
+    <div id="page-vault" class="page">
+      <div class="topbar">
+        <div class="topbar-left"><span class="topbar-title">Document Vault</span></div>
+        <div class="topbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="loadVault()">↺ Refresh</button>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="alert alert-info" style="margin-bottom:14px">
+          Upload your company documents here. They will be automatically attached when generating submission packages.
+        </div>
+        <div id="vault-content">
+          <div class="card" style="text-align:center;color:var(--text3);padding:40px">Loading vault...</div>
         </div>
       </div>
     </div>
@@ -976,8 +1118,17 @@ tbody tr:first-child td{border-top:none}
             <input type="file" id="db-upload" accept=".json" style="display:none" onchange="uploadDB(this)">
             <button class="btn btn-ghost btn-sm" onclick="forceSyncDrive()" style="margin-top:10px;width:100%">☁ Force Sync Drive</button>
           </div>
-          <div class="card" style="grid-column:1/-1">
-            <div class="card-hd"><div class="card-title">System Status</div></div>
+          <div class="card">
+            <div class="card-hd"><div class="card-title">T247 Credentials</div></div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Used for auto-download from tender247.com</div>
+            <div class="form-group"><label>Email</label><input type="text" id="t247u" placeholder="your@email.com"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="t247p" placeholder="password"></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-ghost btn-sm" onclick="saveT247Creds()">💾 Save</button>
+              <button class="btn btn-ghost btn-sm" onclick="testT247Conn()">🔗 Test</button>
+            </div>
+            <div id="t247-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+          </div>
             <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13px">
               <span>Version: <b style="color:var(--text)">7.0</b></span>
               <span id="sys-drive-label">Drive: <b style="color:var(--text)">checking...</b></span>
@@ -1041,6 +1192,8 @@ var G = {
   chatOpen: false,
   profileData: null,
   reports: [],
+  dashSort: {col: 'days', dir: 'asc'},
+  favourites: JSON.parse(localStorage.getItem('bid_favourites') || '{}'),
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1108,6 +1261,7 @@ function showPage(name) {
   if (name==='tracker') loadTracker();
   if (name==='winloss') loadWinLoss();
   if (name==='submission') { populateAllSelects(); }
+  if (name==='vault') loadVault();
   if (name==='profile') loadProfile();
   if (name==='settings') loadSettings();
 }
@@ -1145,16 +1299,39 @@ async function loadDashboard() {
 
 function renderDash() {
   var q = (document.getElementById('dash-search').value||'').toLowerCase();
-  var arr = G.tenders.filter(function(t){ return t.status !== 'Not Interested'; });
   var f = G.dashFilter;
+  var arr = G.tenders;
+
+  // Filter
   if (f==='urgent') arr = arr.filter(function(t){ var dl=daysLeft(t); return dl>=0&&dl<=7; });
   else if (f==='analysed') arr = arr.filter(function(t){ return t.bid_no_bid_done; });
-  else if (f) arr = arr.filter(function(t){ return verdict(t)===f; });
+  else if (f==='favourite') arr = arr.filter(function(t){ return G.favourites[t.t247_id]; });
+  else if (f==='skipped') arr = arr.filter(function(t){ return t.status==='Not Interested'; });
+  else if (f==='expired') arr = arr.filter(function(t){ var dl=daysLeft(t); return dl<0; });
+  else if (f) { arr = arr.filter(function(t){ return verdict(t)===f && t.status!=='Not Interested'; }); }
+  else { arr = arr.filter(function(t){ return t.status!=='Not Interested'; }); }
+
+  // Search
   if (q) arr = arr.filter(function(t){
     return [t.brief,t.org_name,t.t247_id,t.location,t.ref_no].some(function(v){ return v&&v.toLowerCase().includes(q); });
   });
-  arr.sort(function(a,b){ return daysLeft(a)-daysLeft(b); });
-  document.getElementById('dash-count').textContent = arr.length+' tender'+(arr.length!==1?'s':'')+(f?' (filtered)':'');
+
+  // Sort
+  var sc = G.dashSort.col, sd = G.dashSort.dir;
+  arr = arr.slice().sort(function(a,b){
+    var av, bv;
+    if (sc==='days') { av=daysLeft(a); bv=daysLeft(b); }
+    else if (sc==='t247_id') { av=a.t247_id||''; bv=b.t247_id||''; }
+    else if (sc==='brief') { av=a.brief||''; bv=b.brief||''; }
+    else if (sc==='deadline') { av=daysLeft(a); bv=daysLeft(b); }
+    else if (sc==='verdict') { av=verdict(a); bv=verdict(b); }
+    else { av=daysLeft(a); bv=daysLeft(b); }
+    if (av<bv) return sd==='asc'?-1:1;
+    if (av>bv) return sd==='asc'?1:-1;
+    return 0;
+  });
+
+  document.getElementById('dash-count').textContent = arr.length+' tender'+(arr.length!==1?'s':'')+(f&&f!==''?' (filtered)':'');
   var tb = document.getElementById('dash-tbody');
   if (!arr.length) {
     tb.innerHTML = '<tr><td colspan="6" class="empty-row">'+(G.tenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';
@@ -1162,20 +1339,57 @@ function renderDash() {
   }
   tb.innerHTML = arr.map(function(t){
     var v=verdict(t); var dl=daysLeft(t);
-    return '<tr>'+
-      '<td class="mono" style="font-size:12px">'+esc(t.t247_id||'—')+'</td>'+
-      '<td><div class="brief-name">'+esc((t.brief||'—').substring(0,50))+'</div><div class="brief-org">'+esc((t.org_name||'')+(t.location?' · '+t.location:''))+'</div></td>'+
+    var isFav = G.favourites[t.t247_id];
+    var isSkipped = t.status==='Not Interested';
+    var rowStyle = isSkipped ? 'opacity:.5' : '';
+    return '<tr style="'+rowStyle+'">'+
+      '<td><span class="mono" style="font-size:12px">'+esc(t.t247_id||'—')+'</span></td>'+
+      '<td><div class="brief-name" title="'+esc(t.brief||'')+'">'+esc((t.brief||'—').substring(0,50))+'</div>'+
+          '<div class="brief-org" title="'+esc((t.org_name||'')+(t.location?' · '+t.location:''))+'">'+esc((t.org_name||'')+(t.location?' · '+t.location:''))+'</div></td>'+
       '<td class="muted" style="font-size:12px;white-space:nowrap">'+esc(t.deadline||'—')+'</td>'+
       '<td>'+daysHtml(dl)+'</td>'+
       '<td>'+verdictBadge(v)+'</td>'+
       '<td><div class="acts">'+
-        '<button class="act-btn blue" onclick="goAnalyse(\''+esc(t.t247_id)+'\')">Analyse</button>'+
-        (t.bid_no_bid_done?'<button class="act-btn green" onclick="goChecklist(\''+esc(t.t247_id)+'\')">Checklist</button>':'')+
-        '<button class="act-btn gray" onclick="openDetail(\''+esc(t.t247_id)+'\')">View</button>'+
-        '<button class="act-btn red" onclick="skipTender(\''+esc(t.t247_id)+'\')">Skip</button>'+
+        '<button class="act-btn '+(isFav?'gold':'gray')+'" style="'+(isFav?'color:#f59e0b':'')+';" onclick="toggleFav(\''+esc(t.t247_id)+'\')" title="'+(isFav?'Remove favourite':'Add to favourites')+'">'+(isFav?'⭐':'☆')+'</button>'+
+        (isSkipped
+          ? '<button class="act-btn green" onclick="restoreTender(\''+esc(t.t247_id)+'\')">↩ Restore</button>'
+          : '<button class="act-btn blue" onclick="goAnalyse(\''+esc(t.t247_id)+'\')">Analyse</button>'+
+            (t.bid_no_bid_done?'<button class="act-btn green" onclick="goChecklist(\''+esc(t.t247_id)+'\')">Checklist</button>':'')+
+            '<button class="act-btn gray" onclick="openDetail(\''+esc(t.t247_id)+'\')">View</button>'+
+            '<button class="act-btn red" onclick="skipTender(\''+esc(t.t247_id)+'\')">Skip</button>'
+        )+
       '</div></td>'+
     '</tr>';
   }).join('');
+}
+
+function sortDash(col) {
+  if (G.dashSort.col===col) { G.dashSort.dir = G.dashSort.dir==='asc'?'desc':'asc'; }
+  else { G.dashSort.col=col; G.dashSort.dir='asc'; }
+  // Update header classes
+  document.querySelectorAll('.sort-th').forEach(function(th){
+    th.classList.remove('asc','desc');
+    var oc = th.getAttribute('onclick')||'';
+    if (oc.includes("'"+col+"'")) th.classList.add(G.dashSort.dir);
+  });
+  renderDash();
+}
+
+function toggleFav(tid) {
+  G.favourites[tid] = !G.favourites[tid];
+  if (!G.favourites[tid]) delete G.favourites[tid];
+  localStorage.setItem('bid_favourites', JSON.stringify(G.favourites));
+  renderDash();
+  toast(G.favourites[tid]?'Added to favourites':'Removed from favourites','info');
+}
+
+async function restoreTender(tid) {
+  try {
+    await fetch('/tender/'+tid+'/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var t = G.tenders.find(function(x){return x.t247_id===tid;});
+    if (t) t.status='Identified';
+    toast('Tender restored','success'); renderDash();
+  } catch(e){toast('Error: '+e.message,'error');}
 }
 
 function setDashFilter(f) {
@@ -1346,13 +1560,28 @@ async function analyseTender() {
     if (d.status !== 'success' && d.detail) throw new Error(d.detail);
     logLine('Text extraction complete — '+d.files_processed.length+' file(s) read','ok');
     if (d.ai_used) logLine('Gemini AI analysis complete','ok');
-    else logLine('AI not used — basic extraction only (check API key in Settings)','warn');
+    else logLine('AI not used — check API key in Settings','warn');
     if (d.has_corrigendum) logLine('Corrigendum detected: '+d.corrigendum_files.join(', '),'warn');
     G.lastAnalysis = d.tender_data || d;
-    if (tid) G.activeTid = tid;
-    renderAnalysisResult(d.tender_data || d, d.download_file);
+    var td = d.tender_data || d;
+    var analysedTid = tid || td.t247_id || '';
+    if (analysedTid) {
+      G.activeTid = analysedTid;
+      // Auto-populate ALL dropdowns with this tender
+      populateAllSelects();
+      setTimeout(function(){
+        ['cl-select','pb-select','sub-select','wl-tid-sel'].forEach(function(id){
+          var el = document.getElementById(id);
+          if (el && analysedTid) el.value = analysedTid;
+        });
+      }, 300);
+    }
+    renderAnalysisResult(td, d.download_file);
     loadDashboard();
-    toast('Analysis complete — '+(verdict(d.tender_data||d)||'REVIEW'), 'success');
+    // Show navigation bar after analysis
+    document.getElementById('an-post-nav').style.display='flex';
+    document.getElementById('an-post-tid').textContent = analysedTid;
+    toast('Analysis complete — '+(verdict(td)||'REVIEW')+' · All pages updated', 'success');
   } catch(e) {
     hideLoad();
     logLine('Error: '+e.message,'err');
@@ -1680,10 +1909,12 @@ async function exportTenders() {
 // SKIP
 // ═══════════════════════════════════════════════════════════
 async function skipTender(tid) {
-  if (!confirm('Skip tender '+tid+'?')) return;
+  if (!confirm('Skip tender '+tid+'? It will move to the Skipped filter.')) return;
   try {
     await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Not interested'})});
-    toast('Tender skipped','success'); loadDashboard();
+    var t = G.tenders.find(function(x){return x.t247_id===tid;});
+    if (t) t.status='Not Interested';
+    toast('Tender moved to Skipped','success'); renderDash();
   } catch(e){toast('Error: '+e.message,'error');}
 }
 
@@ -1733,63 +1964,156 @@ function copyTid(tid) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PROFILE
+// PROFILE (Fix #7 — complete version)
 // ═══════════════════════════════════════════════════════════
 var profileTabActive = 'company';
 function switchProfileTab(tab) {
-  ['company','finance','certs','projects','team'].forEach(function(t){
-    document.getElementById('profile-tab-'+t).classList.remove('active');
+  ['company','finance','certs','projects','team','bidrules'].forEach(function(t){
+    var el = document.getElementById('profile-tab-'+t);
+    if (el) el.classList.remove('active');
   });
   document.querySelectorAll('#page-profile .tab').forEach(function(t){t.classList.remove('active')});
-  document.getElementById('profile-tab-'+tab).classList.add('active');
+  var activeEl = document.getElementById('profile-tab-'+tab);
+  if (activeEl) activeEl.classList.add('active');
   event.target.classList.add('active');
-  profileTabActive=tab;
+  profileTabActive = tab;
+}
+
+function setVal(id, val) {
+  var el = document.getElementById(id);
+  if (el && val !== undefined && val !== null) el.value = val;
 }
 
 async function loadProfile() {
   try {
     var r = await fetch('/profile'); var d = await r.json();
     G.profileData = d;
-    var c = d.company||{};
-    document.getElementById('p-name').value = c.name||'';
-    document.getElementById('p-cin').value = c.cin||'';
-    document.getElementById('p-pan').value = c.pan||'';
-    document.getElementById('p-gstin').value = c.gstin||'';
-    document.getElementById('p-udyam').value = c.udyam||'';
-    document.getElementById('p-signatory').value = c.authorised_signatory||'';
-    document.getElementById('p-md').value = c.md||'';
-    document.getElementById('p-address').value = c.address||'';
-    var f = d.finance||{};
-    var ty = f.turnover_by_year||{};
-    document.getElementById('p-t2223').value = ty['2022-23']||'';
-    document.getElementById('p-t2324').value = ty['2023-24']||'';
-    document.getElementById('p-t2425').value = ty['2024-25']||'';
-    document.getElementById('p-nw').value = f.net_worth_cr||'';
-    document.getElementById('p-ca').value = f.ca_name||'';
-    var certs = d.certifications||{};
-    document.getElementById('p-cmmi').value = (certs.cmmi&&certs.cmmi.level)||'';
-    document.getElementById('p-cmmi-valid').value = (certs.cmmi&&certs.cmmi.valid_to)||'';
-    document.getElementById('p-iso9001').value = (certs.iso_9001&&certs.iso_9001.valid_to)||'';
-    document.getElementById('p-iso27001').value = (certs.iso_27001&&certs.iso_27001.valid_to)||'';
-    document.getElementById('p-iso20000').value = (certs.iso_20000&&certs.iso_20000.valid_to)||'';
-    document.getElementById('p-emp').value = (d.employees&&d.employees.total_confirmed)||'';
-    document.getElementById('p-itdev').value = (d.employees&&d.employees.it_dev_staff)||'';
-    // projects table
-    var projects = d.projects||[];
-    document.getElementById('profile-projects-tbody').innerHTML = projects.map(function(p){
-      return '<tr>'+
-        '<td>'+esc(p.name||'')+'</td>'+
-        '<td><div style="font-size:13px">'+esc(p.client||'')+'</div><div class="muted" style="font-size:11px">'+esc(p.state||'')+'</div></td>'+
-        '<td class="muted">₹'+esc(p.value_cr||'')+'Cr</td>'+
-        '<td><span class="badge '+(p.status==='Ongoing'?'badge-CONDITIONAL':'badge-BID')+'">'+esc(p.status||'')+'</span></td>'+
-        '<td class="muted" style="font-size:11px">'+esc((p.tags||[]).join(', '))+'</td>'+
-      '</tr>';
-    }).join('');
-    if (d.capabilities) {
-      document.getElementById('p-tech').value = (d.capabilities.tech_stack||[]).join(', ')||'';
-      document.getElementById('p-not').value = (d.capabilities.not_available||[]).join(', ')||'';
+    var c = d.company || {};
+    setVal('p-name', c.name);
+    setVal('p-legal', c.legal_status);
+    setVal('p-year', c.year_of_incorporation);
+    setVal('p-cin', c.cin);
+    setVal('p-pan', c.pan);
+    setVal('p-gstin', c.gstin);
+    setVal('p-udyam', c.udyam);
+    setVal('p-type', c.type);
+    setVal('p-email', c.email);
+    setVal('p-tender-email', c.tender_email);
+    setVal('p-phone', c.phone);
+    setVal('p-website', c.website);
+    setVal('p-address', c.address);
+    setVal('p-signatory', c.authorised_signatory);
+    setVal('p-md', c.md);
+    setVal('p-poa', c.poa_validity);
+    // POA alert
+    if (c.poa_alert) {
+      var poaEl = document.getElementById('poa-alert');
+      if (poaEl) { poaEl.style.display='block'; poaEl.textContent = '⚠ '+c.poa_alert; }
     }
-  } catch(e){ toast('Error loading profile: '+e.message,'error'); }
+    // Finance
+    var f = d.finance || {};
+    var ty = f.turnover_by_year || {};
+    setVal('p-t1920', ty['2019-20']);
+    setVal('p-t2021', ty['2020-21']);
+    setVal('p-t2122', ty['2021-22']);
+    setVal('p-t2223', ty['2022-23']);
+    setVal('p-t2324', ty['2023-24']);
+    setVal('p-t2425', ty['2024-25']);
+    setVal('p-nw', f.net_worth_cr);
+    setVal('p-solv', f.solvency_amount_cr);
+    setVal('p-ca', f.ca_name);
+    // Derived averages
+    var avg3 = f.avg_turnover_last_3_fy || ((parseFloat(ty['2022-23']||0)+parseFloat(ty['2023-24']||0)+parseFloat(ty['2024-25']||0))/3).toFixed(2);
+    var avg2 = f.avg_turnover_last_2_fy || ((parseFloat(ty['2023-24']||0)+parseFloat(ty['2024-25']||0))/2).toFixed(2);
+    var fd = document.getElementById('finance-derived');
+    if (fd) fd.innerHTML = '📊 Avg Turnover (Last 3 FY): <b style="color:var(--blue)">₹'+avg3+' Cr</b> &nbsp;|&nbsp; Avg (Last 2 FY): <b style="color:var(--blue)">₹'+avg2+' Cr</b> &nbsp;|&nbsp; Net Worth: <b style="color:var(--green)">₹'+(f.net_worth_cr||'—')+' Cr</b>';
+    // Certs
+    var certs = d.certifications || {};
+    var cmmi = certs.cmmi || {};
+    setVal('p-cmmi', cmmi.level);
+    setVal('p-cmmi-ver', cmmi.version);
+    setVal('p-cmmi-valid', cmmi.valid_to);
+    var iso9 = certs.iso_9001 || {};
+    setVal('p-iso9001-no', iso9.cert_no);
+    setVal('p-iso9001-from', iso9.valid_from);
+    setVal('p-iso9001', iso9.valid_to);
+    var iso27 = certs.iso_27001 || {};
+    setVal('p-iso27001-no', iso27.cert_no);
+    setVal('p-iso27001-from', iso27.valid_from);
+    setVal('p-iso27001', iso27.valid_to);
+    var iso20 = certs.iso_20000 || {};
+    setVal('p-iso20000-no', iso20.cert_no);
+    setVal('p-iso20000-from', iso20.valid_from);
+    setVal('p-iso20000', iso20.valid_to);
+    var emp = d.employees || {};
+    setVal('p-emp', emp.total_confirmed || emp.total_listed);
+    setVal('p-itdev', emp.it_dev_staff);
+    setVal('p-gis', emp.gis_staff);
+    setVal('p-not', (certs.cert_in===false?'CERT-In, ':'')+(certs.stqc===false?'STQC, ':'')+'SAP Partnership, Oracle Partnership');
+    // Projects table
+    var projects = d.projects || [];
+    var tb = document.getElementById('profile-projects-tbody');
+    if (tb) {
+      tb.innerHTML = projects.map(function(p){
+        return '<tr>'+
+          '<td style="font-size:13px;font-weight:500;color:var(--text)">'+esc(p.name||'')+'</td>'+
+          '<td><div style="font-size:13px">'+esc(p.client||'')+'</div><div class="muted" style="font-size:11px">'+esc((p.client_type||'')+(p.state?' · '+p.state:''))+'</div></td>'+
+          '<td class="muted" style="font-weight:600;color:var(--blue)">₹'+esc(String(p.value_cr||''))+'Cr</td>'+
+          '<td><span class="badge '+(p.status==='Ongoing'?'badge-CONDITIONAL':'badge-BID')+'">'+esc(p.status||'')+'</span></td>'+
+          '<td class="muted" style="font-size:11px">'+esc(p.role||'Solo')+'</td>'+
+          '<td class="muted" style="font-size:11px">'+esc((p.tags||[]).join(', '))+'</td>'+
+        '</tr>';
+      }).join('');
+    }
+    // Team
+    var cap = d.capabilities || {};
+    var techStack = cap.tech_stack || [];
+    setVal('p-tech', Array.isArray(techStack) ? techStack.join(', ') : techStack);
+    var notAvail = cap.not_available || [];
+    setVal('p-not-team', Array.isArray(notAvail) ? notAvail.join(', ') : notAvail);
+    // Bid rules
+    var br = d.bid_rules || {};
+    renderKeywordPills('dnb-list', br.do_not_bid || [], 'red');
+    renderKeywordPills('cond-list', br.conditional || [], 'amber');
+    renderKeywordPills('pref-list', br.preferred_sectors || [], 'green');
+    setVal('p-minval', br.min_project_value_cr);
+    setVal('p-maxval', br.max_project_value_cr);
+  } catch(e) { toast('Error loading profile: '+e.message,'error'); }
+}
+
+function renderKeywordPills(containerId, keywords, color) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var colors = {red:'background:var(--red-bg);color:var(--red)', amber:'background:var(--amber-bg);color:var(--amber)', green:'background:var(--green-bg);color:var(--green)'};
+  el.innerHTML = keywords.slice(0,40).map(function(kw){
+    return '<span style="'+colors[color]+';padding:2px 8px;border-radius:99px;font-size:11px;cursor:pointer" onclick="removeKeyword(this)">'+esc(kw)+' ×</span>';
+  }).join('');
+}
+
+function removeKeyword(el) { el.remove(); }
+
+function addBidRule(type) {
+  var inputId = type==='dnb'?'dnb-add':type==='cond'?'cond-add':'pref-add';
+  var listId = type==='dnb'?'dnb-list':type==='cond'?'cond-list':'pref-list';
+  var color = type==='dnb'?'red':type==='cond'?'amber':'green';
+  var input = document.getElementById(inputId);
+  var val = (input.value||'').trim().toLowerCase();
+  if (!val) return;
+  var colors = {red:'background:var(--red-bg);color:var(--red)', amber:'background:var(--amber-bg);color:var(--amber)', green:'background:var(--green-bg);color:var(--green)'};
+  var el = document.createElement('span');
+  el.style.cssText = colors[color]+';padding:2px 8px;border-radius:99px;font-size:11px;cursor:pointer';
+  el.textContent = val+' ×';
+  el.onclick = function(){el.remove();};
+  document.getElementById(listId).appendChild(el);
+  input.value = '';
+}
+
+function getPillValues(containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('span')).map(function(s){
+    return s.textContent.replace(' ×','').trim();
+  }).filter(Boolean);
 }
 
 async function saveProfile() {
@@ -1797,22 +2121,74 @@ async function saveProfile() {
   var data = JSON.parse(JSON.stringify(G.profileData));
   if (!data.company) data.company = {};
   data.company.name = document.getElementById('p-name').value;
+  data.company.legal_status = document.getElementById('p-legal').value;
+  data.company.year_of_incorporation = parseInt(document.getElementById('p-year').value)||2006;
   data.company.cin = document.getElementById('p-cin').value;
   data.company.pan = document.getElementById('p-pan').value;
   data.company.gstin = document.getElementById('p-gstin').value;
   data.company.udyam = document.getElementById('p-udyam').value;
+  data.company.type = document.getElementById('p-type').value;
+  data.company.email = document.getElementById('p-email').value;
+  data.company.tender_email = document.getElementById('p-tender-email').value;
+  data.company.phone = document.getElementById('p-phone').value;
+  data.company.website = document.getElementById('p-website').value;
+  data.company.address = document.getElementById('p-address').value;
   data.company.authorised_signatory = document.getElementById('p-signatory').value;
   data.company.md = document.getElementById('p-md').value;
-  data.company.address = document.getElementById('p-address').value;
+  data.company.poa_validity = document.getElementById('p-poa').value;
   if (!data.finance) data.finance = {};
   if (!data.finance.turnover_by_year) data.finance.turnover_by_year = {};
-  data.finance.turnover_by_year['2022-23'] = parseFloat(document.getElementById('p-t2223').value)||0;
-  data.finance.turnover_by_year['2023-24'] = parseFloat(document.getElementById('p-t2324').value)||0;
-  data.finance.turnover_by_year['2024-25'] = parseFloat(document.getElementById('p-t2425').value)||0;
+  ['2019-20','2020-21','2021-22','2022-23','2023-24','2024-25'].forEach(function(fy, i){
+    var ids = ['p-t1920','p-t2021','p-t2122','p-t2223','p-t2324','p-t2425'];
+    var v = parseFloat(document.getElementById(ids[i]).value)||0;
+    if (v) data.finance.turnover_by_year[fy] = v;
+  });
   data.finance.net_worth_cr = parseFloat(document.getElementById('p-nw').value)||0;
+  data.finance.solvency_amount_cr = parseFloat(document.getElementById('p-solv').value)||0;
   data.finance.ca_name = document.getElementById('p-ca').value;
+  // Recalculate averages
+  var ty = data.finance.turnover_by_year;
+  var last3 = [(ty['2022-23']||0),(ty['2023-24']||0),(ty['2024-25']||0)];
+  data.finance.avg_turnover_last_3_fy = Math.round(last3.reduce(function(a,b){return a+b;},0)/3*100)/100;
+  data.finance.avg_turnover_last_2_fy = Math.round(((ty['2023-24']||0)+(ty['2024-25']||0))/2*100)/100;
+  // Certs
+  if (!data.certifications) data.certifications = {};
+  if (!data.certifications.cmmi) data.certifications.cmmi = {};
+  data.certifications.cmmi.level = parseInt(document.getElementById('p-cmmi').value)||3;
+  data.certifications.cmmi.version = document.getElementById('p-cmmi-ver').value;
+  data.certifications.cmmi.valid_to = document.getElementById('p-cmmi-valid').value;
+  if (!data.certifications.iso_9001) data.certifications.iso_9001 = {};
+  data.certifications.iso_9001.cert_no = document.getElementById('p-iso9001-no').value;
+  data.certifications.iso_9001.valid_from = document.getElementById('p-iso9001-from').value;
+  data.certifications.iso_9001.valid_to = document.getElementById('p-iso9001').value;
+  if (!data.certifications.iso_27001) data.certifications.iso_27001 = {};
+  data.certifications.iso_27001.cert_no = document.getElementById('p-iso27001-no').value;
+  data.certifications.iso_27001.valid_from = document.getElementById('p-iso27001-from').value;
+  data.certifications.iso_27001.valid_to = document.getElementById('p-iso27001').value;
+  if (!data.certifications.iso_20000) data.certifications.iso_20000 = {};
+  data.certifications.iso_20000.cert_no = document.getElementById('p-iso20000-no').value;
+  data.certifications.iso_20000.valid_from = document.getElementById('p-iso20000-from').value;
+  data.certifications.iso_20000.valid_to = document.getElementById('p-iso20000').value;
+  if (!data.employees) data.employees = {};
+  data.employees.total_confirmed = parseInt(document.getElementById('p-emp').value)||0;
+  data.employees.it_dev_staff = parseInt(document.getElementById('p-itdev').value)||0;
+  data.employees.gis_staff = parseInt(document.getElementById('p-gis').value)||0;
+  // Team
+  if (!data.capabilities) data.capabilities = {};
+  var techVal = document.getElementById('p-tech').value;
+  data.capabilities.tech_stack = techVal.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var notTeamVal = document.getElementById('p-not-team').value;
+  data.capabilities.not_available = notTeamVal.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  // Bid rules
+  if (!data.bid_rules) data.bid_rules = {};
+  data.bid_rules.do_not_bid = getPillValues('dnb-list');
+  data.bid_rules.conditional = getPillValues('cond-list');
+  data.bid_rules.preferred_sectors = getPillValues('pref-list');
+  data.bid_rules.min_project_value_cr = parseFloat(document.getElementById('p-minval').value)||0.25;
+  data.bid_rules.max_project_value_cr = parseFloat(document.getElementById('p-maxval').value)||100;
   try {
-    await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var r = await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var res = await r.json();
     toast('Profile saved successfully','success');
     G.profileData = data;
   } catch(e){toast('Failed to save: '+e.message,'error');}
@@ -1845,6 +2221,29 @@ async function saveKeys() {
   } catch(e){toast('Failed: '+e.message,'error');}
 }
 
+async function saveT247Creds() {
+  var body = {
+    t247_username: document.getElementById('t247u').value,
+    t247_password: document.getElementById('t247p').value
+  };
+  try {
+    await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast('T247 credentials saved','success');
+  } catch(e){toast('Failed: '+e.message,'error');}
+}
+
+async function testT247Conn() {
+  var el = document.getElementById('t247-status');
+  if (el) el.textContent = 'Testing...';
+  try {
+    var r = await fetch('/test-t247'); var d = await r.json();
+    if (el) {
+      el.textContent = d.status==='ok' ? '✅ '+d.message : '❌ '+d.message;
+      el.style.color = d.status==='ok'?'var(--green)':'var(--red)';
+    }
+  } catch(e){if(el){el.textContent='Error: '+e.message;el.style.color='var(--red)';}}
+}
+
 async function testAI() {
   showLoad('Testing AI connection...');
   try {
@@ -1868,9 +2267,41 @@ function populateAllSelects() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════
-// STATUS CHECK
-// ═══════════════════════════════════════════════════════════
+// Filter a select dropdown by search input
+function filterSelect(selectId, searchId) {
+  var sel = document.getElementById(selectId);
+  var q = (document.getElementById(searchId).value||'').toLowerCase();
+  if (!sel) return;
+  // Rebuild options from G.tenders
+  var opts = '<option value="">-- Select --</option>' + G.tenders.filter(function(t){
+    return !q || (t.t247_id||'').toLowerCase().includes(q) || (t.brief||'').toLowerCase().includes(q);
+  }).map(function(t){
+    return '<option value="'+esc(t.t247_id)+'">['+esc(t.t247_id)+'] '+esc((t.brief||'').substring(0,45))+'</option>';
+  }).join('');
+  var cur = sel.value;
+  sel.innerHTML = opts;
+  if (cur) sel.value = cur;
+}
+
+// Navigate to a page and auto-set the active tender
+function goToPage(pageName) {
+  if (G.activeTid) {
+    var selMap = {prebid:'pb-select', checklist:'cl-select', submission:'sub-select'};
+    if (selMap[pageName]) {
+      setTimeout(function(){
+        var el = document.getElementById(selMap[pageName]);
+        if (el && G.activeTid) {
+          el.value = G.activeTid;
+          // Trigger load
+          if (pageName==='prebid') loadPrebidForTender();
+          if (pageName==='checklist') loadChecklist();
+          if (pageName==='submission') loadSubmissionTender();
+        }
+      }, 200);
+    }
+  }
+  showPage(pageName);
+}
 async function checkStatus() {
   try {
     var r = await fetch('/drive-status'); var d = await r.json();
@@ -1937,6 +2368,79 @@ async function sendChat(msg) {
     var d = await r.json();
     addBotMsg(d.response||d.message||'No response');
   } catch(e) { addBotMsg('Error connecting to assistant. Try again.'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// VAULT (Fix #8)
+// ═══════════════════════════════════════════════════════════
+var VAULT_CATEGORIES = ['Company','Certification','Finance','Declaration','Experience'];
+
+async function loadVault() {
+  var el = document.getElementById('vault-content');
+  try {
+    var r = await fetch('/vault'); var d = await r.json();
+    var docs = d.documents || [];
+    var byCategory = {};
+    VAULT_CATEGORIES.forEach(function(c){ byCategory[c]=[]; });
+    docs.forEach(function(doc){ if(byCategory[doc.category]) byCategory[doc.category].push(doc); });
+
+    var html = '';
+    VAULT_CATEGORIES.forEach(function(cat){
+      var catDocs = byCategory[cat]||[];
+      if (!catDocs.length) return;
+      var uploaded = catDocs.filter(function(d){return d.uploaded;}).length;
+      html += '<div class="card" style="margin-bottom:14px">'+
+        '<div class="card-hd">'+
+          '<div class="card-title">'+esc(cat)+'</div>'+
+          '<span style="font-size:12px;color:var(--text3)">'+uploaded+'/'+catDocs.length+' uploaded</span>'+
+        '</div>'+
+        '<div class="table-wrap"><table>'+
+        '<thead><tr><th>Document</th><th style="width:120px">Status</th><th style="width:180px">Actions</th></tr></thead>'+
+        '<tbody>'+
+        catDocs.map(function(doc){
+          return '<tr>'+
+            '<td><div style="font-size:13px;color:var(--text)">'+esc(doc.name)+'</div>'+
+              (doc.uploaded?'<div style="font-size:11px;color:var(--text3)">'+esc(doc.filename||'')+' ('+doc.size_kb+'KB)</div>':'')+
+            '</td>'+
+            '<td>'+(doc.uploaded
+              ? '<span class="badge badge-BID">✓ Uploaded</span>'
+              : '<span class="badge badge-REVIEW">Not uploaded</span>'
+            )+'</td>'+
+            '<td><div class="acts">'+
+              '<label class="act-btn blue" style="cursor:pointer">'+
+                '⬆ Upload'+
+                '<input type="file" style="display:none" onchange="uploadVaultDoc(\''+esc(doc.id)+'\',this)" accept=".pdf,.docx,.jpg,.jpeg,.png">'+
+              '</label>'+
+              (doc.uploaded
+                ? '<a href="/vault/download/'+esc(doc.id)+'" class="act-btn green" download>⬇</a>'+
+                  '<button class="act-btn red" onclick="deleteVaultDoc(\''+esc(doc.id)+'\',\''+esc(doc.name)+'\')">✕</button>'
+                : ''
+              )+
+            '</div></td>'+
+          '</tr>';
+        }).join('')+
+        '</tbody></table></div></div>';
+    });
+    el.innerHTML = html || '<div class="card" style="text-align:center;color:var(--text3);padding:40px">No vault documents configured</div>';
+  } catch(e) { el.innerHTML='<div class="alert alert-danger">Error loading vault: '+esc(e.message)+'</div>'; }
+}
+
+async function uploadVaultDoc(docId, input) {
+  var file = input.files[0]; if(!file) return;
+  showLoad('Uploading '+file.name+'...');
+  var fd = new FormData(); fd.append('file', file);
+  try {
+    var r = await fetch('/vault/upload/'+docId,{method:'POST',body:fd}); var d = await r.json();
+    hideLoad(); toast('Uploaded: '+d.filename,'success'); loadVault();
+  } catch(e){hideLoad();toast('Upload failed: '+e.message,'error');}
+  input.value='';
+}
+
+async function deleteVaultDoc(docId, name) {
+  if(!confirm('Delete '+name+' from vault?')) return;
+  try {
+    await fetch('/vault/'+docId,{method:'DELETE'}); toast('Deleted','success'); loadVault();
+  } catch(e){toast('Error: '+e.message,'error');}
 }
 
 // ═══════════════════════════════════════════════════════════
