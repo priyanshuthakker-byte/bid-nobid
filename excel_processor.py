@@ -111,15 +111,13 @@ def classify_tender(brief: str, estimated_cost: float,
             "reason":        f"Value Rs.{cost_cr:.1f} Cr — exceeds Rs.{max_val_cr} Cr. Verify turnover PQ and consider consortium.",
         }
 
-    # ── STEP 4: Soft NO-BID (overridable) ────────────────────────────────────
+    # ── STEP 4: Soft NO-BID keywords ─────────────────────────────────────────
+    # NO override — if user added a keyword to DO NOT BID, it wins unconditionally.
+    # User explicitly said "supply of gis software" → NO-BID. That is final.
+    # Preferred sector can only promote a REVIEW to BID, not override an explicit NO-BID rule.
     for kw in dnb_keywords:
         if kw in brief_lower:
-            # If a preferred sector keyword is ALSO in the brief, override
-            # e.g. "Supply and installation of GIS software" — 'supply' is soft no-bid
-            # but 'gis' overrides it → BID
-            if any(pk in brief_lower for pk in pref_kw):
-                break  # Preferred sector wins — continue to BID check
-            remark = dnb_remarks.get(kw, f"Matches NO-BID rule: '{kw}' — verify if relevant.")
+            remark = dnb_remarks.get(kw, f"Matches NO-BID rule: '{kw}'.")
             return {
                 "verdict":       "NO-BID",
                 "verdict_color": "RED",

@@ -148,9 +148,10 @@ async def startup_event():
             print(f"⚠️ Vault restore skipped: {e}")
 
     if drive_ok:
+        # ── Restore tenders_db.json ──
         for attempt in range(3):
             try:
-                success = load_from_drive(DB_FILE)
+                success = load_from_drive(DB_FILE, filename="tenders_db.json")
                 if success:
                     db = load_db()
                     print(f"✅ Loaded {len(db.get('tenders',{}))} tenders from Drive")
@@ -159,6 +160,17 @@ async def startup_event():
             except Exception as e:
                 print(f"⚠ Drive load attempt {attempt+1} failed: {e}")
                 time.sleep(2)
+
+        # ── Restore nascent_profile.json (rules + profile changes) ──
+        try:
+            profile_restored = load_from_drive(PROFILE_PATH, filename="nascent_profile.json")
+            if profile_restored:
+                print("✅ nascent_profile.json restored from Drive (rules + profile preserved)")
+            else:
+                print("⚠ nascent_profile.json not on Drive yet — using bundled version")
+        except Exception as e:
+            print(f"⚠ Profile restore skipped: {e}")
+
     elif DB_FILE.exists():
         db = load_db()
         print(f"✅ Using local DB: {len(db.get('tenders',{}))} tenders")
@@ -941,7 +953,7 @@ async def update_profile(data: dict = Body(...)):
         PROFILE_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         # Also sync to Drive if available
         try:
-            save_to_drive(PROFILE_PATH)
+            save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
         except Exception:
             pass
         return {"status": "saved"}
@@ -1454,3 +1466,4 @@ async def reanalyse_tender(t247_id: str):
 
 
 # ── GENERATE PREBID LETTER ─────────────────────────────────────
+
