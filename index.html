@@ -1414,7 +1414,9 @@ document.querySelectorAll('.sb-btn[data-page]').forEach(function(b){
 // ═══════════════════════════════════════════════════════════
 async function loadDashboard() {
   try {
-    var r = await fetch('/dashboard'); var d = await r.json();
+    var r = await fetch('/dashboard');
+    if(!r.ok){ throw new Error('Server error: '+r.status); }
+    var d = await r.json();
     var s = d.stats || {};
     document.getElementById('s-total').textContent = s.total||0;
     document.getElementById('s-bid').textContent = s.bid||0;
@@ -2226,7 +2228,9 @@ function setVal(id, val) {
 
 async function loadProfile() {
   try {
-    var r = await fetch('/profile'); var d = await r.json();
+    var r = await fetch('/profile');
+    if(!r.ok){ throw new Error('Profile load error: '+r.status); }
+    var d = await r.json();
     G.profileData = d;
     var c = d.company || {};
     setVal('p-name', c.name);
@@ -2676,7 +2680,9 @@ var VAULT_CATEGORIES = ['Company','Certification','Finance','Declaration','Exper
 async function loadVault() {
   var el = document.getElementById('vault-content');
   try {
-    var r = await fetch('/vault'); var d = await r.json();
+    var r = await fetch('/vault');
+    if(!r.ok){ el.innerHTML='<div class="alert alert-danger">Vault unavailable: '+r.status+'</div>'; return; }
+    var d = await r.json();
     var docs = d.documents || [];
     var byCategory = {};
     VAULT_CATEGORIES.forEach(function(c){ byCategory[c]=[]; });

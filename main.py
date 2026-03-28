@@ -88,6 +88,28 @@ app = FastAPI(title="Bid/No-Bid System v7", version="7.0")
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# ── Global exception handler — always return JSON, never plain text ──
+from fastapi import Request
+from fastapi.responses import JSONResponse as _JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    print(f"❌ Unhandled error on {request.url.path}: {exc}")
+    traceback.print_exc()
+    return _JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": str(exc), "path": str(request.url.path)}
+    )
+
+@app.exception_handler(500)
+async def server_error_handler(request: Request, exc: Exception):
+    return _JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "Internal server error", "path": str(request.url.path)}
+    )
+
+
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "data"
 TEMP_DIR = BASE_DIR / "temp"
@@ -1074,16 +1096,19 @@ VAULT_DOCS_LIST = [
 
 @app.get("/vault")
 async def get_vault():
-    docs = []
-    for doc in VAULT_DOCS_LIST:
-        existing = list(VAULT_DIR.glob(f"{doc['id']}.*"))
-        docs.append({
-            **doc,
-            "uploaded": len(existing) > 0,
-            "filename": existing[0].name if existing else None,
-            "size_kb": round(existing[0].stat().st_size / 1024) if existing else 0,
-        })
-    return {"documents": docs}
+    try:
+        docs = []
+        for doc in VAULT_DOCS_LIST:
+            existing = list(VAULT_DIR.glob(f"{doc['id']}.*"))
+            docs.append({
+                **doc,
+                "uploaded": len(existing) > 0,
+                "filename": existing[0].name if existing else None,
+                "size_kb": round(existing[0].stat().st_size / 1024) if existing else 0,
+            })
+        return {"documents": docs}
+    except Exception as e:
+        return {"documents": [], "error": str(e)}
 
 @app.post("/vault/upload/{doc_id}")
 async def upload_vault_doc(doc_id: str, file: UploadFile = File(...)):

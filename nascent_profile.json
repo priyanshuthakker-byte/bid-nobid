@@ -33,17 +33,6 @@
     "email": "parthav@nascentinfo.com",
     "phone": "[to be filled]"
   },
-  "financials": {
-    "turnover_fy_2022_23": 1636,
-    "turnover_fy_2023_24": 1636,
-    "turnover_fy_2024_25": 1883,
-    "avg_turnover_3yr": 1718.33,
-    "avg_turnover_3yr_cr": "Rs. 17.18 Cr",
-    "net_worth": 2609,
-    "net_worth_cr": "Rs. 26.09 Cr",
-    "currency": "INR",
-    "unit": "Lakhs"
-  },
   "employees": {
     "total": 67,
     "gis_specialists": 11,
