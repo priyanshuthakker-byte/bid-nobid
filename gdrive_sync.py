@@ -160,8 +160,11 @@ def load_from_drive(local_path, filename="tenders_db.json"):
             parsed = json.loads(data)
             tender_count = len(parsed.get("tenders", {}))
             if tender_count == 0:
-                print(f"⚠️ Drive file has 0 tenders — skipping load")
-                return False
+                # Still write the file locally — at least creates the correct JSON structure
+                print(f"⚠️ Drive file has 0 tenders — writing empty structure locally")
+                local_path.parent.mkdir(exist_ok=True, parents=True)
+                local_path.write_bytes(data)
+                return True  # Don't skip — empty is still valid
         except json.JSONDecodeError:
             print(f"❌ Drive file is not valid JSON")
             return False
