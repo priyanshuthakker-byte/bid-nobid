@@ -1092,3 +1092,133 @@ async def reclassify_all():
             print(f"reclassify error for {tid}: {e}")
     save_db(db)
     return {"status": "ok", **counts}
+
+
+# ── ADDITIONAL ROUTES FROM main_extra ──
+@app.get("/skipped-tenders")
+async def get_skipped():
+    """Return all skipped tenders."""
+    db = load_db()
+    skipped = [
+        t for t in db["tenders"].values()
+        if t.get("status") == "Not Interested"
+    ]
+    return {"tenders": skipped}
+
+@app.post("/tender/{t247_id}/reanalyse")
+async def reanalyse_tender(t247_id: str):
+    """Re-run AI analysis on previously uploaded tender (from saved text in DB)."""
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    saved_text = tender.get("raw_text", "")
+    if not saved_text:
+        raise HTTPException(400, "No saved document text. Upload files and analyse again.")
+    # Re-run analysis
+    from ai_analyzer import analyze_with_gemini, merge_results
+    prebid_passed = tender.get("prebid_passed", False)
+    ai_result = analyze_with_gemini(saved_text, prebid_passed)
+    if "error" not in ai_result:
+        updated = merge_results(tender, ai_result, prebid_passed)
+        updated["bid_no_bid_done"] = True
+        updated["analysed_at"] = datetime.now().isoformat()
+        save_tender(t247_id, updated)
+        return {"status": "success", "verdict": updated.get("verdict", "REVIEW")}
+    return {"status": "error", "error": ai_result.get("error", "Unknown error")}
+
+
+# ── GENERATE PREBID LETTER ─────────────────────────────────────
+@app.post("/tender/{t247_id}/generate-prebid-letter")
+async def gen_prebid_letter(t247_id: str):
+    """Generate a pre-bid query letter as Word doc."""
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    queries = tender.get("prebid_queries", [])
+    if not queries:
+        queries = tender.get("prebid_queries_list", [])
+    if not queries:
+        raise HTTPException(400, "No pre-bid queries found. Analyse tender first.")
+
+    try:
+        from doc_generator import BidDocGenerator
+        gen = BidDocGenerator()
+        import re
+        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
+        filename = f"PreBid_{safe_no}.docx"
+        gen.generate_prebid_letter(tender, queries, str(OUTPUT_DIR / filename))
+        return {
+            "status": "success",
+            "filename": filename,
+            "query_count": len(queries),
+            "download_url": f"/download/{filename}",
+        }
+    except AttributeError:
+        # doc_generator doesn't have generate_prebid_letter method
+        # Create a simple one
+        from docx import Document
+        import re
+        doc = Document()
+        profile_company = "Nascent Info Technologies Pvt. Ltd."
+        doc.add_heading("Pre-Bid Queries", 0)
+        doc.add_paragraph(f"Tender: {tender.get('tender_name', 'N/A')}")
+        doc.add_paragraph(f"Tender No: {tender.get('tender_no', 'N/A')}")
+        doc.add_paragraph(f"Organization: {tender.get('org_name', 'N/A')}")
+        doc.add_paragraph("")
+        doc.add_paragraph("Respected Sir/Madam,")
+        doc.add_paragraph(
+            f"We, {profile_company}, wish to participate in the above tender. "
+            f"We request clarifications on the following points:"
+        )
+        doc.add_paragraph("")
+        for i, q in enumerate(queries, 1):
+            clause = q.get("clause", "") if isinstance(q, dict) else ""
+            query_text = q.get("query", q) if isinstance(q, dict) else str(q)
+            doc.add_paragraph(f"Q{i}. {clause}: {query_text}")
+        doc.add_paragraph("")
+        doc.add_paragraph("Thanking you,")
+        doc.add_paragraph(profile_company)
+        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
+        filename = f"PreBid_{safe_no}.docx"
+        doc.save(str(OUTPUT_DIR / filename))
+        return {
+            "status": "success",
+            "filename": filename,
+            "query_count": len(queries),
+            "download_url": f"/download/{filename}",
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Letter generation failed: {str(e)}")
+
+
+# ── CHECKLIST ITEM TOGGLE ──────────────────────────────────────
+@app.post("/checklist/{t247_id}/item")
+async def toggle_checklist_item(t247_id: str, data: dict = Body(...)):
+    """Toggle a checklist item done/not done."""
+    db = load_db()
+    t = db["tenders"].get(t247_id, {})
+    items = t.get("doc_checklist", [])
+    item_id = data.get("id", "")
+    done = data.get("done", False)
+    for item in items:
+        if item.get("id") == item_id or item.get("label") == item_id:
+            item["done"] = done
+            break
+    t["doc_checklist"] = items
+    # Recalculate completion %
+    if items:
+        t["checklist_pct"] = round(100 * sum(1 for i in items if i.get("done")) / len(items))
+    db["tenders"][t247_id] = t
+    save_db(db)
+    return {"status": "saved", "item_id": item_id, "done": done}
+
+
+# ── SAVE T247 CREDENTIALS TO CONFIG ───────────────────────────
+# (The /config POST endpoint in main.py already handles this,
+#  but make sure these fields are accepted)
+# The main.py /config POST needs to handle t247_username and t247_password:
+# Add this inside the existing update_config_route function:
+#   if "t247_username" in data:
+#       config["t247_username"] = data["t247_username"]
+#   if "t247_password" in data and data["t247_password"]:
+#       config["t247_password"] = data["t247_password"]
