@@ -1056,3 +1056,39 @@ async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved"}
+
+# ══════════════════════════════════════════════════════════════
+# RECLASSIFY ALL TENDERS — re-applies bid rules to all tenders
+# ══════════════════════════════════════════════════════════════
+@app.post("/reclassify-all")
+async def reclassify_all():
+    """Re-run classify_tender() on all non-AI-analysed tenders using current profile rules."""
+    try:
+        from excel_processor import classify_tender
+    except ImportError:
+        raise HTTPException(500, "excel_processor not available")
+    db = load_db()
+    counts = {"bid": 0, "no_bid": 0, "conditional": 0, "review": 0, "count": 0}
+    for tid, t in db["tenders"].items():
+        # Always re-classify (rules may have changed)
+        brief = t.get("brief", "")
+        cost_raw = t.get("estimated_cost_raw", 0)
+        eligibility = t.get("eligibility", "")
+        checklist_str = t.get("checklist", "")
+        try:
+            result = classify_tender(brief, float(cost_raw or 0), eligibility, checklist_str)
+            # Only update verdict if AI hasn't set one
+            if not t.get("bid_no_bid_done"):
+                t["verdict"] = result["verdict"]
+                t["verdict_color"] = result["verdict_color"]
+                t["reason"] = result["reason"]
+            v = result["verdict"]
+            if v == "BID": counts["bid"] += 1
+            elif v == "NO-BID": counts["no_bid"] += 1
+            elif v == "CONDITIONAL": counts["conditional"] += 1
+            else: counts["review"] += 1
+            counts["count"] += 1
+        except Exception as e:
+            print(f"reclassify error for {tid}: {e}")
+    save_db(db)
+    return {"status": "ok", **counts}

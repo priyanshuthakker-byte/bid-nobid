@@ -497,6 +497,14 @@ tbody tr:first-child td{border-top:none}
     </button>
   </div>
   <div class="sb-footer">
+    <!-- Global search accessible from anywhere -->
+    <div style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 9px">
+        <span style="color:var(--text3);font-size:12px">🔍</span>
+        <input id="global-search" placeholder="Search any tender..." style="background:none;border:none;color:var(--text);font-size:12px;font-family:var(--font);outline:none;width:100%;min-width:0" oninput="onGlobalSearch(this.value)" onkeydown="if(event.key==='Enter')goToSearchResults()">
+      </div>
+      <div id="global-search-results" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);margin-top:4px;max-height:200px;overflow-y:auto"></div>
+    </div>
     <div class="sb-status">
       <span class="dot dot-gray dot-pulse" id="drive-dot"></span>
       <span id="drive-label">Drive: checking...</span>
@@ -614,8 +622,13 @@ tbody tr:first-child td{border-top:none}
               <col style="width:90px"><col style="width:110px"><col style="width:100px"><col style="width:130px">
             </colgroup>
             <thead><tr>
-              <th>T247 ID</th><th>Ref No</th><th>Brief / Org</th>
-              <th>Value</th><th>Deadline</th><th>Verdict</th><th>Actions</th>
+              <th class="sort-th" onclick="sortTl('t247_id')">T247 ID</th>
+              <th class="sort-th" onclick="sortTl('ref_no')">Ref No</th>
+              <th class="sort-th" onclick="sortTl('brief')">Brief / Org</th>
+              <th class="sort-th" onclick="sortTl('cost')">Value</th>
+              <th class="sort-th" onclick="sortTl('deadline')">Deadline</th>
+              <th class="sort-th" onclick="sortTl('verdict')">Verdict</th>
+              <th>Actions</th>
             </tr></thead>
             <tbody id="tl-tbody"><tr><td colspan="7" class="empty-row">Loading...</td></tr></tbody>
           </table>
@@ -1037,35 +1050,42 @@ tbody tr:first-child td{border-top:none}
 
         <!-- BID RULES TAB -->
         <div id="profile-tab-bidrules" class="tab-panel">
+          <div class="alert alert-info" style="margin-bottom:12px;font-size:12px;line-height:1.6">
+            <b>How it works:</b> On Excel import, each tender brief is checked against these keyword lists. If a DO NOT BID keyword is found → NO-BID. If a CONDITIONAL keyword is found → CONDITIONAL. If a Preferred Sector keyword matches → BID. After adding keywords, click "Save Rules" then "Re-classify All" to update existing tenders.
+          </div>
           <div class="card">
             <div class="card-hd">
               <div>
                 <div class="card-title">Auto Bid/No-Bid Rules</div>
-                <div class="card-sub">These keywords trigger automatic NO-BID or CONDITIONAL decisions on Excel import</div>
+                <div class="card-sub">Keyword-based auto-classification. AI analysis overrides these when you analyse a specific tender document.</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Rules</button>
+                <button class="btn btn-ghost btn-sm" id="reclassify-btn" onclick="reclassifyAll()">🔄 Re-classify All</button>
               </div>
             </div>
             <div class="row2">
               <div>
-                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px">🚫 DO NOT BID — Keywords</div>
+                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px">🚫 DO NOT BID — Keywords (matched against brief)</div>
                 <div id="dnb-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
                 <div class="form-group" style="margin-bottom:0">
-                  <input type="text" id="dnb-add" placeholder="Add keyword..." onkeydown="if(event.key==='Enter')addBidRule('dnb')">
+                  <input type="text" id="dnb-add" placeholder="e.g. supply of gis software" onkeydown="if(event.key==='Enter')addBidRule('dnb')">
                 </div>
               </div>
               <div>
                 <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">⚠ CONDITIONAL — Keywords</div>
                 <div id="cond-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
                 <div class="form-group" style="margin-bottom:0">
-                  <input type="text" id="cond-add" placeholder="Add keyword..." onkeydown="if(event.key==='Enter')addBidRule('cond')">
+                  <input type="text" id="cond-add" placeholder="e.g. office in state" onkeydown="if(event.key==='Enter')addBidRule('cond')">
                 </div>
               </div>
             </div>
             <div style="margin-top:14px">
-              <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">✓ Preferred Sectors</div>
+              <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">✓ Preferred Sectors → BID</div>
               <div id="pref-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
               <div class="row2">
                 <div class="form-group" style="margin-bottom:0">
-                  <input type="text" id="pref-add" placeholder="Add sector..." onkeydown="if(event.key==='Enter')addBidRule('pref')">
+                  <input type="text" id="pref-add" placeholder="e.g. gis, smart city, egov" onkeydown="if(event.key==='Enter')addBidRule('pref')">
                 </div>
                 <div class="row2" style="margin-bottom:0">
                   <div class="form-group" style="margin-bottom:0"><label>Min Project Value (Cr)</label><input type="number" id="p-minval" step="0.1"></div>
@@ -1128,15 +1148,16 @@ tbody tr:first-child td{border-top:none}
             <div id="ai-test-result" style="margin-top:10px;font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);display:none"></div>
           </div>
 
-          <!-- T247 CREDENTIALS -->
+          <!-- T247 INFO (auto-download removed - not feasible on Render free tier) -->
           <div class="card">
-            <div class="card-hd"><div class="card-title">T247 Credentials</div></div>
-            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Your tender247.com login</div>
-            <div class="form-group"><label>Email / Username</label><input type="text" id="t247u" placeholder="your@email.com"></div>
-            <div class="form-group"><label>Password</label><input type="password" id="t247p" placeholder="password"></div>
-            <button class="btn btn-ghost btn-sm" onclick="saveT247Creds()">💾 Save Credentials</button>
-            <div style="margin-top:10px;padding:8px;border-radius:var(--radius-sm);background:var(--amber-bg);font-size:11px;color:var(--amber);line-height:1.5">
-              ⚠ T247 auto-download is not available on Render free tier (no browser engine). You can still click the T247 ID to open the tender page manually.
+            <div class="card-hd"><div class="card-title">T247 Download Workflow</div></div>
+            <div class="alert alert-info" style="font-size:12px;line-height:1.7;margin-bottom:0">
+              <b>Auto-download permanently removed.</b> Render free tier has no browser (Playwright/Chromium can't run).<br>
+              <b>How to analyse a tender:</b><br>
+              1. In Dashboard, click any T247 ID → opens tender on tender247.com<br>
+              2. On T247, download the tender ZIP file<br>
+              3. Come back → go to Analyse Tender → drag & drop the ZIP file<br>
+              4. Click Analyse — AI does the rest in ~60 seconds
             </div>
           </div>
 
@@ -1415,7 +1436,7 @@ function renderDash() {
     var isSkipped = t.status==='Not Interested';
     var rowStyle = isSkipped ? 'opacity:.5' : '';
     return '<tr style="'+rowStyle+'">'+
-      '<td><span class="mono" style="font-size:12px">'+esc(t.t247_id||'—')+'</span></td>'+
+      '<td>'+makeT247Link(t.t247_id)+'</td>'+
       '<td><div class="brief-name" title="'+esc(t.brief||'')+'">'+esc((t.brief||'—').substring(0,50))+'</div>'+
           '<div class="brief-org" title="'+esc((t.org_name||'')+(t.location?' · '+t.location:''))+'">'+esc((t.org_name||'')+(t.location?' · '+t.location:''))+'</div></td>'+
       '<td class="muted" style="font-size:12px;white-space:nowrap">'+esc(t.deadline||'—')+'</td>'+
@@ -1438,13 +1459,94 @@ function renderDash() {
 function sortDash(col) {
   if (G.dashSort.col===col) { G.dashSort.dir = G.dashSort.dir==='asc'?'desc':'asc'; }
   else { G.dashSort.col=col; G.dashSort.dir='asc'; }
-  // Update header classes
   document.querySelectorAll('.sort-th').forEach(function(th){
     th.classList.remove('asc','desc');
     var oc = th.getAttribute('onclick')||'';
     if (oc.includes("'"+col+"'")) th.classList.add(G.dashSort.dir);
   });
   renderDash();
+}
+
+// ── ALL TENDERS SORT ──────────────────────────────────────────
+var G_tlSort = {col:'days', dir:'asc'};
+function sortTl(col) {
+  if (G_tlSort.col===col) { G_tlSort.dir = G_tlSort.dir==='asc'?'desc':'asc'; }
+  else { G_tlSort.col=col; G_tlSort.dir='asc'; }
+  document.querySelectorAll('#page-tenders .sort-th').forEach(function(th){
+    th.classList.remove('asc','desc');
+    var oc = th.getAttribute('onclick')||'';
+    if (oc.includes("'"+col+"'")) th.classList.add(G_tlSort.dir);
+  });
+  renderTenders();
+}
+
+// ── T247 CLICKABLE LINK ──────────────────────────────────────
+function makeT247Link(tid) {
+  if (!tid || tid==='—') return esc(tid||'—');
+  var url = 'https://www.tender247.com/tender/detail/'+esc(tid);
+  return '<a href="'+url+'" target="_blank" class="mono" style="color:var(--blue);text-decoration:none;font-size:12px">'+esc(tid)+'</a>';
+}
+
+// ── GLOBAL SEARCH ────────────────────────────────────────────
+function onGlobalSearch(q) {
+  var el = document.getElementById('global-search-results');
+  if (!q || q.length < 2) { el.style.display='none'; return; }
+  var ql = q.toLowerCase();
+  var matches = G.tenders.filter(function(t){
+    return [t.brief,t.org_name,t.t247_id,t.location,t.ref_no].some(function(v){ return v&&v.toLowerCase().includes(ql); });
+  }).slice(0,8);
+  if (!matches.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = matches.map(function(t){
+    var v=verdict(t);
+    var col = v==='BID'?'var(--green)':v==='NO-BID'?'var(--red)':v==='CONDITIONAL'?'var(--amber)':'var(--blue)';
+    return '<div style="padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px" onclick="goToTenderFromSearch(\''+esc(t.t247_id)+'\')">'+
+      '<span style="font-size:10px;font-family:var(--mono);color:var(--text3)">'+esc(t.t247_id)+'</span>'+
+      '<span style="font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((t.brief||'—').substring(0,40))+'</span>'+
+      '<span style="font-size:10px;font-weight:600;color:'+col+'">'+v+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+function goToTenderFromSearch(tid) {
+  document.getElementById('global-search').value = '';
+  document.getElementById('global-search-results').style.display = 'none';
+  openDetail(tid);
+}
+
+function goToSearchResults() {
+  var q = document.getElementById('global-search').value;
+  document.getElementById('global-search-results').style.display='none';
+  if (q) {
+    document.getElementById('tl-search').value = q;
+    showPage('tenders');
+    renderTenders();
+  }
+}
+
+// Close global search on click outside
+document.addEventListener('click', function(e){
+  var wrap = document.getElementById('global-search');
+  var res = document.getElementById('global-search-results');
+  if (wrap && res && !wrap.contains(e.target) && !res.contains(e.target)) {
+    res.style.display='none';
+  }
+});
+
+// ── RE-CLASSIFY ALL TENDERS ──────────────────────────────────
+async function reclassifyAll() {
+  var btn = document.getElementById('reclassify-btn');
+  if (btn) btnLoad(btn, 'Re-classifying...');
+  try {
+    var r = await fetch('/reclassify-all', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d = await r.json();
+    if (btn) btnDone(btn, '✓ Done');
+    toast('Re-classified '+d.count+' tenders: '+d.bid+' BID, '+d.no_bid+' NO-BID, '+d.conditional+' Conditional', 'success');
+    loadDashboard();
+  } catch(e) {
+    if (btn) btnDone(btn);
+    toast('Re-classify failed: '+e.message,'error');
+  }
 }
 
 function toggleFav(tid) {
@@ -1491,10 +1593,22 @@ function setTlFilter(f) {
 }
 function renderTenders() {
   var q = (document.getElementById('tl-search').value||'').toLowerCase();
-  var arr = G.tenders;
+  var arr = G.tenders.slice();
   if (tlFilterVal==='urgent') arr = arr.filter(function(t){ var dl=daysLeft(t); return dl>=0&&dl<=7; });
   else if (tlFilterVal) arr = arr.filter(function(t){ return verdict(t)===tlFilterVal; });
   if (q) arr = arr.filter(function(t){ return [t.brief,t.t247_id,t.org_name,t.ref_no].some(function(v){ return v&&v.toLowerCase().includes(q); }); });
+  // Sort
+  var sc = G_tlSort.col, sd = G_tlSort.dir;
+  arr.sort(function(a,b){
+    var av, bv;
+    if (sc==='days'||sc==='deadline') { av=daysLeft(a); bv=daysLeft(b); }
+    else if (sc==='cost') { av=parseFloat(a.estimated_cost_cr||0); bv=parseFloat(b.estimated_cost_cr||0); }
+    else if (sc==='verdict') { av=verdict(a); bv=verdict(b); }
+    else { av=String(a[sc]||''); bv=String(b[sc]||''); }
+    if (av<bv) return sd==='asc'?-1:1;
+    if (av>bv) return sd==='asc'?1:-1;
+    return 0;
+  });
   var countEl = document.getElementById('tl-count');
   if (countEl) countEl.textContent = arr.length+' tenders';
   var tb = document.getElementById('tl-tbody');
@@ -1502,12 +1616,12 @@ function renderTenders() {
   tb.innerHTML = arr.map(function(t){
     var v=verdict(t); var dl=daysLeft(t);
     return '<tr>'+
-      '<td><span class="mono">'+esc(t.t247_id||'—')+'</span></td>'+
-      '<td><span class="mono" style="font-size:10px;word-break:break-all">'+esc((t.ref_no||'—').substring(0,25))+'</span></td>'+
-      '<td><div class="brief-name" title="'+esc(t.brief||'')+'">'+esc((t.brief||'—').substring(0,40))+'</div>'+
-          '<div class="brief-org" title="'+esc(t.org_name||'')+'">'+esc((t.org_name||'').substring(0,35))+'</div></td>'+
+      '<td>'+makeT247Link(t.t247_id)+'</td>'+
+      '<td><span class="mono" style="font-size:10px;word-break:break-all;color:var(--text3)">'+esc((t.ref_no||'—').substring(0,22))+'</span></td>'+
+      '<td><div class="brief-name" title="'+esc(t.brief||'')+'">'+esc((t.brief||'—').substring(0,42))+'</div>'+
+          '<div class="brief-org" title="'+esc(t.org_name||'')+'">'+esc((t.org_name||'').substring(0,38))+'</div></td>'+
       '<td class="muted" style="font-size:12px">'+esc(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
-      '<td style="font-size:12px">'+daysHtml(dl)+'<div class="muted" style="font-size:10px">'+esc(t.deadline||'')+'</div></td>'+
+      '<td>'+daysHtml(dl)+'<div class="muted" style="font-size:10px">'+esc(t.deadline||'')+'</div></td>'+
       '<td>'+verdictBadge(v)+'</td>'+
       '<td><div class="acts">'+
         '<button class="act-btn blue" onclick="goAnalyse(\''+esc(t.t247_id)+'\')">Analyse</button>'+
