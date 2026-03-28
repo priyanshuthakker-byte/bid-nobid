@@ -139,11 +139,13 @@ def load_db() -> dict:
     return {"tenders": {}}
 
 def save_db(db: dict):
+    # Always ensure the data directory exists first
+    OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
         save_to_drive(DB_FILE)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ Drive sync warning: {e}")
 
 def get_tender(t247_id: str) -> dict:
     return load_db()["tenders"].get(str(t247_id), {})
@@ -957,12 +959,16 @@ async def sync_drive():
     if not drive_available():
         return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
     try:
+        # Ensure data directory and DB file exist before syncing
+        OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
+        if not DB_FILE.exists():
+            DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
         db = load_db()
         count = len(db.get("tenders", {}))
         ok = save_to_drive(DB_FILE)
         if ok:
             return {"status": "ok", "message": f"Synced {count} tenders to Google Drive"}
-        return JSONResponse({"status": "error", "message": "Sync failed"}, status_code=500)
+        return JSONResponse({"status": "error", "message": "Sync failed — check Render logs"}, status_code=500)
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
