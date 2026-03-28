@@ -1,8 +1,8 @@
 """
-sync_manager.py — Two-way Google Sheets sync
-Sheet: Nascent_Tender_Master_v4  (14 tabs)
-RULE: Nothing syncs automatically. Only when user presses Sync button.
-Column names are EXACT matches from the actual sheet.
+sync_manager.py — Google Sheets two-way sync
+Sheet: Nascent_Tender_Master_v4 (14 tabs)
+ALL field names match EXACTLY what loadProfile() reads in index.html.
+Sync only when user presses button — never automatic.
 """
 import json, os
 from pathlib import Path
@@ -41,19 +41,16 @@ def _connect():
         return None
 
 def _rows(ws):
-    """Return list of dicts from worksheet (header row → keys)."""
     all_rows = ws.get_all_values()
-    if not all_rows:
-        return []
+    if not all_rows: return []
     headers = all_rows[0]
-    result  = []
-    for row in all_rows[1:]:
-        if any(c.strip() for c in row):
-            result.append({headers[i]: row[i] if i < len(row) else "" for i in range(len(headers))})
-    return result
+    return [
+        {headers[i]: row[i] if i < len(row) else "" for i in range(len(headers))}
+        for row in all_rows[1:]
+        if any(c.strip() for c in row)
+    ]
 
 def _v(d, *keys):
-    """Return first non-empty value from dict using multiple key attempts."""
     for k in keys:
         val = d.get(k, "")
         if val and str(val).strip() and str(val).strip().upper() not in ("PENDING - UPDATE","PENDING","N/A",""):
@@ -71,13 +68,14 @@ def _save_local(profile):
     profile["metadata"] = {
         "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "source": "google_sheet",
-        "version": "3.0",
+        "version": "4.0",
     }
     PROFILE_PATH.write_text(json.dumps(profile, indent=2, ensure_ascii=False))
 
 
 # ══════════════════════════════════════════════════════════════
 # PULL — Sheet → App
+# Field names match EXACTLY what loadProfile() reads in index.html
 # ══════════════════════════════════════════════════════════════
 def pull_from_sheet() -> dict:
     gc = _connect()
@@ -88,82 +86,250 @@ def pull_from_sheet() -> dict:
         profile = _load_local()
         result  = {"tabs_read": [], "tabs_skipped": [], "fields_updated": []}
 
-        # ── Company Profile ───────────────────────────────────
+        # ── Tab: Company Profile (Field → Details vertical format) ──
         try:
             rows = _rows(sh.worksheet("Company Profile"))
-            # This sheet is Field→Details format (vertical)
-            cp = {r.get("Field","").strip(): r.get("Details","").strip() for r in rows if r.get("Field")}
-            co = profile.setdefault("company", {})
-            mapping = {
-                "name":             ["Company Name"],
-                "cin":              ["CIN"],
-                "pan":              ["PAN"],
-                "gstin":            ["GSTIN"],
-                "msme_udyam":       ["Udyam Registration"],
-                "legal_status":     ["Legal Status"],
-                "year_of_incorporation": ["Year of Incorporation"],
-                "type":             ["Type of Organization"],
-                "address":          ["Registered Address"],
-                "email":            ["Corporate Email"],
-                "tender_email":     ["Tender Email"],
-                "website":          ["Website"],
-                "phone":            ["Registered Office Phone"],
-                "authorised_signatory": ["Authorised Signatory"],
-                "poa_validity":     ["POA Validity"],
-                "total_employees":  ["Total Employees"],
-                "gis_staff":        ["GIS Staff Count"],
-                "office_locations": ["Office Locations"],
+            cp = {r.get("Field","").strip(): r.get("Details","").strip()
+                  for r in rows if r.get("Field","").strip()}
+
+            def gf(*keys):
+                for k in keys:
+                    v = cp.get(k,"")
+                    if v and "PENDING" not in v.upper(): return v
+                return ""
+
+            # Write to profile["company"] with EXACT keys loadProfile reads:
+            # name, cin, pan, gstin, udyam, legal_status, year_of_incorporation,
+            # type, email, tender_email, phone, website, address,
+            # authorised_signatory, md, poa_validity, poa_alert
+            company = profile.get("company", {})
+            updates = {
+                "name":                gf("Company Name"),
+                "cin":                 gf("CIN"),
+                "pan":                 gf("PAN"),
+                "gstin":               gf("GSTIN"),
+                "udyam":               gf("Udyam Registration"),
+                "legal_status":        gf("Legal Status"),
+                "year_of_incorporation": gf("Year of Incorporation"),
+                "type":                gf("Type of Organization"),
+                "email":               gf("Corporate Email"),
+                "tender_email":        gf("Tender Email"),
+                "phone":               gf("Registered Office Phone"),
+                "website":             gf("Website"),
+                "address":             gf("Registered Address"),
+                "authorised_signatory": gf("Authorised Signatory"),
+                "total_employees":     gf("Total Employees"),
+                "gis_staff":           gf("GIS Staff Count"),
+                "office_locations":    gf("Office Locations"),
             }
-            for field, keys in mapping.items():
-                val = next((cp.get(k,"") for k in keys if cp.get(k,"").strip()), "")
-                if val and val.upper() not in ("PENDING - UPDATE","PENDING"):
-                    co[field] = val
-                    result["fields_updated"].append(f"company.{field}")
-            # POA alert
-            poa = co.get("poa_validity","")
+            for k, v in updates.items():
+                if v: company[k] = v
+
+            # POA from Company Profile sheet
+            poa = gf("POA Validity")
+            if poa: company["poa_validity"] = poa
+
+            # POA alert if 2026 expiry
             if poa and "2026" in poa:
-                co["poa_alert"] = f"POA validity: {poa} — check if renewal needed"
+                company["poa_alert"] = f"POA validity: {poa} — check if renewal needed"
+
+            profile["company"] = company
+            result["fields_updated"].append(f"company ({sum(1 for v in updates.values() if v)} fields)")
             result["tabs_read"].append("Company Profile")
         except Exception as e:
             result["tabs_skipped"].append(f"Company Profile ({e})")
 
-        # ── Finance ───────────────────────────────────────────
+        # ── Tab: Key Contacts ─────────────────────────────────
+        try:
+            rows = _rows(sh.worksheet("Key Contacts"))
+            co   = profile.setdefault("company", {})
+            for r in rows:
+                role = _v(r, "Department / Role")
+                name = _v(r, "Name")
+                if not name: continue
+                if "authorized signatory" in role.lower() or "authorised" in role.lower():
+                    desig = _v(r, "Designation")
+                    co["authorised_signatory"] = f"{name}, {desig}" if desig else name
+                if "managing director" in role.lower():
+                    co["md"] = name
+            result["tabs_read"].append("Key Contacts")
+        except Exception as e:
+            result["tabs_skipped"].append(f"Key Contacts ({e})")
+
+        # ── Tab: POA & Authorization ──────────────────────────
+        try:
+            rows = _rows(sh.worksheet("POA & Authorization"))
+            co   = profile.setdefault("company", {})
+            poas = []
+            for r in rows:
+                doc = _v(r, "Document")
+                if not doc: continue
+                issued_to = _v(r, "Issued To")
+                valid_to  = _v(r, "Valid To")
+                poas.append({
+                    "document":    doc,
+                    "issued_to":   issued_to,
+                    "designation": _v(r, "Designation"),
+                    "issued_by":   _v(r, "Issued By"),
+                    "valid_from":  _v(r, "Valid From"),
+                    "valid_to":    valid_to,
+                    "status":      _v(r, "Status"),
+                })
+                if issued_to and "PENDING" not in issued_to.upper() and valid_to:
+                    co["poa_validity"] = f"{_v(r,'Valid From')} to {valid_to}"
+                    if "2026" in valid_to or "2025" in valid_to:
+                        co["poa_alert"] = f"POA expires {valid_to} — renew if needed"
+            profile["poa_authorization"] = poas
+            result["tabs_read"].append("POA & Authorization")
+        except Exception as e:
+            result["tabs_skipped"].append(f"POA & Authorization ({e})")
+
+        # ── Tab: Finance ──────────────────────────────────────
+        # loadProfile reads: d.finance.turnover_by_year, avg_turnover_last_3_fy,
+        # avg_turnover_last_2_fy, net_worth_cr, solvency_amount_cr, ca_name
         try:
             rows = _rows(sh.worksheet("Finance"))
-            fin  = profile.setdefault("finance", {})
             tv   = {}
-            last_nw_cr = ""
-            ca_name    = ""
+            nw_cr = ""; ca_name = ""
             for r in rows:
-                fy = _v(r, "Financial Year")
-                tc = _v(r, "Annual Turnover (Rs. Cr)")
-                nw = _v(r, "Net Worth (Rs. Cr)")
-                ca = _v(r, "CA Name")
-                # Only real FY rows (format like 2022-23)
+                fy  = _v(r, "Financial Year")
+                cr  = _v(r, "Annual Turnover (Rs. Cr)")
+                nw  = _v(r, "Net Worth (Rs. Cr)")
+                ca  = _v(r, "CA Name")
                 if fy and "-" in fy and len(fy) == 7:
                     try:
-                        tv[fy] = float(tc)
-                        if nw: last_nw_cr = nw
+                        tv[fy] = float(cr)
+                        if nw: nw_cr = nw
                         if ca: ca_name = ca
                     except: pass
+
             if tv:
                 last3 = sorted(tv.keys())[-3:]
+                last2 = sorted(tv.keys())[-2:]
                 avg3  = round(sum(tv[k] for k in last3) / len(last3), 2)
-                fin.update({
+                avg2  = round(sum(tv[k] for k in last2) / len(last2), 2)
+                profile["finance"] = {
                     "turnover_by_year":      tv,
                     "avg_turnover_last_3_fy": avg3,
+                    "avg_turnover_last_2_fy": avg2,
                     "avg_turnover_cr":        avg3,
-                    "net_worth_cr":           last_nw_cr,
+                    "net_worth_cr":           nw_cr,
                     "ca_name":                ca_name,
-                })
-                result["fields_updated"].append(f"finance ({len(tv)} years, avg ₹{avg3} Cr)")
+                    "solvency_amount_cr":     "",
+                }
+                result["fields_updated"].append(
+                    f"finance ({len(tv)} years, avg3=₹{avg3}Cr, networth=₹{nw_cr}Cr)"
+                )
             result["tabs_read"].append("Finance")
         except Exception as e:
             result["tabs_skipped"].append(f"Finance ({e})")
 
-        # ── Projects ──────────────────────────────────────────
+        # ── Tab: Certifications ───────────────────────────────
+        # loadProfile reads: certs.cmmi.{level, version, valid_to}
+        #                    certs.iso_9001.{cert_no, valid_from, valid_to}
+        #                    certs.iso_27001.{cert_no, valid_from, valid_to}
+        #                    certs.iso_20000.{cert_no, valid_from, valid_to}
         try:
-            rows = _rows(sh.worksheet("Projects"))
+            rows  = _rows(sh.worksheet("Certifications"))
+            certs = profile.get("certifications", {})
+            for r in rows:
+                name      = _v(r, "Cert_Name")
+                standard  = _v(r, "Standard") or name
+                valid_till= _v(r, "Valid_Till")
+                if not name: continue
+                nl = name.lower()
+                if "cmmi" in nl:
+                    certs["cmmi"] = {
+                        "level":   name,
+                        "version": standard,
+                        "valid_to": valid_till,
+                        "valid_till": valid_till,
+                        "status":  _v(r, "Status") or "Active",
+                    }
+                elif "9001" in name:
+                    certs["iso_9001"] = {
+                        "standard":  standard,
+                        "valid_to":  valid_till,
+                        "valid_till": valid_till,
+                        "valid_from": "",
+                        "cert_no":   "",
+                        "status":    _v(r, "Status") or "Active",
+                    }
+                elif "27001" in name:
+                    certs["iso_27001"] = {
+                        "standard":  standard,
+                        "valid_to":  valid_till,
+                        "valid_till": valid_till,
+                        "valid_from": "",
+                        "cert_no":   "",
+                        "status":    _v(r, "Status") or "Active",
+                    }
+                elif "20000" in name:
+                    certs["iso_20000"] = {
+                        "standard":  standard,
+                        "valid_to":  valid_till,
+                        "valid_till": valid_till,
+                        "valid_from": "",
+                        "cert_no":   "",
+                        "status":    _v(r, "Status") or "Active",
+                    }
+                else:
+                    key = name.lower().replace(" ","_").replace("/","_")[:20]
+                    certs[key] = {
+                        "standard":  standard,
+                        "valid_to":  valid_till,
+                        "valid_till": valid_till,
+                        "status":    _v(r, "Status") or "Active",
+                    }
+            profile["certifications"] = certs
+            result["fields_updated"].append(f"certifications ({len(certs)} certs)")
+            result["tabs_read"].append("Certifications")
+        except Exception as e:
+            result["tabs_skipped"].append(f"Certifications ({e})")
+
+        # ── Tab: Employees ────────────────────────────────────
+        # loadProfile reads: emp.total_confirmed, emp.total_listed,
+        #                    emp.it_dev_staff, emp.gis_staff
+        try:
+            rows = _rows(sh.worksheet("Employees"))
+            emp_list = []
+            gis_count = it_count = 0
+            for r in rows:
+                name = _v(r, "Employee Name")
+                if not name: continue
+                is_gis = r.get("GIS Staff (Y/N)","").strip().lower() == "yes"
+                is_it  = r.get("IT/Dev Staff (Y/N)","").strip().lower() == "yes"
+                if is_gis: gis_count += 1
+                if is_it:  it_count  += 1
+                emp_list.append({
+                    "name":        name,
+                    "designation": _v(r, "Designation"),
+                    "department":  _v(r, "Department / Function"),
+                    "years":       _v(r, "Years In Service"),
+                    "is_gis":      is_gis,
+                    "is_it":       is_it,
+                    "is_key":      r.get("Key Person for Tenders (Y/N)","").strip().lower() == "yes",
+                })
+            total = len(emp_list)
+            profile["employees"] = {
+                "total":           total,
+                "total_confirmed": total,
+                "total_listed":    total,
+                "gis_staff":       gis_count,
+                "it_dev_staff":    it_count,
+                "list":            emp_list,
+            }
+            profile.setdefault("company",{})["total_employees"] = str(total)
+            result["fields_updated"].append(
+                f"employees ({total} total, {gis_count} GIS, {it_count} IT/Dev)"
+            )
+            result["tabs_read"].append("Employees")
+        except Exception as e:
+            result["tabs_skipped"].append(f"Employees ({e})")
+
+        # ── Tab: Projects ─────────────────────────────────────
+        try:
+            rows     = _rows(sh.worksheet("Projects"))
             projects = []
             for r in rows:
                 name = _v(r, "Project Name")
@@ -190,134 +356,33 @@ def pull_from_sheet() -> dict:
                     "docs_available":_v(r, "Supporting Docs Available"),
                     "description":   _v(r, "Description of Services Provided"),
                     "team_size":     _v(r, "Team Size"),
-                    "consortium_lead": _v(r, "Consortium Lead (if any)"),
+                    "consortium_lead":_v(r, "Consortium Lead (if any)"),
                 })
             if projects:
                 profile["projects"] = projects
-                result["fields_updated"].append(f"projects ({len(projects)} entries)")
+                result["fields_updated"].append(f"projects ({len(projects)})")
             result["tabs_read"].append("Projects")
         except Exception as e:
             result["tabs_skipped"].append(f"Projects ({e})")
 
-        # ── Employees ─────────────────────────────────────────
+        # ── Tab: Technology Stack → capabilities ──────────────
+        # loadProfile reads: d.capabilities.tech_stack, d.capabilities.not_available
         try:
-            rows = _rows(sh.worksheet("Employees"))
-            emp_list = []
-            gis_count = it_count = key_count = 0
+            rows  = _rows(sh.worksheet("Technology Stack"))
+            techs = []
             for r in rows:
-                name = _v(r, "Employee Name")
-                if not name: continue
-                is_gis = r.get("GIS Staff (Y/N)","").strip().lower() == "yes"
-                is_it  = r.get("IT/Dev Staff (Y/N)","").strip().lower() == "yes"
-                is_key = r.get("Key Person for Tenders (Y/N)","").strip().lower() == "yes"
-                if is_gis: gis_count += 1
-                if is_it:  it_count  += 1
-                if is_key: key_count += 1
-                emp_list.append({
-                    "name":        name,
-                    "designation": _v(r, "Designation"),
-                    "department":  _v(r, "Department / Function"),
-                    "years":       _v(r, "Years In Service"),
-                    "is_gis":      is_gis,
-                    "is_it":       is_it,
-                    "is_key":      is_key,
-                })
-            co = profile.setdefault("company", {})
-            co["total_employees"] = str(len(emp_list))
-            profile["employees"] = {
-                "total":         len(emp_list),
-                "gis_staff":     gis_count,
-                "it_dev_staff":  it_count,
-                "key_persons":   key_count,
-                "list":          emp_list,
+                t = _v(r, "Technology / Tool")
+                if t: techs.append(t)
+            profile["capabilities"] = {
+                "tech_stack":    techs,
+                "not_available": ["CERT-In", "STQC", "SAP Partner", "Oracle Partner"],
             }
-            result["fields_updated"].append(f"employees ({len(emp_list)} total, {gis_count} GIS, {it_count} IT)")
-            result["tabs_read"].append("Employees")
+            profile["key_technologies"] = techs
+            result["tabs_read"].append("Technology Stack")
         except Exception as e:
-            result["tabs_skipped"].append(f"Employees ({e})")
+            result["tabs_skipped"].append(f"Technology Stack ({e})")
 
-        # ── Certifications ────────────────────────────────────
-        try:
-            rows = _rows(sh.worksheet("Certifications"))
-            certs = {}
-            for r in rows:
-                name = _v(r, "Cert_Name")
-                if not name: continue
-                key  = name.lower().replace(" ","_").replace("/","_").replace(":","")[:20]
-                certs[key] = {
-                    "name":       name,
-                    "standard":   _v(r, "Standard") or name,
-                    "valid_till": _v(r, "Valid_Till"),
-                    "cert_body":  _v(r, "Cert_Body"),
-                    "status":     _v(r, "Status") or "Active",
-                }
-            if certs:
-                profile["certifications"] = certs
-                result["fields_updated"].append(f"certifications ({len(certs)})")
-            result["tabs_read"].append("Certifications")
-        except Exception as e:
-            result["tabs_skipped"].append(f"Certifications ({e})")
-
-        # ── Key Contacts ──────────────────────────────────────
-        try:
-            rows = _rows(sh.worksheet("Key Contacts"))
-            contacts = {}
-            for r in rows:
-                role = _v(r, "Department / Role")
-                name = _v(r, "Name")
-                if not role or not name: continue
-                contacts[role] = {
-                    "name":        name,
-                    "designation": _v(r, "Designation"),
-                    "email":       _v(r, "Email"),
-                    "mobile":      _v(r, "Mobile"),
-                    "notes":       _v(r, "Notes"),
-                }
-                # Populate company signatory from Key Contacts
-                if "signatory" in role.lower() or "authorized" in role.lower():
-                    profile.setdefault("company",{})["authorised_signatory"] = f"{name}, {_v(r,'Designation')}"
-                if "bid executive" in role.lower():
-                    profile["bid_executive"] = {
-                        "name":        name,
-                        "designation": _v(r, "Designation"),
-                        "email":       _v(r, "Email"),
-                        "phone":       _v(r, "Mobile"),
-                    }
-            profile["key_contacts"] = contacts
-            result["fields_updated"].append(f"key_contacts ({len(contacts)})")
-            result["tabs_read"].append("Key Contacts")
-        except Exception as e:
-            result["tabs_skipped"].append(f"Key Contacts ({e})")
-
-        # ── POA & Authorization ───────────────────────────────
-        try:
-            rows = _rows(sh.worksheet("POA & Authorization"))
-            poas = []
-            for r in rows:
-                doc = _v(r, "Document")
-                if not doc: continue
-                poas.append({
-                    "document":          doc,
-                    "issued_to":         _v(r, "Issued To"),
-                    "designation":       _v(r, "Designation"),
-                    "issued_by":         _v(r, "Issued By"),
-                    "valid_from":        _v(r, "Valid From"),
-                    "valid_to":          _v(r, "Valid To"),
-                    "status":            _v(r, "Status"),
-                    "type":              _v(r, "Type"),
-                })
-            if poas:
-                profile["poa_authorization"] = poas
-                # Set poa_validity on company from active POA
-                for p in poas:
-                    if p.get("valid_to") and "PENDING" not in p.get("issued_to",""):
-                        profile.setdefault("company",{})["poa_validity"] = f"{p['valid_from']} to {p['valid_to']}"
-                        break
-            result["tabs_read"].append("POA & Authorization")
-        except Exception as e:
-            result["tabs_skipped"].append(f"POA & Authorization ({e})")
-
-        # ── Bank Details ──────────────────────────────────────
+        # ── Tab: Bank Details ─────────────────────────────────
         try:
             rows = _rows(sh.worksheet("Bank Details"))
             banks = []
@@ -334,25 +399,25 @@ def pull_from_sheet() -> dict:
                 })
             if banks:
                 profile["bank_details"] = banks
-                co = profile.setdefault("company",{})
+                co = profile.setdefault("company", {})
                 co["bank"]      = banks[0].get("bank_name","")
                 co["bank_ifsc"] = banks[0].get("ifsc","")
             result["tabs_read"].append("Bank Details")
         except Exception as e:
             result["tabs_skipped"].append(f"Bank Details ({e})")
 
-        # ── Bid_Rules (machine-readable tab) ─────────────────
+        # ── Tab: Bid_Rules ────────────────────────────────────
         try:
             rows = _rows(sh.worksheet("Bid_Rules"))
-            dnb = []; pref = []; cond = []
+            dnb  = []; pref = []; cond = []
             min_cr = 0.5; max_cr = 150.0
             for r in rows:
                 rtype   = r.get("Rule_Type","").strip().lower()
                 keyword = r.get("Keyword","").strip().lower()
                 if not keyword or keyword == "keyword": continue
-                if rtype == "do_not_bid":        dnb.append(keyword)
-                elif rtype == "preferred_sector": pref.append(keyword)
-                elif rtype == "conditional":      cond.append(keyword)
+                if rtype == "do_not_bid":         dnb.append(keyword)
+                elif rtype == "preferred_sector":  pref.append(keyword)
+                elif rtype == "conditional":       cond.append(keyword)
                 elif rtype == "value_range":
                     if "min_cr=" in keyword:
                         try: min_cr = float(keyword.split("=")[1])
@@ -360,14 +425,14 @@ def pull_from_sheet() -> dict:
                     elif "max_cr=" in keyword:
                         try: max_cr = float(keyword.split("=")[1])
                         except: pass
-            existing = profile.get("bid_rules", {})
+            ex = profile.get("bid_rules", {})
             profile["bid_rules"] = {
-                "do_not_bid":            sorted(set(dnb))  or existing.get("do_not_bid",[]),
-                "preferred_sectors":     sorted(set(pref)) or existing.get("preferred_sectors",[]),
-                "conditional":           sorted(set(cond)) or existing.get("conditional",[]),
-                "min_project_value_cr":  min_cr,
-                "max_project_value_cr":  max_cr,
-                "do_not_bid_remarks":    existing.get("do_not_bid_remarks",{}),
+                "do_not_bid":           sorted(set(dnb))  or ex.get("do_not_bid",[]),
+                "preferred_sectors":    sorted(set(pref)) or ex.get("preferred_sectors",[]),
+                "conditional":          sorted(set(cond)) or ex.get("conditional",[]),
+                "min_project_value_cr": min_cr,
+                "max_project_value_cr": max_cr,
+                "do_not_bid_remarks":   ex.get("do_not_bid_remarks",{}),
             }
             result["fields_updated"].append(
                 f"bid_rules ({len(dnb)} no-bid, {len(pref)} preferred, {len(cond)} conditional)"
@@ -376,28 +441,9 @@ def pull_from_sheet() -> dict:
         except Exception as e:
             result["tabs_skipped"].append(f"Bid_Rules ({e})")
 
-        # ── Technology Stack ──────────────────────────────────
+        # ── Tab: Pre-Bid Policies ─────────────────────────────
         try:
-            rows = _rows(sh.worksheet("Technology Stack"))
-            techs = []
-            for r in rows:
-                tech = _v(r, "Technology / Tool")
-                if tech: techs.append({
-                    "name":        tech,
-                    "category":    _v(r, "Category"),
-                    "proficiency": _v(r, "Proficiency\n(Expert/Good/Basic)", "Proficiency"),
-                    "projects":    _v(r, "Used In Projects"),
-                })
-            if techs:
-                profile["technology_stack"] = techs
-                profile["key_technologies"] = [t["name"] for t in techs]
-            result["tabs_read"].append("Technology Stack")
-        except Exception as e:
-            result["tabs_skipped"].append(f"Technology Stack ({e})")
-
-        # ── Pre-Bid Policies ──────────────────────────────────
-        try:
-            rows = _rows(sh.worksheet("Pre-Bid Policies"))
+            rows     = _rows(sh.worksheet("Pre-Bid Policies"))
             policies = []
             for r in rows:
                 pol = _v(r, "Guideline / Policy")
@@ -407,15 +453,14 @@ def pull_from_sheet() -> dict:
                     "relevance": _v(r, "Why It Applies to Nascent"),
                     "query":     _v(r, "Ready-to-Use Pre-Bid Query"),
                 })
-            if policies:
-                profile["prebid_policies"] = policies
+            if policies: profile["prebid_policies"] = policies
             result["tabs_read"].append("Pre-Bid Policies")
         except Exception as e:
             result["tabs_skipped"].append(f"Pre-Bid Policies ({e})")
 
-        # ── Evaluation Methods ────────────────────────────────
+        # ── Tab: Evaluation Methods ───────────────────────────
         try:
-            rows = _rows(sh.worksheet("Evaluation Methods"))
+            rows    = _rows(sh.worksheet("Evaluation Methods"))
             methods = []
             for r in rows:
                 m = _v(r, "Method")
@@ -425,8 +470,7 @@ def pull_from_sheet() -> dict:
                     "how":      _v(r, "How It Works"),
                     "strategy": _v(r, "Nascent Strategy"),
                 })
-            if methods:
-                profile["evaluation_methods"] = methods
+            if methods: profile["evaluation_methods"] = methods
             result["tabs_read"].append("Evaluation Methods")
         except Exception as e:
             result["tabs_skipped"].append(f"Evaluation Methods ({e})")
@@ -450,7 +494,7 @@ def pull_from_sheet() -> dict:
 def push_to_sheet() -> dict:
     gc = _connect()
     if not gc:
-        return {"error": "Cannot connect — check GDRIVE_CREDENTIALS env var", "status": "failed"}
+        return {"error": "Cannot connect — check GDRIVE_CREDENTIALS", "status": "failed"}
     if not PROFILE_PATH.exists():
         return {"error": "nascent_profile.json not found", "status": "failed"}
 
@@ -460,16 +504,14 @@ def push_to_sheet() -> dict:
     try:
         sh = gc.open_by_key(SHEET_ID)
 
-        # ── Push Finance ──────────────────────────────────────
+        # Push Finance
         try:
             fin = profile.get("finance", {})
             tv  = fin.get("turnover_by_year", {})
             if tv:
                 rows = [["Financial Year","Annual Turnover (Rs. Cr)","Net Worth (Rs. Cr)","CA Name"]]
-                nw = fin.get("net_worth_cr","")
-                ca = fin.get("ca_name","")
                 for fy, cr in sorted(tv.items()):
-                    rows.append([fy, cr, nw, ca])
+                    rows.append([fy, cr, fin.get("net_worth_cr",""), fin.get("ca_name","")])
                 ws = sh.worksheet("Finance")
                 ws.batch_clear(["A2:D20"])
                 ws.update("A2", rows[1:])
@@ -477,56 +519,43 @@ def push_to_sheet() -> dict:
         except Exception as e:
             result["tabs_skipped"].append(f"Finance ({e})")
 
-        # ── Push Bid_Rules ────────────────────────────────────
+        # Push Bid_Rules
         try:
             rules = profile.get("bid_rules", {})
-            rows  = [["Rule_Type", "Keyword", "Remarks"]]
-            rows.append(["value_range", f"min_cr={rules.get('min_project_value_cr',0.5)}", "Min project value in Cr"])
-            rows.append(["value_range", f"max_cr={rules.get('max_project_value_cr',150)}", "Max project value in Cr"])
-            remarks = rules.get("do_not_bid_remarks", {})
-            for kw in sorted(rules.get("do_not_bid",[])):
-                rows.append(["do_not_bid", kw, remarks.get(kw,"")])
-            for kw in sorted(rules.get("preferred_sectors",[])):
-                rows.append(["preferred_sector", kw, ""])
-            for kw in sorted(rules.get("conditional",[])):
-                rows.append(["conditional", kw, "Raise pre-bid query"])
-            try:
-                ws = sh.worksheet("Bid_Rules")
-            except:
-                ws = sh.add_worksheet("Bid_Rules", rows=300, cols=4)
-            ws.clear()
-            ws.update("A1", rows)
+            rows  = [["Rule_Type","Keyword","Remarks"]]
+            rows.append(["value_range", f"min_cr={rules.get('min_project_value_cr',0.5)}", "Min Cr"])
+            rows.append(["value_range", f"max_cr={rules.get('max_project_value_cr',150)}", "Max Cr"])
+            rem = rules.get("do_not_bid_remarks", {})
+            for kw in sorted(rules.get("do_not_bid",[])): rows.append(["do_not_bid", kw, rem.get(kw,"")])
+            for kw in sorted(rules.get("preferred_sectors",[])): rows.append(["preferred_sector", kw, ""])
+            for kw in sorted(rules.get("conditional",[])): rows.append(["conditional", kw, "Raise pre-bid query"])
+            try: ws = sh.worksheet("Bid_Rules")
+            except: ws = sh.add_worksheet("Bid_Rules", rows=300, cols=4)
+            ws.clear(); ws.update("A1", rows)
             result["tabs_written"].append("Bid_Rules")
         except Exception as e:
             result["tabs_skipped"].append(f"Bid_Rules ({e})")
 
-        # ── Push Projects ─────────────────────────────────────
+        # Push Projects
         try:
             projects = profile.get("projects", [])
             if projects:
                 cols = ["Project Name","Client","Client Type\n(Govt/PSU/Private)","State",
-                        "Value (Rs. Cr)","Status\n(Completed/Ongoing)","Nascent Role\n(Solo/Consortium/Sub)",
-                        "Project Category Tags","Scope Summary","Technology & Tools",
-                        "Start Date","End Date / Go-Live","Duration","Tender Ref",
-                        "Client Contact Person","Contact Number","Email ID",
+                        "Value (Rs. Cr)","Status\n(Completed/Ongoing)",
+                        "Nascent Role\n(Solo/Consortium/Sub)","Project Category Tags",
+                        "Scope Summary","Technology & Tools","Start Date","End Date / Go-Live",
+                        "Duration","Tender Ref","Client Contact Person","Contact Number","Email ID",
                         "Supporting Docs Available","Description of Services Provided","Team Size"]
-                rows = [cols]
-                for p in projects:
-                    rows.append([
-                        p.get("name",""),       p.get("client",""),
-                        p.get("client_type",""),p.get("state",""),
-                        p.get("value_cr",""),   p.get("status",""),
-                        p.get("role",""),        p.get("tags",""),
-                        p.get("scope",""),       p.get("technologies",""),
-                        p.get("start_date",""), p.get("end_date",""),
-                        p.get("duration",""),   p.get("tender_ref",""),
-                        p.get("contact_person",""),p.get("contact_phone",""),
-                        p.get("contact_email",""),p.get("docs_available",""),
-                        p.get("description",""),p.get("team_size",""),
-                    ])
+                rows = [cols] + [[
+                    p.get("name",""), p.get("client",""), p.get("client_type",""), p.get("state",""),
+                    p.get("value_cr",""), p.get("status",""), p.get("role",""), p.get("tags",""),
+                    p.get("scope",""), p.get("technologies",""), p.get("start_date",""),
+                    p.get("end_date",""), p.get("duration",""), p.get("tender_ref",""),
+                    p.get("contact_person",""), p.get("contact_phone",""), p.get("contact_email",""),
+                    p.get("docs_available",""), p.get("description",""), p.get("team_size",""),
+                ] for p in projects]
                 ws = sh.worksheet("Projects")
-                ws.batch_clear(["A2:T50"])
-                ws.update("A2", rows[1:])
+                ws.batch_clear(["A2:T50"]); ws.update("A2", rows[1:])
                 result["tabs_written"].append("Projects")
         except Exception as e:
             result["tabs_skipped"].append(f"Projects ({e})")
@@ -542,7 +571,7 @@ def push_to_sheet() -> dict:
         return {"error": str(e), "status": "failed"}
 
 
-# ── Profile helpers ───────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────
 def load_local_profile() -> dict:
     return _load_local()
 
@@ -556,26 +585,26 @@ def profile_to_ai_context(profile: dict) -> str:
     tv    = fin.get("turnover_by_year", {})
     tv_lines = "\n".join(f"  FY {fy}: ₹{cr} Cr" for fy,cr in sorted(tv.items())[-4:]) if tv else "  Not available"
     cert_lines = "\n".join(
-        f"  {c.get('standard',k)} — valid till {c.get('valid_till','?')}"
-        for k,c in certs.items()
+        f"  {c.get('standard', c.get('level', k))} — valid till {c.get('valid_to', c.get('valid_till','?'))}"
+        for k,c in certs.items() if isinstance(c, dict)
     ) if certs else "  CMMI V2.0 L3, ISO 9001, ISO 27001, ISO 20000"
     proj_lines = "".join(
-        f"  {i}. {p.get('name','')} | {p.get('client','')} | ₹{p.get('value_cr','')} Cr | {p.get('status','')} | {p.get('scope','')[:80]}\n"
+        f"  {i}. {p.get('name','')} | {p.get('client','')} | ₹{p.get('value_cr','')} Cr"
+        f" | {p.get('status','')} | {str(p.get('scope',''))[:80]}\n"
         for i,p in enumerate(proj[:12],1)
     )
-    return f"""NASCENT INFO TECHNOLOGIES PVT. LTD. — LIVE PROFILE:
-Company: {co.get('name','')} | CIN: {co.get('cin','')} | MSME: {co.get('msme_udyam','')}
+    return f"""NASCENT INFO TECHNOLOGIES — LIVE PROFILE:
+{co.get('name','')} | CIN: {co.get('cin','')} | MSME: {co.get('udyam','')}
 PAN: {co.get('pan','')} | GSTIN: {co.get('gstin','')}
-Employees: {emp.get('total', co.get('total_employees',67))} (GIS: {emp.get('gis_staff',11)}, Dev: {emp.get('it_dev_staff',21)})
+Employees: {emp.get('total', co.get('total_employees',67))} (GIS: {emp.get('gis_staff',11)}, IT: {emp.get('it_dev_staff',21)})
 Signatory: {co.get('authorised_signatory','Hitesh Patel')} | POA: {co.get('poa_validity','')}
-Address: {co.get('address','')}
 
 FINANCIALS:
 {tv_lines}
-  Average (last 3yr): ₹{fin.get('avg_turnover_last_3_fy','17.18')} Cr | Net Worth: ₹{fin.get('net_worth_cr','26.09')} Cr
+  Avg (3yr): ₹{fin.get('avg_turnover_last_3_fy','17.18')} Cr | Net Worth: ₹{fin.get('net_worth_cr','26.09')} Cr
 
 CERTIFICATIONS:
 {cert_lines}
 
-KEY PROJECTS ({len(proj)} total):
+PROJECTS ({len(proj)} total):
 {proj_lines}"""
