@@ -2812,7 +2812,11 @@ async function _sheetSync(endpoint, btnId, label) {
       setTimeout(loadProfile,600);   // Refresh profile page with new data
       // Add "View Profile" link in result
       if(res && d.status==='success') {
-        res.innerHTML += ' <a href="#" onclick="showPage('profile')" style="color:inherit;text-decoration:underline;margin-left:6px">View Profile →</a>';
+        var lnk = document.createElement('a');
+        lnk.href='#'; lnk.textContent=' View Profile →';
+        lnk.style.cssText='color:inherit;text-decoration:underline;margin-left:6px';
+        lnk.onclick=function(){ showPage('profile'); return false; };
+        res.appendChild(lnk);
       }
     }
   } catch(e) {
