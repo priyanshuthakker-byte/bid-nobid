@@ -1280,6 +1280,15 @@ tbody tr:first-child td{border-top:none}
 </div>
 
 <script>
+// Safe array join — handles strings from Google Sheet sync
+function safeJoin(val, sep) {
+  sep = sep || ', ';
+  if (!val) return '';
+  if (Array.isArray(val)) return val.join(sep);
+  if (typeof val === 'string') return val;
+  return String(val);
+}
+
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
@@ -1791,7 +1800,7 @@ async function analyseTender() {
     logLine('Text extraction complete — '+d.files_processed.length+' file(s) read','ok');
     if (d.ai_used) logLine('Gemini AI analysis complete','ok');
     else logLine('AI not used — check API key in Settings','warn');
-    if (d.has_corrigendum) logLine('Corrigendum detected: '+d.corrigendum_files.join(', '),'warn');
+    if (d.has_corrigendum) logLine('Corrigendum detected: '+safeJoin(d.corrigendum_files),'warn');
     G.lastAnalysis = d.tender_data || d;
     var td = d.tender_data || d;
     var analysedTid = tid || td.t247_id || '';
@@ -2292,16 +2301,16 @@ async function loadProfile() {
           '<td class="muted" style="font-weight:600;color:var(--blue)">₹'+esc(String(p.value_cr||''))+'Cr</td>'+
           '<td><span class="badge '+(p.status==='Ongoing'?'badge-CONDITIONAL':'badge-BID')+'">'+esc(p.status||'')+'</span></td>'+
           '<td class="muted" style="font-size:11px">'+esc(p.role||'Solo')+'</td>'+
-          '<td class="muted" style="font-size:11px">'+esc((p.tags||[]).join(', '))+'</td>'+
+          '<td class="muted" style="font-size:11px">'+esc((Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')))+'</td>'+
         '</tr>';
       }).join('');
     }
     // Team
     var cap = d.capabilities || {};
     var techStack = cap.tech_stack || [];
-    setVal('p-tech', Array.isArray(techStack) ? techStack.join(', ') : techStack);
+    setVal('p-tech', Array.isArray(techStack) ? safeJoin(techStack) : techStack);
     var notAvail = cap.not_available || [];
-    setVal('p-not-team', Array.isArray(notAvail) ? notAvail.join(', ') : notAvail);
+    setVal('p-not-team', Array.isArray(notAvail) ? safeJoin(notAvail) : notAvail);
     // Bid rules
     var br = d.bid_rules || {};
     renderKeywordPills('dnb-list', br.do_not_bid || [], 'red');
@@ -2774,7 +2783,7 @@ async function checkSheetStatus() {
       }).join('');
       var tg = document.getElementById('sheet-tabs-grid'); if(tg) tg.style.display='block';
       var missing = Object.entries(d.optional_tabs||{}).filter(function(e){return !e[1];}).map(function(e){return e[0];});
-      if(detail) detail.innerHTML = (d.tabs||[]).length+' tabs found.'+(missing.length?' <span style="color:var(--color-text-warning)">Optional tabs not yet created: '+missing.join(', ')+'</span>':' All tabs ready.');
+      if(detail) detail.innerHTML = (d.tabs||[]).length+' tabs found.'+(missing.length?' <span style="color:var(--color-text-warning)">Optional tabs not yet created: '+safeJoin(missing)+'</span>':' All tabs ready.');
     } else {
       if(badge){ badge.textContent='not connected'; badge.style.background='var(--color-background-danger)'; badge.style.color='var(--color-text-danger)'; }
       if(detail) detail.innerHTML = '<span style="color:var(--color-text-danger)">'+(d.reason||'Cannot connect')+'</span>';
@@ -2801,9 +2810,9 @@ async function _sheetSync(endpoint, btnId, label) {
       var ok = d.status==='success';
       res.style.cssText = 'margin-top:10px;font-size:12px;padding:10px 12px;border-radius:8px;background:'+(ok?'var(--color-background-success)':'var(--color-background-danger)')+';color:'+(ok?'var(--color-text-success)':'var(--color-text-danger)');
       var msg = d.message||d.error||'Done';
-      if(d.tabs_read&&d.tabs_read.length) msg += ' | Read: '+d.tabs_read.join(', ');
-      if(d.tabs_written&&d.tabs_written.length) msg += ' | Written: '+d.tabs_written.join(', ');
-      if(d.tabs_skipped&&d.tabs_skipped.length) msg += ' | Skipped: '+d.tabs_skipped.join(', ');
+      if(d.tabs_read&&d.tabs_read.length) msg += ' | Read: '+safeJoin(d.tabs_read);
+      if(d.tabs_written&&d.tabs_written.length) msg += ' | Written: '+safeJoin(d.tabs_written);
+      if(d.tabs_skipped&&d.tabs_skipped.length) msg += ' | Skipped: '+safeJoin(d.tabs_skipped);
       res.textContent = (ok?'✓ ':'✗ ')+msg;
     }
     toast(d.message||d.error||(d.status==='success'?'Sync done':'Sync failed'), d.status==='success'?'success':'error');
