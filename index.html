@@ -2699,12 +2699,25 @@ async function deleteVaultDoc(docId, name) {
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', function() {
   showLoad('Loading dashboard...');
-  loadDashboard().then(function(){
-    hideLoad();
-  }).catch(function(){
-    hideLoad();
-    toast('Could not connect to server. If this is the first visit, wait 60s for Render to wake up.','error');
-  });
+  // Retry up to 3 times with 4s gap — handles Render cold start (takes 30-60s)
+  var attempt = 0;
+  function tryLoad() {
+    attempt++;
+    if(attempt > 1) showLoad('Connecting... attempt ' + attempt + '/3');
+    loadDashboard().then(function(){
+      hideLoad();
+    }).catch(function(e){
+      if(attempt < 3) {
+        setTimeout(tryLoad, 4000);
+      } else {
+        hideLoad();
+        toast('Server is waking up — refresh in 30 seconds', 'error');
+      }
+    });
+  }
+  // Safety net — always hide after 20s
+  setTimeout(hideLoad, 20000);
+  tryLoad();
 });
 </script>
 </body>
