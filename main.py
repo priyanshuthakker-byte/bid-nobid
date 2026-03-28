@@ -109,6 +109,22 @@ async def startup_event():
     drive_ok = init_drive()
     print(f"📁 Google Drive: {'✅ Connected' if drive_ok else '❌ Not configured'}")
 
+    # Restore vault files from Drive (survive Render redeploys)
+    if drive_ok:
+        try:
+            for doc in VAULT_DOCS_LIST:
+                for ext in [".pdf", ".docx", ".png", ".jpg", ".jpeg"]:
+                    remote_name = f"vault_{doc['id']}{ext}"
+                    local_dest  = VAULT_DIR / f"{doc['id']}{ext}"
+                    if not local_dest.exists():
+                        try:
+                            load_from_drive(local_dest, filename=remote_name)
+                        except Exception:
+                            pass
+            print("✅ Vault restore attempted from Drive")
+        except Exception as e:
+            print(f"⚠️ Vault restore skipped: {e}")
+
     if drive_ok:
         for attempt in range(3):
             try:
@@ -669,12 +685,51 @@ async def gen_prebid_letter(t247_id: str):
 # ══════════════════════════════════════════════════════════════
 @app.get("/checklist/{t247_id}")
 async def get_checklist(t247_id: str):
-    db = load_db()
-    t = db["tenders"].get(t247_id, {})
-    if "doc_checklist" in t:
-        return {"checklist": t["doc_checklist"], "t247_id": t247_id}
+    db  = load_db()
+    t   = db["tenders"].get(t247_id, {})
+
+    # 1. AI-generated checklist (most accurate — from analysed ZIP)
+    if t.get("doc_checklist"):
+        return {"checklist": t["doc_checklist"], "t247_id": t247_id,
+                "source": "ai_analysis"}
+
+    # 2. Excel checklist column (from T247 import — available without ZIP)
+    excel_cl = t.get("checklist", "").strip()
+    if excel_cl:
+        items = _parse_excel_checklist(excel_cl)
+        if items:
+            return {"checklist": items, "t247_id": t247_id,
+                    "source": "excel_import"}
+
+    # 3. Auto-generated from tender profile
     checklist = generate_doc_checklist(t)
-    return {"checklist": checklist, "t247_id": t247_id}
+    return {"checklist": checklist, "t247_id": t247_id, "source": "auto_generated"}
+
+
+def _parse_excel_checklist(text: str) -> list:
+    """Parse T247 Excel checklist column into structured items."""
+    import re as _re
+    items = []
+    sr = 1
+    # Split on bullet points, numbers, or newlines
+    lines = _re.split(r"[\n]+", text)
+    for line in lines:
+        line = line.strip().lstrip("0123456789.").strip("-").strip()
+        if len(line) < 5:
+            continue
+        items.append({
+            "id":          f"excel_{sr}",
+            "sr_no":       str(sr),
+            "label":       line[:200],
+            "description": "",
+            "source":      "excel",
+            "mandatory":   True,
+            "done":        False,
+            "generated_by_app": False,
+            "responsible": "Bid Team",
+        })
+        sr += 1
+    return items
 
 @app.post("/checklist/{t247_id}")
 async def save_checklist(t247_id: str, data: dict = Body(...)):
@@ -1042,7 +1097,8 @@ async def upload_vault_doc(doc_id: str, file: UploadFile = File(...)):
     dest = VAULT_DIR / f"{doc_id}{ext}"
     dest.write_bytes(await file.read())
     try:
-        save_to_drive(dest)
+        # Save to Drive with vault_ prefix so startup can restore it
+        save_to_drive(dest, filename=f"vault_{doc_id}{ext}")
     except Exception:
         pass
     return {"status": "uploaded", "doc_id": doc_id, "filename": dest.name, "size_kb": round(dest.stat().st_size / 1024)}
@@ -1218,17 +1274,50 @@ async def clear_chat_history():
 # ══════════════════════════════════════════════════════════════
 @app.post("/tender/{t247_id}/auto-download")
 async def auto_download_tender(t247_id: str, data: dict = Body(default={})):
-    config = load_config()
+    """Download tender ZIP from T247 using saved credentials."""
+    config   = load_config()
     username = config.get("t247_username", "")
-    if not username:
-        return {"status": "no_credentials", "message": "T247 credentials not saved. Go to Settings."}
+    password = config.get("t247_password", "")
     t247_url = f"https://www.tender247.com/tender/detail/{t247_id}"
-    return {
-        "status": "manual",
-        "message": "Auto-download not available on server. Open T247 manually.",
-        "t247_url": t247_url,
-        "t247_id": t247_id,
-    }
+
+    if not username or not password:
+        return {"status": "no_credentials",
+                "message": "T247 credentials not saved. Go to Settings → T247 tab.",
+                "t247_url": t247_url}
+    try:
+        from t247_downloader import auto_download_tender as t247_dl
+        # Get tender info for portal code
+        db = load_db()
+        tender = db.get("tenders", {}).get(t247_id, {})
+        tender_no   = tender.get("ref_no", "")
+        portal_code = "gem" if tender.get("is_gem") else "nprocure"
+        result = t247_dl(t247_id, tender_no, portal_code, username, password, str(TEMP_DIR))
+        if result.get("success"):
+            return {
+                "status":   "success",
+                "message":  f"Downloaded {result.get('filename','')} from T247",
+                "filename": result.get("filename",""),
+                "filepath": result.get("filepath",""),
+                "t247_url": t247_url,
+            }
+        return {
+            "status":   "failed",
+            "message":  result.get("error", "Download failed"),
+            "t247_url": t247_url,
+        }
+    except ImportError:
+        return {
+            "status":   "manual",
+            "message":  "Open T247 website to download documents manually.",
+            "t247_url": t247_url,
+            "t247_id":  t247_id,
+        }
+    except Exception as e:
+        return {
+            "status":   "failed",
+            "message":  str(e),
+            "t247_url": t247_url,
+        }
 
 @app.get("/test-t247")
 async def test_t247():
@@ -1334,97 +1423,4 @@ async def reanalyse_tender(t247_id: str):
 
 
 # ── GENERATE PREBID LETTER ─────────────────────────────────────
-@app.post("/tender/{t247_id}/generate-prebid-letter")
-async def gen_prebid_letter(t247_id: str):
-    """Generate a pre-bid query letter as Word doc."""
-    tender = get_tender(t247_id)
-    if not tender:
-        raise HTTPException(404, "Tender not found")
-    queries = tender.get("prebid_queries", [])
-    if not queries:
-        queries = tender.get("prebid_queries_list", [])
-    if not queries:
-        raise HTTPException(400, "No pre-bid queries found. Analyse tender first.")
 
-    try:
-        from doc_generator import BidDocGenerator
-        gen = BidDocGenerator()
-        import re
-        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
-        filename = f"PreBid_{safe_no}.docx"
-        gen.generate_prebid_letter(tender, queries, str(OUTPUT_DIR / filename))
-        return {
-            "status": "success",
-            "filename": filename,
-            "query_count": len(queries),
-            "download_url": f"/download/{filename}",
-        }
-    except AttributeError:
-        # doc_generator doesn't have generate_prebid_letter method
-        # Create a simple one
-        from docx import Document
-        import re
-        doc = Document()
-        profile_company = "Nascent Info Technologies Pvt. Ltd."
-        doc.add_heading("Pre-Bid Queries", 0)
-        doc.add_paragraph(f"Tender: {tender.get('tender_name', 'N/A')}")
-        doc.add_paragraph(f"Tender No: {tender.get('tender_no', 'N/A')}")
-        doc.add_paragraph(f"Organization: {tender.get('org_name', 'N/A')}")
-        doc.add_paragraph("")
-        doc.add_paragraph("Respected Sir/Madam,")
-        doc.add_paragraph(
-            f"We, {profile_company}, wish to participate in the above tender. "
-            f"We request clarifications on the following points:"
-        )
-        doc.add_paragraph("")
-        for i, q in enumerate(queries, 1):
-            clause = q.get("clause", "") if isinstance(q, dict) else ""
-            query_text = q.get("query", q) if isinstance(q, dict) else str(q)
-            doc.add_paragraph(f"Q{i}. {clause}: {query_text}")
-        doc.add_paragraph("")
-        doc.add_paragraph("Thanking you,")
-        doc.add_paragraph(profile_company)
-        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
-        filename = f"PreBid_{safe_no}.docx"
-        doc.save(str(OUTPUT_DIR / filename))
-        return {
-            "status": "success",
-            "filename": filename,
-            "query_count": len(queries),
-            "download_url": f"/download/{filename}",
-        }
-    except Exception as e:
-        raise HTTPException(500, f"Letter generation failed: {str(e)}")
-
-
-# ── CHECKLIST ITEM TOGGLE ──────────────────────────────────────
-@app.post("/checklist/{t247_id}/item")
-async def toggle_checklist_item(t247_id: str, data: dict = Body(...)):
-    """Toggle a checklist item done/not done."""
-    db = load_db()
-    t = db["tenders"].get(t247_id, {})
-    items = t.get("doc_checklist", [])
-    item_id = data.get("id", "")
-    done = data.get("done", False)
-    for item in items:
-        if item.get("id") == item_id or item.get("label") == item_id:
-            item["done"] = done
-            break
-    t["doc_checklist"] = items
-    # Recalculate completion %
-    if items:
-        t["checklist_pct"] = round(100 * sum(1 for i in items if i.get("done")) / len(items))
-    db["tenders"][t247_id] = t
-    save_db(db)
-    return {"status": "saved", "item_id": item_id, "done": done}
-
-
-# ── SAVE T247 CREDENTIALS TO CONFIG ───────────────────────────
-# (The /config POST endpoint in main.py already handles this,
-#  but make sure these fields are accepted)
-# The main.py /config POST needs to handle t247_username and t247_password:
-# Add this inside the existing update_config_route function:
-#   if "t247_username" in data:
-#       config["t247_username"] = data["t247_username"]
-#   if "t247_password" in data and data["t247_password"]:
-#       config["t247_password"] = data["t247_password"]

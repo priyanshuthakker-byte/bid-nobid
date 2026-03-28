@@ -19,7 +19,8 @@
     "website": "www.nascentinfo.com",
     "bank": "State Bank of India, SG Highway Branch, Ahmedabad",
     "bank_account": "[to be filled]",
-    "bank_ifsc": "[to be filled]"
+    "bank_ifsc": "[to be filled]",
+    "total_employees": "67"
   },
   "authorised_signatory": {
     "name": "Hitesh Patel",
@@ -645,5 +646,17 @@
       "extension",
       "pre-bid"
     ]
+  },
+  "finance": {
+    "turnover_by_year": {
+      "2022-23": 16.36,
+      "2023-24": 16.36,
+      "2024-25": 18.83
+    },
+    "avg_turnover_last_3_fy": "Rs. 17.18 Cr",
+    "avg_turnover_cr": 17.18,
+    "net_worth_cr": "26.09",
+    "solvency_amount_cr": "",
+    "ca_name": "Anuj J. Sharedalal"
   }
 }
