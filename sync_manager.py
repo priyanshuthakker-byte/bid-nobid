@@ -110,10 +110,10 @@ def pull_from_sheet() -> dict:
                     except: pass
             if tv:
                 avg = round(total / len(tv), 2)
-                profile.setdefault("financials",{}).update({
+                profile.setdefault("finance",{}).update({
                     "turnover_by_year": tv,
-                    "avg_turnover_3yr": avg,
-                    "avg_turnover_3yr_cr": f"Rs. {round(avg/100,2)} Cr" if avg > 100 else f"Rs. {avg} Cr",
+                    "avg_turnover_last_3_fy": round(avg/100,2) if avg > 100 else avg,
+                    "avg_turnover_cr": round(avg/100,2) if avg > 100 else avg,
                 })
             result["tabs_read"].append("Financial_Credentials")
         except Exception as e:
@@ -281,7 +281,7 @@ def push_to_sheet() -> dict:
 
         # ── Push Financial_Credentials ─────────────────────────
         try:
-            fin   = profile.get("financials", {})
+            fin   = profile.get("finance", {}) or profile.get("financials", {})
             by_yr = fin.get("turnover_by_year", {})
             rows  = [["Year", "Turnover_INR", "Turnover_Cr"]]
             for yr, amt in sorted(by_yr.items()):
@@ -361,7 +361,7 @@ def profile_to_ai_context(profile: dict) -> str:
         return "Profile data unavailable."
 
     co   = profile.get("company", {})
-    fin  = profile.get("financials", {})
+    fin  = profile.get("finance", {}) or profile.get("financials", {})
     emp  = profile.get("employees", {})
     certs= profile.get("certifications", {})
     proj = profile.get("projects", [])
@@ -390,7 +390,7 @@ Signatory: {profile.get('authorised_signatory',{}).get('name','Hitesh Patel')}
 
 FINANCIALS:
 {tv_lines}
-  Average (3yr): {avg_cr} | Net Worth: {fin.get('net_worth_cr','Rs. 26.09 Cr')}
+  Average (3yr): {avg_cr} | Net Worth: {fin.get('net_worth_cr') or fin.get('net_worth','Rs. 26.09 Cr')}
 
 CERTIFICATIONS:
 {cert_lines or '  CMMI V2.0 L3, ISO 9001, ISO 27001, ISO 20000'}
