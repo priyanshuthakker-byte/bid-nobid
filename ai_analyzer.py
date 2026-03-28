@@ -85,54 +85,27 @@ def get_all_api_keys() -> List[str]:
 # ─────────────────────────────────────────
 # NASCENT PROFILE CONTEXT
 # ─────────────────────────────────────────
-NASCENT_CONTEXT = """
-NASCENT INFO TECHNOLOGIES PVT. LTD. — COMPLETE PROFILE:
+# ── NASCENT PROFILE — loaded dynamically from Sheet or local JSON ──
+def _load_nascent_context() -> str:
+    """Load profile from Google Sheet (live) or nascent_profile.json (fallback)."""
+    try:
+        from sync_manager import load_combined_profile, profile_to_ai_context
+        profile = load_combined_profile()
+        if profile:
+            return profile_to_ai_context(profile)
+    except Exception as e:
+        print(f"⚠️ sync_manager unavailable: {e}")
+    # Hard fallback — static context
+    return NASCENT_CONTEXT_STATIC
 
-BASICS:
-- Private Limited Company | Incorporated: 23 June 2006 | CIN: U72200GJ2006PTC048723
-- 19 years in operation | HQ: Ahmedabad, Gujarat | No branch offices in other states
-- MSME: UDYAM-GJ-01-0007420 (Lifetime) | PAN: AACCN3670J | GSTIN: 24AACCN3670J1ZG
-- Authorised Signatory: Hitesh Patel (CAO) | MD: Maulik Bhagat
-
-FINANCIALS:
-- FY 2022-23: Rs.16.36 Cr | FY 2023-24: Rs.16.36 Cr | FY 2024-25: Rs.18.83 Cr
-- Average last 3 FY: Rs.17.18 Cr | Net Worth: Rs.26.09 Cr
-
-CERTIFICATIONS (all active):
-- CMMI V2.0 Level 3 | Valid till 19-Dec-2026
-- ISO 9001:2015 | Valid till 08-Sep-2028
-- ISO/IEC 27001:2022 | Valid till 08-Sep-2028
-- ISO/IEC 20000-1:2018 | Valid till 08-Sep-2028
-- CERT-In: NOT HELD | STQC: NOT HELD | SAP: NOT PARTNER | Oracle: NOT PARTNER
-
-EMPLOYEES: 67 total (11 GIS, 21 IT/Dev, rest PM/QA/BA/support)
-
-TECHNOLOGY STACK:
-- GIS: QGIS, ArcGIS, GeoServer, PostGIS, CityLayers 2.0 (OGC compliant)
-- Backend: Java/Spring Boot (PRIMARY), Python, Node.js
-- Frontend: React.js, Angular
-- Mobile: Android Native, Flutter
-- Database: PostgreSQL, MySQL, Oracle
-- Cloud: AWS, Azure
-- NOT primary: .NET/C#, MS SQL Server, SAP, Oracle ERP
-
-KEY PROJECTS:
-1. AMC GIS | Ahmedabad MC | Rs.10.55 Cr | Completed | Web GIS + Property Survey
-2. PCSCL Smart City GIS+ERP | Pimpri-Chinchwad | Rs.61.19 Cr | Ongoing | Consortium
-3. KVIC Geo Portal | KVIC Central PSU | Rs.5.15 Cr | Completed | Mobile GIS + PAN India
-4. TCGL Tourism Portal | Tourism Corp Gujarat | Rs.9.31 Cr | Completed | Web Portal + GIS
-5. JuMC GIS | Junagadh MC | Rs.9.78 Cr | Ongoing | Web GIS + Survey
-6. VMC GIS+ERP | Vadodara MC | Rs.20.5 Cr | Completed | Consortium | GIS + ERP
-7. BMC Mobile GIS | Bhavnagar MC | Rs.4.2 Cr | Completed | Mobile + Web GIS
-8. AMC Heritage App | Ahmedabad MC | Rs.4.72 Cr | Completed | Mobile + AR/QR
-9. CEICED eGov | Gujarat State | Rs.3.59 Cr | Ongoing | Web Portal + Mobile
-
-BID DECISION RULES:
-DO NOT BID: supply only, amc only, hardware procurement, civil construction, manpower outsourcing,
-  defense procurement, CERT-In/STQC required without exemption, .NET-only stack
-CONDITIONAL (raise pre-bid): office in specific state, 100+ employees, OEM authorization,
-  turnover >50Cr, CERT-In preferred, specific ERP OEM
-BID: GIS, web portal, mobile app, eGov, Smart City, ULB/Municipal, IT services
+NASCENT_CONTEXT_STATIC = """NASCENT INFO TECHNOLOGIES PVT. LTD. — STATIC PROFILE (fallback):
+- CIN: U72200GJ2006PTC048723 | MSME: UDYAM-GJ-01-0007420
+- PAN: AACCN3670J | GSTIN: 24AACCN3670J1ZG
+- Employees: 67 | Signatory: Hitesh Patel (CAO)
+- FY 2022-23: ₹16.36 Cr | FY 2023-24: ₹16.36 Cr | FY 2024-25: ₹18.83 Cr | Avg: ₹17.18 Cr
+- CMMI V2.0 L3 | ISO 9001 | ISO 27001 | ISO 20000
+- Stack: Java/Spring Boot, Python, React, Flutter, QGIS, ArcGIS, GeoServer, PostgreSQL
+- Projects: AMC GIS, PCSCL Smart City, KVIC Geo Portal, TCGL, JuMC GIS, VMC GIS+ERP, BMC Mobile GIS
 """
 
 # ─────────────────────────────────────────
@@ -303,7 +276,7 @@ def build_prompt(text_chunk: str, prebid_passed: bool) -> str:
 Read this entire tender document carefully — every section, every clause, every table.
 Extract ALL information with 100% accuracy. Do not skip anything. Do not assume.
 
-{NASCENT_CONTEXT}
+{_load_nascent_context()}
 
 {prebid_note}
 
