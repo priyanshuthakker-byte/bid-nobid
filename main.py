@@ -866,6 +866,129 @@ async def update_profile(data: dict = Body(...)):
         raise HTTPException(500, f"Profile save error: {str(e)}")
 
 # ══════════════════════════════════════════════════════════════
+# BID RULES — read/write bid_rules section of nascent_profile.json
+# Syncs both ways: app UI ↔ JSON file ↔ Google Drive
+# ══════════════════════════════════════════════════════════════
+
+@app.get("/rules")
+async def get_rules():
+    """Return bid_rules section of nascent_profile.json"""
+    try:
+        profile = json.loads(PROFILE_PATH.read_text(encoding="utf-8")) if PROFILE_PATH.exists() else {}
+        rules = profile.get("bid_rules", {})
+        return {
+            "do_not_bid":       rules.get("do_not_bid", []),
+            "preferred_sectors": rules.get("preferred_sectors", []),
+            "conditional":      rules.get("conditional", []),
+            "min_project_value_cr": rules.get("min_project_value_cr", 0.5),
+            "max_project_value_cr": rules.get("max_project_value_cr", 150),
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/rules")
+async def save_rules(data: dict = Body(...)):
+    """
+    Save bid_rules to nascent_profile.json.
+    Merges into existing profile — does not overwrite other sections.
+    Syncs to Drive automatically.
+    """
+    try:
+        # Load existing profile
+        if PROFILE_PATH.exists():
+            profile = json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+        else:
+            profile = {}
+
+        # Clean and validate incoming rules
+        def clean_list(lst):
+            return sorted(set(
+                kw.lower().strip()
+                for kw in (lst or [])
+                if kw and kw.strip()
+            ))
+
+        profile["bid_rules"] = {
+            "do_not_bid":            clean_list(data.get("do_not_bid", [])),
+            "preferred_sectors":     clean_list(data.get("preferred_sectors", [])),
+            "conditional":           clean_list(data.get("conditional", [])),
+            "min_project_value_cr":  float(data.get("min_project_value_cr", 0.5)),
+            "max_project_value_cr":  float(data.get("max_project_value_cr", 150)),
+            "do_not_bid_remarks":    data.get("do_not_bid_remarks", {}),
+        }
+
+        # Write JSON file
+        OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
+        PROFILE_PATH.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        # Sync to Drive
+        try:
+            save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+        except Exception:
+            pass
+
+        return {
+            "status": "saved",
+            "counts": {
+                "do_not_bid":        len(profile["bid_rules"]["do_not_bid"]),
+                "preferred_sectors": len(profile["bid_rules"]["preferred_sectors"]),
+                "conditional":       len(profile["bid_rules"]["conditional"]),
+            }
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/rules/add")
+async def add_rule(data: dict = Body(...)):
+    """Add a single keyword to a rule list. list_type: do_not_bid | preferred_sectors | conditional"""
+    try:
+        list_type = data.get("list_type", "")
+        keyword   = (data.get("keyword") or "").lower().strip()
+        if not keyword or list_type not in ("do_not_bid", "preferred_sectors", "conditional"):
+            raise HTTPException(400, "Invalid list_type or empty keyword")
+
+        profile = json.loads(PROFILE_PATH.read_text(encoding="utf-8")) if PROFILE_PATH.exists() else {}
+        rules   = profile.setdefault("bid_rules", {})
+        lst     = rules.setdefault(list_type, [])
+        if keyword not in lst:
+            lst.append(keyword)
+            lst.sort()
+        profile["bid_rules"] = rules
+        PROFILE_PATH.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+        try: save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+        except Exception: pass
+        return {"status": "added", "keyword": keyword, "list_type": list_type, "total": len(lst)}
+    except HTTPException: raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/rules/remove")
+async def remove_rule(data: dict = Body(...)):
+    """Remove a single keyword from a rule list."""
+    try:
+        list_type = data.get("list_type", "")
+        keyword   = (data.get("keyword") or "").lower().strip()
+        if not keyword or list_type not in ("do_not_bid", "preferred_sectors", "conditional"):
+            raise HTTPException(400, "Invalid list_type or empty keyword")
+
+        profile = json.loads(PROFILE_PATH.read_text(encoding="utf-8")) if PROFILE_PATH.exists() else {}
+        rules   = profile.setdefault("bid_rules", {})
+        lst     = rules.get(list_type, [])
+        if keyword in lst:
+            lst.remove(keyword)
+        profile["bid_rules"] = rules
+        PROFILE_PATH.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
+        try: save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+        except Exception: pass
+        return {"status": "removed", "keyword": keyword, "list_type": list_type, "total": len(lst)}
+    except HTTPException: raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+# ══════════════════════════════════════════════════════════════
 # DOCUMENT VAULT — FIXED: proper upload/download/list
 # ══════════════════════════════════════════════════════════════
 VAULT_DOCS_LIST = [
@@ -971,6 +1094,83 @@ async def sync_drive():
         return JSONResponse({"status": "error", "message": "Sync failed — check Render logs"}, status_code=500)
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+# ══════════════════════════════════════════════════════════════
+# GOOGLE SHEET SYNC — only runs when user presses Sync button
+# Pull: Sheet → JSON  |  Push: JSON → Sheet  |  Both: bidirectional
+# ══════════════════════════════════════════════════════════════
+
+@app.post("/sheet-sync/pull")
+async def sheet_sync_pull():
+    """Pull all tabs from Google Sheet → update nascent_profile.json"""
+    try:
+        from sync_manager import pull_from_sheet
+        result = pull_from_sheet()
+        if result.get("status") == "success":
+            return result
+        return JSONResponse({"status": "error", "message": result.get("error","Pull failed")}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.post("/sheet-sync/push")
+async def sheet_sync_push():
+    """Push nascent_profile.json → write back to all Google Sheet tabs"""
+    try:
+        from sync_manager import push_to_sheet
+        result = push_to_sheet()
+        if result.get("status") == "success":
+            return result
+        return JSONResponse({"status": "error", "message": result.get("error","Push failed")}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.post("/sheet-sync/both")
+async def sheet_sync_both():
+    """Pull from Sheet first, then push back — full two-way reconcile"""
+    try:
+        from sync_manager import pull_from_sheet, push_to_sheet
+        pull_result = pull_from_sheet()
+        if pull_result.get("status") != "success":
+            return JSONResponse({"status": "error", "message": "Pull failed: " + pull_result.get("error","")}, status_code=500)
+        push_result = push_to_sheet()
+        return {
+            "status": "success",
+            "pull": pull_result.get("message",""),
+            "push": push_result.get("message",""),
+            "tabs_read": pull_result.get("tabs_read",[]),
+            "tabs_written": push_result.get("tabs_written",[]),
+            "tabs_skipped": list(set(
+                pull_result.get("tabs_skipped",[]) +
+                push_result.get("tabs_skipped",[])
+            )),
+        }
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.get("/sheet-status")
+async def sheet_status():
+    """Check if Google Sheet is reachable and return tab list"""
+    try:
+        from sync_manager import _connect, SHEET_ID
+        gc = _connect()
+        if not gc:
+            return {"connected": False, "reason": "GDRIVE_CREDENTIALS not set or invalid"}
+        sh = gc.open_by_key(SHEET_ID)
+        tabs = [ws.title for ws in sh.worksheets()]
+        required = ["Firm_Identity","Financial_Credentials","Project_Experience"]
+        optional = ["Certifications","Bid_Rules"]
+        return {
+            "connected": True,
+            "tabs": tabs,
+            "required_tabs": {t: (t in tabs) for t in required},
+            "optional_tabs": {t: (t in tabs) for t in optional},
+            "sheet_id": SHEET_ID,
+        }
+    except Exception as e:
+        return {"connected": False, "reason": str(e)}
 
 @app.post("/upload-db")
 async def upload_db(file: UploadFile = File(...)):
