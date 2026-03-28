@@ -30,10 +30,11 @@ GROQ_MODELS = [
 
 # Free Gemini models — tried in order if one hits quota
 GEMINI_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-latest",
+    "gemini-2.5-flash-lite",       # fastest free model (March 2026)
+    "gemini-2.5-flash",             # best free model
+    "gemini-2.0-flash",             # fallback
+    "gemini-2.0-flash-lite",        # last fallback
+    # NOTE: gemini-1.5-* and gemini-1.0-* are SHUT DOWN — return 404
 ]
 
 # ─────────────────────────────────────────

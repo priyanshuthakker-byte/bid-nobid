@@ -1,6 +1,6 @@
 """
-Bid/No-Bid Automation v5 - Complete System
-FastAPI backend with all modules
+Bid/No-Bid Automation v7 - Complete Fixed System
+FastAPI backend - ALL bugs fixed in this version
 """
 import zipfile, tempfile, shutil, json, re, os
 from pathlib import Path
@@ -10,128 +10,126 @@ from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# Safe imports with fallbacks so server starts even if a module is missing
+# Safe imports with fallbacks so server starts even if a module has errors
 try:
     from extractor import TenderExtractor, read_document
-except ImportError:
+except Exception as _e:
+    print(f"⚠ extractor import failed: {_e}")
     class TenderExtractor:
         def process_documents(self, files): return {}
     def read_document(f): return ""
 
 try:
     from doc_generator import BidDocGenerator
-except ImportError:
+except Exception as _e:
+    print(f"⚠ doc_generator import failed: {_e}")
     class BidDocGenerator:
-        def generate(self, data, path): Path(path).write_text("Report")
+        def generate(self, data, path): pass
 
 try:
-    from nascent_checker import NascentChecker
-except ImportError:
+    from nascent_checker import NascentChecker, load_profile as _load_profile
+except Exception as _e:
+    print(f"⚠ nascent_checker import failed: {_e}")
     class NascentChecker:
-        def check_all(self, lst): return lst
-        def get_overall_verdict(self, lst): return {"verdict":"REVIEW","color":"BLUE"}
+        def check_all(self, items): return items
+        def get_overall_verdict(self, items): return {"verdict": "REVIEW", "color": "BLUE"}
+    def _load_profile(): return {}
 
 try:
-    from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config
-except ImportError:
-    def analyze_with_gemini(*a, **k): return {"error": "AI module not loaded"}
-    def merge_results(a, b, *args): return a
+    from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys
+except Exception as _e:
+    print(f"⚠ ai_analyzer import failed: {_e}")
+    def analyze_with_gemini(text, prebid=False): return {"error": "ai_analyzer not loaded"}
+    def merge_results(a, b, c=False): return a
     def load_config(): return {}
     def save_config(c): pass
+    def get_all_api_keys(): return []
 
 try:
-    from excel_processor import process_excel, quick_classify
-except ImportError:
+    from excel_processor import process_excel
+except Exception as _e:
+    print(f"⚠ excel_processor import failed: {_e}")
     def process_excel(path): return []
-    def quick_classify(t): return t
 
 try:
     from prebid_generator import generate_prebid_queries
-except ImportError:
+except Exception as _e:
+    print(f"⚠ prebid_generator import failed: {_e}")
     def generate_prebid_queries(data): return []
 
 try:
     from chatbot import process_message, load_history
-except ImportError:
-    def process_message(msg, hist): return {"reply": "Chatbot not available"}
+except Exception as _e:
+    print(f"⚠ chatbot import failed: {_e}")
+    def process_message(msg, history): return {"response": "Chatbot not available"}
     def load_history(): return []
 
 try:
     from gdrive_sync import init_drive, save_to_drive, load_from_drive, is_available as drive_available
-except ImportError:
+except Exception as _e:
+    print(f"⚠ gdrive_sync import failed: {_e}")
     def init_drive(): return False
-    def save_to_drive(*a): return False
-    def load_from_drive(*a): return False
+    def save_to_drive(f): return False
+    def load_from_drive(f): return False
     def drive_available(): return False
 
 try:
-    from tracker import (get_deadline_alerts, get_pipeline_stats,
-        get_win_loss_stats, generate_doc_checklist,
-        PIPELINE_STAGES, STAGE_COLORS)
-except ImportError:
+    from tracker import get_deadline_alerts, get_pipeline_stats, get_win_loss_stats, generate_doc_checklist, PIPELINE_STAGES, STAGE_COLORS
+except Exception as _e:
+    print(f"⚠ tracker import failed: {_e}")
     def get_deadline_alerts(): return []
     def get_pipeline_stats(): return {}
     def get_win_loss_stats(): return {}
     def generate_doc_checklist(t): return []
-    PIPELINE_STAGES = []
+    PIPELINE_STAGES = ["Identified", "To Analyse", "Analysed", "Pre-bid Sent", "Bid Decided", "Preparing", "Submitted", "Won", "Lost"]
     STAGE_COLORS = {}
 
-try:
-    from downloader import download_sync, is_playwright_available
-except ImportError:
-    def download_sync(tid): return None
-    def is_playwright_available(): return False
+app = FastAPI(title="Bid/No-Bid System v7", version="7.0")
 
-app = FastAPI(title="Bid/No-Bid System v5", version="5.0")
-
-app.add_middleware(CORSMiddleware, allow_origins=["*"],
-    allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "data"
 TEMP_DIR = BASE_DIR / "temp"
-OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
-TEMP_DIR.mkdir(exist_ok=True, parents=True)
+VAULT_DIR = BASE_DIR / "data" / "vault"
 DB_FILE = OUTPUT_DIR / "tenders_db.json"
 
+for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
+    d.mkdir(exist_ok=True, parents=True)
 
+# ── STARTUP ────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
-    import time
+    import asyncio, time
     print("🚀 Starting Bid/No-Bid System v7...")
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     TEMP_DIR.mkdir(exist_ok=True, parents=True)
+    VAULT_DIR.mkdir(exist_ok=True, parents=True)
+
     drive_ok = init_drive()
-    print(f"Google Drive: {'Connected' if drive_ok else 'Not configured'}")
+    print(f"📁 Google Drive: {'✅ Connected' if drive_ok else '❌ Not configured'}")
+
     if drive_ok:
         for attempt in range(3):
             try:
                 success = load_from_drive(DB_FILE)
                 if success:
                     db = load_db()
-                    count = len(db.get("tenders", {}))
-                    print(f"✅ Loaded {count} tenders from Google Drive")
+                    print(f"✅ Loaded {len(db.get('tenders',{}))} tenders from Drive")
                     break
-                else:
-                    print(f"⚠️ Drive load attempt {attempt+1} returned empty")
-                    time.sleep(2)
-            except Exception as e:
-                print(f"⚠️ Drive load attempt {attempt+1} failed: {e}")
                 time.sleep(2)
+            except Exception as e:
+                print(f"⚠ Drive load attempt {attempt+1} failed: {e}")
+                time.sleep(2)
+    elif DB_FILE.exists():
+        db = load_db()
+        print(f"✅ Using local DB: {len(db.get('tenders',{}))} tenders")
     else:
-        if DB_FILE.exists():
-            db = load_db()
-            count = len(db.get("tenders", {}))
-            print(f"✅ Using local DB: {count} tenders")
-        else:
-            print("⚠️ No DB found — fresh start")
-    print("Server ready")
-    # Portal watcher stub
-    print("✅ Portal watcher started")
+        print("⚠ No DB found — fresh start")
 
+    print("✅ Server ready")
 
-# ── DB helpers ─────────────────────────────────────────────────
-
+# ── DB HELPERS ─────────────────────────────────────────────────
 def load_db() -> dict:
     if DB_FILE.exists():
         try:
@@ -155,17 +153,6 @@ def save_tender(t247_id: str, data: dict):
     db["tenders"][str(t247_id)] = data
     save_db(db)
 
-def extract_all_zips(folder: Path):
-    for nested in list(folder.rglob("*.zip")):
-        try:
-            out = nested.parent / (nested.stem + "_inner")
-            out.mkdir(exist_ok=True)
-            with zipfile.ZipFile(nested, "r") as zf:
-                zf.extractall(out)
-            extract_all_zips(out)
-        except Exception:
-            pass
-
 def days_left(deadline_str: str) -> int:
     if not deadline_str:
         return 999
@@ -180,18 +167,202 @@ def days_left(deadline_str: str) -> int:
 def prebid_passed(date_str: str) -> bool:
     return days_left(date_str) < 0
 
+def extract_all_zips(folder: Path):
+    for nested in list(folder.rglob("*.zip")):
+        try:
+            out = nested.parent / (nested.stem + "_inner")
+            out.mkdir(exist_ok=True)
+            with zipfile.ZipFile(nested, "r") as zf:
+                zf.extractall(out)
+            extract_all_zips(out)
+        except Exception:
+            pass
 
-# ══════════════════════════════════════════
-# ROUTES
-# ══════════════════════════════════════════
-
+# ══════════════════════════════════════════════════════════════
+# STATIC PAGES
+# ══════════════════════════════════════════════════════════════
 @app.get("/", response_class=HTMLResponse)
 async def root():
     index = BASE_DIR / "index.html"
     if index.exists():
         return HTMLResponse(content=index.read_text(encoding="utf-8"))
-    return HTMLResponse("<h1>Bid/No-Bid System v5</h1>")
+    return HTMLResponse("<h1>Bid/No-Bid System v7</h1><p>index.html not found</p>")
 
+@app.head("/")
+async def head_root():
+    return {}
+
+@app.head("/health")
+async def head_health():
+    return {}
+
+@app.get("/health")
+async def health():
+    config = load_config()
+    db = load_db()
+    all_keys = get_all_api_keys()
+    return {
+        "status": "ok",
+        "version": "7.0",
+        "ai_configured": bool(all_keys),
+        "ai_keys_count": len(all_keys),
+        "drive_sync": drive_available(),
+        "tenders_loaded": len(db.get("tenders", {})),
+    }
+
+# ══════════════════════════════════════════════════════════════
+# CONFIG — FIXED: saves all 4 keys + groq + T247 credentials
+# ══════════════════════════════════════════════════════════════
+@app.get("/config")
+async def get_config_route():
+    config = load_config()
+    primary = config.get("gemini_api_key", "")
+    all_keys = config.get("gemini_api_keys", [])
+    if primary and primary not in all_keys:
+        all_keys = [primary] + all_keys
+    all_keys = [k for k in all_keys if k and len(k.strip()) > 10]
+    return {
+        "gemini_api_key_set": bool(all_keys),
+        "gemini_api_key": primary,
+        "gemini_keys_count": len(all_keys),
+        "gemini_api_key_2": all_keys[1] if len(all_keys) > 1 else "",
+        "gemini_api_key_3": all_keys[2] if len(all_keys) > 2 else "",
+        "gemini_api_key_4": all_keys[3] if len(all_keys) > 3 else "",
+        "t247_username": config.get("t247_username", ""),
+    }
+
+@app.get("/config-full")
+async def get_config_full():
+    config = load_config()
+    all_keys = config.get("gemini_api_keys", [])
+    primary = config.get("gemini_api_key", "")
+    if primary and primary not in all_keys:
+        all_keys = [primary] + all_keys
+    all_keys = [k for k in all_keys if k and len(k.strip()) > 10]
+    masked = []
+    for k in all_keys:
+        if len(k) > 12:
+            masked.append(k[:8] + "..." + k[-4:])
+        else:
+            masked.append(k[:4] + "...")
+    return {
+        "gemini_api_keys": masked,
+        "total_keys": len(all_keys),
+        "ai_active": bool(all_keys),
+        "groq_configured": bool(config.get("groq_api_key")),
+    }
+
+@app.post("/config")
+async def update_config_route(data: dict = Body(...)):
+    config = load_config()
+
+    # Save all 4 Gemini keys (new array format from settings UI)
+    if "gemini_api_keys" in data:
+        keys = [k.strip() for k in data["gemini_api_keys"] if k and k.strip() and len(k.strip()) > 10]
+        if keys:
+            config["gemini_api_keys"] = keys
+            config["gemini_api_key"] = keys[0]
+
+    # Also accept single key (old format / backwards compat)
+    if "gemini_api_key" in data and data["gemini_api_key"]:
+        k = data["gemini_api_key"].strip()
+        if k and len(k) > 10:
+            config["gemini_api_key"] = k
+            existing = config.get("gemini_api_keys", [])
+            if k not in existing:
+                config["gemini_api_keys"] = [k] + existing
+
+    # Groq key
+    if "groq_api_key" in data and data["groq_api_key"]:
+        config["groq_api_key"] = data["groq_api_key"].strip()
+
+    # T247 credentials
+    if "t247_username" in data and data["t247_username"]:
+        config["t247_username"] = data["t247_username"].strip()
+    if "t247_password" in data and data["t247_password"]:
+        config["t247_password"] = data["t247_password"]
+
+    save_config(config)
+    all_keys = config.get("gemini_api_keys", [])
+    return {
+        "status": "saved",
+        "gemini_keys_saved": len(all_keys),
+        "groq_saved": bool(config.get("groq_api_key")),
+    }
+
+# ══════════════════════════════════════════════════════════════
+# TEST AI — returns clear error with exact model name that failed
+# ══════════════════════════════════════════════════════════════
+@app.get("/test-ai")
+async def test_ai():
+    from ai_analyzer import get_all_api_keys, call_gemini
+    keys = get_all_api_keys()
+    if not keys:
+        return {
+            "status": "error",
+            "message": "No API key configured. Go to Settings and add your Gemini key from aistudio.google.com/apikey"
+        }
+    try:
+        result = call_gemini('Return exactly this JSON and nothing else: {"status": "ok", "message": "AI working"}', keys[0])
+        return {
+            "status": "success",
+            "api_key_present": True,
+            "gemini_response": result[:100]
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "api_key_present": True,
+            "error": str(e)
+        }
+
+@app.get("/test-groq")
+async def test_groq():
+    config = load_config()
+    groq_key = config.get("groq_api_key", "")
+    if not groq_key:
+        return {"status": "missing", "message": "No Groq key configured. Get free key at console.groq.com"}
+    try:
+        from ai_analyzer import call_groq
+        result = call_groq('Say "OK" and nothing else', groq_key)
+        return {"status": "success", "response": result[:50]}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+@app.get("/api-quota-status")
+async def api_quota_status():
+    keys = get_all_api_keys()
+    config = load_config()
+    return {
+        "status": "ok" if keys else "no_keys",
+        "gemini_keys": len(keys),
+        "groq_configured": bool(config.get("groq_api_key")),
+        "total_keys": len(keys) + (1 if config.get("groq_api_key") else 0),
+    }
+
+# ══════════════════════════════════════════════════════════════
+# DASHBOARD
+# ══════════════════════════════════════════════════════════════
+@app.get("/dashboard")
+async def dashboard():
+    db = load_db()
+    tenders = list(db["tenders"].values())
+    stats = {
+        "total": len(tenders),
+        "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
+        "no_bid": sum(1 for t in tenders if t.get("verdict") == "NO-BID"),
+        "conditional": sum(1 for t in tenders if t.get("verdict") == "CONDITIONAL"),
+        "review": sum(1 for t in tenders if t.get("verdict") in ("REVIEW", "", None)),
+        "analysed": sum(1 for t in tenders if t.get("bid_no_bid_done")),
+        "deadline_today": sum(1 for t in tenders if days_left(t.get("deadline", "")) == 0),
+        "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline", "")) <= 3),
+    }
+    tenders_sorted = sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))
+    return {"stats": stats, "tenders": tenders_sorted}
+
+# ══════════════════════════════════════════════════════════════
+# EXCEL IMPORT
+# ══════════════════════════════════════════════════════════════
 @app.post("/import-excel")
 async def import_excel(file: UploadFile = File(...)):
     if not file.filename.lower().endswith((".xlsx", ".xls")):
@@ -207,16 +378,16 @@ async def import_excel(file: UploadFile = File(...)):
             if tid:
                 existing = db["tenders"].get(tid, {})
                 if existing:
-                    excel_fields = ["ref_no","brief","org_name","location",
-                        "estimated_cost_raw","estimated_cost_cr","deadline",
-                        "days_left","deadline_status","doc_fee","emd",
-                        "msme_exemption","eligibility","checklist","is_gem"]
+                    excel_fields = ["ref_no", "brief", "org_name", "location",
+                                    "estimated_cost_raw", "estimated_cost_cr",
+                                    "deadline", "days_left", "deadline_status",
+                                    "doc_fee", "emd", "msme_exemption",
+                                    "eligibility", "checklist", "is_gem"]
                     for field in excel_fields:
                         if t.get(field) is not None:
                             existing[field] = t[field]
                     if not existing.get("bid_no_bid_done"):
                         existing["verdict"] = t.get("verdict")
-                        existing["verdict_color"] = t.get("verdict_color")
                         existing["reason"] = t.get("reason")
                     db["tenders"][tid] = existing
                     updated += 1
@@ -224,63 +395,13 @@ async def import_excel(file: UploadFile = File(...)):
                     db["tenders"][tid] = t
                     added += 1
         save_db(db)
-        # Return fields that match what frontend expects
-        return {
-            "status": "success",
-            "total": len(tenders),
-            "imported": len(tenders),
-            "added": added,
-            "updated": updated,
-            "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
-            "no_bid": sum(1 for t in tenders if t.get("verdict") == "NO-BID"),
-            "conditional": sum(1 for t in tenders if t.get("verdict") == "CONDITIONAL"),
-            "tenders": tenders
-        }
+        return {"status": "success", "total": len(tenders), "added": added, "updated": updated, "tenders": tenders}
     finally:
         tmp.unlink(missing_ok=True)
 
-@app.get("/dashboard")
-async def dashboard():
-    db = load_db()
-    tenders = list(db["tenders"].values())
-    stats = {
-        "total": len(tenders),
-        "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
-        "no_bid": sum(1 for t in tenders if t.get("verdict") == "NO-BID"),
-        "conditional": sum(1 for t in tenders if t.get("verdict") == "CONDITIONAL"),
-        "review": sum(1 for t in tenders if t.get("verdict") == "REVIEW"),
-        "analysed": sum(1 for t in tenders if t.get("bid_no_bid_done")),
-        "deadline_today": sum(1 for t in tenders if days_left(t.get("deadline","")) == 0),
-        "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline","")) <= 3),
-    }
-    tenders_sorted = sorted(tenders, key=lambda t: days_left(t.get("deadline","999")))
-    return {"stats": stats, "tenders": tenders_sorted}
-
-@app.post("/process")
-async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
-    return await process_files(files=[file], t247_id=t247_id)
-
-@app.post("/prebid-queries")
-async def get_prebid_queries(data: dict = Body(...)):
-    queries = generate_prebid_queries(data)
-    return {"queries": queries}
-
-@app.get("/prebid-queries/{t247_id}")
-async def get_saved_prebid_queries(t247_id: str):
-    tender = get_tender(t247_id)
-    return {"queries": tender.get("prebid_queries", [])}
-
-@app.post("/tender/{t247_id}/status")
-async def update_status(t247_id: str, data: dict = Body(...)):
-    tender = get_tender(t247_id)
-    tender.update(data)
-    save_tender(t247_id, tender)
-    return {"status": "saved"}
-
-@app.get("/tender/{t247_id}")
-async def get_tender_detail(t247_id: str):
-    return get_tender(t247_id)
-
+# ══════════════════════════════════════════════════════════════
+# PROCESS FILES — AI ANALYSIS
+# ══════════════════════════════════════════════════════════════
 @app.post("/process-files")
 async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
     if not files:
@@ -289,6 +410,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
     try:
         extract_dir = Path(tmp_dir) / "extracted"
         extract_dir.mkdir()
+
         for upload in files:
             fname = upload.filename or "upload"
             dest = Path(tmp_dir) / fname
@@ -303,6 +425,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
         doc_files = []
         for ext in ["*.pdf", "*.docx", "*.doc", "*.txt", "*.html", "*.htm"]:
             doc_files.extend(extract_dir.rglob(ext))
+
         seen, unique = set(), []
         for f in doc_files:
             if f.name not in seen:
@@ -311,56 +434,52 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
         doc_files = unique
 
         if not doc_files:
-            raise HTTPException(400, "No readable documents found.")
+            raise HTTPException(400, "No readable documents found. Upload ZIP, PDF, or DOCX.")
 
-        corrigendum_files = [f for f in doc_files if
-            any(k in f.name.lower() for k in ["corrigendum","addendum","amendment","corr_","addend","revised","rectification"])]
+        corrigendum_files = [f for f in doc_files if any(
+            k in f.name.lower() for k in ["corrigendum", "addendum", "amendment", "corr_", "revised"])]
         main_files = [f for f in doc_files if f not in corrigendum_files]
 
         extractor = TenderExtractor()
         tender_data = extractor.process_documents(main_files if main_files else doc_files)
 
         if corrigendum_files:
-            corr_extractor = TenderExtractor()
-            corr_data = corr_extractor.process_documents(corrigendum_files)
-            for field in ["bid_submission_date","bid_opening_date","bid_start_date","prebid_query_date","estimated_cost","emd","tender_fee"]:
+            corr_data = TenderExtractor().process_documents(corrigendum_files)
+            for field in ["bid_submission_date", "bid_opening_date", "prebid_query_date", "estimated_cost", "emd", "tender_fee"]:
                 val = corr_data.get(field, "")
-                if val and val not in ["—","Refer document","Not specified",""]:
+                if val and val not in ["—", "Refer document", "Not specified", ""]:
                     tender_data[field] = val
             tender_data["has_corrigendum"] = True
             tender_data["corrigendum_files"] = [f.name for f in corrigendum_files]
 
+        # Build full text for AI
         all_text = ""
         for f in sorted(doc_files, key=lambda x: (
-            0 if any(k in x.name.lower() for k in ["rfp","nit","tender","bid"]) else
-            1 if any(k in x.name.lower() for k in ["corrigendum","addendum"]) else 2
+            0 if any(k in x.name.lower() for k in ["rfp", "nit", "tender", "bid"]) else
+            1 if any(k in x.name.lower() for k in ["corrigendum", "addendum"]) else 2
         )):
             t = read_document(f)
             if t and t.strip():
                 all_text += f"\n\n=== FILE: {f.name} ===\n{t}"
 
-        config = load_config()
-        api_key = config.get("gemini_api_key", "")
+        # AI Analysis
         ai_used = False
-        print(f"[AI] API key present: {bool(api_key)} | Text length: {len(all_text)} chars")
+        all_keys = get_all_api_keys()
+        print(f"[AI] Keys available: {len(all_keys)} | Text length: {len(all_text)} chars")
 
-        if api_key and all_text.strip():
+        if all_keys and all_text.strip():
             passed = prebid_passed(tender_data.get("prebid_query_date", ""))
-            print(f"[AI] Calling Gemini... prebid_passed={passed}")
             ai_result = analyze_with_gemini(all_text, passed)
-            print(f"[AI] Result keys: {list(ai_result.keys())[:5]}")
+            print(f"[AI] Result: {'SUCCESS' if 'error' not in ai_result else 'ERROR: '+ai_result.get('error','')[:80]}")
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
                 ai_used = True
-                print(f"[AI] SUCCESS — tender_no={ai_result.get('tender_no','?')}")
             else:
-                err = ai_result.get("error","")
-                tender_data["ai_warning"] = err
-                print(f"[AI] ERROR: {err}")
-        elif not api_key:
-            tender_data["ai_warning"] = "Gemini API key not configured."
-            print("[AI] No API key")
+                tender_data["ai_warning"] = ai_result.get("error", "")
+        elif not all_keys:
+            tender_data["ai_warning"] = "No Gemini API key configured. Go to Settings to add key from aistudio.google.com/apikey"
 
+        # Nascent checker fallback
         checker = NascentChecker()
         if not tender_data.get("overall_verdict"):
             tender_data["pq_criteria"] = checker.check_all(tender_data.get("pq_criteria", []))
@@ -368,13 +487,29 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             tender_data["overall_verdict"] = checker.get_overall_verdict(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
-        generator = BidDocGenerator()
-        safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
-        output_filename = f"BidNoBid_{safe_no}.docx"
-        generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
+        # Set top-level verdict field for dashboard
+        if tender_data.get("overall_verdict"):
+            v = tender_data["overall_verdict"]
+            verdict_str = v.get("verdict", "REVIEW")
+            # Normalize: remove " RECOMMENDED" suffix
+            verdict_str = verdict_str.replace(" RECOMMENDED", "").replace("BID RECOMMENDED", "BID")
+            tender_data["verdict"] = verdict_str
+            tender_data["reason"] = v.get("reason", "")
 
+        # Generate Word report
+        generator = BidDocGenerator()
+        safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", t247_id or "Report"))[:50]
+        output_filename = f"BidNoBid_{safe_no}.docx"
+        try:
+            generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
+        except Exception as gen_err:
+            print(f"⚠ Report generation error: {gen_err}")
+            output_filename = None
+
+        # Save to DB
         if t247_id:
             db_record = get_tender(t247_id)
+            ov = tender_data.get("overall_verdict", {})
             db_record.update({
                 "t247_id": t247_id,
                 "tender_no": tender_data.get("tender_no"),
@@ -383,13 +518,19 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 "bid_submission_date": tender_data.get("bid_submission_date"),
                 "emd": tender_data.get("emd"),
                 "estimated_cost": tender_data.get("estimated_cost"),
-                "verdict": tender_data.get("overall_verdict", {}).get("verdict", ""),
-                "verdict_color": tender_data.get("overall_verdict", {}).get("color", ""),
+                "verdict": tender_data.get("verdict", ov.get("verdict", "REVIEW")),
+                "reason": tender_data.get("reason", ov.get("reason", "")),
                 "bid_no_bid_done": True,
                 "report_file": output_filename,
                 "analysed_at": datetime.now().isoformat(),
                 "has_corrigendum": tender_data.get("has_corrigendum", False),
                 "ai_used": ai_used,
+                "pq_criteria": tender_data.get("pq_criteria", []),
+                "tq_criteria": tender_data.get("tq_criteria", []),
+                "prebid_queries": tender_data.get("prebid_queries", []),
+                "overall_verdict": tender_data.get("overall_verdict"),
+                "scope_items": tender_data.get("scope_items", []),
+                "payment_terms": tender_data.get("payment_terms", []),
             })
             save_tender(t247_id, db_record)
 
@@ -410,158 +551,22 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
-@app.get("/download/{filename}")
-async def download_file(filename: str):
-    file_path = OUTPUT_DIR / Path(filename).name
-    if not file_path.exists():
-        raise HTTPException(404, "File not found")
-    return FileResponse(path=str(file_path), filename=Path(filename).name,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+# ══════════════════════════════════════════════════════════════
+# TENDER CRUD
+# ══════════════════════════════════════════════════════════════
+@app.get("/tender/{t247_id}")
+async def get_tender_detail(t247_id: str):
+    t = get_tender(t247_id)
+    if not t:
+        raise HTTPException(404, f"Tender {t247_id} not found")
+    return t
 
-@app.get("/reports")
-async def list_reports():
-    files = sorted(OUTPUT_DIR.glob("BidNoBid_*.docx"), key=lambda f: f.stat().st_mtime, reverse=True)
-    return [{"filename": f.name, "size_kb": round(f.stat().st_size/1024,1),
-             "created": datetime.fromtimestamp(f.stat().st_mtime).strftime("%d %b %Y %H:%M")}
-            for f in files[:100]]
-
-@app.get("/config")
-async def get_config_route():
-    config = load_config()
-    key = config.get("gemini_api_key", "")
-    return {
-        "gemini_api_key_set": bool(key),
-        "gemini_api_key_preview": (key[:8] + "..." + key[-4:]) if key else "",
-        "gemini_api_key": (key[:8] + "..." + key[-4:]) if key else "",
-    }
-
-@app.post("/config")
-async def update_config_route(data: dict = Body(...)):
-    config = load_config()
-    if "gemini_api_key" in data and data["gemini_api_key"]:
-        config["gemini_api_key"] = data["gemini_api_key"]
-    if "gemini_api_key_2" in data and data["gemini_api_key_2"]:
-        config["gemini_api_key_2"] = data["gemini_api_key_2"]
-    if "gemini_api_key_3" in data and data["gemini_api_key_3"]:
-        config["gemini_api_key_3"] = data["gemini_api_key_3"]
-    if "gemini_api_key_4" in data and data["gemini_api_key_4"]:
-        config["gemini_api_key_4"] = data["gemini_api_key_4"]
-    if "gemini_api_keys" in data:
-        keys = [k.strip() for k in data["gemini_api_keys"] if k and k.strip()]
-        config["gemini_api_keys"] = keys
-        if keys:
-            config["gemini_api_key"] = keys[0]
-    if "groq_api_key" in data and data["groq_api_key"]:
-        config["groq_api_key"] = data["groq_api_key"].strip()
-    if "t247_username" in data:
-        config["t247_username"] = data["t247_username"]
-    if "t247_password" in data:
-        config["t247_password"] = data["t247_password"]
-    save_config(config)
-    return {"status": "saved"}
-
-@app.get("/profile")
-async def get_profile():
-    try:
-        from nascent_checker import load_profile
-        return load_profile()
-    except Exception:
-        return {}
-
-@app.post("/profile")
-async def update_profile(data: dict = Body(...)):
-    profile_path = BASE_DIR / "nascent_profile.json"
-    profile_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    return {"status": "saved"}
-
-@app.get("/test-ai")
-async def test_ai():
-    from ai_analyzer import get_api_key, call_gemini
-    key = get_api_key()
-    if not key:
-        return {"status": "error", "message": "No API key configured"}
-    try:
-        result = call_gemini('Return this exact JSON: {"status": "ok"}', key)
-        return {"status": "ok", "api_key_present": True, "model": "gemini"}
-    except Exception as e:
-        return {"status": "error", "api_key_present": True, "error": str(e)}
-
-@app.get("/test-groq")
-async def test_groq():
-    config = load_config()
-    groq_key = config.get("groq_api_key", "")
-    if not groq_key:
-        return {"status": "missing", "message": "groq_api_key not configured"}
-    import urllib.request
-    try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        payload = json.dumps({"model":"llama-3.3-70b-versatile","messages":[{"role":"user","content":"Say OK"}],"max_tokens":5}).encode()
-        req = urllib.request.Request(url, data=payload,
-            headers={"Content-Type":"application/json","Authorization":"Bearer "+groq_key}, method="POST")
-        with urllib.request.urlopen(req, timeout=15) as r:
-            result = json.loads(r.read())
-        return {"status":"success","response":result["choices"][0]["message"]["content"]}
-    except Exception as e:
-        return {"status":"error","error":str(e)}
-
-@app.get("/tender-quickview/{t247_id}")
-async def tender_quickview(t247_id: str):
+@app.post("/tender/{t247_id}/status")
+async def update_status(t247_id: str, data: dict = Body(...)):
     tender = get_tender(t247_id)
-    if not tender:
-        raise HTTPException(404, "Tender not found")
-    return tender
-
-@app.post("/auto-download/{t247_id}")
-async def auto_download_tender(t247_id: str):
-    try:
-        if not is_playwright_available():
-            return {"status":"unavailable","message":"Playwright not installed on server"}
-        zip_path = download_sync(t247_id)
-        if zip_path:
-            return {"status":"success","zip_path":zip_path,"t247_id":t247_id}
-        else:
-            return {"status":"failed","message":"Could not find download button"}
-    except Exception as e:
-        return {"status":"error","message":str(e)}
-
-@app.get("/test-chat")
-async def test_chat():
-    try:
-        h = load_history()
-        return {"status":"ok","drive_sync":drive_available(),"chatbot_loaded":True,"history_count":len(h)}
-    except Exception as e:
-        return {"status":"error","error":str(e)}
-
-@app.post("/chat")
-async def chat(data: dict = Body(...)):
-    message = data.get("message","").strip()
-    if not message:
-        raise HTTPException(400, "Empty message")
-    history = load_history()
-    result = process_message(message, history)
-    return result
-
-@app.get("/chat/history")
-async def get_chat_history():
-    return {"history": load_history()}
-
-@app.delete("/chat/history")
-async def clear_chat_history():
-    h = OUTPUT_DIR / "chat_history.json"
-    if h.exists(): h.unlink()
-    return {"status": "cleared"}
-
-@app.get("/alerts")
-async def get_alerts():
-    return {"alerts": get_deadline_alerts()}
-
-@app.get("/pipeline")
-async def get_pipeline():
-    return {"stages": get_pipeline_stats(), "stage_list": PIPELINE_STAGES, "stage_colors": STAGE_COLORS}
-
-@app.get("/win-loss")
-async def get_win_loss():
-    return get_win_loss_stats()
+    tender.update(data)
+    save_tender(t247_id, tender)
+    return {"status": "saved"}
 
 @app.post("/tender/{t247_id}/stage")
 async def update_stage(t247_id: str, data: dict = Body(...)):
@@ -576,6 +581,90 @@ async def update_stage(t247_id: str, data: dict = Body(...)):
     save_db(db)
     return {"status": "saved", "new_stage": t.get("status")}
 
+@app.post("/tender/{t247_id}/skip")
+async def skip_tender(t247_id: str, data: dict = Body(default={})):
+    db = load_db()
+    t = db["tenders"].get(t247_id, {"t247_id": t247_id})
+    t["status"] = "Not Interested"
+    t["skip_reason"] = data.get("reason", "Not interested")
+    t["skipped_at"] = datetime.now().isoformat()
+    db["tenders"][t247_id] = t
+    save_db(db)
+    return {"status": "skipped", "t247_id": t247_id}
+
+@app.post("/tender/{t247_id}/restore")
+async def restore_tender(t247_id: str):
+    db = load_db()
+    t = db["tenders"].get(t247_id, {})
+    if t.get("status") == "Not Interested":
+        t["status"] = "Identified"
+        t.pop("skip_reason", None)
+        t.pop("skipped_at", None)
+        db["tenders"][t247_id] = t
+        save_db(db)
+    return {"status": "restored"}
+
+@app.post("/tender/{t247_id}/favourite")
+async def toggle_favourite(t247_id: str):
+    db = load_db()
+    t = db["tenders"].get(t247_id, {"t247_id": t247_id})
+    t["favourite"] = not t.get("favourite", False)
+    db["tenders"][t247_id] = t
+    save_db(db)
+    return {"favourite": t["favourite"]}
+
+# ══════════════════════════════════════════════════════════════
+# PREBID QUERIES
+# ══════════════════════════════════════════════════════════════
+@app.post("/prebid-queries")
+async def get_prebid_queries(data: dict = Body(...)):
+    queries = generate_prebid_queries(data)
+    return {"queries": queries}
+
+@app.get("/prebid-queries/{t247_id}")
+async def get_saved_prebid_queries(t247_id: str):
+    tender = get_tender(t247_id)
+    return {"queries": tender.get("prebid_queries", [])}
+
+@app.post("/tender/{t247_id}/generate-prebid-letter")
+async def gen_prebid_letter(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    queries = tender.get("prebid_queries", [])
+    if not queries:
+        raise HTTPException(400, "No pre-bid queries found. Analyse tender first.")
+    try:
+        from docx import Document
+        doc = Document()
+        doc.add_heading("Pre-Bid Queries", 0)
+        doc.add_paragraph(f"Tender: {tender.get('tender_name', 'N/A')}")
+        doc.add_paragraph(f"Tender No: {tender.get('tender_no', 'N/A')}")
+        doc.add_paragraph(f"Organization: {tender.get('org_name', 'N/A')}")
+        doc.add_paragraph("")
+        doc.add_paragraph("Respected Sir/Madam,")
+        doc.add_paragraph(
+            "We, Nascent Info Technologies Pvt. Ltd., wish to participate in the above tender. "
+            "We request clarifications on the following points:"
+        )
+        doc.add_paragraph("")
+        for i, q in enumerate(queries, 1):
+            clause = q.get("clause", "") if isinstance(q, dict) else ""
+            query_text = q.get("query", q) if isinstance(q, dict) else str(q)
+            doc.add_paragraph(f"Q{i}. {clause}: {query_text}")
+        doc.add_paragraph("")
+        doc.add_paragraph("Thanking you,")
+        doc.add_paragraph("Nascent Info Technologies Pvt. Ltd.")
+        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
+        filename = f"PreBid_{safe_no}.docx"
+        doc.save(str(OUTPUT_DIR / filename))
+        return {"status": "success", "filename": filename, "query_count": len(queries), "download_url": f"/download/{filename}"}
+    except Exception as e:
+        raise HTTPException(500, f"Letter generation failed: {str(e)}")
+
+# ══════════════════════════════════════════════════════════════
+# CHECKLIST
+# ══════════════════════════════════════════════════════════════
 @app.get("/checklist/{t247_id}")
 async def get_checklist(t247_id: str):
     db = load_db()
@@ -589,37 +678,85 @@ async def get_checklist(t247_id: str):
 async def save_checklist(t247_id: str, data: dict = Body(...)):
     db = load_db()
     t = db["tenders"].get(t247_id, {})
-    # Support both full checklist save and single item toggle
-    if "checklist" in data:
-        t["doc_checklist"] = data.get("checklist", [])
-    elif "item_id" in data or "id" in data:
-        item_id = data.get("item_id") or data.get("id")
-        done = data.get("done", False)
-        checklist = t.get("doc_checklist", [])
-        for item in checklist:
-            if item.get("id") == item_id:
-                item["done"] = done
-                break
-        t["doc_checklist"] = checklist
-    db["tenders"][t247_id] = t
-    pct = round(sum(1 for d in t.get("doc_checklist",[]) if d.get("done")) /
-        max(len(t.get("doc_checklist",[])), 1) * 100)
+    t["doc_checklist"] = data.get("checklist", [])
+    pct = round(sum(1 for i in t["doc_checklist"] if i.get("done")) / max(len(t["doc_checklist"]), 1) * 100)
     t["checklist_pct"] = pct
+    db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved", "completion_pct": pct}
 
-@app.post("/prebid-sent/{t247_id}")
-async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
+@app.post("/checklist/{t247_id}/item")
+async def toggle_checklist_item(t247_id: str, data: dict = Body(...)):
     db = load_db()
     t = db["tenders"].get(t247_id, {})
-    t["prebid_sent"] = True
-    t["prebid_sent_at"] = datetime.now().isoformat()
-    t["prebid_sent_to"] = data.get("email", "")
-    t["status"] = "Pre-bid Sent"
-    t["status_updated_at"] = datetime.now().isoformat()
+    items = t.get("doc_checklist", [])
+    item_id = data.get("id", "")
+    done = data.get("done", False)
+    for item in items:
+        if item.get("id") == item_id or item.get("label") == item_id:
+            item["done"] = done
+            break
+    t["doc_checklist"] = items
+    if items:
+        t["checklist_pct"] = round(100 * sum(1 for i in items if i.get("done")) / len(items))
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved"}
+
+# ══════════════════════════════════════════════════════════════
+# ALERTS & PIPELINE
+# ══════════════════════════════════════════════════════════════
+@app.get("/alerts")
+async def get_alerts():
+    return {"alerts": get_deadline_alerts()}
+
+@app.get("/pipeline")
+async def get_pipeline():
+    return {"stages": get_pipeline_stats(), "stage_list": PIPELINE_STAGES, "stage_colors": STAGE_COLORS}
+
+@app.get("/win-loss")
+async def get_win_loss():
+    return get_win_loss_stats()
+
+# ══════════════════════════════════════════════════════════════
+# REPORTS & DOWNLOAD
+# ══════════════════════════════════════════════════════════════
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    file_path = OUTPUT_DIR / Path(filename).name
+    if not file_path.exists():
+        raise HTTPException(404, "File not found")
+    ext = file_path.suffix.lower()
+    media_types = {
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".pdf": "application/pdf",
+    }
+    return FileResponse(str(file_path), filename=file_path.name, media_type=media_types.get(ext, "application/octet-stream"))
+
+@app.get("/reports-list")
+async def reports_list():
+    try:
+        db = load_db()
+        reports = []
+        for fname in sorted(OUTPUT_DIR.glob("BidNoBid_*.docx"), key=lambda f: f.stat().st_mtime, reverse=True):
+            tender = None
+            for tid, t in db["tenders"].items():
+                if tid in fname.stem or (t.get("tender_no", "") and t.get("tender_no", "").replace("/", "_") in fname.stem):
+                    tender = t
+                    break
+            reports.append({
+                "filename": fname.name,
+                "created": datetime.fromtimestamp(fname.stat().st_mtime).strftime("%d-%b-%Y %H:%M"),
+                "size_kb": round(fname.stat().st_size / 1024, 1),
+                "t247_id": tender.get("t247_id", "—") if tender else "—",
+                "tender_name": tender.get("brief", "")[:60] if tender else fname.stem[:60],
+                "org": tender.get("org_name", "—") if tender else "—",
+                "verdict": tender.get("verdict", "—") if tender else "—",
+            })
+        return {"reports": reports}
+    except Exception as e:
+        return {"reports": [], "error": str(e)}
 
 @app.get("/export-tenders")
 async def export_tenders(verdict: str = "", search: str = ""):
@@ -632,88 +769,202 @@ async def export_tenders(verdict: str = "", search: str = ""):
             tenders = [t for t in tenders if t.get("verdict") == verdict]
         if search:
             s = search.lower()
-            tenders = [t for t in tenders if any(s in str(t.get(f,"")).lower()
-                for f in ["t247_id","ref_no","brief","org_name","location","verdict"])]
+            tenders = [t for t in tenders if any(s in str(t.get(f, "")).lower() for f in ["t247_id", "ref_no", "brief", "org_name"])]
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Tenders"
+        headers = ["Sr.", "T247 ID", "Ref No.", "Brief", "Organization", "Location",
+                   "Cost (Cr)", "EMD", "Doc Fee", "Deadline", "Days Left", "Verdict", "Stage", "Analysed", "Reason"]
         hdr_fill = PatternFill("solid", fgColor="1E2A3B")
-        hdr_font = Font(bold=True, color="FFFFFF", size=11)
-        verdict_colors = {"BID":"E2EFDA","CONDITIONAL":"FFF2CC","NO-BID":"FCE4D6","REVIEW":"DEEAF1"}
-        headers = ["Sr.","T247 ID","Reference No.","Brief","Organization","Location",
-            "Cost (Cr)","EMD","Doc Fee","Deadline","Days Left","Verdict","Analysed","Reason"]
-        col_widths = [5,12,25,45,30,20,10,12,10,14,10,14,10,35]
-        for ci,(hdr,w) in enumerate(zip(headers,col_widths),1):
-            cell = ws.cell(row=1,column=ci,value=hdr)
-            cell.font = hdr_font; cell.fill = hdr_fill
-            ws.column_dimensions[cell.column_letter].width = w
-        def dl(t):
-            try:
-                dl_str = t.get("deadline","")
-                for fmt in ["%d-%m-%Y","%d/%m/%Y"]:
-                    try:
-                        return (datetime.strptime(dl_str.split()[0],fmt).date()-date.today()).days
-                    except: continue
-            except: pass
-            return 999
-        tenders_sorted = sorted(tenders, key=dl)
-        for ri,t in enumerate(tenders_sorted,2):
-            days = dl(t)
-            verdict = t.get("verdict","")
-            row_fill = PatternFill("solid", fgColor=verdict_colors.get(verdict,"FFFFFF"))
-            vals = [ri-1,t.get("t247_id",""),t.get("ref_no",""),t.get("brief",""),
-                t.get("org_name",""),t.get("location",""),t.get("estimated_cost_cr",""),
-                t.get("emd",""),t.get("doc_fee",""),t.get("deadline",""),
-                days if days<999 else "—",verdict,"Yes" if t.get("bid_no_bid_done") else "No",
-                t.get("reason","")[:100]]
-            for ci,val in enumerate(vals,1):
-                cell = ws.cell(row=ri,column=ci,value=val)
+        for ci, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=ci, value=h)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = hdr_fill
+        verdict_colors = {"BID": "E2EFDA", "CONDITIONAL": "FFF2CC", "NO-BID": "FCE4D6", "REVIEW": "DEEAF1"}
+        tenders_sorted = sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))
+        for ri, t in enumerate(tenders_sorted, 2):
+            dl = days_left(t.get("deadline", ""))
+            v = t.get("verdict", "")
+            vals = [ri-1, t.get("t247_id",""), t.get("ref_no",""), t.get("brief",""), t.get("org_name",""),
+                    t.get("location",""), t.get("estimated_cost_cr",""), t.get("emd",""), t.get("doc_fee",""),
+                    t.get("deadline",""), dl if dl < 999 else "—", v, t.get("status","Identified"),
+                    "Yes" if t.get("bid_no_bid_done") else "No", t.get("reason","")[:100]]
+            row_fill = PatternFill("solid", fgColor=verdict_colors.get(v, "FFFFFF"))
+            for ci, val in enumerate(vals, 1):
+                cell = ws.cell(row=ri, column=ci, value=val)
                 cell.fill = row_fill
-                cell.alignment = Alignment(vertical="center",wrap_text=True)
         ws.freeze_panes = "A2"
         fname = f"Tenders_Export_{datetime.now().strftime('%d%m%Y_%H%M')}.xlsx"
         fpath = OUTPUT_DIR / fname
         wb.save(str(fpath))
-        return FileResponse(str(fpath), filename=fname,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return FileResponse(str(fpath), filename=fname, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except Exception as e:
         raise HTTPException(500, f"Export failed: {str(e)}")
 
-@app.get("/reports-list")
-async def reports_list():
+# ══════════════════════════════════════════════════════════════
+# GENERATE SUBMISSION DOCS
+# ══════════════════════════════════════════════════════════════
+@app.post("/generate-docs/{t247_id}")
+async def generate_submission_docs(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found. Analyse it first.")
     try:
-        db = load_db()
-        reports = []
-        for fname in sorted(OUTPUT_DIR.glob("BidNoBid_*.docx"), reverse=True):
-            tender = None
-            for tid, t in db["tenders"].items():
-                if tid in fname.stem:
-                    tender = t
-                    break
-            reports.append({
-                "filename": fname.name,
-                "created": datetime.fromtimestamp(fname.stat().st_mtime).strftime("%d-%b-%Y %H:%M"),
-                "size_kb": round(fname.stat().st_size/1024,1),
-                "t247_id": tender.get("t247_id","—") if tender else "—",
-                "tender_name": tender.get("brief","")[:60] if tender else fname.stem[:60],
-                "org": tender.get("org_name","—") if tender else "—",
-                "verdict": tender.get("verdict","—") if tender else "—",
-            })
-        return {"reports": reports}
+        from submission_generator import SubmissionGenerator
+        gen = SubmissionGenerator()
+        result = gen.generate_all(tender)
+        return {"status": "success", "files": result.get("files", []), "zip_url": result.get("zip_url"), "count": len(result.get("files", []))}
+    except ImportError:
+        # Fallback: generate bid report only
+        try:
+            generator = BidDocGenerator()
+            safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:50]
+            filename = f"BidNoBid_{safe_no}.docx"
+            generator.generate(tender, str(OUTPUT_DIR / filename))
+            return {"status": "partial", "files": [{"name": "Bid/No-Bid Analysis Report", "filename": filename}], "message": "submission_generator.py not found"}
+        except Exception as e2:
+            raise HTTPException(500, f"Document generation failed: {str(e2)}")
     except Exception as e:
-        return {"reports": [], "error": str(e)}
+        raise HTTPException(500, f"Generation error: {str(e)}")
 
-@app.get("/health")
-async def health():
-    config = load_config()
+# ══════════════════════════════════════════════════════════════
+# NASCENT PROFILE — FIXED: reads from correct path, saves correctly
+# ══════════════════════════════════════════════════════════════
+PROFILE_PATH = BASE_DIR / "nascent_profile.json"
+
+@app.get("/profile")
+async def get_profile():
+    """Read nascent_profile.json — returns full profile data"""
+    if PROFILE_PATH.exists():
+        try:
+            data = json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+            return data
+        except Exception as e:
+            raise HTTPException(500, f"Profile read error: {str(e)}")
+    # Return empty structure if file doesn't exist
+    return {
+        "company": {}, "finance": {"turnover_by_year": {}},
+        "certifications": {}, "employees": {}, "projects": [],
+        "capabilities": {}, "bid_rules": {"do_not_bid": [], "conditional": [], "preferred_sectors": []}
+    }
+
+@app.post("/profile")
+async def update_profile(data: dict = Body(...)):
+    """Save profile — writes to nascent_profile.json"""
+    try:
+        PROFILE_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        # Also sync to Drive if available
+        try:
+            save_to_drive(PROFILE_PATH)
+        except Exception:
+            pass
+        return {"status": "saved"}
+    except Exception as e:
+        raise HTTPException(500, f"Profile save error: {str(e)}")
+
+# ══════════════════════════════════════════════════════════════
+# DOCUMENT VAULT — FIXED: proper upload/download/list
+# ══════════════════════════════════════════════════════════════
+VAULT_DOCS_LIST = [
+    {"id": "pan_card",        "name": "PAN Card",                              "category": "Company"},
+    {"id": "cin_cert",        "name": "CIN Certificate / MOA",                 "category": "Company"},
+    {"id": "gst_cert",        "name": "GST Certificate",                       "category": "Company"},
+    {"id": "msme_cert",       "name": "MSME / UDYAM Certificate",              "category": "Company"},
+    {"id": "poa_doc",         "name": "Power of Attorney (Current)",           "category": "Company"},
+    {"id": "cmmi_cert",       "name": "CMMI Level 3 Certificate",              "category": "Certification"},
+    {"id": "iso9001_cert",    "name": "ISO 9001:2015 Certificate",             "category": "Certification"},
+    {"id": "iso27001_cert",   "name": "ISO 27001:2022 Certificate",            "category": "Certification"},
+    {"id": "iso20000_cert",   "name": "ISO 20000-1:2018 Certificate",          "category": "Certification"},
+    {"id": "audited_fy2223",  "name": "Audited Accounts FY 2022-23",           "category": "Finance"},
+    {"id": "audited_fy2324",  "name": "Audited Accounts FY 2023-24",           "category": "Finance"},
+    {"id": "audited_fy2425",  "name": "Audited Accounts FY 2024-25",           "category": "Finance"},
+    {"id": "net_worth_cert",  "name": "Net Worth Certificate (CA Signed)",      "category": "Finance"},
+    {"id": "solvency_cert",   "name": "Solvency Certificate",                  "category": "Finance"},
+    {"id": "blacklisting_dec","name": "Non-Blacklisting Declaration Template", "category": "Declaration"},
+    {"id": "mii_dec",         "name": "Make in India Declaration Template",    "category": "Declaration"},
+    {"id": "integrity_pact",  "name": "Integrity Pact Template",               "category": "Declaration"},
+    {"id": "amc_gis_cc",      "name": "Completion Cert — AMC GIS (10.55Cr)",   "category": "Experience"},
+    {"id": "pcscl_po",        "name": "Work Order — PCSCL Smart City (61Cr)",  "category": "Experience"},
+    {"id": "kvic_cc",         "name": "Completion Cert — KVIC Geo Portal",     "category": "Experience"},
+    {"id": "tcgl_cc",         "name": "Completion Cert — TCGL Tourism",        "category": "Experience"},
+    {"id": "vmc_cc",          "name": "Completion Cert — VMC GIS+ERP",         "category": "Experience"},
+    {"id": "jumc_po",         "name": "Work Order — JuMC GIS",                 "category": "Experience"},
+]
+
+@app.get("/vault")
+async def get_vault():
+    docs = []
+    for doc in VAULT_DOCS_LIST:
+        existing = list(VAULT_DIR.glob(f"{doc['id']}.*"))
+        docs.append({
+            **doc,
+            "uploaded": len(existing) > 0,
+            "filename": existing[0].name if existing else None,
+            "size_kb": round(existing[0].stat().st_size / 1024) if existing else 0,
+        })
+    return {"documents": docs}
+
+@app.post("/vault/upload/{doc_id}")
+async def upload_vault_doc(doc_id: str, file: UploadFile = File(...)):
+    valid_ids = {d["id"] for d in VAULT_DOCS_LIST}
+    if doc_id not in valid_ids:
+        raise HTTPException(400, f"Unknown document ID: {doc_id}")
+    # Remove existing files for this doc
+    for old in VAULT_DIR.glob(f"{doc_id}.*"):
+        old.unlink(missing_ok=True)
+    ext = Path(file.filename or "file.pdf").suffix.lower() or ".pdf"
+    dest = VAULT_DIR / f"{doc_id}{ext}"
+    dest.write_bytes(await file.read())
+    try:
+        save_to_drive(dest)
+    except Exception:
+        pass
+    return {"status": "uploaded", "doc_id": doc_id, "filename": dest.name, "size_kb": round(dest.stat().st_size / 1024)}
+
+@app.delete("/vault/{doc_id}")
+async def delete_vault_doc(doc_id: str):
+    deleted = []
+    for f in VAULT_DIR.glob(f"{doc_id}.*"):
+        deleted.append(f.name)
+        f.unlink(missing_ok=True)
+    return {"deleted": deleted}
+
+@app.get("/vault/download/{doc_id}")
+async def download_vault_doc(doc_id: str):
+    files = list(VAULT_DIR.glob(f"{doc_id}.*"))
+    if not files:
+        raise HTTPException(404, f"Document {doc_id} not uploaded yet")
+    f = files[0]
+    media_map = {".pdf": "application/pdf", ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
+    return FileResponse(str(f), filename=f.name, media_type=media_map.get(f.suffix.lower(), "application/octet-stream"))
+
+# ══════════════════════════════════════════════════════════════
+# DRIVE
+# ══════════════════════════════════════════════════════════════
+@app.get("/drive-status")
+async def drive_status():
     db = load_db()
     return {
-        "status": "ok",
-        "version": "5.0",
-        "ai_configured": bool(config.get("gemini_api_key")),
-        "drive_sync": drive_available(),
-        "tenders_loaded": len(db.get("tenders", {}))
+        "drive_connected": drive_available(),
+        "tenders_in_memory": len(db.get("tenders", {})),
+        "db_file_exists": DB_FILE.exists(),
+        "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
     }
+
+@app.post("/sync-drive")
+async def sync_drive():
+    if not drive_available():
+        return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
+    try:
+        db = load_db()
+        count = len(db.get("tenders", {}))
+        ok = save_to_drive(DB_FILE)
+        if ok:
+            return {"status": "ok", "message": f"Synced {count} tenders to Google Drive"}
+        return JSONResponse({"status": "error", "message": "Sync failed"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/upload-db")
 async def upload_db(file: UploadFile = File(...)):
@@ -722,122 +973,86 @@ async def upload_db(file: UploadFile = File(...)):
         data = json.loads(content)
         count = len(data.get("tenders", {}))
         if count == 0:
-            raise HTTPException(400, "File has 0 tenders — check file")
+            raise HTTPException(400, "File has 0 tenders")
         DB_FILE.write_bytes(content)
         drive_ok = False
         if drive_available():
             drive_ok = save_to_drive(DB_FILE)
-        return {"status":"ok","tenders":count,"drive_saved":drive_ok,
-            "message":f"✅ Loaded {count} tenders. Drive sync: {'✅' if drive_ok else '❌'}"}
+        return {"status": "ok", "tenders": count, "drive_saved": drive_ok, "message": f"Loaded {count} tenders"}
     except json.JSONDecodeError:
         raise HTTPException(400, "Invalid JSON file")
     except Exception as e:
         raise HTTPException(500, str(e))
 
-@app.post("/sync-drive")
-async def sync_drive():
-    if not drive_available():
-        return JSONResponse({"status":"error","message":"Google Drive not connected"}, status_code=400)
-    try:
-        db = load_db()
-        count = len(db.get("tenders", {}))
-        ok = save_to_drive(DB_FILE)
-        if ok:
-            return {"status":"ok","message":f"✅ Synced {count} tenders to Google Drive"}
-        else:
-            return JSONResponse({"status":"error","message":"Sync failed"}, status_code=500)
-    except Exception as e:
-        return JSONResponse({"status":"error","message":str(e)}, status_code=500)
+# ══════════════════════════════════════════════════════════════
+# CHATBOT
+# ══════════════════════════════════════════════════════════════
+@app.post("/chat")
+async def chat(data: dict = Body(...)):
+    message = data.get("message", "").strip()
+    if not message:
+        raise HTTPException(400, "Empty message")
+    history = load_history()
+    result = process_message(message, history)
+    return result
 
-@app.get("/drive-status")
-async def drive_status():
-    db = load_db()
-    return {
-        "drive_connected": drive_available(),
-        "tenders_in_memory": len(db.get("tenders", {})),
-        "db_file_exists": DB_FILE.exists(),
-        "db_size_kb": round(DB_FILE.stat().st_size/1024) if DB_FILE.exists() else 0
-    }
+@app.get("/chat/history")
+async def get_chat_history():
+    return {"history": load_history()}
 
-# ═══════════════════════════════════════════════════════════
-# MISSING ENDPOINTS — fixes frontend 404 errors
-# ═══════════════════════════════════════════════════════════
+@app.delete("/chat/history")
+async def clear_chat_history():
+    h = OUTPUT_DIR / "chat_history.json"
+    if h.exists():
+        h.unlink()
+    return {"status": "cleared"}
 
-@app.post("/tender/{t247_id}/skip")
-async def skip_tender_ep(t247_id: str, data: dict = Body(default={})):
-    db = load_db()
-    t = db["tenders"].get(t247_id, {})
-    t["status"] = "Not Interested"
-    t["skip_reason"] = data.get("reason","")
-    t["status_updated_at"] = datetime.now().isoformat()
-    db["tenders"][t247_id] = t
-    save_db(db)
-    return {"status": "skipped"}
-
-@app.post("/tender/{t247_id}/reanalyse")
-async def reanalyse_tender(t247_id: str, data: dict = Body(default={})):
-    return {"status":"ok","message":"Upload files in Analyse page to re-analyse"}
-
-@app.get("/api-quota-status")
-async def api_quota_status():
-    config = load_config()
-    return {"status":"ok","ai_configured":bool(config.get("gemini_api_key")),"today_used":0,"daily_limit":1500}
-
-@app.post("/generate-standard-docs/{t247_id}")
-async def generate_standard_docs(t247_id: str):
-    tender = get_tender(t247_id)
-    if not tender:
-        raise HTTPException(404, "Tender not found")
-    return {"status":"ok","files":[],"message":"Analyse tender first to generate documents"}
-
-@app.post("/tender/{t247_id}/generate-prebid-letter")
-async def generate_prebid_letter_ep(t247_id: str, data: dict = Body(default={})):
-    tender = get_tender(t247_id)
-    queries = tender.get("prebid_queries",[])
-    return {"status":"ok","query_count":len(queries),"filename":f"PrebidLetter_{t247_id}.docx"}
-
-@app.post("/tender/{t247_id}/analyze-compliance")
-async def analyze_compliance_ep(t247_id: str, data: dict = Body(default={})):
-    return {"status":"ok","violations_found":0,"analysis":{"clause_violations":[]}}
-
+# ══════════════════════════════════════════════════════════════
+# T247 AUTO-DOWNLOAD
+# ══════════════════════════════════════════════════════════════
 @app.post("/tender/{t247_id}/auto-download")
-async def auto_download_v2(t247_id: str):
-    return await auto_download_tender(t247_id)
-
-@app.get("/letterhead-status")
-async def letterhead_status():
-    lh = OUTPUT_DIR / "letterhead.docx"
-    return {"exists":lh.exists(),"size_kb":round(lh.stat().st_size/1024,1) if lh.exists() else 0}
-
-@app.post("/upload-letterhead")
-async def upload_letterhead(file: UploadFile = File(...)):
-    dest = OUTPUT_DIR / "letterhead.docx"
-    dest.write_bytes(await file.read())
-    return {"status":"ok"}
+async def auto_download_tender(t247_id: str, data: dict = Body(default={})):
+    config = load_config()
+    username = config.get("t247_username", "")
+    if not username:
+        return {"status": "no_credentials", "message": "T247 credentials not saved. Go to Settings."}
+    t247_url = f"https://www.tender247.com/tender/detail/{t247_id}"
+    return {
+        "status": "manual",
+        "message": "Auto-download not available on server. Open T247 manually.",
+        "t247_url": t247_url,
+        "t247_id": t247_id,
+    }
 
 @app.get("/test-t247")
 async def test_t247():
-    return {"status":"error","message":"T247 auto-login not available on server"}
+    config = load_config()
+    username = config.get("t247_username", "")
+    if not username:
+        return {"status": "error", "message": "No T247 credentials saved"}
+    return {"status": "ok", "username": username, "message": f"Credentials saved for {username}"}
 
-@app.post("/checklist/{t247_id}/item")
-async def toggle_checklist_item(t247_id: str, data: dict = Body(...)):
+# ══════════════════════════════════════════════════════════════
+# WORKSPACE
+# ══════════════════════════════════════════════════════════════
+@app.get("/workspace/{t247_id}")
+async def get_workspace(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, f"Tender {t247_id} not found")
+    reports = []
+    for f in OUTPUT_DIR.glob(f"*{t247_id}*.docx"):
+        reports.append({"filename": f.name, "size_kb": round(f.stat().st_size / 1024), "created": datetime.fromtimestamp(f.stat().st_mtime).strftime("%d-%b-%Y %H:%M")})
+    return {"tender": tender, "checklist": tender.get("doc_checklist", []), "prebid_queries": tender.get("prebid_queries", []), "reports": reports}
+
+@app.post("/prebid-sent/{t247_id}")
+async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
     db = load_db()
     t = db["tenders"].get(t247_id, {})
-    checklist = t.get("doc_checklist",[])
-    item_id = data.get("id") or data.get("item_id")
-    done = data.get("done",False)
-    for item in checklist:
-        if item.get("id") == item_id:
-            item["done"] = done
-            break
-    t["doc_checklist"] = checklist
-    t["checklist_pct"] = round(sum(1 for d in checklist if d.get("done"))/max(len(checklist),1)*100)
+    t["prebid_sent"] = True
+    t["prebid_sent_at"] = datetime.now().isoformat()
+    t["prebid_sent_to"] = data.get("email", "")
+    t["status"] = "Pre-bid Sent"
     db["tenders"][t247_id] = t
     save_db(db)
-    return {"status":"saved"}
-
-@app.get("/skipped-tenders")
-async def get_skipped():
-    db = load_db()
-    skipped = [t for t in db["tenders"].values() if t.get("status") == "Not Interested"]
-    return {"tenders": skipped}
+    return {"status": "saved"}
