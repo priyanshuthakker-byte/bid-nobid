@@ -75,3 +75,8 @@ def load_rules() -> dict:
             return p.get("bid_rules", {})
         except Exception:
             return {}
+
+if __name__ == "__main__":
+    rules = load_rules()
+    print("Loaded rules:", json.dumps(rules, indent=2))
+
