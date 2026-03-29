@@ -1,4 +1,3 @@
-import re
 import json
 from pathlib import Path
 from typing import List, Dict
@@ -13,7 +12,7 @@ def load_rules() -> dict:
     Falls back to nascent_profile.json if API fails.
     """
     try:
-        import os, json
+        import os
         import gspread
         from oauth2client.service_account import ServiceAccountCredentials
 
@@ -35,7 +34,8 @@ def load_rules() -> dict:
             "do_not_bid": [r["Rule / Condition"].lower() for r in rules_data if r["Rule Type"].upper() == "DO NOT BID"],
             "do_not_bid_remarks": {r["Rule / Condition"].lower(): r["Reason / Notes"] for r in rules_data if r["Rule Type"].upper() == "DO NOT BID"},
             "conditional": [r["Rule / Condition"].lower() for r in rules_data if r["Rule Type"].upper() == "CONDITIONAL"],
-            "preferred_sectors": [r["Rule / Condition"].lower() for r in rules_data if r["Rule Type"].upper() == "PREFERRED"],
+            "bid": [r["Rule / Condition"].lower() for r in rules_data if r["Rule Type"].upper() == "BID"],
+            "preferred_sectors": [r["Rule / Condition"].lower() for r in rules_data if r["Rule Type"].upper() == "PREFERRED SECTORS"],
             "min_project_value_cr": float(rules_ws.acell("B2").value or 0.5),
             "max_project_value_cr": float(rules_ws.acell("B3").value or 150),
         }
@@ -61,6 +61,7 @@ def classify_tender(brief: str, estimated_cost: float,
     dnb_keywords = [k.lower().strip() for k in rules.get("do_not_bid", [])]
     dnb_remarks  = {k.lower(): v for k, v in rules.get("do_not_bid_remarks", {}).items()}
     cond_kw      = [k.lower().strip() for k in rules.get("conditional", [])]
+    bid_kw       = [k.lower().strip() for k in rules.get("bid", [])]
     pref_kw      = [k.lower().strip() for k in rules.get("preferred_sectors", [])]
     min_val_cr   = rules.get("min_project_value_cr", 0.5)
     max_val_cr   = rules.get("max_project_value_cr", 150)
@@ -79,25 +80,31 @@ def classify_tender(brief: str, estimated_cost: float,
         return {"verdict": "CONDITIONAL", "verdict_color": "AMBER",
                 "reason": f"Value Rs.{cost_cr:.1f} Cr — exceeds Rs.{max_val_cr} Cr. Verify turnover PQ and consider consortium."}
 
-    # Step 3: Soft NO-BID
+    # Step 3: NO-BID rules
     for kw in dnb_keywords:
         if kw in brief_lower:
             remark = dnb_remarks.get(kw, f"Matches NO-BID rule: '{kw}'.")
             return {"verdict": "NO-BID", "verdict_color": "RED", "reason": remark}
 
-    # Step 4: CONDITIONAL triggers
+    # Step 4: CONDITIONAL rules
     for kw in cond_kw:
         if kw in full_text:
             return {"verdict": "CONDITIONAL", "verdict_color": "AMBER",
                     "reason": f"Conditional trigger: '{kw}' — verify eligibility before deciding."}
 
-    # Step 5: Preferred sector → BID
+    # Step 5: BID rules
+    for kw in bid_kw:
+        if kw in full_text:
+            return {"verdict": "BID", "verdict_color": "GREEN",
+                    "reason": f"Matches Nascent core capability: '{kw}'."}
+
+    # Step 6: Preferred sectors
     matched = [kw for kw in pref_kw if kw in full_text]
     if matched:
         return {"verdict": "BID", "verdict_color": "GREEN",
-                "reason": f"Matches Nascent preferred domain: {', '.join(matched[:3])}."}
+                "reason": f"Matches Nascent preferred sector: {', '.join(matched[:3])}."}
 
-    # Step 6: Default → REVIEW
+    # Step 7: Default → REVIEW
     return {"verdict": "REVIEW", "verdict_color": "BLUE",
             "reason": "Needs manual review — insufficient data to auto-classify."}
 
@@ -132,7 +139,6 @@ def process_excel(filepath: str) -> List[Dict]:
 
     for sheet_name in wb.sheetnames:
         ws  = wb[sheet_name]
-        is_gem = "gem" in sheet_name.lower()
 
         headers = [str(cell.value or "").strip().lower() for cell in ws[1]]
 
@@ -144,8 +150,6 @@ def process_excel(filepath: str) -> List[Dict]:
             return None
 
         idx = {
-            "t247_id":   col("t247 id", "tender id", "sr.no"),
-            "ref_no":    col("reference no", "tender no"),
             "brief":     col("tender brief", "description", "title"),
             "deadline":  col("bid submission end date", "closing date"),
             "value":     col("estimated cost", "value"),
@@ -174,13 +178,3 @@ def process_excel(filepath: str) -> List[Dict]:
                 "days_left": dl_days,
                 "deadline_status": dl_status,
                 "verdict": verdict["verdict"],
-                "verdict_color": verdict["verdict_color"],
-                "reason": verdict["reason"],
-            })
-
-    return all_tenders
-
-
-if __name__ == "__main__":
-    rules = load_rules()
-    print("Loaded rules:", json.dumps(rules, indent=2))
