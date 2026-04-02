@@ -1049,6 +1049,13 @@ async def save_rules(data: dict = Body(...)):
         except Exception:
             pass
 
+        # Invalidate classify_tender rules cache so next Excel import uses new rules
+        try:
+            from excel_processor import invalidate_rules_cache
+            invalidate_rules_cache()
+        except Exception:
+            pass
+
         return {
             "status": "saved",
             "counts": {

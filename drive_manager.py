@@ -361,8 +361,8 @@ class DriveManager:
         pass  # VAULT_DOCS_LIST passed as parameter
         try:
             folder_id = self._ensure_folder(FOLDER_VAULT)
-            if folder_id:
-                for doc in VAULT_DOCS_LIST:
+            if folder_id and vault_docs_list:
+                for doc in vault_docs_list:
                     doc_id = doc["id"]
                     already = any((vault_dir / f"{doc_id}{ext}").exists()
                                   for ext in [".pdf", ".docx", ".png", ".jpg", ".jpeg"])
@@ -389,8 +389,15 @@ def _log_drive_error(e: Exception, context: str = ""):
     if "storageQuotaExceeded" in err:
         print(
             f"❌ Drive {context} failed: storageQuotaExceeded\n"
-            "   CAUSE: GDRIVE_FOLDER_ID is not set, or folder not shared with service account\n"
-            "   FIX: Share NIT-BidNoBid/ folder with service account email (Editor), set GDRIVE_FOLDER_ID"
+            "   CAUSE: Service account Drive quota exceeded (15 GB free limit) OR\n"
+            "          service account does not have Editor permission on the folder.\n"
+            "   FIX: Go to Google Drive → right-click NIT-BidNoBid folder → Share\n"
+            "        → add service account email as Editor."
+        )
+    elif "insufficientPermissions" in err or "forbidden" in err.lower():
+        print(
+            f"❌ Drive {context} failed: insufficientPermissions\n"
+            "   FIX: Share the NIT-BidNoBid folder with the service account email (Editor role)."
         )
     else:
         print(f"❌ Drive {context} failed: {e}")

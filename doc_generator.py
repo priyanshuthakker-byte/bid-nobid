@@ -226,7 +226,9 @@ class BidDocGenerator:
         p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
         add_run(p2, tender_title, size=10, color="DEEAF1")
         verdict_data = data.get("overall_verdict", {})
-        verdict = strip_emojis(verdict_data.get("verdict", "PENDING REVIEW"))
+        # Read top-level verdict first (set by main.py), fall back to overall_verdict dict
+        _raw_verdict = data.get("verdict") or verdict_data.get("verdict", "PENDING REVIEW")
+        verdict = strip_emojis(_raw_verdict)
         vcolor = verdict_data.get("color", "BLUE")
         v_txt = {"GREEN": "FFF2CC", "AMBER": "FFF2CC", "RED": "FCE4D6", "BLUE": "DEEAF1"}.get(vcolor, "DEEAF1")
         p3 = c1.add_paragraph()
@@ -528,8 +530,9 @@ class BidDocGenerator:
 
         vcolor = verdict_data.get("color", "BLUE")
         s_bg, s_tc = STATUS_STYLE.get(vcolor, ("blue_bg", "blue_text"))
-        verdict = strip_emojis(verdict_data.get("verdict", "PENDING REVIEW"))
-        reason = strip_emojis(verdict_data.get("reason", ""))
+        _rv2 = data.get("verdict") or verdict_data.get("verdict", "PENDING REVIEW")
+        verdict = strip_emojis(_rv2)
+        reason = strip_emojis(data.get("reason") or verdict_data.get("reason", ""))
 
         assessment_rows = [
             ("Financial Eligibility", "Average turnover Rs. 17.18 Cr (last 3 FY). Net worth Rs. 26.09 Cr."),
