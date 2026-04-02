@@ -128,9 +128,37 @@ OUTPUT_DIR = BASE_DIR / "data"
 TEMP_DIR   = BASE_DIR / "temp"
 VAULT_DIR  = BASE_DIR / "data" / "vault"
 DB_FILE    = OUTPUT_DIR / "tenders_db.json"
+PROFILE_PATH = BASE_DIR / "nascent_profile.json"   # ← moved up
 
 for _d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
     _d.mkdir(exist_ok=True, parents=True)
+
+# Must be defined before startup_event() uses them
+VAULT_DOCS_LIST = [
+    {"id": "pan_card",        "name": "PAN Card",                              "category": "Company"},
+    {"id": "cin_cert",        "name": "CIN Certificate / MOA",                 "category": "Company"},
+    {"id": "gst_cert",        "name": "GST Certificate",                       "category": "Company"},
+    {"id": "msme_cert",       "name": "MSME / UDYAM Certificate",              "category": "Company"},
+    {"id": "poa_doc",         "name": "Power of Attorney (Current)",           "category": "Company"},
+    {"id": "cmmi_cert",       "name": "CMMI Level 3 Certificate",              "category": "Certification"},
+    {"id": "iso9001_cert",    "name": "ISO 9001:2015 Certificate",             "category": "Certification"},
+    {"id": "iso27001_cert",   "name": "ISO 27001:2022 Certificate",            "category": "Certification"},
+    {"id": "iso20000_cert",   "name": "ISO 20000-1:2018 Certificate",          "category": "Certification"},
+    {"id": "audited_fy2223",  "name": "Audited Accounts FY 2022-23",           "category": "Finance"},
+    {"id": "audited_fy2324",  "name": "Audited Accounts FY 2023-24",           "category": "Finance"},
+    {"id": "audited_fy2425",  "name": "Audited Accounts FY 2024-25",           "category": "Finance"},
+    {"id": "net_worth_cert",  "name": "Net Worth Certificate (CA Signed)",      "category": "Finance"},
+    {"id": "solvency_cert",   "name": "Solvency Certificate",                  "category": "Finance"},
+    {"id": "blacklisting_dec","name": "Non-Blacklisting Declaration Template", "category": "Declaration"},
+    {"id": "mii_dec",         "name": "Make in India Declaration Template",    "category": "Declaration"},
+    {"id": "integrity_pact",  "name": "Integrity Pact Template",               "category": "Declaration"},
+    {"id": "amc_gis_cc",      "name": "Completion Cert — AMC GIS (10.55Cr)",   "category": "Experience"},
+    {"id": "pcscl_po",        "name": "Work Order — PCSCL Smart City (61Cr)",  "category": "Experience"},
+    {"id": "kvic_cc",         "name": "Completion Cert — KVIC Geo Portal",     "category": "Experience"},
+    {"id": "tcgl_cc",         "name": "Completion Cert — TCGL Tourism",        "category": "Experience"},
+    {"id": "vmc_cc",          "name": "Completion Cert — VMC GIS+ERP",         "category": "Experience"},
+    {"id": "jumc_po",         "name": "Work Order — JuMC GIS",                 "category": "Experience"},
+]
 
 # ── STARTUP ────────────────────────────────────────────────────
 @app.on_event("startup")
