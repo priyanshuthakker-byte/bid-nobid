@@ -922,78 +922,96 @@ tbody tr:first-child td{border-top:none}
     </div>
 
     <!-- ═══ NASCENT PROFILE ═══ -->
+    <!-- ═══ NASCENT PROFILE ═══ -->
     <div id="page-profile" class="page">
       <div class="topbar">
-        <div class="topbar-left"><span class="topbar-title">Nascent Profile</span></div>
+        <div class="topbar-left"><span class="topbar-title">Nascent Profile</span>
+          <span style="font-size:12px;color:var(--text3);margin-left:10px">Saved to server · used for scoring &amp; matching</span>
+        </div>
         <div class="topbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="switchProfileTab('bidrules')">⚙ Bid Rules</button>
           <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
         </div>
       </div>
       <div class="page-body">
         <div class="tab-row">
-          <div class="tab active" onclick="switchProfileTab('company')">Company</div>
-          <div class="tab" onclick="switchProfileTab('finance')">Finance</div>
-          <div class="tab" onclick="switchProfileTab('certs')">Certifications</div>
-          <div class="tab" onclick="switchProfileTab('projects')">Projects</div>
-          <div class="tab" onclick="switchProfileTab('team')">Team</div>
-          <div class="tab" onclick="switchProfileTab('bidrules')">Bid Rules</div>
+          <div class="tab active" onclick="switchProfileTab('company')">🏢 Company</div>
+          <div class="tab" onclick="switchProfileTab('finance')">💰 Finance</div>
+          <div class="tab" onclick="switchProfileTab('certs')">🏅 Certifications</div>
+          <div class="tab" onclick="switchProfileTab('projects')">📁 Projects</div>
+          <div class="tab" onclick="switchProfileTab('team')">💻 Tech Stack</div>
+          <div class="tab" onclick="switchProfileTab('bidrules')">⚙ Bid Rules</div>
         </div>
 
-        <!-- COMPANY TAB -->
+        <!-- ── COMPANY TAB ── -->
         <div id="profile-tab-company" class="tab-panel active">
+          <div id="poa-alert" style="display:none;margin-bottom:12px" class="alert alert-danger">⚠ POA EXPIRY ALERT — Renew before any submission</div>
           <div class="card">
-            <div class="card-title" style="margin-bottom:14px">Company Details</div>
+            <div class="card-title" style="margin-bottom:14px">Company Identity</div>
             <div class="row3">
               <div class="form-group"><label>Company Name</label><input type="text" id="p-name"></div>
-              <div class="form-group"><label>Legal Status</label><input type="text" id="p-legal" placeholder="Private Limited Company"></div>
+              <div class="form-group"><label>Legal Status</label><input type="text" id="p-legal" placeholder="Private Limited"></div>
               <div class="form-group"><label>Year of Incorporation</label><input type="number" id="p-year"></div>
               <div class="form-group"><label>CIN</label><input type="text" id="p-cin"></div>
               <div class="form-group"><label>PAN</label><input type="text" id="p-pan"></div>
               <div class="form-group"><label>GSTIN</label><input type="text" id="p-gstin"></div>
               <div class="form-group"><label>MSME / UDYAM No.</label><input type="text" id="p-udyam"></div>
-              <div class="form-group"><label>Type / Domain</label><input type="text" id="p-type" placeholder="IT / GIS / Smart City"></div>
+              <div class="form-group"><label>Domain / Type</label><input type="text" id="p-type" placeholder="IT / GIS / Smart City"></div>
+              <div class="form-group"><label>HQ City / State</label><input type="text" id="p-city" placeholder="Ahmedabad, Gujarat"></div>
               <div class="form-group"><label>Email</label><input type="text" id="p-email"></div>
               <div class="form-group"><label>Tender Email</label><input type="text" id="p-tender-email"></div>
               <div class="form-group"><label>Phone</label><input type="text" id="p-phone"></div>
               <div class="form-group"><label>Website</label><input type="text" id="p-website"></div>
-            </div>
-            <div class="form-group"><label>HQ Address</label><input type="text" id="p-address"></div>
-            <div class="row3">
               <div class="form-group"><label>Authorized Signatory</label><input type="text" id="p-signatory"></div>
               <div class="form-group"><label>MD / Director</label><input type="text" id="p-md"></div>
-              <div class="form-group"><label>POA Valid Till</label><input type="text" id="p-poa"></div>
+              <div class="form-group"><label>POA Valid Till</label><input type="text" id="p-poa" placeholder="DD-MM-YYYY"></div>
             </div>
-            <div id="poa-alert" style="display:none" class="alert alert-danger">⚠ POA EXPIRY ALERT — Renew immediately before any submission</div>
+            <div class="form-group"><label>HQ Full Address</label><input type="text" id="p-address"></div>
+          </div>
+
+          <!-- State offices for location-based eligibility -->
+          <div class="card">
+            <div class="card-hd">
+              <div><div class="card-title">State / Branch Offices</div>
+                <div class="card-sub">Used to check "local office required" conditions in tenders</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="addStateOffice()">+ Add Office</button>
+            </div>
+            <div id="state-offices-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <input type="text" id="state-office-input" class="form-control" style="flex:1;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px" placeholder="e.g. Gujarat, Maharashtra, Delhi">
+              <button class="btn btn-ghost btn-sm" onclick="addStateOffice()">Add</button>
+            </div>
           </div>
         </div>
 
-        <!-- FINANCE TAB -->
+        <!-- ── FINANCE TAB ── -->
         <div id="profile-tab-finance" class="tab-panel">
           <div class="card">
-            <div class="card-title" style="margin-bottom:14px">Financial Details</div>
+            <div class="card-title" style="margin-bottom:14px">Annual Turnover (₹ Crore)</div>
             <div class="row3">
-              <div class="form-group"><label>Turnover FY 2019-20 (Cr)</label><input type="number" id="p-t1920" step="0.01"></div>
-              <div class="form-group"><label>Turnover FY 2020-21 (Cr)</label><input type="number" id="p-t2021" step="0.01"></div>
-              <div class="form-group"><label>Turnover FY 2021-22 (Cr)</label><input type="number" id="p-t2122" step="0.01"></div>
-              <div class="form-group"><label>Turnover FY 2022-23 (Cr)</label><input type="number" id="p-t2223" step="0.01"></div>
-              <div class="form-group"><label>Turnover FY 2023-24 (Cr)</label><input type="number" id="p-t2324" step="0.01"></div>
-              <div class="form-group"><label>Turnover FY 2024-25 (Cr)</label><input type="number" id="p-t2425" step="0.01"></div>
+              <div class="form-group"><label>FY 2019-20</label><input type="number" id="p-t1920" step="0.01" oninput="recalcFinance()"></div>
+              <div class="form-group"><label>FY 2020-21</label><input type="number" id="p-t2021" step="0.01" oninput="recalcFinance()"></div>
+              <div class="form-group"><label>FY 2021-22</label><input type="number" id="p-t2122" step="0.01" oninput="recalcFinance()"></div>
+              <div class="form-group"><label>FY 2022-23</label><input type="number" id="p-t2223" step="0.01" oninput="recalcFinance()"></div>
+              <div class="form-group"><label>FY 2023-24</label><input type="number" id="p-t2324" step="0.01" oninput="recalcFinance()"></div>
+              <div class="form-group"><label>FY 2024-25</label><input type="number" id="p-t2425" step="0.01" oninput="recalcFinance()"></div>
               <div class="form-group"><label>Net Worth (Cr)</label><input type="number" id="p-nw" step="0.01"></div>
               <div class="form-group"><label>Solvency Amount (Cr)</label><input type="number" id="p-solv" step="0.01"></div>
               <div class="form-group"><label>CA Firm Name</label><input type="text" id="p-ca"></div>
             </div>
-            <div id="finance-derived" style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:var(--radius);font-size:13px;color:var(--text2)"></div>
+            <div id="finance-derived" style="margin-top:14px;padding:14px;background:var(--bg3);border-radius:var(--radius);font-size:13px;line-height:2"></div>
           </div>
         </div>
 
-        <!-- CERTIFICATIONS TAB -->
+        <!-- ── CERTIFICATIONS TAB ── -->
         <div id="profile-tab-certs" class="tab-panel">
           <div class="card">
-            <div class="card-title" style="margin-bottom:14px">Certifications</div>
+            <div class="card-title" style="margin-bottom:14px">Process Certifications</div>
             <div class="row3">
               <div class="form-group"><label>CMMI Level</label><input type="text" id="p-cmmi" placeholder="3"></div>
               <div class="form-group"><label>CMMI Version</label><input type="text" id="p-cmmi-ver" placeholder="V2.0 (DEV)"></div>
-              <div class="form-group"><label>CMMI Valid Till</label><input type="text" id="p-cmmi-valid"></div>
+              <div class="form-group"><label>CMMI Valid Till</label><input type="text" id="p-cmmi-valid" placeholder="DD-MM-YYYY"></div>
               <div class="form-group"><label>ISO 9001 Cert No.</label><input type="text" id="p-iso9001-no"></div>
               <div class="form-group"><label>ISO 9001 Valid From</label><input type="text" id="p-iso9001-from"></div>
               <div class="form-group"><label>ISO 9001 Valid Till</label><input type="text" id="p-iso9001"></div>
@@ -1004,100 +1022,192 @@ tbody tr:first-child td{border-top:none}
               <div class="form-group"><label>ISO 20000 Valid From</label><input type="text" id="p-iso20000-from"></div>
               <div class="form-group"><label>ISO 20000 Valid Till</label><input type="text" id="p-iso20000"></div>
             </div>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:14px">Staff Count</div>
             <div class="row3">
               <div class="form-group"><label>Total Employees</label><input type="number" id="p-emp"></div>
-              <div class="form-group"><label>IT/Dev Employees</label><input type="number" id="p-itdev"></div>
+              <div class="form-group"><label>IT / Dev Staff</label><input type="number" id="p-itdev"></div>
               <div class="form-group"><label>GIS Staff</label><input type="number" id="p-gis"></div>
+              <div class="form-group"><label>Project Managers</label><input type="number" id="p-pm"></div>
+              <div class="form-group"><label>QA Staff</label><input type="number" id="p-qa"></div>
+              <div class="form-group"><label>Support / Admin</label><input type="number" id="p-support"></div>
             </div>
-            <div class="form-group"><label>NOT Available (CERT-In, STQC, SAP, Oracle, etc.)</label>
-              <input type="text" id="p-not" placeholder="CERT-In, STQC, SAP Partnership, Oracle Partnership, .NET Primary"></div>
           </div>
+          <!-- Cert status cards -->
+          <div id="cert-status-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px"></div>
         </div>
 
-        <!-- PROJECTS TAB -->
+        <!-- ── PROJECTS TAB ── -->
         <div id="profile-tab-projects" class="tab-panel">
           <div class="card">
             <div class="card-hd">
-              <div class="card-title">Key Projects</div>
-              <div style="font-size:12px;color:var(--text3)">Used for PQ/experience matching by AI</div>
+              <div><div class="card-title">Key Past Projects</div>
+                <div class="card-sub">Tags are used for automatic project-match scoring on every tender</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="openAddProjectModal()">+ Add Project</button>
             </div>
             <div class="table-wrap" style="overflow-x:auto">
               <table>
                 <thead><tr>
-                  <th>Project Name</th><th>Client</th><th>Type</th>
-                  <th>Value (Cr)</th><th>Status</th><th>Role</th><th>Tags</th>
+                  <th>Project Name</th><th>Client</th><th>State</th>
+                  <th>Value (Cr)</th><th>Status</th><th>Role</th>
+                  <th>Match Tags</th><th></th>
                 </tr></thead>
                 <tbody id="profile-projects-tbody"></tbody>
               </table>
             </div>
           </div>
+          <!-- Add/edit project inline form -->
+          <div id="project-form-card" class="card" style="display:none;border-color:var(--blue)">
+            <div class="card-title" style="margin-bottom:12px" id="proj-form-title">Add Project</div>
+            <div class="row3">
+              <div class="form-group"><label>Project Name *</label><input type="text" id="pf-name"></div>
+              <div class="form-group"><label>Client Name *</label><input type="text" id="pf-client"></div>
+              <div class="form-group"><label>Client Type</label><input type="text" id="pf-client-type" placeholder="State Govt / Central Govt / PSU / ULB"></div>
+              <div class="form-group"><label>State</label><input type="text" id="pf-state" placeholder="Gujarat"></div>
+              <div class="form-group"><label>Value (Cr) *</label><input type="number" id="pf-value" step="0.01"></div>
+              <div class="form-group"><label>Status</label>
+                <select id="pf-status"><option>Completed</option><option>Ongoing</option><option>Under Warranty</option></select>
+              </div>
+              <div class="form-group"><label>Role</label>
+                <select id="pf-role"><option>Solo</option><option>Prime Contractor</option><option>Sub-contractor</option><option>Consortium</option></select>
+              </div>
+              <div class="form-group"><label>Duration</label><input type="text" id="pf-duration" placeholder="e.g. 18 months"></div>
+              <div class="form-group"><label>Year Completed</label><input type="text" id="pf-year" placeholder="2024"></div>
+            </div>
+            <div class="form-group">
+              <label>Match Tags * <span style="font-size:11px;color:var(--text3)">(comma separated — these keywords are matched against tender briefs)</span></label>
+              <input type="text" id="pf-tags" placeholder="gis, smart city, web gis, arcgis, property tax, urban, municipal, e-governance">
+            </div>
+            <div class="form-group">
+              <label>Technology Used</label>
+              <input type="text" id="pf-tech" placeholder="ArcGIS, Python, PostgreSQL, PostGIS, React">
+            </div>
+            <div class="form-group">
+              <label>Scope Summary <span style="font-size:11px;color:var(--text3)">(used for AI tender analysis matching)</span></label>
+              <textarea id="pf-scope" rows="2" placeholder="Brief description of what was delivered..."></textarea>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-primary btn-sm" onclick="saveProjectForm()">Save Project</button>
+              <button class="btn btn-ghost btn-sm" onclick="cancelProjectForm()">Cancel</button>
+              <button class="btn btn-ghost btn-sm" id="pf-delete-btn" style="display:none;color:var(--red)" onclick="deleteCurrentProject()">Delete</button>
+            </div>
+          </div>
         </div>
 
-        <!-- TEAM TAB -->
+        <!-- ── TECH STACK TAB ── -->
         <div id="profile-tab-team" class="tab-panel">
           <div class="card">
             <div class="card-title" style="margin-bottom:14px">Technology Stack &amp; Capabilities</div>
-            <div class="form-group">
-              <label>Primary Technology Stack</label>
-              <textarea id="p-tech" rows="4" placeholder="Java/Spring Boot, Python, React.js, Angular, Android, Flutter..."></textarea>
+            <div class="row2">
+              <div class="form-group">
+                <label>✅ Available / Capable (comma separated)</label>
+                <textarea id="p-tech" rows="5" placeholder="Java, Spring Boot, Python, FastAPI, React, Angular, GIS, ArcGIS, QGIS, PostGIS, PostgreSQL, MySQL, Oracle, Android, Flutter, IoT, SCADA, AI/ML..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>❌ NOT Available — Check Before Bidding</label>
+                <textarea id="p-not-team" rows="5" placeholder=".NET (primary), SAP Partner, Oracle ERP Partner, CERT-In empanelled, STQC certified..."></textarea>
+              </div>
             </div>
-            <div class="form-group">
-              <label>NOT Available / Check Before Bidding</label>
-              <textarea id="p-not-team" rows="2" placeholder=".NET Primary, MS SQL Server, SAP Partner, Oracle ERP Partner..."></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- BID RULES TAB -->
-        <div id="profile-tab-bidrules" class="tab-panel">
-          <div class="alert alert-info" style="margin-bottom:12px;font-size:12px;line-height:1.6">
-            <b>How it works:</b> On Excel import, each tender brief is checked against these keyword lists. If a DO NOT BID keyword is found → NO-BID. If a CONDITIONAL keyword is found → CONDITIONAL. If a Preferred Sector keyword matches → BID. After adding keywords, click "Save Rules" then "Re-classify All" to update existing tenders.
           </div>
           <div class="card">
-            <div class="card-hd">
-              <div>
-                <div class="card-title">Auto Bid/No-Bid Rules</div>
-                <div class="card-sub">Keyword-based auto-classification. AI analysis overrides these when you analyse a specific tender document.</div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Rules</button>
-                <button class="btn btn-ghost btn-sm" id="reclassify-btn" onclick="reclassifyAll()">🔄 Re-classify All</button>
-              </div>
-            </div>
+            <div class="card-title" style="margin-bottom:14px">Sector Experience</div>
             <div class="row2">
-              <div>
-                <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px">🚫 DO NOT BID — Keywords (matched against brief)</div>
-                <div id="dnb-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
-                <div class="form-group" style="margin-bottom:0">
-                  <input type="text" id="dnb-add" placeholder="e.g. supply of gis software" onkeydown="if(event.key==='Enter')addBidRule('dnb')">
-                </div>
+              <div class="form-group">
+                <label>Sectors We Work In</label>
+                <textarea id="p-sectors" rows="4" placeholder="Smart City, Urban Local Bodies, E-Governance, GIS Mapping, Land Records, Revenue Department, Agriculture, Tourism, Municipal ERP, Water Supply, Traffic Management..."></textarea>
               </div>
-              <div>
-                <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">⚠ CONDITIONAL — Keywords</div>
-                <div id="cond-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
-                <div class="form-group" style="margin-bottom:0">
-                  <input type="text" id="cond-add" placeholder="e.g. office in state" onkeydown="if(event.key==='Enter')addBidRule('cond')">
-                </div>
-              </div>
-            </div>
-            <div style="margin-top:14px">
-              <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">✓ Preferred Sectors → BID</div>
-              <div id="pref-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
-              <div class="row2">
-                <div class="form-group" style="margin-bottom:0">
-                  <input type="text" id="pref-add" placeholder="e.g. gis, smart city, egov" onkeydown="if(event.key==='Enter')addBidRule('pref')">
-                </div>
-                <div class="row2" style="margin-bottom:0">
-                  <div class="form-group" style="margin-bottom:0"><label>Min Project Value (Cr)</label><input type="number" id="p-minval" step="0.1"></div>
-                  <div class="form-group" style="margin-bottom:0"><label>Max Project Value (Cr)</label><input type="number" id="p-maxval" step="1"></div>
-                </div>
+              <div class="form-group">
+                <label>GeM Category / NIC Codes</label>
+                <textarea id="p-gem-cats" rows="4" placeholder="Software Development Services, GIS Services, IT Consulting, Web Application Development..."></textarea>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
+        <!-- ── BID RULES TAB ── -->
+        <div id="profile-tab-bidrules" class="tab-panel">
+          <div class="alert alert-info" style="margin-bottom:14px;font-size:12px;line-height:1.7">
+            <b>How Rules Work:</b><br>
+            1. <b style="color:var(--red)">DO NOT BID</b> — if any keyword found in tender brief → immediate NO-BID (cannot be overridden)<br>
+            2. <b style="color:var(--amber)">CONDITIONAL</b> — if keyword found → CONDITIONAL (needs manual check)<br>
+            3. <b style="color:var(--green)">PREFERRED SECTORS</b> → BID (only if no DO NOT BID rule fired)<br>
+            <b>Compound Rules:</b> Use pipe | to separate MUST keywords from EXCLUDE keywords. E.g. <code>gis|supply,procurement</code> means: tender must contain "gis" but NOT "supply" or "procurement"
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <!-- DO NOT BID -->
+            <div class="card" style="border-color:rgba(239,69,101,.3)">
+              <div class="card-hd">
+                <div><div class="card-title" style="color:var(--red)">🚫 DO NOT BID</div>
+                  <div class="card-sub">Hard block — always NO-BID</div>
+                </div>
+                <span id="dnb-count" style="font-size:11px;color:var(--text3)">0 rules</span>
+              </div>
+              <div id="dnb-list" style="display:flex;flex-wrap:wrap;gap:5px;min-height:32px;margin-bottom:10px"></div>
+              <div style="display:flex;gap:6px">
+                <input type="text" id="dnb-add" style="flex:1;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px" placeholder="supply of gis software" onkeydown="if(event.key==='Enter')addBidRule('dnb')">
+                <button class="btn btn-ghost btn-sm" onclick="addBidRule('dnb')">Add</button>
+              </div>
+              <div style="font-size:10px;color:var(--text3);margin-top:6px">Tip: use <code>word1|exclude1,exclude2</code> for compound logic</div>
+            </div>
+
+            <!-- CONDITIONAL -->
+            <div class="card" style="border-color:rgba(245,166,35,.3)">
+              <div class="card-hd">
+                <div><div class="card-title" style="color:var(--amber)">⚡ CONDITIONAL</div>
+                  <div class="card-sub">Needs manual review</div>
+                </div>
+                <span id="cond-count" style="font-size:11px;color:var(--text3)">0 rules</span>
+              </div>
+              <div id="cond-list" style="display:flex;flex-wrap:wrap;gap:5px;min-height:32px;margin-bottom:10px"></div>
+              <div style="display:flex;gap:6px">
+                <input type="text" id="cond-add" style="flex:1;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px" placeholder="local office required" onkeydown="if(event.key==='Enter')addBidRule('cond')">
+                <button class="btn btn-ghost btn-sm" onclick="addBidRule('cond')">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREFERRED SECTORS -->
+          <div class="card" style="border-color:rgba(45,216,132,.2)">
+            <div class="card-hd">
+              <div><div class="card-title" style="color:var(--green)">✅ PREFERRED SECTORS → BID</div>
+                <div class="card-sub">Matching keywords push verdict to BID (only if no hard block fired)</div>
+              </div>
+              <span id="pref-count" style="font-size:11px;color:var(--text3)">0 rules</span>
+            </div>
+            <div id="pref-list" style="display:flex;flex-wrap:wrap;gap:5px;min-height:32px;margin-bottom:10px"></div>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="pref-add" style="flex:1;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px" placeholder="gis, smart city, e-governance, property tax" onkeydown="if(event.key==='Enter')addBidRule('pref')">
+              <button class="btn btn-ghost btn-sm" onclick="addBidRule('pref')">Add</button>
+            </div>
+          </div>
+
+          <!-- Value gates -->
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">💰 Value Gates</div>
+            <div class="row3">
+              <div class="form-group"><label>Min Project Value (Cr) — below this → NO-BID</label><input type="number" id="p-minval" step="0.1"></div>
+              <div class="form-group"><label>Max Project Value (Cr) — above this → CONDITIONAL</label><input type="number" id="p-maxval" step="1"></div>
+              <div class="form-group"><label>Max Turnover Ratio — req > this × avg → NO-BID</label><input type="number" id="p-turnover-ratio" step="0.1" placeholder="1.5"></div>
+            </div>
+          </div>
+
+          <!-- Rule effectiveness live preview -->
+          <div class="card" id="rule-effectiveness-card" style="display:none">
+            <div class="card-title" style="margin-bottom:10px">📊 Rule Effectiveness (on loaded tenders)</div>
+            <div id="rule-effectiveness-body"></div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-primary" onclick="saveProfile()">💾 Save Rules</button>
+            <button class="btn btn-ghost" id="reclassify-btn" onclick="reclassifyAll()">🔄 Re-classify All Tenders</button>
+          </div>
+        </div>
+
+      </div><!-- /page-body -->
+    </div><!-- /page-profile -->
     <!-- ═══ DOCUMENT VAULT ═══ -->
     <div id="page-vault" class="page">
       <div class="topbar">
@@ -2209,16 +2319,20 @@ function copyTid(tid) {
 // PROFILE (Fix #7 — complete version)
 // ═══════════════════════════════════════════════════════════
 var profileTabActive = 'company';
+var _editingProjectIdx = -1;
+var _stateOffices = [];
+
 function switchProfileTab(tab) {
   ['company','finance','certs','projects','team','bidrules'].forEach(function(t){
     var el = document.getElementById('profile-tab-'+t);
     if (el) el.classList.remove('active');
   });
-  document.querySelectorAll('#page-profile .tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('#page-profile .tab').forEach(function(t){t.classList.remove('active');});
   var activeEl = document.getElementById('profile-tab-'+tab);
   if (activeEl) activeEl.classList.add('active');
   event.target.classList.add('active');
   profileTabActive = tab;
+  if (tab === 'bidrules') renderRuleEffectiveness();
 }
 
 function setVal(id, val) {
@@ -2226,95 +2340,331 @@ function setVal(id, val) {
   if (el && val !== undefined && val !== null) el.value = val;
 }
 
+function recalcFinance() {
+  var ids = ['p-t1920','p-t2021','p-t2122','p-t2223','p-t2324','p-t2425'];
+  var vals = ids.map(function(id){ return parseFloat(document.getElementById(id).value)||0; });
+  var last3 = vals.slice(3);
+  var last2 = vals.slice(4);
+  var last5 = vals.slice(1);
+  var avg3 = last3.reduce(function(a,b){return a+b;},0)/3;
+  var avg2 = last2.reduce(function(a,b){return a+b;},0)/2;
+  var avg5 = last5.filter(Boolean).length ? last5.reduce(function(a,b){return a+b;},0)/last5.filter(Boolean).length : 0;
+  var fd = document.getElementById('finance-derived');
+  if (fd) fd.innerHTML =
+    '📊 3-yr Avg (FY23-25): <b style="color:var(--blue)">₹'+avg3.toFixed(2)+' Cr</b> &nbsp;|&nbsp; ' +
+    '2-yr Avg (FY24-25): <b style="color:var(--blue)">₹'+avg2.toFixed(2)+' Cr</b> &nbsp;|&nbsp; ' +
+    '5-yr Avg: <b style="color:var(--text2)">₹'+avg5.toFixed(2)+' Cr</b> &nbsp;|&nbsp; ' +
+    'Net Worth: <b style="color:var(--green)">₹'+(parseFloat(document.getElementById('p-nw').value)||0).toFixed(2)+' Cr</b><br>' +
+    '<span style="font-size:11px;color:var(--text3)">Note: Tenders requiring &gt;1.5× 3yr avg (₹'+(avg3*1.5).toFixed(2)+' Cr) will auto-score lower</span>';
+}
+
+function renderCertStatus() {
+  var certs = [
+    {name:'CMMI L'+( document.getElementById('p-cmmi').value||'3'), valid: document.getElementById('p-cmmi-valid').value},
+    {name:'ISO 9001', valid: document.getElementById('p-iso9001').value},
+    {name:'ISO 27001', valid: document.getElementById('p-iso27001').value},
+    {name:'ISO 20000', valid: document.getElementById('p-iso20000').value},
+  ];
+  var today = new Date();
+  var html = certs.map(function(c){
+    if (!c.valid) return '';
+    var parts = c.valid.split(/[-\/]/);
+    var d = parts.length === 3 ? new Date(parts[2]+'-'+parts[1]+'-'+parts[0]) : new Date(c.valid);
+    var days = isNaN(d) ? 999 : Math.ceil((d - today) / 86400000);
+    var color = days < 0 ? 'var(--red)' : days < 90 ? 'var(--amber)' : 'var(--green)';
+    var status = days < 0 ? 'EXPIRED' : days < 90 ? days+'d left' : 'ACTIVE';
+    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center">'+
+      '<div style="font-weight:700;color:'+color+';font-size:13px">'+esc(c.name)+'</div>'+
+      '<div style="font-size:11px;color:'+color+';margin-top:4px">'+status+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);margin-top:2px">till '+esc(c.valid)+'</div>'+
+    '</div>';
+  }).filter(Boolean).join('');
+  var el = document.getElementById('cert-status-cards');
+  if (el) el.innerHTML = html;
+}
+
+// ── State Offices ──
+function addStateOffice() {
+  var input = document.getElementById('state-office-input');
+  var val = (input.value||'').trim();
+  if (!val) return;
+  val.split(',').forEach(function(v){
+    v = v.trim();
+    if (v && _stateOffices.indexOf(v) === -1) _stateOffices.push(v);
+  });
+  input.value = '';
+  renderStateOffices();
+}
+function renderStateOffices() {
+  var el = document.getElementById('state-offices-list');
+  if (!el) return;
+  el.innerHTML = _stateOffices.map(function(s,i){
+    return '<span style="background:var(--blue-bg);color:var(--blue);padding:3px 10px;border-radius:99px;font-size:11px;cursor:pointer" onclick="removeStateOffice('+i+')">'+esc(s)+' ×</span>';
+  }).join('');
+}
+function removeStateOffice(i) { _stateOffices.splice(i,1); renderStateOffices(); }
+
+// ── Keyword Pills ──
+function renderKeywordPills(containerId, keywords, color) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var colors = {
+    red:'background:var(--red-bg);color:var(--red);border:1px solid rgba(239,69,101,.2)',
+    amber:'background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,166,35,.2)',
+    green:'background:var(--green-bg);color:var(--green);border:1px solid rgba(45,216,132,.2)'
+  };
+  el.innerHTML = keywords.slice(0,60).map(function(kw){
+    var hasCompound = kw.includes('|');
+    return '<span style="'+colors[color]+';padding:3px 9px;border-radius:99px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px" onclick="removeKeyword(this)" title="'+esc(kw)+'">' +
+      (hasCompound ? '<span style="font-size:9px;opacity:.7">⊕</span>' : '') +
+      esc(kw) + ' <span style="opacity:.6">×</span></span>';
+  }).join('');
+  // Update count badge
+  var countEl = document.getElementById(containerId.replace('-list','-count'));
+  if (countEl) countEl.textContent = keywords.length + ' rules';
+}
+function removeKeyword(el) {
+  el.remove();
+  updateRuleCounts();
+}
+function updateRuleCounts() {
+  var el1 = document.getElementById('dnb-count');
+  var el2 = document.getElementById('cond-count');
+  var el3 = document.getElementById('pref-count');
+  if (el1) el1.textContent = getPillValues('dnb-list').length + ' rules';
+  if (el2) el2.textContent = getPillValues('cond-list').length + ' rules';
+  if (el3) el3.textContent = getPillValues('pref-list').length + ' rules';
+}
+function addBidRule(type) {
+  var inputId = type==='dnb'?'dnb-add':type==='cond'?'cond-add':'pref-add';
+  var listId  = type==='dnb'?'dnb-list':type==='cond'?'cond-list':'pref-list';
+  var color   = type==='dnb'?'red':type==='cond'?'amber':'green';
+  var input   = document.getElementById(inputId);
+  var raw     = (input.value||'').trim();
+  if (!raw) return;
+  // Support comma separated for bulk add
+  var existing = getPillValues(listId);
+  raw.split(',').forEach(function(v){
+    v = v.trim().toLowerCase();
+    if (v && existing.indexOf(v) === -1) {
+      existing.push(v);
+    }
+  });
+  renderKeywordPills(listId, existing, color);
+  input.value = '';
+  updateRuleCounts();
+}
+function getPillValues(containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('span[onclick]')).map(function(s){
+    return s.getAttribute('title') || s.textContent.replace(/×?\s*$/, '').trim();
+  }).filter(Boolean);
+}
+
+// ── Rule Effectiveness Preview ──
+function renderRuleEffectiveness() {
+  if (!G.tenders || !G.tenders.length) return;
+  var dnbKws = getPillValues('dnb-list');
+  var condKws = getPillValues('cond-list');
+  var prefKws = getPillValues('pref-list');
+  var card = document.getElementById('rule-effectiveness-card');
+  var body = document.getElementById('rule-effectiveness-body');
+  if (!card || !body) return;
+  card.style.display = 'block';
+  var rows = [];
+  dnbKws.forEach(function(kw){
+    var mustKw = kw.split('|')[0].trim();
+    var exclKws = kw.includes('|') ? kw.split('|')[1].split(',').map(function(k){return k.trim();}) : [];
+    var hits = G.tenders.filter(function(t){
+      var b = ((t.brief||'')+(t.org_name||'')).toLowerCase();
+      var mustHit = mustKw.split(',').some(function(k){return k.trim()&&b.includes(k.trim());});
+      var exclHit = exclKws.length && exclKws.some(function(k){return k&&b.includes(k);});
+      return mustHit && !exclHit;
+    }).length;
+    if (hits) rows.push({kw:kw, type:'NO-BID', hits:hits, color:'var(--red)'});
+  });
+  prefKws.forEach(function(kw){
+    var hits = G.tenders.filter(function(t){
+      return ((t.brief||'')+(t.org_name||'')).toLowerCase().includes(kw);
+    }).length;
+    if (hits) rows.push({kw:kw, type:'BID', hits:hits, color:'var(--green)'});
+  });
+  rows.sort(function(a,b){return b.hits-a.hits;});
+  body.innerHTML = rows.slice(0,10).map(function(r){
+    var pct = Math.round(r.hits/G.tenders.length*100);
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px">'+
+      '<span style="color:'+r.color+';min-width:60px;font-weight:600">'+r.type+'</span>'+
+      '<span style="flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.kw)+'</span>'+
+      '<div style="width:100px;height:4px;background:var(--bg3);border-radius:2px"><div style="width:'+Math.min(100,pct*2)+'%;height:100%;background:'+r.color+';border-radius:2px"></div></div>'+
+      '<span style="color:var(--text3);min-width:50px;text-align:right">'+r.hits+' tenders</span>'+
+    '</div>';
+  }).join('') || '<div style="color:var(--text3);font-size:12px">Add rules above to see which tenders they match</div>';
+}
+
+// ── Projects CRUD ──
+function openAddProjectModal() {
+  _editingProjectIdx = -1;
+  document.getElementById('proj-form-title').textContent = 'Add New Project';
+  ['pf-name','pf-client','pf-client-type','pf-state','pf-value','pf-duration','pf-year','pf-tags','pf-tech','pf-scope'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('pf-status').value = 'Completed';
+  document.getElementById('pf-role').value = 'Solo';
+  document.getElementById('pf-delete-btn').style.display = 'none';
+  document.getElementById('project-form-card').style.display = 'block';
+  document.getElementById('project-form-card').scrollIntoView({behavior:'smooth'});
+}
+function editProject(idx) {
+  var projects = (G.profileData && G.profileData.projects) || [];
+  var p = projects[idx];
+  if (!p) return;
+  _editingProjectIdx = idx;
+  document.getElementById('proj-form-title').textContent = 'Edit Project';
+  setVal('pf-name', p.name);
+  setVal('pf-client', p.client);
+  setVal('pf-client-type', p.client_type);
+  setVal('pf-state', p.state);
+  setVal('pf-value', p.value_cr);
+  setVal('pf-duration', p.duration);
+  setVal('pf-year', p.year_completed);
+  setVal('pf-status', p.status);
+  setVal('pf-role', p.role);
+  setVal('pf-tags', Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags||''));
+  setVal('pf-tech', p.tech||'');
+  setVal('pf-scope', p.scope||'');
+  document.getElementById('pf-delete-btn').style.display = 'inline-flex';
+  document.getElementById('project-form-card').style.display = 'block';
+  document.getElementById('project-form-card').scrollIntoView({behavior:'smooth'});
+}
+function cancelProjectForm() {
+  document.getElementById('project-form-card').style.display = 'none';
+  _editingProjectIdx = -1;
+}
+function saveProjectForm() {
+  var name = document.getElementById('pf-name').value.trim();
+  if (!name) { toast('Project name required','error'); return; }
+  var tagsRaw = document.getElementById('pf-tags').value;
+  var tags = tagsRaw.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean);
+  var p = {
+    name: name,
+    client: document.getElementById('pf-client').value.trim(),
+    client_type: document.getElementById('pf-client-type').value.trim(),
+    state: document.getElementById('pf-state').value.trim(),
+    value_cr: parseFloat(document.getElementById('pf-value').value)||0,
+    status: document.getElementById('pf-status').value,
+    role: document.getElementById('pf-role').value,
+    duration: document.getElementById('pf-duration').value.trim(),
+    year_completed: document.getElementById('pf-year').value.trim(),
+    tags: tags,
+    tech: document.getElementById('pf-tech').value.trim(),
+    scope: document.getElementById('pf-scope').value.trim(),
+  };
+  if (!G.profileData) G.profileData = {};
+  if (!G.profileData.projects) G.profileData.projects = [];
+  if (_editingProjectIdx >= 0) {
+    G.profileData.projects[_editingProjectIdx] = p;
+  } else {
+    G.profileData.projects.push(p);
+  }
+  renderProjectsTable(G.profileData.projects);
+  cancelProjectForm();
+  toast('Project saved — click Save Profile to persist','success');
+}
+function deleteCurrentProject() {
+  if (_editingProjectIdx < 0) return;
+  if (!confirm('Delete this project?')) return;
+  G.profileData.projects.splice(_editingProjectIdx, 1);
+  renderProjectsTable(G.profileData.projects);
+  cancelProjectForm();
+  toast('Deleted — click Save Profile to persist','success');
+}
+function renderProjectsTable(projects) {
+  var tb = document.getElementById('profile-projects-tbody');
+  if (!tb) return;
+  tb.innerHTML = (projects||[]).map(function(p, i){
+    var tags = Array.isArray(p.tags) ? p.tags : (p.tags||'').split(',').map(function(s){return s.trim();});
+    return '<tr>'+
+      '<td style="font-size:13px;font-weight:600;color:var(--text)">'+esc(p.name||'')+'</td>'+
+      '<td><div style="font-size:12px">'+esc(p.client||'')+'</div><div style="font-size:10px;color:var(--text3)">'+esc(p.client_type||'')+(p.state?' · '+esc(p.state):'')+'</div></td>'+
+      '<td style="font-size:11px;color:var(--text3)">'+esc(p.state||'')+'</td>'+
+      '<td style="font-weight:600;color:var(--blue)">₹'+esc(String(p.value_cr||''))+'Cr</td>'+
+      '<td><span class="badge '+(p.status==='Ongoing'?'badge-CONDITIONAL':p.status==='Completed'?'badge-BID':'badge-REVIEW')+'">'+esc(p.status||'')+'</span></td>'+
+      '<td style="font-size:11px;color:var(--text3)">'+esc(p.role||'Solo')+'</td>'+
+      '<td style="font-size:10px;color:var(--text3);max-width:200px">'+tags.slice(0,6).map(function(t){return '<span style="background:var(--bg3);padding:1px 5px;border-radius:3px;margin:1px">'+esc(t)+'</span>';}).join(' ')+'</td>'+
+      '<td><button class="btn btn-ghost btn-xs" onclick="editProject('+i+')">Edit</button></td>'+
+    '</tr>';
+  }).join('') || '<tr><td colspan="8" class="empty-row">No projects — click + Add Project</td></tr>';
+}
+
+// ── Load Profile ──
 async function loadProfile() {
   try {
     var r = await fetch('/profile');
-    if(!r.ok){ throw new Error('Profile load error: '+r.status); }
+    if (!r.ok) throw new Error('Profile load error: '+r.status);
     var d = await r.json();
     G.profileData = d;
     var c = d.company || {};
-    setVal('p-name', c.name);
-    setVal('p-legal', c.legal_status);
-    setVal('p-year', c.year_of_incorporation);
-    setVal('p-cin', c.cin);
-    setVal('p-pan', c.pan);
-    setVal('p-gstin', c.gstin);
-    setVal('p-udyam', c.udyam);
-    setVal('p-type', c.type);
-    setVal('p-email', c.email);
-    setVal('p-tender-email', c.tender_email);
-    setVal('p-phone', c.phone);
-    setVal('p-website', c.website);
-    setVal('p-address', c.address);
-    setVal('p-signatory', c.authorised_signatory);
-    setVal('p-md', c.md);
-    setVal('p-poa', c.poa_validity);
+    setVal('p-name', c.name); setVal('p-legal', c.legal_status);
+    setVal('p-year', c.year_of_incorporation); setVal('p-cin', c.cin);
+    setVal('p-pan', c.pan); setVal('p-gstin', c.gstin);
+    setVal('p-udyam', c.udyam); setVal('p-type', c.type);
+    setVal('p-email', c.email); setVal('p-tender-email', c.tender_email);
+    setVal('p-phone', c.phone); setVal('p-website', c.website);
+    setVal('p-address', c.address); setVal('p-signatory', c.authorised_signatory);
+    setVal('p-md', c.md); setVal('p-poa', c.poa_validity);
+    setVal('p-city', c.city || (c.address ? c.address.split(',').slice(-2).join(',').trim() : ''));
     // POA alert
-    if (c.poa_alert) {
+    if (c.poa_validity) {
+      var parts = c.poa_validity.split(/[-\/]/);
+      var poaDate = parts.length === 3 ? new Date(parts[2]+'-'+parts[1]+'-'+parts[0]) : new Date(c.poa_validity);
+      var daysLeft = Math.ceil((poaDate - new Date()) / 86400000);
       var poaEl = document.getElementById('poa-alert');
-      if (poaEl) { poaEl.style.display='block'; poaEl.textContent = '⚠ '+c.poa_alert; }
+      if (poaEl && daysLeft < 30) {
+        poaEl.style.display = 'block';
+        poaEl.textContent = daysLeft < 0
+          ? '⚠ POA EXPIRED ('+c.poa_validity+') — Renew immediately before any tender submission!'
+          : '⚠ POA expires in '+daysLeft+' days ('+c.poa_validity+') — Renew soon!';
+      }
     }
+    // State offices
+    _stateOffices = Array.isArray(c.state_offices) ? c.state_offices : [];
+    renderStateOffices();
     // Finance
     var f = d.finance || {};
     var ty = f.turnover_by_year || {};
-    setVal('p-t1920', ty['2019-20']);
-    setVal('p-t2021', ty['2020-21']);
-    setVal('p-t2122', ty['2021-22']);
-    setVal('p-t2223', ty['2022-23']);
-    setVal('p-t2324', ty['2023-24']);
-    setVal('p-t2425', ty['2024-25']);
-    setVal('p-nw', f.net_worth_cr);
-    setVal('p-solv', f.solvency_amount_cr);
+    setVal('p-t1920', ty['2019-20']); setVal('p-t2021', ty['2020-21']);
+    setVal('p-t2122', ty['2021-22']); setVal('p-t2223', ty['2022-23']);
+    setVal('p-t2324', ty['2023-24']); setVal('p-t2425', ty['2024-25']);
+    setVal('p-nw', f.net_worth_cr); setVal('p-solv', f.solvency_amount_cr);
     setVal('p-ca', f.ca_name);
-    // Derived averages
-    var avg3 = f.avg_turnover_last_3_fy || ((parseFloat(ty['2022-23']||0)+parseFloat(ty['2023-24']||0)+parseFloat(ty['2024-25']||0))/3).toFixed(2);
-    var avg2 = f.avg_turnover_last_2_fy || ((parseFloat(ty['2023-24']||0)+parseFloat(ty['2024-25']||0))/2).toFixed(2);
-    var fd = document.getElementById('finance-derived');
-    if (fd) fd.innerHTML = '📊 Avg Turnover (Last 3 FY): <b style="color:var(--blue)">₹'+avg3+' Cr</b> &nbsp;|&nbsp; Avg (Last 2 FY): <b style="color:var(--blue)">₹'+avg2+' Cr</b> &nbsp;|&nbsp; Net Worth: <b style="color:var(--green)">₹'+(f.net_worth_cr||'—')+' Cr</b>';
+    recalcFinance();
     // Certs
     var certs = d.certifications || {};
     var cmmi = certs.cmmi || {};
-    setVal('p-cmmi', cmmi.level);
-    setVal('p-cmmi-ver', cmmi.version);
-    setVal('p-cmmi-valid', cmmi.valid_to);
+    setVal('p-cmmi', cmmi.level); setVal('p-cmmi-ver', cmmi.version); setVal('p-cmmi-valid', cmmi.valid_to);
     var iso9 = certs.iso_9001 || {};
-    setVal('p-iso9001-no', iso9.cert_no);
-    setVal('p-iso9001-from', iso9.valid_from);
-    setVal('p-iso9001', iso9.valid_to);
+    setVal('p-iso9001-no', iso9.cert_no); setVal('p-iso9001-from', iso9.valid_from); setVal('p-iso9001', iso9.valid_to);
     var iso27 = certs.iso_27001 || {};
-    setVal('p-iso27001-no', iso27.cert_no);
-    setVal('p-iso27001-from', iso27.valid_from);
-    setVal('p-iso27001', iso27.valid_to);
+    setVal('p-iso27001-no', iso27.cert_no); setVal('p-iso27001-from', iso27.valid_from); setVal('p-iso27001', iso27.valid_to);
     var iso20 = certs.iso_20000 || {};
-    setVal('p-iso20000-no', iso20.cert_no);
-    setVal('p-iso20000-from', iso20.valid_from);
-    setVal('p-iso20000', iso20.valid_to);
+    setVal('p-iso20000-no', iso20.cert_no); setVal('p-iso20000-from', iso20.valid_from); setVal('p-iso20000', iso20.valid_to);
+    setTimeout(renderCertStatus, 100);
+    // Employees
     var emp = d.employees || {};
     setVal('p-emp', emp.total_confirmed || emp.total_listed);
-    setVal('p-itdev', emp.it_dev_staff);
-    setVal('p-gis', emp.gis_staff);
-    setVal('p-not', (certs.cert_in===false?'CERT-In, ':'')+(certs.stqc===false?'STQC, ':'')+'SAP Partnership, Oracle Partnership');
-    // Projects table
-    var projects = d.projects || [];
-    var tb = document.getElementById('profile-projects-tbody');
-    if (tb) {
-      tb.innerHTML = projects.map(function(p){
-        return '<tr>'+
-          '<td style="font-size:13px;font-weight:500;color:var(--text)">'+esc(p.name||'')+'</td>'+
-          '<td><div style="font-size:13px">'+esc(p.client||'')+'</div><div class="muted" style="font-size:11px">'+esc((p.client_type||'')+(p.state?' · '+p.state:''))+'</div></td>'+
-          '<td class="muted" style="font-weight:600;color:var(--blue)">₹'+esc(String(p.value_cr||''))+'Cr</td>'+
-          '<td><span class="badge '+(p.status==='Ongoing'?'badge-CONDITIONAL':'badge-BID')+'">'+esc(p.status||'')+'</span></td>'+
-          '<td class="muted" style="font-size:11px">'+esc(p.role||'Solo')+'</td>'+
-          '<td class="muted" style="font-size:11px">'+esc((Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')))+'</td>'+
-        '</tr>';
-      }).join('');
-    }
-    // Team
+    setVal('p-itdev', emp.it_dev_staff); setVal('p-gis', emp.gis_staff);
+    setVal('p-pm', emp.project_managers); setVal('p-qa', emp.qa_staff);
+    setVal('p-support', emp.support_staff);
+    // Projects
+    renderProjectsTable(d.projects || []);
+    // Tech stack
     var cap = d.capabilities || {};
-    var techStack = cap.tech_stack || [];
-    setVal('p-tech', Array.isArray(techStack) ? safeJoin(techStack) : techStack);
-    var notAvail = cap.not_available || [];
-    setVal('p-not-team', Array.isArray(notAvail) ? safeJoin(notAvail) : notAvail);
+    setVal('p-tech', Array.isArray(cap.tech_stack) ? cap.tech_stack.join(', ') : (cap.tech_stack||''));
+    setVal('p-not-team', Array.isArray(cap.not_available) ? cap.not_available.join(', ') : (cap.not_available||''));
+    setVal('p-sectors', Array.isArray(cap.sectors) ? cap.sectors.join(', ') : (cap.sectors||''));
+    setVal('p-gem-cats', Array.isArray(cap.gem_categories) ? cap.gem_categories.join(', ') : (cap.gem_categories||''));
     // Bid rules
     var br = d.bid_rules || {};
     renderKeywordPills('dnb-list', br.do_not_bid || [], 'red');
@@ -2322,47 +2672,17 @@ async function loadProfile() {
     renderKeywordPills('pref-list', br.preferred_sectors || [], 'green');
     setVal('p-minval', br.min_project_value_cr);
     setVal('p-maxval', br.max_project_value_cr);
-  } catch(e) { toast('Error loading profile: '+e.message,'error'); }
+    setVal('p-turnover-ratio', br.max_turnover_ratio || 1.5);
+    updateRuleCounts();
+  } catch(e) { toast('Error loading profile: '+e.message, 'error'); }
 }
 
-function renderKeywordPills(containerId, keywords, color) {
-  var el = document.getElementById(containerId);
-  if (!el) return;
-  var colors = {red:'background:var(--red-bg);color:var(--red)', amber:'background:var(--amber-bg);color:var(--amber)', green:'background:var(--green-bg);color:var(--green)'};
-  el.innerHTML = keywords.slice(0,40).map(function(kw){
-    return '<span style="'+colors[color]+';padding:2px 8px;border-radius:99px;font-size:11px;cursor:pointer" onclick="removeKeyword(this)">'+esc(kw)+' ×</span>';
-  }).join('');
-}
-
-function removeKeyword(el) { el.remove(); }
-
-function addBidRule(type) {
-  var inputId = type==='dnb'?'dnb-add':type==='cond'?'cond-add':'pref-add';
-  var listId = type==='dnb'?'dnb-list':type==='cond'?'cond-list':'pref-list';
-  var color = type==='dnb'?'red':type==='cond'?'amber':'green';
-  var input = document.getElementById(inputId);
-  var val = (input.value||'').trim().toLowerCase();
-  if (!val) return;
-  var colors = {red:'background:var(--red-bg);color:var(--red)', amber:'background:var(--amber-bg);color:var(--amber)', green:'background:var(--green-bg);color:var(--green)'};
-  var el = document.createElement('span');
-  el.style.cssText = colors[color]+';padding:2px 8px;border-radius:99px;font-size:11px;cursor:pointer';
-  el.textContent = val+' ×';
-  el.onclick = function(){el.remove();};
-  document.getElementById(listId).appendChild(el);
-  input.value = '';
-}
-
-function getPillValues(containerId) {
-  var el = document.getElementById(containerId);
-  if (!el) return [];
-  return Array.from(el.querySelectorAll('span')).map(function(s){
-    return s.textContent.replace(' ×','').trim();
-  }).filter(Boolean);
-}
-
+// ── Save Profile ──
 async function saveProfile() {
   if (!G.profileData) { toast('Profile not loaded','error'); return; }
   var data = JSON.parse(JSON.stringify(G.profileData));
+
+  // Company
   if (!data.company) data.company = {};
   data.company.name = document.getElementById('p-name').value;
   data.company.legal_status = document.getElementById('p-legal').value;
@@ -2372,6 +2692,7 @@ async function saveProfile() {
   data.company.gstin = document.getElementById('p-gstin').value;
   data.company.udyam = document.getElementById('p-udyam').value;
   data.company.type = document.getElementById('p-type').value;
+  data.company.city = document.getElementById('p-city').value;
   data.company.email = document.getElementById('p-email').value;
   data.company.tender_email = document.getElementById('p-tender-email').value;
   data.company.phone = document.getElementById('p-phone').value;
@@ -2380,62 +2701,75 @@ async function saveProfile() {
   data.company.authorised_signatory = document.getElementById('p-signatory').value;
   data.company.md = document.getElementById('p-md').value;
   data.company.poa_validity = document.getElementById('p-poa').value;
+  data.company.state_offices = _stateOffices.slice();
+
+  // Finance
   if (!data.finance) data.finance = {};
   if (!data.finance.turnover_by_year) data.finance.turnover_by_year = {};
-  ['2019-20','2020-21','2021-22','2022-23','2023-24','2024-25'].forEach(function(fy, i){
-    var ids = ['p-t1920','p-t2021','p-t2122','p-t2223','p-t2324','p-t2425'];
-    var v = parseFloat(document.getElementById(ids[i]).value)||0;
+  var fyIds = ['p-t1920','p-t2021','p-t2122','p-t2223','p-t2324','p-t2425'];
+  var fyKeys = ['2019-20','2020-21','2021-22','2022-23','2023-24','2024-25'];
+  fyKeys.forEach(function(fy, i){
+    var v = parseFloat(document.getElementById(fyIds[i]).value)||0;
     if (v) data.finance.turnover_by_year[fy] = v;
   });
   data.finance.net_worth_cr = parseFloat(document.getElementById('p-nw').value)||0;
   data.finance.solvency_amount_cr = parseFloat(document.getElementById('p-solv').value)||0;
   data.finance.ca_name = document.getElementById('p-ca').value;
-  // Recalculate averages
   var ty = data.finance.turnover_by_year;
-  var last3 = [(ty['2022-23']||0),(ty['2023-24']||0),(ty['2024-25']||0)];
+  var last3 = [ty['2022-23']||0, ty['2023-24']||0, ty['2024-25']||0];
   data.finance.avg_turnover_last_3_fy = Math.round(last3.reduce(function(a,b){return a+b;},0)/3*100)/100;
   data.finance.avg_turnover_last_2_fy = Math.round(((ty['2023-24']||0)+(ty['2024-25']||0))/2*100)/100;
-  // Certs
+
+  // Certifications
   if (!data.certifications) data.certifications = {};
   if (!data.certifications.cmmi) data.certifications.cmmi = {};
   data.certifications.cmmi.level = parseInt(document.getElementById('p-cmmi').value)||3;
   data.certifications.cmmi.version = document.getElementById('p-cmmi-ver').value;
   data.certifications.cmmi.valid_to = document.getElementById('p-cmmi-valid').value;
-  if (!data.certifications.iso_9001) data.certifications.iso_9001 = {};
-  data.certifications.iso_9001.cert_no = document.getElementById('p-iso9001-no').value;
-  data.certifications.iso_9001.valid_from = document.getElementById('p-iso9001-from').value;
-  data.certifications.iso_9001.valid_to = document.getElementById('p-iso9001').value;
-  if (!data.certifications.iso_27001) data.certifications.iso_27001 = {};
-  data.certifications.iso_27001.cert_no = document.getElementById('p-iso27001-no').value;
-  data.certifications.iso_27001.valid_from = document.getElementById('p-iso27001-from').value;
-  data.certifications.iso_27001.valid_to = document.getElementById('p-iso27001').value;
-  if (!data.certifications.iso_20000) data.certifications.iso_20000 = {};
-  data.certifications.iso_20000.cert_no = document.getElementById('p-iso20000-no').value;
-  data.certifications.iso_20000.valid_from = document.getElementById('p-iso20000-from').value;
-  data.certifications.iso_20000.valid_to = document.getElementById('p-iso20000').value;
+  ['iso_9001','iso_27001','iso_20000'].forEach(function(k, i){
+    if (!data.certifications[k]) data.certifications[k] = {};
+    var pfx = i===0?'p-iso9001':i===1?'p-iso27001':'p-iso20000';
+    data.certifications[k].cert_no   = document.getElementById(pfx+'-no').value;
+    data.certifications[k].valid_from = document.getElementById(pfx+'-from').value;
+    data.certifications[k].valid_to  = document.getElementById(pfx).value;
+  });
+
+  // Employees
   if (!data.employees) data.employees = {};
-  data.employees.total_confirmed = parseInt(document.getElementById('p-emp').value)||0;
-  data.employees.it_dev_staff = parseInt(document.getElementById('p-itdev').value)||0;
-  data.employees.gis_staff = parseInt(document.getElementById('p-gis').value)||0;
-  // Team
+  data.employees.total_confirmed  = parseInt(document.getElementById('p-emp').value)||0;
+  data.employees.it_dev_staff     = parseInt(document.getElementById('p-itdev').value)||0;
+  data.employees.gis_staff        = parseInt(document.getElementById('p-gis').value)||0;
+  data.employees.project_managers = parseInt(document.getElementById('p-pm').value)||0;
+  data.employees.qa_staff         = parseInt(document.getElementById('p-qa').value)||0;
+  data.employees.support_staff    = parseInt(document.getElementById('p-support').value)||0;
+
+  // Capabilities
   if (!data.capabilities) data.capabilities = {};
-  var techVal = document.getElementById('p-tech').value;
-  data.capabilities.tech_stack = techVal.split(',').map(function(s){return s.trim();}).filter(Boolean);
-  var notTeamVal = document.getElementById('p-not-team').value;
-  data.capabilities.not_available = notTeamVal.split(',').map(function(s){return s.trim();}).filter(Boolean);
-  // Bid rules
+  data.capabilities.tech_stack   = document.getElementById('p-tech').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  data.capabilities.not_available= document.getElementById('p-not-team').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  data.capabilities.sectors      = document.getElementById('p-sectors').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  data.capabilities.gem_categories=document.getElementById('p-gem-cats').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+
+  // Projects (already in G.profileData from form saves)
+  data.projects = G.profileData.projects || [];
+
+  // Bid Rules
   if (!data.bid_rules) data.bid_rules = {};
-  data.bid_rules.do_not_bid = getPillValues('dnb-list');
-  data.bid_rules.conditional = getPillValues('cond-list');
+  data.bid_rules.do_not_bid        = getPillValues('dnb-list');
+  data.bid_rules.conditional       = getPillValues('cond-list');
   data.bid_rules.preferred_sectors = getPillValues('pref-list');
   data.bid_rules.min_project_value_cr = parseFloat(document.getElementById('p-minval').value)||0.25;
-  data.bid_rules.max_project_value_cr = parseFloat(document.getElementById('p-maxval').value)||100;
+  data.bid_rules.max_project_value_cr = parseFloat(document.getElementById('p-maxval').value)||150;
+  data.bid_rules.max_turnover_ratio   = parseFloat(document.getElementById('p-turnover-ratio').value)||1.5;
+
   try {
-    var r = await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var r = await fetch('/profile', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
     var res = await r.json();
-    toast('Profile saved successfully','success');
     G.profileData = data;
-  } catch(e){toast('Failed to save: '+e.message,'error');}
+    toast('Profile saved ✓', 'success');
+    renderCertStatus();
+    updateRuleCounts();
+  } catch(e) { toast('Failed to save: '+e.message, 'error'); }
 }
 
 // ═══════════════════════════════════════════════════════════
