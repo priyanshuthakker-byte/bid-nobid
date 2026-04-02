@@ -1,5 +1,5 @@
 """
-Bid/No-Bid Automation v7 - Complete Fixed System
+Bid/No-Bid Automation v8 - Drive folder architecture
 FastAPI backend - ALL bugs fixed in this version
 """
 import zipfile, tempfile, shutil, json, re, os
@@ -65,12 +65,25 @@ except Exception as _e:
     def load_history(): return []
 
 try:
-    from gdrive_sync import init_drive, save_to_drive, load_from_drive, is_available as drive_available
+    from drive_manager import get_drive, init_drive, is_available as drive_available
+    # Convenience wrappers used throughout this file
+    def _dm(): return get_drive()
 except Exception as _e:
-    print(f"⚠ gdrive_sync import failed: {_e}")
+    print(f"⚠ drive_manager import failed: {_e}")
+    class _FakeDM:
+        def save_config(self, *a, **k): return False
+        def load_config(self, *a, **k): return False
+        def save_vault(self, *a, **k): return False
+        def load_vault(self, *a, **k): return False
+        def save_tender_file(self, *a, **k): return False
+        def save_tender_submission(self, *a, **k): return False
+        def save_export(self, *a, **k): return False
+        def get_vault_file(self, *a, **k): return None
+        def restore_on_startup(self, *a, **k): pass
+        def get_tender_folder_url(self, *a, **k): return None
+        def is_available(self): return False
+    def _dm(): return _FakeDM()
     def init_drive(): return False
-    def save_to_drive(f): return False
-    def load_from_drive(f): return False
     def drive_available(): return False
 
 try:
@@ -84,7 +97,7 @@ except Exception as _e:
     PIPELINE_STAGES = ["Identified", "To Analyse", "Analysed", "Pre-bid Sent", "Bid Decided", "Preparing", "Submitted", "Won", "Lost"]
     STAGE_COLORS = {}
 
-app = FastAPI(title="Bid/No-Bid System v7", version="7.0")
+app = FastAPI(title="Bid/No-Bid System v8", version="8.0")
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -110,70 +123,36 @@ async def server_error_handler(request: Request, exc: Exception):
     )
 
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR   = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "data"
-TEMP_DIR = BASE_DIR / "temp"
-VAULT_DIR = BASE_DIR / "data" / "vault"
-DB_FILE = OUTPUT_DIR / "tenders_db.json"
+TEMP_DIR   = BASE_DIR / "temp"
+VAULT_DIR  = BASE_DIR / "data" / "vault"
+DB_FILE    = OUTPUT_DIR / "tenders_db.json"
 
-for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
-    d.mkdir(exist_ok=True, parents=True)
+for _d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
+    _d.mkdir(exist_ok=True, parents=True)
 
 # ── STARTUP ────────────────────────────────────────────────────
 @app.on_event("startup")
 async def startup_event():
-    import asyncio, time
-    print("🚀 Starting Bid/No-Bid System v7...")
-    OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
-    TEMP_DIR.mkdir(exist_ok=True, parents=True)
-    VAULT_DIR.mkdir(exist_ok=True, parents=True)
+    print("🚀 Starting Bid/No-Bid System v8...")
+    for _d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
+        _d.mkdir(exist_ok=True, parents=True)
 
     drive_ok = init_drive()
     print(f"📁 Google Drive: {'✅ Connected' if drive_ok else '❌ Not configured'}")
 
-    # Restore vault files from Drive (survive Render redeploys)
     if drive_ok:
-        try:
-            for doc in VAULT_DOCS_LIST:
-                for ext in [".pdf", ".docx", ".png", ".jpg", ".jpeg"]:
-                    remote_name = f"vault_{doc['id']}{ext}"
-                    local_dest  = VAULT_DIR / f"{doc['id']}{ext}"
-                    if not local_dest.exists():
-                        try:
-                            load_from_drive(local_dest, filename=remote_name)
-                        except Exception:
-                            pass
-            print("✅ Vault restore attempted from Drive")
-        except Exception as e:
-            print(f"⚠️ Vault restore skipped: {e}")
-
-    if drive_ok:
-        # ── Restore tenders_db.json ──
-        for attempt in range(3):
-            try:
-                success = load_from_drive(DB_FILE, filename="tenders_db.json")
-                if success:
-                    db = load_db()
-                    print(f"✅ Loaded {len(db.get('tenders',{}))} tenders from Drive")
-                    break
-                time.sleep(2)
-            except Exception as e:
-                print(f"⚠ Drive load attempt {attempt+1} failed: {e}")
-                time.sleep(2)
-
-        # ── Restore nascent_profile.json (rules + profile changes) ──
-        try:
-            profile_restored = load_from_drive(PROFILE_PATH, filename="nascent_profile.json")
-            if profile_restored:
-                print("✅ nascent_profile.json restored from Drive (rules + profile preserved)")
-            else:
-                print("⚠ nascent_profile.json not on Drive yet — using bundled version")
-        except Exception as e:
-            print(f"⚠ Profile restore skipped: {e}")
-
+        # Single call restores everything: db, profile, vault files
+        _dm().restore_on_startup(
+            db_path=DB_FILE,
+            profile_path=PROFILE_PATH,
+            vault_dir=VAULT_DIR,
+            vault_docs_list=VAULT_DOCS_LIST,
+        )
     elif DB_FILE.exists():
         db = load_db()
-        print(f"✅ Using local DB: {len(db.get('tenders',{}))} tenders")
+        print(f"✅ Using local DB: {len(db.get('tenders', {}))} tenders")
     else:
         print("⚠ No DB found — fresh start")
 
@@ -199,7 +178,7 @@ def save_db(db: dict):
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
-        save_to_drive(DB_FILE)
+        _dm().save_config("tenders_db.json", DB_FILE)
     except Exception as e:
         print(f"⚠️ Drive sync warning: {e}")
 
@@ -261,7 +240,7 @@ async def health():
     all_keys = get_all_api_keys()
     return {
         "status": "ok",
-        "version": "7.0",
+        "version": "8.0",
         "ai_configured": bool(all_keys),
         "ai_keys_count": len(all_keys),
         "drive_sync": drive_available(),
@@ -568,6 +547,14 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
         if t247_id:
             db_record = get_tender(t247_id)
             ov = tender_data.get("overall_verdict", {})
+            tender_label = re.sub(r'[^\w]', '-', (tender_data.get("org_name", "") or "")[:20])
+            # Save analysis report to tenders/<id>/ in Drive
+            drive_folder_url = None
+            if output_filename and drive_available():
+                report_path = OUTPUT_DIR / output_filename
+                if report_path.exists():
+                    _dm().save_tender_file(t247_id, output_filename, report_path, label=tender_label)
+                drive_folder_url = _dm().get_tender_folder_url(t247_id, label=tender_label)
             db_record.update({
                 "t247_id": t247_id,
                 "tender_no": tender_data.get("tender_no"),
@@ -580,6 +567,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 "reason": tender_data.get("reason", ov.get("reason", "")),
                 "bid_no_bid_done": True,
                 "report_file": output_filename,
+                "drive_folder_url": drive_folder_url,
                 "analysed_at": datetime.now().isoformat(),
                 "has_corrigendum": tender_data.get("has_corrigendum", False),
                 "ai_used": ai_used,
@@ -716,6 +704,12 @@ async def gen_prebid_letter(t247_id: str):
         safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
         filename = f"PreBid_{safe_no}.docx"
         doc.save(str(OUTPUT_DIR / filename))
+        # Also save to tender's Drive folder
+        try:
+            tender_label = re.sub(r'[^\w]', '-', (tender.get("org_name", "") or "")[:20])
+            _dm().save_tender_file(t247_id, filename, OUTPUT_DIR / filename, label=tender_label)
+        except Exception:
+            pass
         return {"status": "success", "filename": filename, "query_count": len(queries), "download_url": f"/download/{filename}"}
     except Exception as e:
         raise HTTPException(500, f"Letter generation failed: {str(e)}")
@@ -895,6 +889,10 @@ async def export_tenders(verdict: str = "", search: str = ""):
         fname = f"Tenders_Export_{datetime.now().strftime('%d%m%Y_%H%M')}.xlsx"
         fpath = OUTPUT_DIR / fname
         wb.save(str(fpath))
+        try:
+            _dm().save_export(fname, fpath)
+        except Exception:
+            pass
         return FileResponse(str(fpath), filename=fname, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except Exception as e:
         raise HTTPException(500, f"Export failed: {str(e)}")
@@ -953,7 +951,7 @@ async def update_profile(data: dict = Body(...)):
         PROFILE_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         # Also sync to Drive if available
         try:
-            save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+            _dm().save_config("nascent_profile.json", PROFILE_PATH)
         except Exception:
             pass
         return {"status": "saved"}
@@ -1019,7 +1017,7 @@ async def save_rules(data: dict = Body(...)):
 
         # Sync to Drive
         try:
-            save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+            _dm().save_config("nascent_profile.json", PROFILE_PATH)
         except Exception:
             pass
 
@@ -1052,7 +1050,7 @@ async def add_rule(data: dict = Body(...)):
             lst.sort()
         profile["bid_rules"] = rules
         PROFILE_PATH.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
-        try: save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+        try: _dm().save_config("nascent_profile.json", PROFILE_PATH)
         except Exception: pass
         return {"status": "added", "keyword": keyword, "list_type": list_type, "total": len(lst)}
     except HTTPException: raise
@@ -1076,7 +1074,7 @@ async def remove_rule(data: dict = Body(...)):
             lst.remove(keyword)
         profile["bid_rules"] = rules
         PROFILE_PATH.write_text(json.dumps(profile, indent=2, ensure_ascii=False), encoding="utf-8")
-        try: save_to_drive(PROFILE_PATH, filename="nascent_profile.json")
+        try: _dm().save_config("nascent_profile.json", PROFILE_PATH)
         except Exception: pass
         return {"status": "removed", "keyword": keyword, "list_type": list_type, "total": len(lst)}
     except HTTPException: raise
@@ -1140,8 +1138,7 @@ async def upload_vault_doc(doc_id: str, file: UploadFile = File(...)):
     dest = VAULT_DIR / f"{doc_id}{ext}"
     dest.write_bytes(await file.read())
     try:
-        # Save to Drive with vault_ prefix so startup can restore it
-        save_to_drive(dest, filename=f"vault_{doc_id}{ext}")
+        _dm().save_vault(f"{doc_id}{ext}", dest)
     except Exception:
         pass
     return {"status": "uploaded", "doc_id": doc_id, "filename": dest.name, "size_kb": round(dest.stat().st_size / 1024)}
@@ -1174,6 +1171,7 @@ async def drive_status():
         "tenders_in_memory": len(db.get("tenders", {})),
         "db_file_exists": DB_FILE.exists(),
         "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
+        "folder_structure": "NIT-BidNoBid/config + vault + tenders + exports",
     }
 
 @app.post("/sync-drive")
@@ -1187,9 +1185,9 @@ async def sync_drive():
             DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
         db = load_db()
         count = len(db.get("tenders", {}))
-        ok = save_to_drive(DB_FILE)
+        ok = _dm().save_config("tenders_db.json", DB_FILE)
         if ok:
-            return {"status": "ok", "message": f"Synced {count} tenders to Google Drive"}
+            return {"status": "ok", "message": f"Synced {count} tenders to Google Drive (config/)"}
         return JSONResponse({"status": "error", "message": "Sync failed — check Render logs"}, status_code=500)
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
@@ -1282,7 +1280,7 @@ async def upload_db(file: UploadFile = File(...)):
         DB_FILE.write_bytes(content)
         drive_ok = False
         if drive_available():
-            drive_ok = save_to_drive(DB_FILE)
+            drive_ok = _dm().save_config("tenders_db.json", DB_FILE)
         return {"status": "ok", "tenders": count, "drive_saved": drive_ok, "message": f"Loaded {count} tenders"}
     except json.JSONDecodeError:
         raise HTTPException(400, "Invalid JSON file")
