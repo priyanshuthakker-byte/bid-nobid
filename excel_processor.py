@@ -20,7 +20,7 @@ def load_rules() -> dict:
                  "https://www.googleapis.com/auth/drive"]
 
         # Load JSON from Render environment variable
-        service_account_info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
+        service_account_info = json.loads(os.environ.get("GDRIVE_CREDENTIALS", os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "{}")))
         creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_info, scope)
         client = gspread.authorize(creds)
 
