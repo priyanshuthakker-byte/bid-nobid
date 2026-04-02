@@ -178,3 +178,7 @@ def process_excel(filepath: str) -> List[Dict]:
                 "days_left": dl_days,
                 "deadline_status": dl_status,
                 "verdict": verdict["verdict"],
+                "verdict_color": verdict.get("verdict_color", ""),
+                "reason": verdict.get("reason", ""),
+            })
+    return all_tenders
