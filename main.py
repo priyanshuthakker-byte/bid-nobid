@@ -526,6 +526,11 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             t = read_document(f)
             if t and t.strip():
                 all_text += f"\n\n=== FILE: {f.name} ===\n{t}"
+            # Cap at 300,000 chars — smart_chunk extracts key sections from this
+            # 2.6M chars = crash on Render free tier (512MB RAM limit)
+            if len(all_text) > 300_000:
+                all_text = all_text[:300_000]
+                print(f"[AI] Text capped at 300,000 chars to prevent memory overflow")
 
         # AI Analysis
         ai_used = False
@@ -1499,4 +1504,3 @@ async def reanalyse_tender(t247_id: str):
 
 
 # ── GENERATE PREBID LETTER ─────────────────────────────────────
-
