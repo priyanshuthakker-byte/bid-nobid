@@ -250,7 +250,9 @@ def get_last_n_chars(text: str, n: int = 2000) -> str:
 # STEP 1 — SNAPSHOT EXTRACTION
 # ═══════════════════════════════════════════════════════════════
 SNAPSHOT_PROMPT = """You are extracting tender header information from Indian government tender documents.
-Read the text below and extract ONLY what is explicitly stated. Never infer or guess.
+Read ALL the text below carefully — key fields like EMD, Tender Fee, Bid Validity, and JV rules
+are often buried in the body sections (Notice Inviting Bid, Key Events, Instructions, Terms & Conditions),
+NOT just in the header.
 
 Return ONLY valid JSON, no markdown, no explanation.
 
@@ -264,7 +266,7 @@ Return JSON:
   "org_name": "full organization name",
   "dept_name": "department/sub-department",
   "tender_name": "full tender title",
-  "portal": "portal URL or name",
+  "portal": "portal URL where bids must be submitted (e.g. smctender.nprocure.com)",
   "tender_type": "form of contract (Item Rate / Lumpsum / QCBS / etc)",
   "mode_of_selection": "evaluation method (L1 / QCBS / LCS / etc)",
   "no_of_covers": "number of bid covers/envelopes",
@@ -272,34 +274,35 @@ Return JSON:
   "bid_submission_date": "LAST DATE for bid submission with time",
   "bid_opening_date": "technical bid opening date",
   "commercial_opening_date": "financial/commercial bid opening date if different",
-  "prebid_meeting": "pre-bid meeting date, time, mode, venue — combine all info",
-  "prebid_query_date": "last date for pre-bid queries",
-  "estimated_cost": "tender/estimated value",
-  "tender_fee": "document/tender fee amount and payment details",
-  "emd": "EMD/bid security amount and payment details",
-  "emd_exemption": "is EMD exemption available? Yes/No and for whom",
-  "performance_security": "performance bank guarantee percentage and conditions",
-  "contract_period": "period/duration of work",
-  "bid_validity": "bid validity period",
-  "post_implementation": "O&M / AMC period after implementation if stated",
-  "technology_mandatory": "any mandatory technology or platform",
-  "location": "project location / state",
-  "contact": "contact officer name, email, phone, address",
-  "jv_allowed": "JV/Consortium allowed? exact text from document"
+  "prebid_meeting": "pre-bid meeting — date, time, mode (email/physical/online), email address if given",
+  "prebid_query_date": "last date for pre-bid queries with time",
+  "estimated_cost": "tender/estimated value — search for 'estimated cost', 'NIT value', 'project cost'",
+  "tender_fee": "tender/bid document fee — search for 'Bid Fee', 'Tender Fee', 'Document Fee' — include amount + GST + payment mode (DD/online)",
+  "emd": "EMD/bid security — search for 'EMD', 'Earnest Money', 'Bid Security' — include full amount in words and figures + payment mode",
+  "emd_exemption": "EMD exemption — is it available? For MSME/Startups? Exact clause text",
+  "performance_security": "Performance Security / Initial Security Deposit — percentage of contract value + conditions",
+  "contract_period": "contract duration — include Phase A (development) + Phase B (O&M/AMC) separately if stated",
+  "bid_validity": "bid validity period — search for 'validity', 'valid for acceptance' — state in days",
+  "post_implementation": "O&M / AMC / CAMC period after go-live if stated",
+  "technology_mandatory": "any mandatory technology, platform, or software stack",
+  "location": "project location / city / state",
+  "contact": "contact officer name + email + phone + address — search entire document",
+  "jv_allowed": "JV/Consortium/Sub-contracting — is it allowed or NOT allowed? Quote the exact clause text"
 }}
 
 Rules:
-- Use "—" for any field not found in text
-- For dates: use format as written in document
-- For amounts: include currency symbol and words (e.g. Rs. 9,00,000/-)
-- Do NOT guess or fill in blanks
-- Contact field: combine name + email + phone into one readable string
+- Use "—" ONLY if a field is truly not found anywhere in the text after careful reading
+- For amounts: include Rs. symbol, figures, and words as written (e.g. Rs. 4,248/- (Rs. 3,600 + 18% GST))
+- For portal: look for the submission URL, not just the organization website
+- For JV: look in Terms & Conditions section — it often explicitly says 'NOT allowed'
+- For Bid Validity: look for '120 days', '180 days from opening of price bid' etc.
+- Contact field: search entire document including footer, Notice Inviting Bid section
 """
 
 
 def step1_snapshot(text: str, api_key: str, all_keys: List[str], groq_key: str) -> Dict:
-    # Use first 8000 chars (NIT section) + last 2000 (often has contact/terms)
-    chunk = get_first_n_chars(text, 8000) + "\n\n...\n\n" + get_last_n_chars(text, 2000)
+    # Use first 12000 chars (covers NIT + Key Events + Instructions) + last 3000 (T&C)
+    chunk = get_first_n_chars(text, 12000) + "\n\n...\n\n" + get_last_n_chars(text, 3000)
     prompt = SNAPSHOT_PROMPT.format(text=chunk)
     try:
         raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=4096)
@@ -416,39 +419,47 @@ def step3_scope(text: str, api_key: str, all_keys: List[str], groq_key: str) -> 
 PQ_PROMPT = """You are a bid analyst extracting Pre-Qualification (PQ) / Eligibility criteria
 from an Indian government tender document.
 
-IMPORTANT RULES:
-1. Extract EVERY numbered row from the PQ/Eligibility table — do not skip any
-2. Copy criteria text WORD-FOR-WORD from the document — do not paraphrase
-3. The table has columns like: Sr.No | Parameter | Criteria Description | Supporting Documents
-4. Each Sr.No = one item in your output
-5. Do NOT include Table of Contents entries (those have page numbers like "....31")
-6. The real criteria start with phrases like "The bidder should...", "Bidder must...", "Cover letter..."
+The PQ criteria may appear as:
+- A numbered table with columns: Sr.No | Description/Criteria | Proof Required
+- A numbered list with each item starting with "The bidder should..."
+- A section titled "Eligibility Criteria" or "Qualifying Criteria"
+
+CRITICAL RULES:
+1. Extract EVERY numbered criterion — check all Sr.No entries (1, 2, 3... until end of table)
+2. Copy the FULL criteria text WORD-FOR-WORD from the document — do not summarize or cut short
+3. If criteria spans multiple lines/rows, concatenate into one complete string
+4. "Proof Required" or "Documents Required" column = the "details" field
+5. Do NOT include Table of Contents entries (those end with page numbers like "....7" or "....31")
+6. Each Sr.No in the eligibility table = ONE separate item in pq_criteria array
+7. Even if criteria text is long (multi-sentence), capture ALL of it
 
 Nascent Info Technologies profile for status assessment:
 {nascent}
 
-Text containing PQ criteria:
+Text containing PQ/Eligibility criteria:
 {text}
 
-Return ONLY valid JSON:
+Return ONLY valid JSON — no markdown, no text before or after:
 {{
   "pq_criteria": [
     {{
       "sl_no": "1",
-      "clause_ref": "Section reference and page if stated",
-      "criteria": "EXACT word-for-word criteria from document — full text, do not cut short",
-      "details": "Supporting documents required as stated",
+      "clause_ref": "Section/Clause/Page reference if stated, else Eligibility Criteria",
+      "criteria": "COMPLETE word-for-word criteria text from document. Include ALL conditions, thresholds, and qualifications stated. Do not truncate.",
+      "details": "Documents/proof required as stated in the document",
       "nascent_status": "Met / Not Met / Conditional",
       "nascent_color": "GREEN / RED / AMBER",
-      "nascent_remark": "What Nascent has that satisfies this (cite specific cert/project/figure). If gap: what is missing. If borderline: explain why Conditional. Keep it concise and factual."
+      "nascent_remark": "Specific evidence: cite cert name, project name, turnover figure, employee count. If Not Met: exactly what is missing. If Conditional: what caveat or pre-bid query is needed."
     }}
   ]
 }}
 
-Status guide:
-- Met (GREEN): Nascent clearly satisfies — cite the specific evidence
-- Not Met (RED): Clear gap — state exactly what is missing
-- Conditional (AMBER): Meets but with caveat OR borderline OR needs clarification
+Status assessment guide:
+- Met (GREEN): Nascent clearly satisfies — name the specific cert / project / figure as evidence
+- Not Met (RED): Hard gap — state exactly what Nascent lacks vs what is required
+- Conditional (AMBER): Meets but needs clarification, or borderline (e.g. employee count close to threshold, cert version mismatch)
+
+IMPORTANT: If no PQ section is found in the text, return {{"pq_criteria": []}}
 """
 
 
@@ -459,15 +470,16 @@ def step4_pq(text: str, api_key: str, all_keys: List[str], groq_key: str) -> Dic
         "fulfill the following minimum eligibility",
         "minimum eligibility criteria", "A Bidder must meet",
         "Qualifying Criteria\n", "4. Eligibility", "5.1 Pre-Qualification",
-        "6. Pre-Qualification", "S.no.\nParameter", "Sr.\nNo.\nDescription"
-    ], chars=8000)
+        "6. Pre-Qualification", "S.no.\nParameter", "Sr.\nNo.\nDescription",
+        "Sr.\nNo.\nDescription", "4. Eligibility Criteria",
+        "ELIGIBILITY CRITERIA", "Eligibility:", "Minimum Eligibility",
+    ], chars=10000)
     if not pq_text:
-        # Search in middle of document
-        mid = len(text) // 3
-        pq_text = text[mid:mid+8000]
-    prompt = PQ_PROMPT.format(nascent=NASCENT, text=pq_text[:10000])
+        # Search in first half of document (PQ usually in first 60%)
+        pq_text = text[3000:13000]
+    prompt = PQ_PROMPT.format(nascent=NASCENT, text=pq_text[:12000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=8192)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=10240)
         result = clean_json(raw)
         pq = result.get("pq_criteria", [])
         logger.info(f"[Step4-PQ] {len(pq)} criteria extracted")
@@ -883,6 +895,165 @@ def build_text_corpus(all_text: str) -> tuple:
     return main_text, corrigendum_parts
 
 
+def regex_extract_snapshot(text: str) -> Dict:
+    """
+    Fast regex extraction of key fields from Indian tender documents.
+    Used as fallback when all AI API calls fail.
+    Handles common patterns in SMC/GeM/NIT tender formats.
+    """
+    result = {}
+
+    def first_match(patterns, txt=text):
+        for p in patterns:
+            m = re.search(p, txt, re.IGNORECASE | re.MULTILINE)
+            if m:
+                val = m.group(1).strip().rstrip('/-')
+                if val and len(val) < 200:
+                    return val
+        return "—"
+
+    # Tender No — try specific patterns first
+    result["tender_no"] = "—"
+    # DC/GIS CELL style
+    m = re.search(r'(DC/[A-Z ]+/\d+/\d{4}-\d{2,4})', text)
+    if m: result["tender_no"] = m.group(1).strip()
+    # GeM style
+    if result["tender_no"] == "—":
+        m = re.search(r'(GEM/\d{4}/[A-Z]/\d+)', text)
+        if m: result["tender_no"] = m.group(1)
+    # Generic NIT/Tender No
+    if result["tender_no"] == "—":
+        result["tender_no"] = first_match([
+            r'(?:Notice Inviting (?:Tender|Bid)|NIT No\.?|Tender No\.?|Bid No\.?|RFP No\.?)[:\s]+([A-Z0-9/\-\. ]+)',
+            r'Tender Reference Number\s+([A-Z0-9/ ]+dated[^\n]+)',
+        ])
+
+    # Org name
+    result["org_name"] = first_match([
+        r'(?:Organisation Name|Organization)[:\s]+([^\n]+)',
+        r'(?:Issued by|Inviting Authority)[:\s]+([^\n]+)',
+        r'^((?:Surat|Ahmedabad|Mumbai|Delhi|Gujarat|Rajasthan)[^\n]{5,50}(?:Corporation|Department|Office|Council|Authority))',
+    ])
+
+    # Tender name / title
+    result["tender_name"] = first_match([
+        r'(?:Title|Work Description|Item Category)[:\s]+([^\n]{20,})',
+        r'Request for Proposal[^\n]*\n([^\n]{20,})',
+        r'(?:NIB|NIT) for ([^\n]{20,})',
+    ])
+
+    # Bid submission deadline
+    result["bid_submission_date"] = first_match([
+        r'(?:Bid End Date|Last Date.*Submission|Online Bid End Date)[:/\s]+([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4}[^\n]{0,20})',
+        r'(?:last date.*online submission|bid end date/time)[:\s]+([0-9-]{8,}[^\n]{0,15})',
+        r'on or before\s+([0-9]{2}/[0-9]{2}/[0-9]{4}[^\n]{0,15})',
+    ])
+
+    # Bid opening date
+    result["bid_opening_date"] = first_match([
+        r'(?:Bid Opening Date|Opening of Technical Bids?)[:/\s]+([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4}[^\n]{0,20})',
+        r'Tentatively on ([0-9]{2}/[0-9]{2}/[0-9]{4})',
+    ])
+
+    # Bid start date
+    result["bid_start_date"] = first_match([
+        r'(?:Bid (?:Start|Availability|Start Date|Available from))[:/\s]+([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})',
+        r'Online Bid Start Date\s+([0-9]{2}/[0-9]{2}/[0-9]{4})',
+        r'Start from ([0-9]{2}/[0-9]{2}/[0-9]{4})',
+    ])
+
+    # EMD
+    result["emd"] = first_match([
+        r'EMD[^\n]*?(?:Rs\.?|INR|₹)\s*([\d,]+(?:/[-])?)',
+        r'Earnest Money Deposit[^\n]*?(?:Rs\.?|INR|₹)\s*([\d,]+)',
+        r'EMD Amount[^\n]*?([\d,]+)',
+        r'(?:Rs\.?\s*[\d,]+)[^\n]*(?:EMD|Earnest)',
+    ])
+    if result["emd"] != "—":
+        result["emd"] = "Rs. " + result["emd"].replace("Rs.", "").replace("Rs", "").strip()
+
+    # Tender fee
+    result["tender_fee"] = first_match([
+        r'(?:Tender Fee|Bid Fee|Document Fee)[^\n]*?(?:Rs\.?|INR|₹)\s*([\d,]+[^\n]{0,50})',
+        r'(?:Rs\.?\s*[\d,]+)[^\n]*(?:Tender Fee|Bid Fee)',
+    ])
+
+    # Pre-bid query deadline
+    result["prebid_query_date"] = first_match([
+        r'(?:Pre-Bid Quer(?:y|ies)|Last Date.*Quer)[^\n]*?([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4}[^\n]{0,20})',
+        r'(?:post queries|submit.*queries)[^\n]*?([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}[^\n]{0,20})',
+        r'on or before\s+([0-9]{2}/[0-9]{2}/[0-9]{4}[^\n]{0,20}hrs)',
+    ])
+
+    # Pre-bid meeting
+    result["prebid_meeting"] = first_match([
+        r'Pre-Bid Meeting[^\n]*?([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4}[^\n]{0,80})',
+        r'Pre-Bid Conference[^\n]*?([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4}[^\n]{0,80})',
+    ])
+
+    # Contact email
+    email_m = re.search(r'([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})', text)
+    if email_m:
+        result["contact"] = email_m.group(1)
+
+    # Portal
+    url_m = re.search(r'(https?://[a-zA-Z0-9./\-]+(?:tender|gem|eproc|nprocure|bid)[a-zA-Z0-9./\-]*)', text)
+    if url_m:
+        result["portal"] = url_m.group(1)
+
+    # Contract period
+    result["contract_period"] = first_match([
+        r'(?:Period of Work|Contract Period|Duration)[:/\s]+([^\n]{5,60})',
+        r'(\d+\s+(?:Year|Month)[s]?[^\n]{0,40}(?:O&M|AMC|maintenance)?)',
+    ])
+
+    # Bid validity
+    result["bid_validity"] = first_match([
+        r'(?:Bid Validity|Offer Valid)[:/\s]+([^\n]{5,40})',
+        r'valid.*?(\d+\s*days?)[^\n]{0,20}(?:opening|price)',
+    ])
+
+    # JV
+    if re.search(r'(?:JV|Joint Venture|Consortium)[^\n]*NOT\s+(?:allowed|permitted)', text, re.IGNORECASE):
+        result["jv_allowed"] = "NOT allowed — JV/Consortium not permitted"
+    elif re.search(r'NOT\s+(?:allowed|permitted)[^\n]*(?:JV|Joint Venture|Consortium)', text, re.IGNORECASE):
+        result["jv_allowed"] = "NOT allowed — JV/Consortium not permitted"
+
+    # EMD exemption
+    if re.search(r'MSME.*exemption|exemption.*MSME', text, re.IGNORECASE):
+        result["emd_exemption"] = "MSME exemption may be applicable — verify with authority"
+
+    # Performance security
+    result["performance_security"] = first_match([
+        r'(?:Performance (?:Bank Guarantee|Security|Guarantee))[^\n]*?(\d+%[^\n]{0,60})',
+        r'(?:Initial Security Deposit|ISD)[^\n]*?(\d+%[^\n]{0,60})',
+        r'Security Deposit[^\n]*?(?:@\s*)?(\d+%[^\n]{0,40})',
+    ])
+
+    # Estimated cost
+    result["estimated_cost"] = first_match([
+        r'(?:Estimated (?:Bid )?Value|Tender Value)[:/\s]+(?:Rs\.?|INR|₹)?\s*([\d,]+)',
+        r'(?:Estimated Cost)[:/\s]+([^\n]{5,40})',
+    ])
+
+    # Location
+    result["location"] = first_match([
+        r'(?:Location|Project Location)[:/\s]+([^\n]{5,50})',
+        r'Pincode[^\n]*?([A-Za-z ,]+)\n',
+    ])
+
+    # Mode of selection
+    if re.search(r'L1\b|lowest bid|L-1', text, re.IGNORECASE):
+        result["mode_of_selection"] = "L1 (Lowest Bid)"
+    elif re.search(r'QCBS', text, re.IGNORECASE):
+        result["mode_of_selection"] = "QCBS (Quality cum Cost Based Selection)"
+    elif re.search(r'LCS|Least Cost', text, re.IGNORECASE):
+        result["mode_of_selection"] = "LCS (Least Cost Selection)"
+
+    # Remove "—" values to keep result clean
+    return {k: v for k, v in result.items() if v and v != "—"}
+
+
 # ═══════════════════════════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════
@@ -890,6 +1061,7 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
     """
     Multi-call pipeline. Each step extracts one thing well.
     Returns merged result dict ready for doc_generator.
+    Falls back to regex extraction if all API keys are exhausted.
     """
     all_keys = get_all_api_keys()
     if not all_keys:
@@ -912,104 +1084,183 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
             main_text = main_text[:quarter]
             print(f"[AI Pipeline] Deduplicated repeated content — using {len(main_text)} chars")
 
-    # Run each step
-    result = {}
+    # Always run regex extraction first — it's instant and reliable
+    # AI steps will override these with richer data
+    result = regex_extract_snapshot(full_text)
+    print(f"[AI Pipeline] Regex extracted {len(result)} fields as baseline")
 
+    # Track if any AI step succeeded
+    any_ai_success = False
+    api_quota_exhausted = False
+
+    # ── STEP 1: SNAPSHOT ─────────────────────────────────────
     print("[AI Pipeline] Step 1: Snapshot...")
-    snapshot = step1_snapshot(main_text, api_key, all_keys, groq_key)
-    result.update(snapshot)
+    try:
+        snapshot = step1_snapshot(main_text, api_key, all_keys, groq_key)
+        if snapshot and len(snapshot) > 3:
+            # Merge: AI wins on non-empty fields
+            for k, v in snapshot.items():
+                if v and str(v).strip() not in ("—", "null", "None", ""):
+                    result[k] = v
+            any_ai_success = True
+            print(f"[AI Pipeline] Step 1 OK: {len(snapshot)} fields")
+        else:
+            print("[AI Pipeline] Step 1: Empty response — using regex baseline")
+    except Exception as e:
+        err = str(e).lower()
+        if "429" in err or "quota" in err or "exhausted" in err:
+            api_quota_exhausted = True
+        print(f"[AI Pipeline] Step 1 failed: {str(e)[:60]}")
 
+    # ── STEP 2: CORRIGENDUMS ──────────────────────────────────
     print("[AI Pipeline] Step 2: Corrigendums...")
-    if corrigendum_texts:
-        corr_overrides = step2_corrigendums(corrigendum_texts, api_key, all_keys, groq_key)
-        if corr_overrides:
-            # Override snapshot dates with latest corrigendum dates
-            for field in ["bid_submission_date","bid_opening_date","prebid_meeting","prebid_query_date"]:
-                if corr_overrides.get(field) and corr_overrides[field] != "null":
-                    old = result.get(field,"—")
-                    result[field] = corr_overrides[field]
-                    print(f"[AI Pipeline] Date override: {field}: {old} → {corr_overrides[field]}")
-            if corr_overrides.get("corrigendum_note"):
-                result["corrigendum_note"] = corr_overrides["corrigendum_note"]
-            result["has_corrigendum"] = True
+    if corrigendum_texts and not api_quota_exhausted:
+        try:
+            corr_overrides = step2_corrigendums(corrigendum_texts, api_key, all_keys, groq_key)
+            if corr_overrides:
+                for field in ["bid_submission_date","bid_opening_date","prebid_meeting","prebid_query_date"]:
+                    if corr_overrides.get(field) and corr_overrides[field] not in ("null","—",""):
+                        old = result.get(field,"—")
+                        result[field] = corr_overrides[field]
+                        print(f"[AI Pipeline] Date override: {field}: {old} → {corr_overrides[field]}")
+                if corr_overrides.get("corrigendum_note"):
+                    result["corrigendum_note"] = corr_overrides["corrigendum_note"]
+                result["has_corrigendum"] = True
+        except Exception as e:
+            if "429" in str(e) or "quota" in str(e).lower():
+                api_quota_exhausted = True
+            print(f"[AI Pipeline] Step 2 failed: {str(e)[:60]}")
+    elif corrigendum_texts:
+        # Regex-based corrigendum date extraction
+        for ct in corrigendum_texts:
+            m = re.search(r'extended to (\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2})', ct)
+            if m:
+                result["bid_submission_date"] = m.group(1).replace("-", "/").strip()
+                result["has_corrigendum"] = True
+                result["corrigendum_note"] = "Bid deadline extended — see corrigendum"
+                print(f"[AI Pipeline] Corrigendum regex: new deadline = {result['bid_submission_date']}")
 
+    # If quota exhausted after step 1, skip remaining AI steps
+    if api_quota_exhausted:
+        print("[AI Pipeline] API quota exhausted — using regex baseline for all remaining fields")
+        result["ai_warning"] = (
+            "API quota exhausted — snapshot extracted by regex. "
+            "PQ criteria, scope, and payment terms not available. "
+            "Add a new free Gemini key at aistudio.google.com/apikey or try again tomorrow."
+        )
+        # Build minimal verdict from regex data
+        result["verdict"] = "CONDITIONAL"
+        result["overall_verdict"] = {
+            "verdict": "CONDITIONAL", "color": "BLUE",
+            "reason": "API quota exhausted — manual review required",
+            "green": 0, "amber": 0, "red": 0
+        }
+        result["key_reasons"] = ["API quota exhausted — AI analysis incomplete. Review tender manually."]
+        result["action_items"] = [{
+            "action": "Add a new free Gemini API key at aistudio.google.com/apikey, then re-analyse this tender",
+            "responsible": "Admin", "target_date": "Today", "priority": "URGENT"
+        }]
+        return result
+
+    # ── STEP 3: SCOPE ─────────────────────────────────────────
     print("[AI Pipeline] Step 3: Scope...")
-    scope = step3_scope(main_text, api_key, all_keys, groq_key)
-    if scope.get("scope_background"):
-        result["scope_background"] = scope["scope_background"]
-    if scope.get("scope_items"):
-        result["scope_items"] = scope["scope_items"]
-    if scope.get("key_integrations"):
-        result["key_integrations"] = scope["key_integrations"]
-    if scope.get("scale_requirements"):
-        result["scale_requirements"] = scope["scale_requirements"]
+    scope = {}
+    try:
+        scope = step3_scope(main_text, api_key, all_keys, groq_key)
+        if scope.get("scope_background"):
+            result["scope_background"] = scope["scope_background"]
+        if scope.get("scope_items"):
+            result["scope_items"] = scope["scope_items"]
+        if scope.get("key_integrations"):
+            result["key_integrations"] = scope["key_integrations"]
+        any_ai_success = True
+    except Exception as e:
+        print(f"[AI Pipeline] Step 3 failed: {str(e)[:60]}")
 
+    # ── STEP 4: PQ CRITERIA ───────────────────────────────────
     print("[AI Pipeline] Step 4: PQ Criteria...")
-    pq = step4_pq(main_text, api_key, all_keys, groq_key)
-    if pq.get("pq_criteria"):
-        # Normalize statuses
-        normalized = []
-        for item in pq["pq_criteria"]:
-            if not isinstance(item, dict):
-                continue
-            status, color = normalize_status(item.get("nascent_status","Review"))
-            normalized.append({
-                "sl_no":          str(item.get("sl_no","") or ""),
-                "clause_ref":     str(item.get("clause_ref","—") or "—"),
-                "criteria":       str(item.get("criteria","") or ""),
-                "details":        str(item.get("details","") or ""),
-                "nascent_status": status,
-                "nascent_color":  color,
-                "nascent_remark": str(item.get("nascent_remark","") or ""),
-            })
-        result["pq_criteria"] = normalized
+    pq = {}
+    try:
+        pq = step4_pq(main_text, api_key, all_keys, groq_key)
+        if pq.get("pq_criteria"):
+            normalized = []
+            for item in pq["pq_criteria"]:
+                if not isinstance(item, dict):
+                    continue
+                status, color = normalize_status(item.get("nascent_status","Review"))
+                normalized.append({
+                    "sl_no":          str(item.get("sl_no","") or ""),
+                    "clause_ref":     str(item.get("clause_ref","—") or "—"),
+                    "criteria":       str(item.get("criteria","") or ""),
+                    "details":        str(item.get("details","") or ""),
+                    "nascent_status": status,
+                    "nascent_color":  color,
+                    "nascent_remark": str(item.get("nascent_remark","") or ""),
+                })
+            result["pq_criteria"] = normalized
+            any_ai_success = True
+    except Exception as e:
+        print(f"[AI Pipeline] Step 4 failed: {str(e)[:60]}")
 
+    # ── STEP 5: TQ CRITERIA ───────────────────────────────────
     print("[AI Pipeline] Step 5: TQ Criteria...")
-    tq = step5_tq(main_text, api_key, all_keys, groq_key)
-    if tq.get("tq_criteria"):
-        normalized_tq = []
-        for item in tq["tq_criteria"]:
-            if not isinstance(item, dict):
-                continue
-            status, color = normalize_status(item.get("nascent_status","Review"))
-            normalized_tq.append({
-                "sl_no":          str(item.get("sl_no","") or ""),
-                "clause_ref":     str(item.get("clause_ref","—") or "—"),
-                "criteria":       str(item.get("criteria","") or ""),
-                "details":        str(item.get("details","") or ""),
-                "nascent_status": status,
-                "nascent_color":  color,
-                "nascent_remark": str(item.get("nascent_remark","") or ""),
-            })
-        result["tq_criteria"] = normalized_tq
+    tq = {}
+    try:
+        tq = step5_tq(main_text, api_key, all_keys, groq_key)
+        if tq.get("tq_criteria"):
+            normalized_tq = []
+            for item in tq["tq_criteria"]:
+                if not isinstance(item, dict):
+                    continue
+                status, color = normalize_status(item.get("nascent_status","Review"))
+                normalized_tq.append({
+                    "sl_no":          str(item.get("sl_no","") or ""),
+                    "clause_ref":     str(item.get("clause_ref","—") or "—"),
+                    "criteria":       str(item.get("criteria","") or ""),
+                    "details":        str(item.get("details","") or ""),
+                    "nascent_status": status,
+                    "nascent_color":  color,
+                    "nascent_remark": str(item.get("nascent_remark","") or ""),
+                })
+            result["tq_criteria"] = normalized_tq
+    except Exception as e:
+        print(f"[AI Pipeline] Step 5 failed: {str(e)[:60]}")
 
+    # ── STEP 6: PAYMENT TERMS ─────────────────────────────────
     print("[AI Pipeline] Step 6: Payment Terms...")
-    payment = step6_payment(main_text, api_key, all_keys, groq_key)
-    if payment.get("payment_terms"):
-        result["payment_terms"] = payment["payment_terms"]
-    if payment.get("penalty_clauses"):
-        result["penalty_clauses"] = payment["penalty_clauses"]
-    if payment.get("key_conditions"):
-        result["key_conditions"] = payment["key_conditions"]
+    payment = {}
+    try:
+        payment = step6_payment(main_text, api_key, all_keys, groq_key)
+        if payment.get("payment_terms"):
+            result["payment_terms"] = payment["payment_terms"]
+        if payment.get("penalty_clauses"):
+            result["penalty_clauses"] = payment["penalty_clauses"]
+        if payment.get("key_conditions"):
+            result["key_conditions"] = payment["key_conditions"]
+    except Exception as e:
+        print(f"[AI Pipeline] Step 6 failed: {str(e)[:60]}")
 
+    # ── STEP 7: ASSESSMENT + VERDICT ─────────────────────────
     print("[AI Pipeline] Step 7: Nascent Assessment + Verdict...")
-    assessment = step7_assessment(
-        result, pq, tq, scope, api_key, all_keys, groq_key
-    )
-    if assessment.get("prebid_queries"):
-        result["prebid_queries"] = assessment["prebid_queries"]
-    if assessment.get("action_items"):
-        result["action_items"] = assessment["action_items"]
-    if assessment.get("jv_conditions"):
-        result["jv_conditions"] = assessment["jv_conditions"]
-    if assessment.get("portal_vs_rfp_discrepancies"):
-        result["portal_vs_rfp_discrepancies"] = assessment["portal_vs_rfp_discrepancies"]
-    if assessment.get("key_reasons"):
-        result["key_reasons"] = assessment["key_reasons"]
+    assessment = {}
+    try:
+        assessment = step7_assessment(result, pq, tq, scope, api_key, all_keys, groq_key)
+        if assessment.get("prebid_queries"):
+            result["prebid_queries"] = assessment["prebid_queries"]
+        if assessment.get("action_items"):
+            result["action_items"] = assessment["action_items"]
+        if assessment.get("jv_conditions"):
+            result["jv_conditions"] = assessment["jv_conditions"]
+        if assessment.get("portal_vs_rfp_discrepancies"):
+            result["portal_vs_rfp_discrepancies"] = assessment["portal_vs_rfp_discrepancies"]
+        if assessment.get("key_reasons"):
+            result["key_reasons"] = assessment["key_reasons"]
+    except Exception as e:
+        print(f"[AI Pipeline] Step 7 failed: {str(e)[:60]}")
 
     # Build overall_verdict
-    rec = assessment.get("overall_recommendation", "CONDITIONAL")
-    reason = assessment.get("recommendation_reason", "")
+    rec = assessment.get("overall_recommendation", "CONDITIONAL") if assessment else "CONDITIONAL"
+    reason = assessment.get("recommendation_reason", "") if assessment else ""
     verdict, color = normalize_verdict(rec)
     result["verdict"] = verdict
     pq_list = result.get("pq_criteria", [])
@@ -1022,14 +1273,18 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
         "red":   sum(1 for p in pq_list if p.get("nascent_color") == "RED"),
     }
 
+    # ── STEP 8: NOTES + CHECKLIST ─────────────────────────────
     print("[AI Pipeline] Step 8: Notes + Checklist...")
-    notes = step8_notes_checklist(result, pq, api_key, all_keys, groq_key)
-    if notes.get("notes"):
-        result["notes"] = notes["notes"]
-    if notes.get("submission_checklist"):
-        result["submission_checklist"] = notes["submission_checklist"]
+    try:
+        notes = step8_notes_checklist(result, pq, api_key, all_keys, groq_key)
+        if notes.get("notes"):
+            result["notes"] = notes["notes"]
+        if notes.get("submission_checklist"):
+            result["submission_checklist"] = notes["submission_checklist"]
+    except Exception as e:
+        print(f"[AI Pipeline] Step 8 failed: {str(e)[:60]}")
 
-    print(f"[AI Pipeline] Complete — verdict={verdict}, PQ={len(pq_list)} criteria")
+    print(f"[AI Pipeline] Complete — verdict={verdict}, PQ={len(pq_list)} criteria, AI steps succeeded: {any_ai_success}")
     return result
 
 
