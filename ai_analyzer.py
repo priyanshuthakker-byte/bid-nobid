@@ -271,41 +271,82 @@ def smart_chunk(full_text: str) -> str:
         return full_text
 
     parts = []
-    # Part 1: Beginning — NIT, dates, amounts
+    # Part 1: Beginning — NIT, dates, amounts (first 4000 chars)
     parts.append(full_text[:4000])
 
-    # Part 2: PQ/Eligibility section
-    for kw in ["Pre-Qualification Criteria", "Eligibility Criteria",
-               "Qualifying Criteria", "Section 2", "2.1 Pre"]:
-        idx = full_text.find(kw)
-        if idx != -1:
-            parts.append(full_text[max(0, idx-100):idx+3000])
-            break
+    def find_section(text, keywords, min_content_after=200, skip_toc=True):
+        """Find section that has real content, not just a TOC entry."""
+        best_idx = -1
+        for kw in keywords:
+            start = 0
+            while True:
+                idx = text.find(kw, start)
+                if idx == -1:
+                    break
+                # Check if this is a real section (has content after it, not just dots or page numbers)
+                after = text[idx:idx+300].replace(kw, '').strip()
+                is_toc = bool(re.search(r'^[\s\.]{10,}', after) or
+                              re.search(r'^\s*\d+\s*$', after[:30]) or
+                              re.search(r'\.{5,}', after[:50]))
+                if skip_toc and is_toc:
+                    start = idx + 1
+                    continue
+                # Real content found
+                if best_idx == -1 or idx < best_idx:
+                    best_idx = idx
+                break
+        return best_idx
 
-    # Part 3: TQ/Technical evaluation
-    for kw in ["Technical Evaluation Criteria", "Evaluation Criteria",
-               "Technical Score", "Marking Scheme", "2.2 Technical"]:
-        idx = full_text.find(kw)
-        if idx != -1:
-            parts.append(full_text[max(0, idx-100):idx+2500])
-            break
+    # Part 2: PQ/Eligibility section — skip TOC, get actual criteria
+    pq_keywords = [
+        "Pre-Qualification Criteria\n", "Pre-Qualification Criteria \n",
+        "Eligibility Criteria\n", "Qualifying Criteria\n",
+        "A Bidder must meet", "The Bidder must have",
+        "Eligibility and Qualification", "5.1 Pre-Qualification",
+        "Minimum Eligibility", "Technical Eligibility",
+    ]
+    pq_idx = find_section(full_text, pq_keywords)
+    if pq_idx != -1:
+        parts.append(full_text[max(0, pq_idx-100):pq_idx+4000])
 
-    # Part 4: Scope of work
-    for kw in ["Scope of Work", "Scope of Services", "Section 6",
-               "Technology Stack", "Functionalities Required"]:
-        idx = full_text.find(kw)
-        if idx != -1:
-            parts.append(full_text[max(0, idx-100):idx+3000])
-            break
+    # Part 3: TQ/Technical scoring — skip TOC
+    tq_keywords = [
+        "Technical Score Criteria\n", "Technical Evaluation Criteria\n",
+        "Marking Scheme\n", "Technical Score system",
+        "Sr. No.  Marking", "Marks  Sub-Marks",
+        "5.2  Technical Score", "Technical Qualification Criteria",
+    ]
+    tq_idx = find_section(full_text, tq_keywords)
+    if tq_idx != -1:
+        parts.append(full_text[max(0, tq_idx-100):tq_idx+3000])
+
+    # Part 4: Scope of work — skip TOC
+    scope_keywords = [
+        "Scope of Work\n", "Scope of Services\n",
+        "SCOPE OF WORK\n", "Work to be Done",
+        "1.  Scope", "2.  Scope", "Phase 1:",
+        "Functionalities Required", "Key Deliverables",
+    ]
+    scope_idx = find_section(full_text, scope_keywords)
+    if scope_idx != -1:
+        parts.append(full_text[max(0, scope_idx-100):scope_idx+3000])
 
     # Part 5: Payment terms
-    for kw in ["Payment Terms", "Payment Schedule", "7. Payment"]:
-        idx = full_text.find(kw)
-        if idx != -1:
-            parts.append(full_text[max(0, idx-100):idx+2000])
-            break
+    pay_keywords = ["Payment Terms\n", "Payment Schedule\n",
+                    "PAYMENT TO THE AGENCY", "Payment Milestones",
+                    "7. Payment", "Schedule of Payments"]
+    pay_idx = find_section(full_text, pay_keywords)
+    if pay_idx != -1:
+        parts.append(full_text[max(0, pay_idx-100):pay_idx+2000])
 
-    # Part 6: Last 1500 chars
+    # Part 6: Schedule of dates / key dates table
+    dates_keywords = ["Schedule of Bidding", "Schedule of Activities",
+                      "Key Dates", "Important Dates", "1.6 Schedule"]
+    dates_idx = find_section(full_text, dates_keywords)
+    if dates_idx != -1:
+        parts.append(full_text[max(0, dates_idx-50):dates_idx+1500])
+
+    # Part 7: Last 1500 chars
     parts.append(full_text[-1500:])
 
     combined = "\n\n[...]\n\n".join(parts)
