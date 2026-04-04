@@ -411,6 +411,7 @@ CRITICAL RULES:
 9. For payment terms — look for milestone table with Sr.No. | Activity | Timeline | Payment % columns
 10. Extract EMD amount, Bid Fee, Bid Validity, Performance Security — these are always in Notice Inviting Bid or Key Events section
 11. Use "—" for genuinely missing fields, never null or empty string
+12. PRE-BID QUERIES: Only raise queries for REAL GAPS that affect Nascent's eligibility or ability to bid. Do NOT raise queries for: dates that are clearly stated, procedural questions about submission process, general information requests, or items that are already clear in the document. Maximum 5-6 focused queries. Each query must have a specific purpose — either removing a blockage or seeking genuine clarification on ambiguous criteria.
 
 {{
   "tender_no": "exact tender reference number from document",
