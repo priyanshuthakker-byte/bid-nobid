@@ -452,9 +452,23 @@ CRITICAL RULES:
   "jv_conditions": [
     "Each JV condition word-for-word from document — max members, liability, lead partner rules, individual vs pooled criteria"
   ],
+  "scope_background": "2-3 sentence paragraph: what problem client is solving, what they currently have/lack, why this project is initiated. Source: Introduction/Background section of tender.",
   "scope_items": [
-    "Scope point 1 — with actual deliverable names, quantities, technologies from document",
-    "Include all phases, modules, features, integrations mentioned"
+    {{
+      "sl_no": "1",
+      "title": "Component Name (e.g. Project Planning & Mobilization)",
+      "section_ref": "Sec. 3.3.1",
+      "description": "What must be done — specific deliverables, activities, sub-components. Include artifact names (SRS, HLD, UAT sign-off etc.)",
+      "deliverables": ["SRS document", "UI/UX Prototype", "Process Re-engineering Report"],
+      "tech_platform": "Technology/platform if specified"
+    }}
+  ],
+  "key_integrations": [
+    {{
+      "system": "System/Platform name",
+      "type": "API / Database / Webhook / Portal",
+      "purpose": "What data/function this integration provides"
+    }}
   ],
   "pq_criteria": [
     {{
@@ -469,15 +483,27 @@ CRITICAL RULES:
   "tq_criteria": [
     {{
       "sl_no": "1",
-      "clause_ref": "Clause reference",
-      "criteria": "EXACT text from TQ table",
-      "details": "Max Marks: X | Nascent Estimated Score: Y",
+      "clause_ref": "Clause reference / page",
+      "criteria": "EXACT text from TQ table — parameter name and scoring criteria",
+      "details": "Max Marks: X | Nascent Estimated Score: Y–Z",
       "nascent_status": "Met",
       "nascent_remark": "Score justification citing specific Nascent projects and certifications"
     }}
   ],
   "payment_terms": [
-    "Milestone 1: exact trigger condition and payment percentage or amount"
+    {{
+      "milestone": "M1 — Project Initiation",
+      "activity": "SRS + UI/UX Prototype",
+      "scope": "Key deliverables for this milestone",
+      "timeline": "T1 + 30 days",
+      "payment_percent": "10%"
+    }}
+  ],
+  "key_conditions": [
+    {{
+      "term": "Liquidated Damages",
+      "details": "0.5% per week of delay, max 10% of contract value"
+    }}
   ],
   "penalty_clauses": [
     {{
@@ -490,9 +516,28 @@ CRITICAL RULES:
   ],
   "prebid_queries": [
     {{
-      "clause": "exact clause ref and page number",
-      "rfp_text": "the exact clause text that needs clarification",
-      "query": "professional query text — specific, well-reasoned, cites guidelines where applicable"
+      "clause": "exact clause ref",
+      "page_no": "page number from document",
+      "rfp_text": "the exact clause text that needs clarification (verbatim)",
+      "query": "professional query text — specific, well-reasoned, cites guidelines where applicable",
+      "desired_clarification": "What written response we need from the authority"
+    }}
+  ],
+  "submission_checklist": [
+    {{
+      "document": "Document name",
+      "annexure": "Annexure X / —",
+      "status": "Prepare / Compile / CRITICAL — verify / Ready"
+    }}
+  ],
+  "notes": [
+    {{
+      "title": "Selection Method",
+      "detail": "LCS / QCBS / L1 — explain what this means for Nascent's strategy"
+    }},
+    {{
+      "title": "Physical Submission",
+      "detail": "Any hard copy submission requirements with address and deadline"
     }}
   ],
   "overall_recommendation": "BID",
@@ -630,23 +675,39 @@ def merge_results(regex_data: Dict, ai_data: Dict,
     if ai_data.get("notes"):
         result["notes"] = ai_data["notes"]
 
-    # NEW: JV conditions
+    # Scope background
+    if ai_data.get("scope_background"):
+        result["scope_background"] = ai_data["scope_background"]
+
+    # Key integrations
+    if ai_data.get("key_integrations"):
+        result["key_integrations"] = ai_data["key_integrations"]
+
+    # Key conditions
+    if ai_data.get("key_conditions"):
+        result["key_conditions"] = ai_data["key_conditions"]
+
+    # Submission checklist
+    if ai_data.get("submission_checklist"):
+        result["submission_checklist"] = ai_data["submission_checklist"]
+
+    # JV conditions
     if ai_data.get("jv_conditions"):
         result["jv_conditions"] = ai_data["jv_conditions"]
 
-    # NEW: Portal vs RFP discrepancies
+    # Portal vs RFP discrepancies
     if ai_data.get("portal_vs_rfp_discrepancies"):
         result["portal_vs_rfp_discrepancies"] = ai_data["portal_vs_rfp_discrepancies"]
 
-    # NEW: Penalty clauses
+    # Penalty clauses
     if ai_data.get("penalty_clauses"):
         result["penalty_clauses"] = ai_data["penalty_clauses"]
 
-    # NEW: Action items with dates
+    # Action items with dates
     if ai_data.get("action_items"):
         result["action_items"] = ai_data["action_items"]
 
-    # NEW: Key reasons
+    # Key reasons
     if ai_data.get("key_reasons"):
         result["key_reasons"] = ai_data["key_reasons"]
 
