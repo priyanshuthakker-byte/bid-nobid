@@ -123,7 +123,7 @@ def call_gemini(prompt: str, api_key: str) -> str:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.1,
-                "maxOutputTokens": 8192,
+                "maxOutputTokens": 16384,
             }
         }).encode("utf-8")
         req = urllib.request.Request(
@@ -196,20 +196,70 @@ def call_groq(prompt: str, groq_key: str) -> str:
 # JSON CLEANER
 # ─────────────────────────────────────────
 def clean_json(text: str) -> Dict:
-    """Strip markdown fences and parse JSON."""
+    """Strip markdown fences and parse JSON. Recovers partial JSON if truncated."""
     text = text.strip()
     # Remove ```json ... ``` or ``` ... ```
     text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.MULTILINE)
     text = re.sub(r'\s*```$', '', text, flags=re.MULTILINE)
     text = text.strip()
+
+    # Try direct parse first
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        # Try to find JSON object inside text
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
+        pass
+
+    # Try to find a complete JSON object
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        try:
             return json.loads(match.group(0))
-        raise
+        except json.JSONDecodeError:
+            pass
+
+    # Partial recovery: JSON was truncated — fix it
+    # Find the opening brace
+    start = text.find('{')
+    if start == -1:
+        raise json.JSONDecodeError("No JSON object found", text, 0)
+
+    partial = text[start:]
+
+    # Try progressively shorter versions until we get valid JSON
+    # Strategy: truncate at the last complete key-value pair
+    for cut_pattern in [
+        # Cut at last complete array item ending with }
+        r',\s*\{[^{}]*$',
+        # Cut at last complete string value
+        r',\s*"[^"]*":\s*"[^"]*$',
+        # Cut at last complete key
+        r',\s*"[^"]*":\s*\[$',
+        r',\s*"[^"]*":\s*$',
+        r',\s*"[^"]*$',
+    ]:
+        truncated = re.sub(cut_pattern, '', partial, flags=re.DOTALL)
+        # Close any open arrays and the object
+        open_brackets = truncated.count('[') - truncated.count(']')
+        open_braces   = truncated.count('{') - truncated.count('}')
+        fixed = truncated
+        fixed += ']' * max(0, open_brackets)
+        fixed += '}' * max(0, open_braces)
+        try:
+            result = json.loads(fixed)
+            logger.warning(f"Recovered partial JSON ({len(result)} top-level keys)")
+            return result
+        except json.JSONDecodeError:
+            continue
+
+    # Last resort: extract whatever valid fields we can
+    result = {}
+    for field_match in re.finditer(r'"(\w+)"\s*:\s*"([^"]*)"', partial):
+        result[field_match.group(1)] = field_match.group(2)
+    if result:
+        logger.warning(f"Extracted {len(result)} fields from broken JSON via regex")
+        return result
+
+    raise json.JSONDecodeError("Could not recover JSON", text, 0)
 
 
 # ─────────────────────────────────────────
@@ -608,13 +658,8 @@ def analyze_with_gemini(full_text: str,
 
         except json.JSONDecodeError as e:
             logger.error(f"JSON parse error on key {key_idx+1}: {e}")
-            # Don't try next key for JSON errors — it's a prompt issue
-            return {
-                "error": (
-                    f"AI returned invalid JSON. "
-                    f"Try uploading a cleaner PDF. Details: {str(e)[:80]}"
-                )
-            }
+            # Try next key — different key may get a cleaner response
+            continue
 
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")
