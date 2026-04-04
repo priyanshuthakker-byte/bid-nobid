@@ -300,10 +300,15 @@ def smart_chunk(full_text: str) -> str:
     # Part 2: PQ/Eligibility section — skip TOC, get actual criteria
     pq_keywords = [
         "Pre-Qualification Criteria\n", "Pre-Qualification Criteria \n",
-        "Eligibility Criteria\n", "Qualifying Criteria\n",
+        "Eligibility Criteria\n", "Eligibility Criteria \n",
+        "Qualifying Criteria\n",
         "A Bidder must meet", "The Bidder must have",
+        "bidder interested in being considered",
+        "fulfill the following minimum eligibility",
+        "minimum eligibility criteria",
         "Eligibility and Qualification", "5.1 Pre-Qualification",
         "Minimum Eligibility", "Technical Eligibility",
+        "4. Eligibility", "4.  Eligibility",
     ]
     pq_idx = find_section(full_text, pq_keywords)
     if pq_idx != -1:
@@ -390,14 +395,22 @@ Return ONLY a valid JSON object. No markdown fences. No explanation. Just the JS
 
 CRITICAL RULES:
 1. overall_recommendation must be exactly: "BID", "NO-BID", or "CONDITIONAL"
-2. Extract ALL PQ criteria WORD-FOR-WORD from document — do not paraphrase, do not skip any row
+2. PQ CRITERIA EXTRACTION — THIS IS THE MOST IMPORTANT PART:
+   - Look for section titled "Eligibility Criteria" or "Pre-Qualification Criteria" — this is ALWAYS a numbered table with Sr.No. | Description | Proof Required columns
+   - Extract EVERY numbered row from that table as a separate pq_criteria item
+   - The Index/TOC also mentions "Eligibility Criteria" with a page number — IGNORE the TOC entry, use only the actual section content
+   - The actual criteria start with "The bidder should..." or "Bidder must..." or similar
+   - Common criteria in Indian tenders: company registration, turnover, GST/PAN, certifications (CMMI, ISO), experience projects, employee count, EMD, solvency, non-blacklisting
+   - Each Sr. No. in the eligibility table = one pq_criteria item
 3. Extract ALL TQ criteria with exact marks/weightage
 4. nascent_status must be exactly: "Met", "Not Met", or "Conditional"
 5. For every "Not Met" or "Conditional" — ALWAYS write a pre-bid query draft in nascent_remark
 6. Check for portal vs RFP discrepancies (dates, amounts, period of work, EMD, conditions)
 7. Extract JV/consortium conditions as a separate dedicated section
 8. Generate action_items with specific target dates based on bid deadline
-9. Use "—" for genuinely missing fields, never null or empty string
+9. For payment terms — look for milestone table with Sr.No. | Activity | Timeline | Payment % columns
+10. Extract EMD amount, Bid Fee, Bid Validity, Performance Security — these are always in Notice Inviting Bid or Key Events section
+11. Use "—" for genuinely missing fields, never null or empty string
 
 {{
   "tender_no": "exact tender reference number from document",
@@ -445,7 +458,7 @@ CRITICAL RULES:
   "pq_criteria": [
     {{
       "sl_no": "1",
-      "clause_ref": "Clause X.X / Section Y / Page Z",
+      "clause_ref": "Section 4 / Eligibility Criteria / Sr. No. 1",
       "criteria": "EXACT WORD-FOR-WORD criteria text from PQ table — do not shorten",
       "details": "Documents required as stated in document",
       "nascent_status": "Met",
