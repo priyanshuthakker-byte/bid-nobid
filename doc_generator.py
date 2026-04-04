@@ -126,6 +126,24 @@ def status_color(s):
     return "BLUE"
 
 
+def flatten_value(val) -> str:
+    """Convert any value to a clean readable string for Word cells."""
+    if val is None:
+        return "—"
+    if isinstance(val, str):
+        return val.strip() or "—"
+    if isinstance(val, dict):
+        parts = []
+        for k, v in val.items():
+            if v is not None and str(v).strip():
+                label = k.replace('_', ' ').title()
+                parts.append(f"{label}: {v}")
+        return " | ".join(parts) if parts else "—"
+    if isinstance(val, list):
+        return ", ".join(str(i) for i in val if i) or "—"
+    return str(val).strip() or "—"
+
+
 class BidDocGenerator:
 
     def generate(self, data: Dict[str, Any], output_path: str):
@@ -259,8 +277,9 @@ class BidDocGenerator:
         table = self.doc.add_table(rows=0, cols=2)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         set_table_borders(table, color=C["mid_blue"])
-        for idx, (key, val) in enumerate(fields):
-            if val in ("—", "", None): continue  # skip empty rows
+        for idx, (key, raw_val) in enumerate(fields):
+            val = flatten_value(raw_val)
+            if val == "—": continue  # skip empty rows
             row = table.add_row(); row.height = Cm(0.75)
             bg_l = "D6E4F0" if idx % 2 == 0 else "E8F0F8"
             bg_v = C["white"] if idx % 2 == 0 else C["alt_row"]
@@ -269,8 +288,8 @@ class BidDocGenerator:
             cell_write(c0, key, bold=True, size=9, color=C["dark_blue"])
             c1 = row.cells[1]; c1.width = Cm(18.5)
             set_bg(c1, bg_v); set_borders(c1)
-            hl = key in highlight and str(val) not in ("—","Not mentioned — verify portal","Not specified")
-            cell_write(c1, str(val), bold=hl, size=9, color=(C["orange"] if hl else None))
+            hl = key in highlight and val not in ("—","Not mentioned — verify portal","Not specified")
+            cell_write(c1, val, bold=hl, size=9, color=(C["orange"] if hl else None))
         self.doc.add_paragraph()
 
     # ── SECTION 2: JV / CONSORTIUM CONDITIONS ─────────────────
@@ -392,9 +411,9 @@ class BidDocGenerator:
         items = data.get("payment_terms", [])
         if not items:
             items = [
-                f"Contract Period: {data.get('contract_period','As per tender')}",
-                f"EMD: {data.get('emd','As per tender')}",
-                f"Performance Security: {data.get('performance_security','As per tender')}",
+                f"Contract Period: {flatten_value(data.get('contract_period','As per tender'))}",
+                f"EMD: {flatten_value(data.get('emd','As per tender'))}",
+                f"Performance Security: {flatten_value(data.get('performance_security','As per tender'))}",
                 "Payment schedule: Not explicitly extracted — refer tender document.",
             ]
         table = self.doc.add_table(rows=0, cols=2)
@@ -409,7 +428,7 @@ class BidDocGenerator:
                        align=WD_ALIGN_PARAGRAPH.CENTER)
             c1 = row.cells[1]; c1.width = Cm(24.3)
             set_bg(c1, bg); set_borders(c1)
-            cell_write(c1, strip_emojis(str(item)), size=9)
+            cell_write(c1, strip_emojis(flatten_value(item)), size=9)
         self.doc.add_paragraph()
 
     # ── SECTION 7: PENALTY & RISK ─────────────────────────────
@@ -495,7 +514,11 @@ class BidDocGenerator:
             return
 
         prebid_deadline = data.get("prebid_query_date","—")
-        prebid_contact  = data.get("contact","—")
+        prebid_contact  = flatten_value(data.get("contact","—"))
+        # Just use email if available, else name
+        contact_raw = data.get("contact", {})
+        if isinstance(contact_raw, dict):
+            prebid_contact = contact_raw.get("email") or contact_raw.get("name") or "Refer tender document"
         self._sec_heading("9", "Pre-Bid Queries — Consolidated List",
                           f"Submit to: {prebid_contact} | Deadline: {prebid_deadline}")
 
