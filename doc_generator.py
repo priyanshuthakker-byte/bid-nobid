@@ -159,6 +159,7 @@ class BidDocGenerator:
         self._section_penalty(data)              # 7. Penalty & Risk
         self._section_portal_discrepancies(data) # 8. Portal vs RFP Discrepancies
         self._section_prebid_queries(data)       # 9. Pre-Bid Queries (consolidated)
+        self._section_notes(data)                # 10a. Notes + checklist
         self._section_recommendation(data)       # 10. Verdict
         self._section_action_items(data)         # 11. Immediate Action Items
         self._section_authorization()            # 12. Authorization
@@ -323,25 +324,117 @@ class BidDocGenerator:
     # ── SECTION 3: SCOPE OF WORK ──────────────────────────────
     def _section_scope(self, data):
         self._sec_heading("3", "Scope of Work",
-                          "Source: Tender document — deliverables, phases, and technical requirements")
+                          "Source: Tender document — background, deliverables, phases, and integrations")
+
+        # 3a — Background & Context (2-paragraph brief)
+        background = data.get("scope_background", "")
+        if background:
+            p = self.doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(4)
+            p.paragraph_format.space_after  = Pt(6)
+            p.paragraph_format.left_indent  = Inches(0.1)
+            add_run(p, strip_emojis(str(background)), size=9)
+            self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+        # 3b — Work Components (rich numbered table)
         scope_items = data.get("scope_items", [])
         if not scope_items:
             p = self.doc.add_paragraph()
             add_run(p, "Scope not extracted — refer tender document.", italic=True, size=9)
         else:
-            table = self.doc.add_table(rows=0, cols=2)
-            table.alignment = WD_TABLE_ALIGNMENT.CENTER
-            set_table_borders(table, color=C["mid_blue"])
-            for idx, item in enumerate(scope_items):
-                row = table.add_row()
-                bg = C["white"] if idx % 2 == 0 else C["alt_row"]
-                c0 = row.cells[0]; c0.width = Cm(1.2)
-                set_bg(c0, C["label_col"]); set_borders(c0)
-                cell_write(c0, str(idx+1), bold=True, size=9, color=C["dark_blue"],
-                           align=WD_ALIGN_PARAGRAPH.CENTER)
-                c1 = row.cells[1]; c1.width = Cm(24.3)
-                set_bg(c1, bg); set_borders(c1)
-                cell_write(c1, strip_emojis(str(item)), size=9)
+            # Check if items are rich dicts or plain strings
+            is_rich = scope_items and isinstance(scope_items[0], dict)
+            if is_rich:
+                # Rich format: {title, section_ref, description, deliverables}
+                p_head = self.doc.add_paragraph()
+                p_head.paragraph_format.space_after = Pt(3)
+                add_run(p_head, "Major Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
+                table = self.doc.add_table(rows=1, cols=4)
+                table.alignment = WD_TABLE_ALIGNMENT.CENTER
+                set_table_borders(table, color=C["mid_blue"])
+                hrow = table.rows[0]; repeat_header(hrow)
+                for hcell, hdr in zip(hrow.cells, ["Sr.", "Component / Section", "Description & Deliverables", "Tech / Platform"]):
+                    set_bg(hcell, C["dark_blue"]); set_borders(hcell, color="FFFFFF", size=4)
+                    p = hcell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(3)
+                    add_run(p, hdr, bold=True, size=9, color="FFFFFF")
+                for ri, item in enumerate(scope_items):
+                    row = table.add_row()
+                    bg = C["white"] if ri % 2 == 0 else C["alt_row"]
+                    c0 = row.cells[0]; c0.width = Cm(0.9)
+                    set_bg(c0, C["label_col"]); set_borders(c0)
+                    cell_write(c0, str(item.get("sl_no", ri+1)), bold=True, size=9,
+                               color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
+                    c1 = row.cells[1]; c1.width = Cm(5.0)
+                    set_bg(c1, C["light_blue"] if ri == 0 else bg); set_borders(c1)
+                    title = item.get("title", "")
+                    sec   = item.get("section_ref", "")
+                    cell_write(c1, f"{title}\n({sec})" if sec else title, bold=True, size=9, color=C["dark_blue"])
+                    c2 = row.cells[2]; c2.width = Cm(14.5)
+                    set_bg(c2, bg); set_borders(c2)
+                    desc = strip_emojis(item.get("description", ""))
+                    deliverables = item.get("deliverables", [])
+                    if deliverables:
+                        dl_text = " | Deliverables: " + "; ".join(f"({chr(96+i+1)}) {d}" for i, d in enumerate(deliverables) if d)
+                        cell_write(c2, desc + dl_text, size=9)
+                    else:
+                        cell_write(c2, desc, size=9)
+                    c3 = row.cells[3]; c3.width = Cm(5.1)
+                    set_bg(c3, bg); set_borders(c3)
+                    cell_write(c3, strip_emojis(item.get("tech_platform", "—")), size=8, italic=True, color=C["gray"])
+            else:
+                # Plain string list — numbered table
+                p_head = self.doc.add_paragraph()
+                p_head.paragraph_format.space_after = Pt(3)
+                add_run(p_head, "Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
+                table = self.doc.add_table(rows=0, cols=2)
+                table.alignment = WD_TABLE_ALIGNMENT.CENTER
+                set_table_borders(table, color=C["mid_blue"])
+                for idx, item in enumerate(scope_items):
+                    row = table.add_row()
+                    bg = C["white"] if idx % 2 == 0 else C["alt_row"]
+                    c0 = row.cells[0]; c0.width = Cm(1.2)
+                    set_bg(c0, C["label_col"]); set_borders(c0)
+                    cell_write(c0, str(idx+1), bold=True, size=9, color=C["dark_blue"],
+                               align=WD_ALIGN_PARAGRAPH.CENTER)
+                    c1 = row.cells[1]; c1.width = Cm(24.3)
+                    set_bg(c1, bg); set_borders(c1)
+                    cell_write(c1, strip_emojis(str(item)), size=9)
+
+        # 3c — Key Integrations (if provided)
+        integrations = data.get("key_integrations", [])
+        if integrations:
+            self.doc.add_paragraph()
+            p_head2 = self.doc.add_paragraph()
+            p_head2.paragraph_format.space_after = Pt(3)
+            add_run(p_head2, "Key System Integrations", bold=True, size=10, color=C["dark_blue"])
+            table2 = self.doc.add_table(rows=1, cols=3)
+            table2.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders(table2, color=C["mid_blue"])
+            hrow2 = table2.rows[0]
+            for hcell2, hdr2 in zip(hrow2.cells, ["System / Platform", "Type", "Purpose / Integration Point"]):
+                set_bg(hcell2, C["mid_blue"]); set_borders(hcell2, color="FFFFFF", size=4)
+                p = hcell2.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                add_run(p, hdr2, bold=True, size=9, color="FFFFFF")
+            for ri2, intg in enumerate(integrations):
+                row2 = table2.add_row()
+                bg2 = C["white"] if ri2 % 2 == 0 else C["alt_row"]
+                if isinstance(intg, dict):
+                    c0 = row2.cells[0]; c0.width = Cm(6.0)
+                    set_bg(c0, bg2); set_borders(c0)
+                    cell_write(c0, strip_emojis(intg.get("system", "")), bold=True, size=9, color=C["dark_blue"])
+                    c1 = row2.cells[1]; c1.width = Cm(3.5)
+                    set_bg(c1, bg2); set_borders(c1)
+                    cell_write(c1, intg.get("type", "—"), size=8)
+                    c2 = row2.cells[2]; c2.width = Cm(16.0)
+                    set_bg(c2, bg2); set_borders(c2)
+                    cell_write(c2, strip_emojis(intg.get("purpose", "")), size=9)
+                else:
+                    c0 = row2.cells[0]; set_bg(c0, bg2); set_borders(c0)
+                    cell_write(c0, strip_emojis(str(intg)), size=9)
+                    for cx in row2.cells[1:]:
+                        set_bg(cx, bg2); set_borders(cx); cell_write(cx, "", size=9)
+
         self.doc.add_paragraph()
 
     # ── SHARED: CRITERIA TABLE ────────────────────────────────
@@ -407,28 +500,67 @@ class BidDocGenerator:
     # ── SECTION 6: PAYMENT TERMS ──────────────────────────────
     def _section_payment(self, data):
         self._sec_heading("6", "Payment Schedule & Terms",
-                          "Source: Tender document — milestone-based payment schedule")
+                          "Source: Tender document — milestone-linked payment schedule")
         items = data.get("payment_terms", [])
-        if not items:
-            items = [
+
+        if items and isinstance(items[0], dict) and "milestone" in items[0]:
+            # Rich milestone table matching reference doc standard
+            table = self.doc.add_table(rows=1, cols=5)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders(table, color=C["mid_blue"])
+            hrow = table.rows[0]; repeat_header(hrow)
+            for hcell, hdr in zip(hrow.cells,
+                                  ["Sr. / Milestone", "Activity", "Scope / Deliverables",
+                                   "Timeline", "Payment %"]):
+                set_bg(hcell, C["dark_blue"]); set_borders(hcell, color="FFFFFF", size=4)
+                p = hcell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(3)
+                add_run(p, hdr, bold=True, size=9, color="FFFFFF")
+            for ri, item in enumerate(items):
+                row = table.add_row()
+                bg = C["white"] if ri % 2 == 0 else C["alt_row"]
+                pct = item.get("payment_percent", item.get("payment", "—"))
+                is_oam = "O&M" in str(item.get("milestone","")) or "maintenance" in str(item.get("activity","")).lower()
+                row_bg = C["blue_bg"] if is_oam else bg
+                c0 = row.cells[0]; c0.width = Cm(3.5)
+                set_bg(c0, C["label_col"]); set_borders(c0)
+                cell_write(c0, strip_emojis(item.get("milestone", str(ri+1))),
+                           bold=True, size=9, color=C["dark_blue"])
+                c1 = row.cells[1]; c1.width = Cm(4.5)
+                set_bg(c1, row_bg); set_borders(c1)
+                cell_write(c1, strip_emojis(item.get("activity", "")), size=9)
+                c2 = row.cells[2]; c2.width = Cm(9.5)
+                set_bg(c2, row_bg); set_borders(c2)
+                cell_write(c2, strip_emojis(item.get("scope", item.get("notes", ""))), size=8, italic=True, color=C["gray"])
+                c3 = row.cells[3]; c3.width = Cm(3.5)
+                set_bg(c3, row_bg); set_borders(c3)
+                cell_write(c3, strip_emojis(item.get("timeline", "")), size=9)
+                c4 = row.cells[4]; c4.width = Cm(4.5)
+                set_bg(c4, C["green_bg"] if str(pct).replace("%","").strip().isdigit() and int(str(pct).replace("%","").strip()) > 0 else row_bg)
+                set_borders(c4)
+                cell_write(c4, str(pct), bold=True, size=10, color=C["green_text"],
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+        else:
+            # Fallback: plain list
+            fallback = items if items else [
                 f"Contract Period: {flatten_value(data.get('contract_period','As per tender'))}",
                 f"EMD: {flatten_value(data.get('emd','As per tender'))}",
                 f"Performance Security: {flatten_value(data.get('performance_security','As per tender'))}",
                 "Payment schedule: Not explicitly extracted — refer tender document.",
             ]
-        table = self.doc.add_table(rows=0, cols=2)
-        table.alignment = WD_TABLE_ALIGNMENT.CENTER
-        set_table_borders(table, color=C["mid_blue"])
-        for idx, item in enumerate(items):
-            row = table.add_row()
-            bg = C["white"] if idx % 2 == 0 else C["alt_row"]
-            c0 = row.cells[0]; c0.width = Cm(1.2)
-            set_bg(c0, C["label_col"]); set_borders(c0)
-            cell_write(c0, str(idx+1), bold=True, size=9, color=C["dark_blue"],
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
-            c1 = row.cells[1]; c1.width = Cm(24.3)
-            set_bg(c1, bg); set_borders(c1)
-            cell_write(c1, strip_emojis(flatten_value(item)), size=9)
+            table = self.doc.add_table(rows=0, cols=2)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders(table, color=C["mid_blue"])
+            for idx, item in enumerate(fallback):
+                row = table.add_row()
+                bg = C["white"] if idx % 2 == 0 else C["alt_row"]
+                c0 = row.cells[0]; c0.width = Cm(1.2)
+                set_bg(c0, C["label_col"]); set_borders(c0)
+                cell_write(c0, str(idx+1), bold=True, size=9, color=C["dark_blue"],
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+                c1 = row.cells[1]; c1.width = Cm(24.3)
+                set_bg(c1, bg); set_borders(c1)
+                cell_write(c1, strip_emojis(flatten_value(item)), size=9)
         self.doc.add_paragraph()
 
     # ── SECTION 7: PENALTY & RISK ─────────────────────────────
@@ -491,7 +623,6 @@ class BidDocGenerator:
     # ── SECTION 9: PRE-BID QUERIES (CONSOLIDATED) ─────────────
     def _section_prebid_queries(self, data):
         queries = data.get("prebid_queries", [])
-        # Also gather queries from PQ gaps
         pq_queries = []
         for item in data.get("pq_criteria", []):
             sc = item.get("nascent_color","BLUE")
@@ -500,55 +631,159 @@ class BidDocGenerator:
                 if remark and len(remark) > 30:
                     pq_queries.append({
                         "clause": item.get("clause_ref","—"),
+                        "page_no": "—",
                         "rfp_text": item.get("criteria","")[:200],
-                        "query": remark
+                        "query": remark,
+                        "desired_clarification": "Confirmation that Nascent meets this criterion or revised definition."
                     })
-        # Merge: explicit queries first, then PQ-derived
         all_queries = list(queries)
         seen_clauses = {q.get("clause","") for q in all_queries}
         for q in pq_queries:
             if q.get("clause","") not in seen_clauses:
                 all_queries.append(q)
-
         if not all_queries:
             return
 
         prebid_deadline = data.get("prebid_query_date","—")
-        prebid_contact  = flatten_value(data.get("contact","—"))
-        # Just use email if available, else name
         contact_raw = data.get("contact", {})
         if isinstance(contact_raw, dict):
             prebid_contact = contact_raw.get("email") or contact_raw.get("name") or "Refer tender document"
+        else:
+            prebid_contact = flatten_value(contact_raw)
         self._sec_heading("9", "Pre-Bid Queries — Consolidated List",
-                          f"Submit to: {prebid_contact} | Deadline: {prebid_deadline}")
+                          f"Submit to: {prebid_contact} | Deadline: {prebid_deadline} | Format per RFP")
 
-        table = self.doc.add_table(rows=1, cols=4)
+        p_bidder = self.doc.add_paragraph()
+        p_bidder.paragraph_format.space_after = Pt(4)
+        add_run(p_bidder, "Name of Bidder: Nascent Info Technologies Pvt. Ltd.", bold=True, size=9, color=C["dark_blue"])
+
+        table = self.doc.add_table(rows=1, cols=6)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         set_table_borders(table, color=C["mid_blue"])
-        hrow = table.rows[0]
-        for cell, hdr in zip(hrow.cells,
-                             ["Q No.", "Clause / Section Ref.", "RFP Text (Clause)", "Query / Clarification"]):
-            set_bg(cell, C["dark_blue"]); set_borders(cell, color="FFFFFF")
-            p = cell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        hrow = table.rows[0]; repeat_header(hrow)
+        for hcell, hdr in zip(hrow.cells,
+                             ["Q No.", "Clause /\nSection", "Page\nNo.", "Tender Clause\n(Verbatim)",
+                              "Query / Clarification Sought", "Desired Clarification"]):
+            set_bg(hcell, C["dark_blue"]); set_borders(hcell, color="FFFFFF", size=4)
+            p = hcell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(3)
             add_run(p, hdr, bold=True, size=9, color="FFFFFF")
-        for qi, q in enumerate(all_queries):
+        for qi, q in enumerate(all_queries[:10]):
             row = table.add_row()
             bg = C["white"] if qi % 2 == 0 else C["alt_row"]
-            c0 = row.cells[0]; c0.width = Cm(1.2)
+            c0 = row.cells[0]; c0.width = Cm(1.0)
             set_bg(c0, C["label_col"]); set_borders(c0)
-            cell_write(c0, f"Q{qi+1}", bold=True, size=9, color=C["dark_blue"],
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
-            c1 = row.cells[1]; c1.width = Cm(4.0)
+            cell_write(c0, f"Q{qi+1}", bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
+            c1 = row.cells[1]; c1.width = Cm(3.0)
             set_bg(c1, bg); set_borders(c1)
-            cell_write(c1, strip_emojis(str(q.get("clause","—"))), size=9)
-            c2 = row.cells[2]; c2.width = Cm(8.0)
+            cell_write(c1, strip_emojis(str(q.get("clause","—"))), size=8)
+            c2 = row.cells[2]; c2.width = Cm(1.5)
             set_bg(c2, bg); set_borders(c2)
-            rfp_txt = q.get("rfp_text", "")
-            cell_write(c2, strip_emojis(str(rfp_txt))[:300] if rfp_txt else "—",
-                       size=8, italic=True, color=C["gray"])
-            c3 = row.cells[3]; c3.width = Cm(12.3)
-            set_bg(c3, C["blue_bg"]); set_borders(c3)
-            cell_write(c3, strip_emojis(str(q.get("query",""))), size=9)
+            cell_write(c2, str(q.get("page_no","—")), size=8, align=WD_ALIGN_PARAGRAPH.CENTER)
+            c3 = row.cells[3]; c3.width = Cm(5.5)
+            set_bg(c3, bg); set_borders(c3)
+            rfp_txt = q.get("rfp_text","")
+            cell_write(c3, strip_emojis(str(rfp_txt))[:300] if rfp_txt else "—", size=8, italic=True, color=C["gray"])
+            c4 = row.cells[4]; c4.width = Cm(8.0)
+            set_bg(c4, C["blue_bg"]); set_borders(c4)
+            cell_write(c4, strip_emojis(str(q.get("query",""))), size=9)
+            c5 = row.cells[5]; c5.width = Cm(6.5)
+            set_bg(c5, C["alt_row"]); set_borders(c5)
+            cell_write(c5, strip_emojis(str(q.get("desired_clarification","Written confirmation."))), size=8, italic=True)
+        self.doc.add_paragraph()
+
+    # ── SECTION 10a: NOTES & CHECKLIST ────────────────────────
+    def _section_notes(self, data):
+        notes = data.get("notes", [])
+        checklist = data.get("submission_checklist", [])
+        key_conditions = data.get("key_conditions", [])
+        if not (notes or checklist or key_conditions):
+            return
+        self._sec_heading("10a", "Notes, Critical Observations & Submission Checklist",
+                          "Key points requiring attention before bid preparation and submission")
+        if notes:
+            ph = self.doc.add_paragraph()
+            ph.paragraph_format.space_after = Pt(3)
+            add_run(ph, "Key Observations", bold=True, size=10, color=C["dark_blue"])
+            for ni, note in enumerate(notes):
+                p2 = self.doc.add_paragraph()
+                p2.paragraph_format.left_indent = Inches(0.15)
+                p2.paragraph_format.space_after = Pt(3)
+                if isinstance(note, dict):
+                    title  = note.get("title","")
+                    detail = note.get("detail", note.get("text",""))
+                    if title:
+                        add_run(p2, f"{ni+1}. {strip_emojis(title)}: ", bold=True, size=9, color=C["dark_blue"])
+                        add_run(p2, strip_emojis(str(detail)), size=9)
+                    else:
+                        add_run(p2, f"{ni+1}. {strip_emojis(str(detail))}", size=9)
+                else:
+                    add_run(p2, f"{ni+1}. {strip_emojis(str(note))}", size=9)
+        if key_conditions:
+            p3 = self.doc.add_paragraph()
+            p3.paragraph_format.space_before = Pt(8); p3.paragraph_format.space_after = Pt(4)
+            add_run(p3, "Key Financial & Contractual Terms", bold=True, size=10, color=C["dark_blue"])
+            table = self.doc.add_table(rows=1, cols=2)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders(table, color=C["mid_blue"])
+            hrow = table.rows[0]
+            for hc, ht in zip(hrow.cells, ["Term", "Details"]):
+                set_bg(hc, C["dark_blue"]); set_borders(hc, color="FFFFFF")
+                cell_write(hc, ht, bold=True, size=9, color="FFFFFF")
+            for ri, cond in enumerate(key_conditions):
+                row = table.add_row()
+                bg = C["white"] if ri % 2 == 0 else C["alt_row"]
+                if isinstance(cond, dict):
+                    c0 = row.cells[0]; c0.width = Cm(5)
+                    set_bg(c0, C["label_col"]); set_borders(c0)
+                    cell_write(c0, strip_emojis(cond.get("term","")), bold=True, size=9, color=C["dark_blue"])
+                    c1 = row.cells[1]; c1.width = Cm(20.5)
+                    set_bg(c1, bg); set_borders(c1)
+                    cell_write(c1, strip_emojis(cond.get("details","")), size=9)
+                else:
+                    set_bg(row.cells[0], C["label_col"]); set_borders(row.cells[0])
+                    cell_write(row.cells[0], str(ri+1), bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
+                    set_bg(row.cells[1], bg); set_borders(row.cells[1])
+                    cell_write(row.cells[1], strip_emojis(str(cond)), size=9)
+        if checklist:
+            p4 = self.doc.add_paragraph()
+            p4.paragraph_format.space_before = Pt(8); p4.paragraph_format.space_after = Pt(4)
+            add_run(p4, "Submission Checklist", bold=True, size=10, color=C["dark_blue"])
+            table2 = self.doc.add_table(rows=1, cols=4)
+            table2.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders(table2, color=C["mid_blue"])
+            hrow2 = table2.rows[0]
+            for hc2, ht2 in zip(hrow2.cells, ["Sr.", "Document", "Annexure / Ref.", "Status"]):
+                set_bg(hc2, C["dark_blue"]); set_borders(hc2, color="FFFFFF", size=4)
+                p = hc2.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                add_run(p, ht2, bold=True, size=9, color="FFFFFF")
+            for ri2, item in enumerate(checklist):
+                row2 = table2.add_row()
+                bg2 = C["white"] if ri2 % 2 == 0 else C["alt_row"]
+                if isinstance(item, dict):
+                    status = item.get("status","Prepare")
+                    s_bg = C["green_bg"] if "ready" in status.lower() or "done" in status.lower() else                            C["red_bg"]   if "critical" in status.lower() else C["amber_bg"]
+                    c0 = row2.cells[0]; c0.width = Cm(0.9)
+                    set_bg(c0, C["label_col"]); set_borders(c0)
+                    cell_write(c0, str(ri2+1), bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
+                    c1 = row2.cells[1]; c1.width = Cm(12.0)
+                    set_bg(c1, bg2); set_borders(c1)
+                    cell_write(c1, strip_emojis(item.get("document","")), size=9)
+                    c2 = row2.cells[2]; c2.width = Cm(4.0)
+                    set_bg(c2, bg2); set_borders(c2)
+                    cell_write(c2, item.get("annexure","—"), size=8, italic=True)
+                    c3 = row2.cells[3]; c3.width = Cm(8.6)
+                    set_bg(c3, s_bg); set_borders(c3)
+                    cell_write(c3, strip_emojis(status), size=9)
+                else:
+                    c0 = row2.cells[0]; c0.width = Cm(0.9)
+                    set_bg(c0, C["label_col"]); set_borders(c0)
+                    cell_write(c0, str(ri2+1), bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
+                    for cx in row2.cells[1:]:
+                        set_bg(cx, bg2); set_borders(cx)
+                    cell_write(row2.cells[1], strip_emojis(str(item)), size=9)
+                    cell_write(row2.cells[2], "—", size=8)
+                    cell_write(row2.cells[3], "Prepare", size=9)
         self.doc.add_paragraph()
 
     # ── SECTION 10: BID / NO-BID RECOMMENDATION ───────────────
