@@ -518,19 +518,34 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             tender_data["corrigendum_files"] = [f.name for f in corrigendum_files]
 
         # Build full text for AI
+        # Order: HTML first (clean GeM portal data), then main RFP/NIT, then others
+        def file_priority(f):
+            n = f.name.lower()
+            if n.endswith('.html') or n.endswith('.htm'):
+                return 0  # HTML always first — has clean portal data for GeM
+            if any(k in n for k in ["rfp", "nit", "tender", "bid", "main"]):
+                return 1  # Main tender doc second
+            if any(k in n for k in ["corrigendum", "addendum", "amendment"]):
+                return 3  # Corrigendums last
+            return 2  # Everything else in between
+
         all_text = ""
-        for f in sorted(doc_files, key=lambda x: (
-            0 if any(k in x.name.lower() for k in ["rfp", "nit", "tender", "bid"]) else
-            1 if any(k in x.name.lower() for k in ["corrigendum", "addendum"]) else 2
-        )):
+        for f in sorted(doc_files, key=file_priority):
             t = read_document(f)
-            if t and t.strip():
-                all_text += f"\n\n=== FILE: {f.name} ===\n{t}"
+            if not t or not t.strip():
+                continue
+            # Skip files with mostly garbled text (cid: encoding > 1% of content)
+            cid_count = t.count('(cid:')
+            if cid_count > 30 and cid_count / max(len(t), 1) > 0.01:
+                print(f"[AI] Skipping garbled file: {f.name} ({cid_count} cid: sequences)")
+                continue
+            all_text += f"\n\n=== FILE: {f.name} ===\n{t}"
             # Cap at 300,000 chars — smart_chunk extracts key sections from this
             # 2.6M chars = crash on Render free tier (512MB RAM limit)
             if len(all_text) > 300_000:
                 all_text = all_text[:300_000]
                 print(f"[AI] Text capped at 300,000 chars to prevent memory overflow")
+                break
 
         # AI Analysis
         ai_used = False
