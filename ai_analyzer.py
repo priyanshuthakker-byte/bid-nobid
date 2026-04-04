@@ -123,7 +123,7 @@ def call_gemini(prompt: str, api_key: str) -> str:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.1,
-                "maxOutputTokens": 4096,
+                "maxOutputTokens": 8192,
             }
         }).encode("utf-8")
         req = urllib.request.Request(
@@ -259,7 +259,7 @@ def smart_chunk(full_text: str) -> str:
     parts.append(full_text[-1500:])
 
     combined = "\n\n[...]\n\n".join(parts)
-    return combined[:12000]
+    return combined[:20000]
 
 
 # ─────────────────────────────────────────
@@ -268,17 +268,29 @@ def smart_chunk(full_text: str) -> str:
 def build_prompt(text_chunk: str, prebid_passed: bool) -> str:
     prebid_note = (
         "PRE-BID DEADLINE HAS NOT PASSED. For every gap or conditional item, "
-        "write the EXACT pre-bid query text to send — cite exact clause number."
+        "draft the EXACT pre-bid query text to send — cite exact clause number and page. "
+        "Be specific, professional, cite guidelines where possible. Every blockage has a window — find it."
         if not prebid_passed else
-        "PRE-BID DEADLINE HAS PASSED. Note gaps directly, no pre-bid queries needed."
+        "PRE-BID DEADLINE HAS PASSED. Note gaps directly. Document what was missing and why."
     )
     return f"""You are a senior bid analyst at Nascent Info Technologies Pvt. Ltd.
-Read this entire tender document carefully — every section, every clause, every table.
+Read this entire tender document word by word — every section, every clause, every table, every footnote.
 Extract ALL information with 100% accuracy. Do not skip anything. Do not assume.
 
 {_load_nascent_context()}
 
 {prebid_note}
+
+NASCENT BID PHILOSOPHY — apply this intelligence:
+- Never auto-reject on geography: "We will establish office within X days of award"
+- Never auto-reject on employee count: "Project needs X Java devs, Y GIS — here is actual team breakdown"  
+- Never auto-reject on turnover: "Request MSME/CMMI exception per procurement guidelines"
+- ISO old version demanded: "We hold current superseding version — request acceptance"
+- OEM authorization missing: "Request exception or submit MAF from qualifying OEM"
+- JV/Consortium allowed: Nascent does software/GIS, partner does rest — always check if JV path exists
+- Pure supply (no development): Only true NO-BID. If any software/GIS development is in scope → BID path exists
+- Portal vs RFP discrepancies: Flag every mismatch — these are pre-bid queries
+- EVERY blockage has a window. Find it and draft the query.
 
 TENDER DOCUMENT:
 {text_chunk}
@@ -286,74 +298,114 @@ TENDER DOCUMENT:
 Return ONLY a valid JSON object. No markdown fences. No explanation. Just the JSON.
 
 CRITICAL RULES:
-1. overall_recommendation must be exactly one of: "BID", "NO-BID", "CONDITIONAL" (use hyphen, no underscore)
-2. Extract ALL PQ criteria word-for-word from the document — every row of the PQ table
-3. Extract ALL TQ criteria with exact marks
+1. overall_recommendation must be exactly: "BID", "NO-BID", or "CONDITIONAL"
+2. Extract ALL PQ criteria WORD-FOR-WORD from document — do not paraphrase, do not skip any row
+3. Extract ALL TQ criteria with exact marks/weightage
 4. nascent_status must be exactly: "Met", "Not Met", or "Conditional"
-5. If no data found for a field, use "—" not null or empty string
+5. For every "Not Met" or "Conditional" — ALWAYS write a pre-bid query draft in nascent_remark
+6. Check for portal vs RFP discrepancies (dates, amounts, period of work, EMD, conditions)
+7. Extract JV/consortium conditions as a separate dedicated section
+8. Generate action_items with specific target dates based on bid deadline
+9. Use "—" for genuinely missing fields, never null or empty string
 
 {{
-  "tender_no": "exact tender number",
-  "org_name": "full organization name",
-  "tender_name": "complete project title",
-  "portal": "exact URL from document",
-  "bid_start_date": "start date with time",
-  "bid_submission_date": "deadline with time",
-  "bid_opening_date": "opening date",
-  "commercial_opening_date": "commercial opening or when intimated",
-  "prebid_meeting": "date and mode or Not Applicable",
-  "prebid_query_date": "deadline for queries",
-  "estimated_cost": "amount with Rs.",
-  "tender_fee": "amount and payment mode",
-  "emd": "amount and payment mode",
-  "emd_exemption": "MSME exemption clause as stated",
-  "performance_security": "percentage and conditions",
-  "contract_period": "duration with phases",
-  "bid_validity": "days",
-  "location": "project location",
-  "contact": "email and phone",
-  "jv_allowed": "JV/consortium text from document",
-  "mode_of_selection": "QCBS/L1/etc with weightage",
-  "tender_type": "contract type",
-  "post_implementation": "AMC period",
-  "technology_mandatory": "mandatory tech stack if any",
+  "tender_no": "exact tender reference number from document",
+  "tender_id": "portal tender ID if different from tender_no",
+  "org_name": "full official organization name",
+  "dept_name": "department or sub-department if mentioned",
+  "tender_name": "complete project title word for word",
+  "portal": "exact portal URL from document",
+  "bid_start_date": "date and time",
+  "bid_submission_date": "deadline date and time — CRITICAL",
+  "bid_opening_date": "technical bid opening date and time",
+  "commercial_opening_date": "commercial/financial opening date or when intimated",
+  "prebid_meeting": "date, time, mode (physical/online), venue",
+  "prebid_query_date": "deadline for submitting pre-bid queries",
+  "estimated_cost": "amount with Rs. prefix — if not stated say Not mentioned in document",
+  "tender_fee": "amount and payment mode and payable to",
+  "emd": "full EMD amount and payment modes accepted",
+  "emd_exemption": "MSME/startup exemption text exactly as in document",
+  "performance_security": "percentage and form and validity",
+  "contract_period": "total duration broken into phases if mentioned",
+  "bid_validity": "number of days",
+  "location": "project location/site",
+  "contact": "name, designation, email, phone of contact officer",
+  "jv_allowed": "full JV/consortium permission text from document",
+  "mode_of_selection": "L1/QCBS/quality-cum-cost with exact weightage if given",
+  "tender_type": "lump sum/rate contract/turnkey/EPC etc",
+  "post_implementation": "AMC period and support obligations",
+  "technology_mandatory": "any mandatory technology stack mentioned",
+  "no_of_covers": "number of bid envelopes/covers",
+  "portal_vs_rfp_discrepancies": [
+    {{
+      "field": "what field has discrepancy",
+      "portal_says": "what portal shows",
+      "rfp_says": "what RFP document states",
+      "action": "pre-bid query text to resolve this discrepancy"
+    }}
+  ],
+  "jv_conditions": [
+    "Each JV condition word-for-word from document — max members, liability, lead partner rules, individual vs pooled criteria"
+  ],
   "scope_items": [
-    "Detailed scope point 1 with actual content from document",
-    "Include phases, deliverables, technology, quantities, timelines"
+    "Scope point 1 — with actual deliverable names, quantities, technologies from document",
+    "Include all phases, modules, features, integrations mentioned"
   ],
   "pq_criteria": [
     {{
       "sl_no": "1",
-      "clause_ref": "Clause number and page",
-      "criteria": "EXACT WORD-FOR-WORD text from PQ table",
-      "details": "supporting documents required",
+      "clause_ref": "Clause X.X / Section Y / Page Z",
+      "criteria": "EXACT WORD-FOR-WORD criteria text from PQ table — do not shorten",
+      "details": "Documents required as stated in document",
       "nascent_status": "Met",
-      "nascent_remark": "What Nascent has or lacks. If pre-bid needed, write exact query text."
+      "nascent_remark": "What Nascent has. If gap: what is missing AND draft pre-bid query with exact clause ref and professional reasoning"
     }}
   ],
   "tq_criteria": [
     {{
       "sl_no": "1",
-      "clause_ref": "Clause number",
-      "criteria": "EXACT text from TQ scoring table",
-      "details": "Max Marks: X | Nascent Estimated: Y",
+      "clause_ref": "Clause reference",
+      "criteria": "EXACT text from TQ table",
+      "details": "Max Marks: X | Nascent Estimated Score: Y",
       "nascent_status": "Met",
-      "nascent_remark": "Score justification with evidence from Nascent portfolio"
+      "nascent_remark": "Score justification citing specific Nascent projects and certifications"
     }}
   ],
   "payment_terms": [
-    "Milestone 1: trigger and percentage"
+    "Milestone 1: exact trigger condition and payment percentage or amount"
+  ],
+  "penalty_clauses": [
+    {{
+      "type": "LD/Penalty/Blacklisting etc",
+      "condition": "what triggers it",
+      "penalty": "amount or percentage",
+      "max_cap": "maximum cap if stated",
+      "clause_ref": "clause reference"
+    }}
   ],
   "prebid_queries": [
     {{
-      "clause": "clause reference",
-      "query": "exact query text to send to the authority"
+      "clause": "exact clause ref and page number",
+      "rfp_text": "the exact clause text that needs clarification",
+      "query": "professional query text — specific, well-reasoned, cites guidelines where applicable"
     }}
   ],
   "overall_recommendation": "BID",
-  "recommendation_reason": "Specific reason with gaps and strengths",
+  "recommendation_reason": "3-5 specific reasons — cite actual gaps, strengths, and JV path if applicable",
+  "key_reasons": [
+    "Reason 1 with specific detail",
+    "Reason 2 with specific detail"
+  ],
+  "action_items": [
+    {{
+      "action": "specific action to take",
+      "responsible": "who does it — Bid Team / CA / Signatory / External",
+      "target_date": "target date based on bid deadline",
+      "priority": "URGENT / HIGH / MEDIUM"
+    }}
+  ],
   "notes": [
-    "Critical action item 1"
+    "Important observation 1 — portal discrepancies, corrigendum status, local supplier, integrity pact requirements etc"
   ]
 }}"""
 
@@ -472,6 +524,32 @@ def merge_results(regex_data: Dict, ai_data: Dict,
     # Notes
     if ai_data.get("notes"):
         result["notes"] = ai_data["notes"]
+
+    # NEW: JV conditions
+    if ai_data.get("jv_conditions"):
+        result["jv_conditions"] = ai_data["jv_conditions"]
+
+    # NEW: Portal vs RFP discrepancies
+    if ai_data.get("portal_vs_rfp_discrepancies"):
+        result["portal_vs_rfp_discrepancies"] = ai_data["portal_vs_rfp_discrepancies"]
+
+    # NEW: Penalty clauses
+    if ai_data.get("penalty_clauses"):
+        result["penalty_clauses"] = ai_data["penalty_clauses"]
+
+    # NEW: Action items with dates
+    if ai_data.get("action_items"):
+        result["action_items"] = ai_data["action_items"]
+
+    # NEW: Key reasons
+    if ai_data.get("key_reasons"):
+        result["key_reasons"] = ai_data["key_reasons"]
+
+    # Extra snapshot fields
+    for field in ["tender_id", "dept_name", "no_of_covers"]:
+        val = ai_data.get(field)
+        if val and str(val).strip() not in EMPTY:
+            result[field] = str(val).strip()
 
     # Overall verdict — CRITICAL: normalize to hyphen format
     rec = ai_data.get("overall_recommendation", "")
