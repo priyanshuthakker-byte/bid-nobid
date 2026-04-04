@@ -686,20 +686,20 @@ def step7_assessment(snapshot: Dict, pq: Dict, tq: Dict, scope: Dict,
     # Build summaries for the prompt
     pq_items = pq.get("pq_criteria", [])
     pq_summary = "\n".join([
-        f"- Sr.{item.get('sl_no','?')}: {item.get('criteria','')[:100]} → {item.get('nascent_status','?')}: {item.get('nascent_remark','')[:100]}"
-        for item in pq_items
+        f"- Sr.{item.get('sl_no','?')}: {str(item.get('criteria','') or '')[:100]} → {item.get('nascent_status','?')}: {str(item.get('nascent_remark','') or '')[:100]}"
+        for item in pq_items if isinstance(item, dict)
     ]) or "No PQ criteria extracted"
 
     tq_items = tq.get("tq_criteria", [])
     tq_summary = "\n".join([
-        f"- {item.get('criteria','')[:80]} → {item.get('details','')[:60]} → {item.get('nascent_remark','')[:80]}"
-        for item in tq_items
+        f"- {str(item.get('criteria','') or '')[:80]} → {str(item.get('details','') or '')[:60]} → {str(item.get('nascent_remark','') or '')[:80]}"
+        for item in tq_items if isinstance(item, dict)
     ]) or "No TQ criteria extracted"
 
     scope_items = scope.get("scope_items", [])
-    scope_summary = scope.get("scope_background","") + "\n" + "\n".join([
-        f"- {item.get('title','')}: {item.get('description','')[:100]}"
-        for item in scope_items[:5]
+    scope_summary = str(scope.get("scope_background","") or "") + "\n" + "\n".join([
+        f"- {str(item.get('title','') or '')}: {str(item.get('description','') or '')[:100]}"
+        for item in scope_items[:5] if isinstance(item, dict)
     ]) or "Scope not extracted"
 
     prompt = ASSESSMENT_PROMPT.format(
@@ -773,8 +773,9 @@ def step8_notes_checklist(snapshot: Dict, pq: Dict,
         ]
     ])
     pq_list = "\n".join([
-        f"- Sr.{item.get('sl_no','?')}: {item.get('criteria','')[:80]} — docs: {item.get('details','')[:60]}"
+        f"- Sr.{item.get('sl_no','?')}: {str(item.get('criteria','') or '')[:80]} — docs: {str(item.get('details','') or '')[:60]}"
         for item in pq.get("pq_criteria", [])
+        if isinstance(item, dict)
     ])
     prompt = NOTES_PROMPT.format(
         tender_summary=tender_summary,
@@ -953,13 +954,13 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
                 continue
             status, color = normalize_status(item.get("nascent_status","Review"))
             normalized.append({
-                "sl_no": item.get("sl_no",""),
-                "clause_ref": item.get("clause_ref","—"),
-                "criteria": item.get("criteria",""),
-                "details": item.get("details",""),
+                "sl_no":          str(item.get("sl_no","") or ""),
+                "clause_ref":     str(item.get("clause_ref","—") or "—"),
+                "criteria":       str(item.get("criteria","") or ""),
+                "details":        str(item.get("details","") or ""),
                 "nascent_status": status,
-                "nascent_color": color,
-                "nascent_remark": item.get("nascent_remark",""),
+                "nascent_color":  color,
+                "nascent_remark": str(item.get("nascent_remark","") or ""),
             })
         result["pq_criteria"] = normalized
 
@@ -972,13 +973,13 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
                 continue
             status, color = normalize_status(item.get("nascent_status","Review"))
             normalized_tq.append({
-                "sl_no": item.get("sl_no",""),
-                "clause_ref": item.get("clause_ref","—"),
-                "criteria": item.get("criteria",""),
-                "details": item.get("details",""),
+                "sl_no":          str(item.get("sl_no","") or ""),
+                "clause_ref":     str(item.get("clause_ref","—") or "—"),
+                "criteria":       str(item.get("criteria","") or ""),
+                "details":        str(item.get("details","") or ""),
                 "nascent_status": status,
-                "nascent_color": color,
-                "nascent_remark": item.get("nascent_remark",""),
+                "nascent_color":  color,
+                "nascent_remark": str(item.get("nascent_remark","") or ""),
             })
         result["tq_criteria"] = normalized_tq
 
