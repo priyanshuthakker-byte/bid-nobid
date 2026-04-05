@@ -1137,34 +1137,31 @@ async def remove_rule(data: dict = Body(...)):
         raise HTTPException(500, str(e))
 
 # ══════════════════════════════════════════════════════════════
-# DOCUMENT VAULT — FIXED: proper upload/download/list
+# ALL TENDERS — returns full list for All Tenders page
 # ══════════════════════════════════════════════════════════════
-VAULT_DOCS_LIST = [
-    {"id": "pan_card",        "name": "PAN Card",                              "category": "Company"},
-    {"id": "cin_cert",        "name": "CIN Certificate / MOA",                 "category": "Company"},
-    {"id": "gst_cert",        "name": "GST Certificate",                       "category": "Company"},
-    {"id": "msme_cert",       "name": "MSME / UDYAM Certificate",              "category": "Company"},
-    {"id": "poa_doc",         "name": "Power of Attorney (Current)",           "category": "Company"},
-    {"id": "cmmi_cert",       "name": "CMMI Level 3 Certificate",              "category": "Certification"},
-    {"id": "iso9001_cert",    "name": "ISO 9001:2015 Certificate",             "category": "Certification"},
-    {"id": "iso27001_cert",   "name": "ISO 27001:2022 Certificate",            "category": "Certification"},
-    {"id": "iso20000_cert",   "name": "ISO 20000-1:2018 Certificate",          "category": "Certification"},
-    {"id": "audited_fy2223",  "name": "Audited Accounts FY 2022-23",           "category": "Finance"},
-    {"id": "audited_fy2324",  "name": "Audited Accounts FY 2023-24",           "category": "Finance"},
-    {"id": "audited_fy2425",  "name": "Audited Accounts FY 2024-25",           "category": "Finance"},
-    {"id": "net_worth_cert",  "name": "Net Worth Certificate (CA Signed)",      "category": "Finance"},
-    {"id": "solvency_cert",   "name": "Solvency Certificate",                  "category": "Finance"},
-    {"id": "blacklisting_dec","name": "Non-Blacklisting Declaration Template", "category": "Declaration"},
-    {"id": "mii_dec",         "name": "Make in India Declaration Template",    "category": "Declaration"},
-    {"id": "integrity_pact",  "name": "Integrity Pact Template",               "category": "Declaration"},
-    {"id": "amc_gis_cc",      "name": "Completion Cert — AMC GIS (10.55Cr)",   "category": "Experience"},
-    {"id": "pcscl_po",        "name": "Work Order — PCSCL Smart City (61Cr)",  "category": "Experience"},
-    {"id": "kvic_cc",         "name": "Completion Cert — KVIC Geo Portal",     "category": "Experience"},
-    {"id": "tcgl_cc",         "name": "Completion Cert — TCGL Tourism",        "category": "Experience"},
-    {"id": "vmc_cc",          "name": "Completion Cert — VMC GIS+ERP",         "category": "Experience"},
-    {"id": "jumc_po",         "name": "Work Order — JuMC GIS",                 "category": "Experience"},
-]
+@app.get("/tenders")
+async def get_all_tenders(verdict: str = "", search: str = ""):
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    if verdict and verdict != "ALL":
+        tenders = [t for t in tenders if t.get("verdict") == verdict]
+    if search:
+        s = search.lower()
+        tenders = [t for t in tenders if any(
+            s in str(t.get(f, "")).lower()
+            for f in ["t247_id", "ref_no", "brief", "org_name", "location"]
+        )]
+    return {"tenders": sorted(tenders, key=lambda t: days_left(t.get("deadline", "999"))),
+            "total": len(tenders)}
 
+# Alias for old frontend "Sync Drive" button
+@app.post("/sync-sheets")
+async def sync_sheets_compat():
+    return await sync_drive()
+
+# ══════════════════════════════════════════════════════════════
+# DOCUMENT VAULT
+# ══════════════════════════════════════════════════════════════
 @app.get("/vault")
 async def get_vault():
     try:
