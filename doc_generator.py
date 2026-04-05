@@ -336,70 +336,63 @@ class BidDocGenerator:
             add_run(p, strip_emojis(str(background)), size=9)
             self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
-        # 3b — Work Components (rich numbered table)
+        # 3b — Work Components (plain paragraphs, no table)
         scope_items = data.get("scope_items", [])
         if not scope_items:
             p = self.doc.add_paragraph()
             add_run(p, "Scope not extracted — refer tender document.", italic=True, size=9)
         else:
-            # Check if items are rich dicts or plain strings
-            is_rich = scope_items and isinstance(scope_items[0], dict)
-            if is_rich:
-                # Rich format: {title, section_ref, description, deliverables}
-                p_head = self.doc.add_paragraph()
-                p_head.paragraph_format.space_after = Pt(3)
-                add_run(p_head, "Major Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
-                table = self.doc.add_table(rows=1, cols=4)
-                table.alignment = WD_TABLE_ALIGNMENT.CENTER
-                set_table_borders(table, color=C["mid_blue"])
-                hrow = table.rows[0]; repeat_header(hrow)
-                for hcell, hdr in zip(hrow.cells, ["Sr.", "Component / Section", "Description & Deliverables", "Tech / Platform"]):
-                    set_bg(hcell, C["dark_blue"]); set_borders(hcell, color="FFFFFF", size=4)
-                    p = hcell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(3)
-                    add_run(p, hdr, bold=True, size=9, color="FFFFFF")
-                for ri, item in enumerate(scope_items):
-                    row = table.add_row()
-                    bg = C["white"] if ri % 2 == 0 else C["alt_row"]
-                    c0 = row.cells[0]; c0.width = Cm(0.9)
-                    set_bg(c0, C["label_col"]); set_borders(c0)
-                    cell_write(c0, str(item.get("sl_no", ri+1)), bold=True, size=9,
-                               color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
-                    c1 = row.cells[1]; c1.width = Cm(5.0)
-                    set_bg(c1, C["light_blue"] if ri == 0 else bg); set_borders(c1)
-                    title = item.get("title", "")
-                    sec   = item.get("section_ref", "")
-                    cell_write(c1, f"{title}\n({sec})" if sec else title, bold=True, size=9, color=C["dark_blue"])
-                    c2 = row.cells[2]; c2.width = Cm(14.5)
-                    set_bg(c2, bg); set_borders(c2)
-                    desc = strip_emojis(item.get("description", ""))
+            p_head = self.doc.add_paragraph()
+            p_head.paragraph_format.space_after = Pt(4)
+            add_run(p_head, "Major Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
+
+            for idx, item in enumerate(scope_items):
+                if isinstance(item, dict):
+                    sl     = str(item.get("sl_no", idx + 1))
+                    title  = strip_emojis(str(item.get("title", "") or ""))
+                    sec    = strip_emojis(str(item.get("section_ref", "") or ""))
+                    desc   = strip_emojis(str(item.get("description", "") or ""))
+                    tech   = strip_emojis(str(item.get("tech_platform", "") or ""))
                     deliverables = item.get("deliverables", [])
-                    if deliverables:
-                        dl_text = " | Deliverables: " + "; ".join(f"({chr(96+i+1)}) {d}" for i, d in enumerate(deliverables) if d)
-                        cell_write(c2, desc + dl_text, size=9)
-                    else:
-                        cell_write(c2, desc, size=9)
-                    c3 = row.cells[3]; c3.width = Cm(5.1)
-                    set_bg(c3, bg); set_borders(c3)
-                    cell_write(c3, strip_emojis(item.get("tech_platform", "—")), size=8, italic=True, color=C["gray"])
-            else:
-                # Plain string list — numbered table
-                p_head = self.doc.add_paragraph()
-                p_head.paragraph_format.space_after = Pt(3)
-                add_run(p_head, "Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
-                table = self.doc.add_table(rows=0, cols=2)
-                table.alignment = WD_TABLE_ALIGNMENT.CENTER
-                set_table_borders(table, color=C["mid_blue"])
-                for idx, item in enumerate(scope_items):
-                    row = table.add_row()
-                    bg = C["white"] if idx % 2 == 0 else C["alt_row"]
-                    c0 = row.cells[0]; c0.width = Cm(1.2)
-                    set_bg(c0, C["label_col"]); set_borders(c0)
-                    cell_write(c0, str(idx+1), bold=True, size=9, color=C["dark_blue"],
-                               align=WD_ALIGN_PARAGRAPH.CENTER)
-                    c1 = row.cells[1]; c1.width = Cm(24.3)
-                    set_bg(c1, bg); set_borders(c1)
-                    cell_write(c1, strip_emojis(str(item)), size=9)
+
+                    # Title line (bold, numbered)
+                    p_title = self.doc.add_paragraph()
+                    p_title.paragraph_format.left_indent = Inches(0.15)
+                    p_title.paragraph_format.space_before = Pt(5)
+                    p_title.paragraph_format.space_after  = Pt(2)
+                    heading_text = f"{sl}. {title}"
+                    if sec:
+                        heading_text += f"  [{sec}]"
+                    add_run(p_title, heading_text, bold=True, size=9, color=C["dark_blue"])
+
+                    # Description
+                    if desc:
+                        p_desc = self.doc.add_paragraph()
+                        p_desc.paragraph_format.left_indent = Inches(0.35)
+                        p_desc.paragraph_format.space_after  = Pt(2)
+                        add_run(p_desc, desc, size=9)
+
+                    # Deliverables as sub-bullets
+                    for d in deliverables:
+                        d = strip_emojis(str(d or "")).strip()
+                        if d:
+                            p_d = self.doc.add_paragraph()
+                            p_d.paragraph_format.left_indent = Inches(0.55)
+                            p_d.paragraph_format.space_after  = Pt(1)
+                            add_run(p_d, "\u2022 " + d, size=8, color=C["gray"])
+
+                    # Tech platform note
+                    if tech and tech != "—":
+                        p_tech = self.doc.add_paragraph()
+                        p_tech.paragraph_format.left_indent = Inches(0.35)
+                        p_tech.paragraph_format.space_after  = Pt(3)
+                        add_run(p_tech, "Platform: " + tech, size=8, italic=True, color=C["mid_blue"])
+                else:
+                    # Plain string fallback
+                    p = self.doc.add_paragraph()
+                    p.paragraph_format.left_indent = Inches(0.15)
+                    p.paragraph_format.space_after  = Pt(3)
+                    add_run(p, f"{idx+1}. " + strip_emojis(str(item)), size=9)
 
         # 3c — Key Integrations (if provided)
         integrations = data.get("key_integrations", [])
