@@ -15,7 +15,7 @@ from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config
-from excel_processor import process_excel, quick_classify
+from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
 from gdrive_sync import (
