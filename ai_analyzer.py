@@ -419,47 +419,70 @@ def step3_scope(text: str, api_key: str, all_keys: List[str], groq_key: str) -> 
 PQ_PROMPT = """You are a bid analyst extracting Pre-Qualification (PQ) / Eligibility criteria
 from an Indian government tender document.
 
-The PQ criteria may appear as:
-- A numbered table with columns: Sr.No | Description/Criteria | Proof Required
-- A numbered list with each item starting with "The bidder should..."
-- A section titled "Eligibility Criteria" or "Qualifying Criteria"
+The PQ criteria appear as a table with columns like:
+  S.N. | Basic Requirement | Specific Requirements | Documents Required
+OR
+  Sr.No | Criteria / Parameter | Proof/Documents Required
+OR as a numbered list of conditions.
 
-CRITICAL RULES:
-1. Extract EVERY numbered criterion — check all Sr.No entries (1, 2, 3... until end of table)
-2. Copy the FULL criteria text WORD-FOR-WORD from the document — do not summarize or cut short
-3. If criteria spans multiple lines/rows, concatenate into one complete string
-4. "Proof Required" or "Documents Required" column = the "details" field
-5. Do NOT include Table of Contents entries (those end with page numbers like "....7" or "....31")
-6. Each Sr.No in the eligibility table = ONE separate item in pq_criteria array
-7. Even if criteria text is long (multi-sentence), capture ALL of it
+════════════════════════════════════════════════════════
+RULE 1 — COPY WORD-FOR-WORD. NO PARAPHRASING.
+The "criteria" field MUST be the EXACT TEXT from the document.
+Do not summarise, shorten, rephrase, or rewrite a single word.
+Copy every sentence, every condition, every threshold exactly as written.
+If the document says "The bidder should have been in operation for a period
+of at least 10 years in India prior to the date of submission of bid" —
+that exact sentence goes into "criteria". Not "10 years experience". Not
+"company age requirement". The EXACT text.
+════════════════════════════════════════════════════════
 
-Nascent Info Technologies profile for status assessment:
+RULE 2 — COPY DOCUMENTS REQUIRED WORD-FOR-WORD.
+The "details" field = the Documents Required column, copied exactly.
+Every document name, every annexure reference, every sub-point — exact.
+
+RULE 3 — EXTRACT EVERY ROW.
+Every Sr.No or numbered criterion = one item in the array.
+Do not skip any. Do not merge rows.
+
+RULE 4 — COLUMN NAMES.
+If the table has a "Basic Requirement" column (short label like "Legal Entity",
+"Annual Turnover") put that in "clause_ref". Put the full Specific Requirements
+text in "criteria".
+
+RULE 5 — IGNORE TABLE OF CONTENTS.
+Skip rows that end with dots and page numbers (....7, ....31).
+
+Nascent Info Technologies profile — use ONLY for nascent_status assessment:
 {nascent}
+
+KEY RULE FOR STATUS — Nascent is a pure IT/ITeS company:
+- If tender asks for IT/ITeS turnover and Nascent's turnover meets the number → Met (GREEN)
+  Nascent's ENTIRE turnover is IT/ITeS. Do NOT mark as Conditional if the number qualifies.
+- If tender asks for IT/ITeS employees and Nascent has 67 employees → Met if 67 >= required
+  All Nascent employees are IT/ITeS. Do NOT say Conditional for numbers that qualify.
+- Only mark Conditional for: EMD exemption query, local office, CERT-In, STQC,
+  or where a genuine caveat EXISTS regardless of the numbers.
+- Only mark Not Met for hard disqualifiers: expired cert, number genuinely below threshold.
 
 Text containing PQ/Eligibility criteria:
 {text}
 
-Return ONLY valid JSON — no markdown, no text before or after:
+Return ONLY valid JSON — no markdown, no explanation before or after:
 {{
   "pq_criteria": [
     {{
-      "sl_no": "1",
-      "clause_ref": "Section/Clause/Page reference if stated, else Eligibility Criteria",
-      "criteria": "COMPLETE word-for-word criteria text from document. Include ALL conditions, thresholds, and qualifications stated. Do not truncate.",
-      "details": "Documents/proof required as stated in the document",
+      "sl_no": "i",
+      "clause_ref": "Basic Requirement label OR clause/section reference (e.g. 'Legal Entity', 'Cl. 5.1-i')",
+      "criteria": "EXACT WORD-FOR-WORD text of the Specific Requirements column. Every word. Every sentence. Every sub-point. No truncation.",
+      "details": "EXACT WORD-FOR-WORD text of the Documents Required column. Every document. Every annexure. No truncation.",
       "nascent_status": "Met / Not Met / Conditional",
       "nascent_color": "GREEN / RED / AMBER",
-      "nascent_remark": "Specific evidence: cite cert name, project name, turnover figure, employee count. If Not Met: exactly what is missing. If Conditional: what caveat or pre-bid query is needed."
+      "nascent_remark": "Specific evidence from Nascent profile: cite cert name + validity, project name + value, exact turnover figure, employee count. If Not Met: state exactly what is missing. If Conditional: state exactly what pre-bid query is needed."
     }}
   ]
 }}
 
-Status assessment guide:
-- Met (GREEN): Nascent clearly satisfies — name the specific cert / project / figure as evidence
-- Not Met (RED): Hard gap — state exactly what Nascent lacks vs what is required
-- Conditional (AMBER): Meets but needs clarification, or borderline (e.g. employee count close to threshold, cert version mismatch)
-
-IMPORTANT: If no PQ section is found in the text, return {{"pq_criteria": []}}
+IMPORTANT: If no PQ/Eligibility section is found in the text, return {{"pq_criteria": []}}
 """
 
 
@@ -492,36 +515,69 @@ def step4_pq(text: str, api_key: str, all_keys: List[str], groq_key: str) -> Dic
 # ═══════════════════════════════════════════════════════════════
 # STEP 5 — TQ CRITERIA EXTRACTION
 # ═══════════════════════════════════════════════════════════════
-TQ_PROMPT = """Extract Technical Qualification (TQ) / Technical Evaluation criteria and scoring
-from this Indian government tender document.
+TQ_PROMPT = """You are a bid analyst extracting Technical Qualification (TQ) / Technical Evaluation
+criteria from an Indian government tender document.
 
-Nascent profile:
+The TQ table typically has columns:
+  S. No. | Criteria | Evaluation Criteria | Documents Required | Maximum Marks
+
+════════════════════════════════════════════════════════
+RULE 1 — COPY WORD-FOR-WORD. NO PARAPHRASING.
+"criteria" field = EXACT text of the Criteria column, word for word.
+"eval_criteria" field = EXACT text of the Evaluation Criteria column, word for word.
+  This includes every slab (e.g. "INR = 7 Cr: 4 Marks, INR 7 Cr and <= INR 10 Cr: 6 Marks").
+  Copy every slab. Every threshold. Every mark allocation. Exactly.
+"documents_required" field = EXACT text of the Documents Required column, word for word.
+Do NOT summarise, shorten, or rephrase anything.
+════════════════════════════════════════════════════════
+
+RULE 2 — EXTRACT EVERY ROW.
+Every numbered criterion = one item. Do not skip or merge rows.
+
+RULE 3 — SCORE ESTIMATION.
+After copying RFP text exactly, then estimate Nascent's score based on the profile below.
+Nascent profile is ONLY used for score estimation and remarks. Never for changing RFP text.
+
+Nascent Info Technologies profile:
 {nascent}
 
-Text:
+KEY SCORING RULE — Nascent is a pure IT/ITeS company:
+- Turnover slabs: use Nascent's actual figures (FY23=16.36Cr, FY24=16.36Cr, FY25=18.83Cr)
+  to determine which slab applies. All turnover = IT/ITeS turnover.
+- Employee slabs: all 67 employees count as IT/ITeS employees.
+- CMMI L3 = 5 marks if asked. ISO 9001=1, ISO 27001=2, ISO 20000=2 marks if asked.
+- Project experience: use actual project values from profile.
+
+Text containing TQ/Technical Evaluation criteria:
 {text}
 
-Return ONLY valid JSON:
+Return ONLY valid JSON — no markdown:
 {{
   "tq_criteria": [
     {{
       "sl_no": "1",
-      "clause_ref": "Section / Annexure reference",
-      "criteria": "EXACT criteria text from document",
-      "details": "Max Marks: X | Nascent Estimated Score: Y-Z",
+      "clause_ref": "Section / Annexure / Clause reference",
+      "criteria": "EXACT WORD-FOR-WORD text from the Criteria column of the TQ table.",
+      "eval_criteria": "EXACT WORD-FOR-WORD text from the Evaluation Criteria column — every slab, every threshold, every mark allocation, exactly as written.",
+      "documents_required": "EXACT WORD-FOR-WORD text from the Documents Required column.",
+      "max_marks": "Maximum marks for this criterion as stated in RFP",
+      "nascent_score": "Nascent's estimated score for this criterion (number only)",
       "nascent_status": "Met / Conditional / Not Met",
       "nascent_color": "GREEN / AMBER / RED",
-      "nascent_remark": "Score justification — cite specific Nascent projects, certs, numbers"
+      "nascent_remark": "Which slab Nascent falls into and why — cite specific figures, cert names, project values. State exact score justification."
     }}
   ],
-  "tq_min_qualifying_score": "minimum score to qualify if stated",
-  "tq_total_marks": "total TQ marks if stated",
+  "tq_min_qualifying_score": "minimum qualifying score if stated",
+  "tq_total_marks": "total marks if stated",
+  "tq_nascent_estimated_total": "sum of all Nascent estimated scores",
   "key_personnel": [
     {{
-      "role": "role name",
-      "qualification": "required qualification",
-      "experience": "required experience",
-      "nascent_status": "Met / Conditional / Not Met"
+      "role": "role name as stated in RFP",
+      "qualification": "exact qualification requirement",
+      "experience": "exact experience requirement",
+      "max_marks": "marks allocated",
+      "nascent_status": "Met / Conditional / Not Met",
+      "nascent_remark": "who in Nascent team qualifies"
     }}
   ]
 }}
@@ -532,16 +588,35 @@ def step5_tq(text: str, api_key: str, all_keys: List[str], groq_key: str) -> Dic
     tq_text = extract_section(text, [
         "Technical Qualification", "Technical Evaluation", "TQ Criteria",
         "Annexure- II", "Annexure II", "Marking Scheme", "Max\nMarks",
-        "Max Marks", "Evaluation Criteria", "7. Technical", "10. Technical"
-    ], chars=7000)
+        "Max Marks", "5.2 Technical", "Evaluation Criteria", "7. Technical", "10. Technical",
+        "S. No.\nCriteria", "S.No.\nCriteria",
+    ], chars=8000)
     if not tq_text:
         return {}
-    prompt = TQ_PROMPT.format(nascent=NASCENT, text=tq_text[:9000])
+    prompt = TQ_PROMPT.format(nascent=NASCENT, text=tq_text[:10000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=6144)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=8192)
         result = clean_json(raw)
-        tq = result.get("tq_criteria", [])
-        logger.info(f"[Step5-TQ] {len(tq)} criteria")
+        # Normalise TQ items — merge eval_criteria + documents_required into details field
+        # so doc_generator can render them properly
+        tq_list = result.get("tq_criteria", [])
+        for item in tq_list:
+            if not isinstance(item, dict):
+                continue
+            # Build details field from eval_criteria + max_marks if present
+            eval_cr = item.get("eval_criteria", "") or item.get("details", "")
+            docs_req = item.get("documents_required", "")
+            max_marks = item.get("max_marks", "")
+            parts = []
+            if max_marks:
+                parts.append(f"Max Marks: {max_marks}")
+            if eval_cr:
+                parts.append(eval_cr)
+            if docs_req:
+                parts.append(f"Documents: {docs_req}")
+            item["details"] = " | ".join(parts) if parts else ""
+            # Preserve eval_criteria and documents_required as separate fields too
+        logger.info(f"[Step5-TQ] {len(tq_list)} criteria")
         return result
     except Exception as e:
         logger.error(f"[Step5-TQ] failed: {e}")
