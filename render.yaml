@@ -3,15 +3,12 @@ services:
     name: bid-nobid
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      apt-get update -qq && apt-get install -y -qq tesseract-ocr poppler-utils libgomp1
+      pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
     envVars:
       - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_API_KEY_2
-        sync: false
-      - key: GROQ_API_KEY
         sync: false
       - key: GDRIVE_CREDENTIALS
         sync: false
