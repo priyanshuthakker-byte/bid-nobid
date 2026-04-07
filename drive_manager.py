@@ -82,3 +82,45 @@ class DriveManager:
         # Fallback to Service Account
         raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
         # ... keep your existing service account fallback logic here ...
+
+
+# ── HELPERS ──────────────────────────────────────────────────────
+def _slug(text: str) -> str:
+    """Convert text to a safe folder name slug."""
+    return re.sub(r"[^\w\-]", "-", str(text).strip())[:30].strip("-")
+
+def _log_drive_error(e: Exception, context: str = ""):
+    err = str(e)
+    if "storageQuotaExceeded" in err:
+        print(
+            f"❌ Drive {context} failed: storageQuotaExceeded\n"
+            "   CAUSE: Service account Drive quota exceeded (15 GB free limit) OR\n"
+            "          service account does not have Editor permission on the folder.\n"
+            "   FIX: Go to Google Drive → right-click NIT-BidNoBid folder → Share\n"
+            "        → add service account email as Editor."
+        )
+    elif "insufficientPermissions" in err or "forbidden" in err.lower():
+        print(
+            f"❌ Drive {context} failed: insufficientPermissions\n"
+            "   FIX: Share the NIT-BidNoBid folder with the service account email (Editor role)."
+        )
+    else:
+        print(f"❌ Drive {context} failed: {e}")
+
+
+# ── Module-level singleton ──────────────────────────────────────
+_dm: Optional[DriveManager] = None
+
+def get_drive() -> DriveManager:
+    global _dm
+    if _dm is None:
+        _dm = DriveManager()
+    return _dm
+
+def init_drive() -> bool:
+    return get_drive().init()
+
+def is_available() -> bool:
+    return get_drive()._svc is not None
+
+drive_available = is_available
