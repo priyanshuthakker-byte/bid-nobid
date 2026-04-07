@@ -228,11 +228,18 @@ def extract_portal_snapshot(portal_fields: dict) -> dict:
 
 def _find(text: str, patterns: list, flags=re.IGNORECASE) -> str:
     for pat in patterns:
-        m = re.search(pat, text, flags)
-        if m:
-            val = m.group(1).strip()
-            if val and val not in ("—", ""):
-                return val
+        try:
+            m = re.search(pat, text, flags)
+            if m:
+                # Try group(1) first, fall back to group(0) if no capture group
+                try:
+                    val = m.group(1).strip()
+                except IndexError:
+                    val = m.group(0).strip()
+                if val and val not in ("—", "") and len(val) < 500:
+                    return val
+        except re.error:
+            continue
     return ""
 
 
@@ -301,7 +308,7 @@ def extract_snapshot_from_text(text: str) -> dict:
 
     snap["emd_exemption"] = _find(text, [
         r'(?:EMD\s+Exemption|Exemption\s+from\s+EMD)\s*[:\-]?\s*(.{20,300}?)(?:\n|$)',
-        r'(?:MSME|Startup)\s*(?:are|is)?\s*(?:exempt|exempted)\s+from\s+EMD.{0,100}',
+        r'(?:MSME|Startup)\s*(?:are|is)?\s*(?:exempt|exempted)\s+from\s+(EMD[^\n]{0,100})',
     ])
 
     snap["performance_security"] = _find(text, [
@@ -324,7 +331,7 @@ def extract_snapshot_from_text(text: str) -> dict:
     ])
 
     snap["portal"] = _find(text, [
-        r'(?:https?://(?:eproc|eprocure|etender|gem|portal|tender)\S+)',
+        r'(https?://(?:eproc|eprocure|etender|gem|portal|tender)\S+)',
         r'(?:bids?\s+must\s+be\s+submitted\s+(?:through|via|on|at))\s+(https?://\S+)',
         r'(https?://[a-zA-Z0-9\-\.]+\.(?:gov|nic|in|org)\S*)',
     ])
