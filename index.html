@@ -430,6 +430,118 @@ tbody tr:first-child td{border-top:none}
   .settings-grid{grid-template-columns:1fr}
   .pipeline-grid{grid-template-columns:1fr 1fr}
 }
+
+/* ── ANALYSIS PREVIEW PANEL (right slide-in) ── */
+#preview-panel{
+  position:fixed;top:0;right:-680px;width:660px;height:100vh;
+  background:var(--bg2);border-left:1px solid var(--border);
+  z-index:200;display:flex;flex-direction:column;
+  transition:right .3s cubic-bezier(.4,0,.2,1);overflow:hidden;
+}
+#preview-panel.open{right:0}
+.preview-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199;
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.preview-overlay.open{opacity:1;pointer-events:all}
+.preview-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+  background:var(--bg3);
+}
+.preview-title{font-size:15px;font-weight:700;color:var(--text)}
+.preview-actions{display:flex;gap:8px;align-items:center}
+.preview-body{flex:1;overflow-y:auto;padding:20px}
+.preview-verdict{
+  display:flex;align-items:center;gap:12px;padding:16px 18px;
+  border-radius:var(--radius);margin-bottom:16px;
+  border:1px solid;
+}
+.preview-verdict-label{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.preview-verdict-reason{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5}
+.preview-section{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin:18px 0 8px}
+.preview-snap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.preview-snap-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px}
+.preview-snap-label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.preview-snap-val{font-size:12px;color:var(--text);font-weight:500;word-break:break-word}
+.preview-pq-row{
+  display:grid;grid-template-columns:22px 1fr 80px;gap:8px;align-items:start;
+  padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;
+}
+.preview-pq-row:last-child{border-bottom:none}
+.preview-pq-num{color:var(--text3);font-family:var(--mono);font-size:11px;padding-top:2px}
+.preview-pq-text{color:var(--text2);line-height:1.4}
+.preview-pq-clause{color:var(--text3);font-size:10px;margin-top:2px}
+.pv-met{color:var(--green);font-weight:700;font-size:11px;text-align:right}
+.pv-cond{color:var(--amber);font-weight:700;font-size:11px;text-align:right}
+.pv-not{color:var(--red);font-weight:700;font-size:11px;text-align:right}
+.pv-rev{color:var(--blue);font-weight:700;font-size:11px;text-align:right}
+.preview-score-bar{display:flex;gap:12px;margin:10px 0;flex-wrap:wrap}
+.preview-score-item{text-align:center;min-width:60px}
+.preview-score-num{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1}
+.preview-score-lbl{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+.chatbot-fix-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 8px;
+  background:var(--purple-bg);color:var(--purple);border:1px solid rgba(167,139,250,.25);
+  border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;
+  transition:background .15s;
+}
+.chatbot-fix-btn:hover{background:rgba(167,139,250,.2)}
+
+/* ── SELF-LEARNING CORRECTION INDICATOR ── */
+.correction-toast{
+  position:fixed;bottom:80px;right:20px;z-index:500;
+  background:var(--purple-bg);border:1px solid rgba(167,139,250,.3);
+  color:var(--purple);padding:10px 16px;border-radius:var(--radius);
+  font-size:12px;font-weight:600;display:none;
+  animation:slideUp .3s ease;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ── PRE-BID STANDALONE ── */
+.prebid-mode-tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--bg3);border-radius:var(--radius);padding:3px;width:fit-content}
+.pb-mode-btn{padding:6px 16px;border-radius:calc(var(--radius) - 2px);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none;color:var(--text3);font-family:var(--font);transition:all .15s}
+.pb-mode-btn.active{background:var(--bg4);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.pb-standalone-drop{
+  border:2px dashed var(--border2);border-radius:var(--radius-lg);
+  padding:32px;text-align:center;cursor:pointer;transition:all .2s;
+  background:var(--bg3);
+}
+.pb-standalone-drop:hover,.pb-standalone-drop.drag-active{border-color:var(--blue);background:var(--blue-bg)}
+.pb-query-item{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 14px;margin-bottom:8px;cursor:grab;
+  display:flex;align-items:flex-start;gap:10px;
+  transition:border-color .15s,background .15s;
+}
+.pb-query-item:hover{border-color:var(--border2)}
+.pb-query-item.dragging{opacity:.5;border-color:var(--blue);background:var(--blue-bg);cursor:grabbing}
+.pb-drag-handle{color:var(--text3);font-size:14px;padding-top:2px;flex-shrink:0;user-select:none}
+.pb-query-num{font-size:10px;font-weight:700;color:var(--blue);font-family:var(--mono);flex-shrink:0;padding-top:2px}
+.pb-query-body{flex:1;min-width:0}
+.pb-query-clause{font-size:10px;font-weight:700;color:var(--text3);margin-bottom:3px}
+.pb-query-text{font-size:13px;color:var(--text2);line-height:1.5}
+.pb-query-actions{flex-shrink:0;display:flex;gap:4px}
+
+/* ── EMAIL DRAFT MODAL ── */
+.email-modal{
+  position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.email-modal.open{opacity:1;pointer-events:all}
+.email-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  width:620px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.email-box-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.email-box-body{flex:1;overflow-y:auto;padding:20px}
+.email-field{margin-bottom:12px}
+.email-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.email-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border-color .15s}
+.email-input:focus{border-color:var(--blue)}
+textarea.email-input{resize:vertical;min-height:180px;line-height:1.6}
+.email-box-ft{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -743,27 +855,91 @@ tbody tr:first-child td{border-top:none}
     <div id="page-prebid" class="page">
       <div class="topbar">
         <div class="topbar-left"><span class="topbar-title">Pre-Bid Queries</span></div>
+        <div class="topbar-right">
+          <button class="btn btn-ghost btn-sm" id="pb-email-btn" onclick="openEmailModal('client')" style="display:none">✉ Email to Authority</button>
+        </div>
       </div>
       <div class="page-body">
-        <div class="card">
-          <div class="row2" style="align-items:flex-end">
-            <div class="form-group" style="margin-bottom:0">
-              <label>Select Tender</label>
-              <select id="pb-select" onchange="loadPrebidForTender()">
-                <option value="">-- Select --</option>
-              </select>
+
+        <!-- Mode tabs -->
+        <div class="prebid-mode-tabs">
+          <button class="pb-mode-btn active" id="pb-mode-linked" onclick="switchPbMode('linked')">From Analysed Tender</button>
+          <button class="pb-mode-btn" id="pb-mode-standalone" onclick="switchPbMode('standalone')">Direct RFP Upload</button>
+        </div>
+
+        <!-- LINKED MODE -->
+        <div id="pb-linked-mode">
+          <div class="card">
+            <div class="row2" style="align-items:flex-end">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Select Tender</label>
+                <select id="pb-select" onchange="loadPrebidForTender()">
+                  <option value="">-- Select --</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Search tender</label>
+                <input type="text" id="pb-search" placeholder="Type T247 ID or brief..." oninput="filterSelect('pb-select','pb-search')">
+              </div>
             </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label>Search tender</label>
-              <input type="text" id="pb-search" placeholder="Type T247 ID or brief..." oninput="filterSelect('pb-select','pb-search')">
+          </div>
+          <div id="pb-content">
+            <div class="card" style="text-align:center;color:var(--text3);padding:40px">
+              Select a tender to view pre-bid queries.
             </div>
           </div>
         </div>
-        <div id="pb-content">
-          <div class="card" style="text-align:center;color:var(--text3);padding:40px">
-            Select a tender to view pre-bid queries.
+
+        <!-- STANDALONE MODE -->
+        <div id="pb-standalone-mode" style="display:none">
+          <div class="card">
+            <div class="card-hd">
+              <div>
+                <div class="card-title">Upload RFP Directly</div>
+                <div class="card-sub">Drop the tender RFP here — AI will generate pre-bid queries without full analysis</div>
+              </div>
+            </div>
+            <div class="pb-standalone-drop" id="pb-standalone-drop"
+              onclick="document.getElementById('pb-standalone-file').click()"
+              ondragover="event.preventDefault();this.classList.add('drag-active')"
+              ondragleave="this.classList.remove('drag-active')"
+              ondrop="pbStandaloneDrop(event)">
+              <div style="font-size:28px;margin-bottom:8px">📄</div>
+              <div style="font-weight:600;color:var(--text2)">Drop RFP here or click to browse</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:4px">ZIP · PDF · DOCX — the tender document</div>
+              <div id="pb-standalone-filename" style="font-size:12px;color:var(--blue);margin-top:8px;display:none"></div>
+            </div>
+            <input type="file" id="pb-standalone-file" style="display:none" accept=".zip,.pdf,.docx,.doc" onchange="pbStandaloneFileChanged(this)">
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+              <div class="form-group" style="flex:1;margin-bottom:0">
+                <label style="font-size:11px">Authority Email (from RFP — auto-filled after analysis)</label>
+                <input type="email" id="pb-authority-email" placeholder="authority@gov.in">
+              </div>
+              <div style="padding-top:18px">
+                <button class="btn btn-primary" onclick="generateStandalonePrebid()" id="pb-standalone-btn" disabled>
+                  🤖 Generate Queries
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="pb-standalone-result"></div>
+        </div>
+
+        <!-- QUERIES OUTPUT (shared by both modes) -->
+        <div id="pb-queries-output" style="display:none">
+          <div class="card">
+            <div class="card-hd">
+              <div class="card-title" id="pb-queries-title">Pre-Bid Queries</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" onclick="openEmailModal('client')">✉ Email to Authority</button>
+                <button class="btn btn-ghost btn-sm" onclick="generatePrebidLetter('')">📄 Download Letter</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Drag to reorder · Click ✏ to edit via chatbot</div>
+            <div id="pb-draggable-list"></div>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -1363,6 +1539,54 @@ tbody tr:first-child td{border-top:none}
   <div id="dp-content"></div>
 </div>
 
+<!-- ═══ ANALYSIS PREVIEW PANEL ═══ -->
+<div class="preview-overlay" id="preview-overlay" onclick="closePreview()"></div>
+<div id="preview-panel">
+  <div class="preview-topbar">
+    <div class="preview-title" id="preview-tender-name">Analysis Preview</div>
+    <div class="preview-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openEmailModal('team')" title="Email to team">✉ Email Team</button>
+      <button class="btn btn-primary btn-sm" id="preview-dl-btn">⬇ Download Report</button>
+      <button class="btn btn-ghost btn-sm" onclick="closePreview()">✕</button>
+    </div>
+  </div>
+  <div class="preview-body" id="preview-body">
+    <div style="text-align:center;color:var(--text3);padding:40px">Loading preview...</div>
+  </div>
+</div>
+
+<!-- ═══ EMAIL MODAL ═══ -->
+<div class="email-modal" id="email-modal">
+  <div class="email-box">
+    <div class="email-box-hd">
+      <div style="font-size:14px;font-weight:700" id="email-modal-title">Email Draft</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="email-box-body">
+      <div class="email-field">
+        <div class="email-label">To</div>
+        <input class="email-input" id="email-to" placeholder="team@nascentinfo.com">
+      </div>
+      <div class="email-field">
+        <div class="email-label">Subject</div>
+        <input class="email-input" id="email-subject">
+      </div>
+      <div class="email-field">
+        <div class="email-label">Body</div>
+        <textarea class="email-input" id="email-body"></textarea>
+      </div>
+      <div id="email-attach-note" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
+    </div>
+    <div class="email-box-ft">
+      <button class="btn btn-ghost btn-sm" onclick="copyEmailToClipboard()">📋 Copy</button>
+      <button class="btn btn-primary btn-sm" onclick="sendEmailDraft()">📧 Open in Mail</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CORRECTION TOAST ═══ -->
+<div class="correction-toast" id="correction-toast">🧠 Correction saved — AI will not repeat this mistake</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1928,11 +2152,13 @@ async function analyseTender() {
       }, 300);
     }
     renderAnalysisResult(td, d.download_file);
+    // Open preview panel
+    openPreviewPanel(td, d.download_file);
     loadDashboard();
     // Show navigation bar after analysis
     document.getElementById('an-post-nav').style.display='flex';
     document.getElementById('an-post-tid').textContent = analysedTid;
-    toast('Analysis complete — '+(verdict(td)||'REVIEW')+' · All pages updated', 'success');
+    toast('Analysis complete — '+(verdict(td)||'REVIEW')+' · Preview panel open', 'success');
   } catch(e) {
     hideLoad();
     logLine('Error: '+e.message,'err');
@@ -3178,7 +3404,504 @@ async function _sheetSync(endpoint, btnId, label) {
 function sheetPull()     { _sheetSync('/sheet-sync/pull','btn-pull','Pulling from Google Sheet...'); }
 function sheetPush()     { _sheetSync('/sheet-sync/push','btn-push','Pushing to Google Sheet...'); }
 function sheetSyncBoth() { _sheetSync('/sheet-sync/both','btn-sync-both','Syncing with Google Sheet...'); }
-// ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// ANALYSIS PREVIEW PANEL
+// ═══════════════════════════════════════════════════════════
+var G_previewData = null;
+var G_previewFile = null;
+
+function openPreviewPanel(td, downloadFile) {
+  G_previewData = td;
+  G_previewFile = downloadFile;
+
+  var v = (td.overall_verdict&&td.overall_verdict.verdict) || td.verdict || 'REVIEW';
+  var reason = (td.overall_verdict&&td.overall_verdict.reason) || td.reason || '';
+  var green = (td.overall_verdict&&td.overall_verdict.green) || 0;
+  var amber = (td.overall_verdict&&td.overall_verdict.amber) || 0;
+  var red   = (td.overall_verdict&&td.overall_verdict.red)   || 0;
+
+  var col = v==='BID'?'var(--green)':v==='NO-BID'?'var(--red)':v==='CONDITIONAL'?'var(--amber)':'var(--blue)';
+  var bgcol = v==='BID'?'var(--green-bg)':v==='NO-BID'?'var(--red-bg)':v==='CONDITIONAL'?'var(--amber-bg)':'var(--blue-bg)';
+  var tname = esc(td.tender_name||td.org_name||'Tender Analysis');
+  document.getElementById('preview-tender-name').textContent = tname.substring(0,50);
+
+  // Download button
+  var dlBtn = document.getElementById('preview-dl-btn');
+  if (downloadFile) {
+    dlBtn.onclick = function(){ window.open('/download/'+downloadFile); };
+    dlBtn.style.display = 'flex';
+  } else { dlBtn.style.display = 'none'; }
+
+  // Build snapshot grid
+  var snapFields = [
+    ['Tender No', td.tender_no],['Ref No', td.reference_no||td.tender_id],
+    ['Organisation', td.org_name],['Portal', td.portal],
+    ['Submission Deadline', td.bid_submission_date],['EMD', td.emd],
+    ['Tender Fee', td.tender_fee],['Processing Fee', td.processing_fee],
+    ['Est. Cost', td.estimated_cost],['Contract Period', td.contract_period],
+    ['Pre-Bid Query Date', td.prebid_query_date],['JV / Consortium', td.jv_allowed],
+    ['Mode of Selection', td.mode_of_selection],['Location', td.location],
+  ].filter(function(f){return f[1]&&f[1]!=='—'&&f[1]!=='Not specified';});
+
+  var snapHtml = snapFields.map(function(f){
+    return '<div class="preview-snap-item">'+
+      '<div class="preview-snap-label">'+esc(f[0])+'</div>'+
+      '<div class="preview-snap-val">'+esc(f[1])+'</div>'+
+    '</div>';
+  }).join('');
+
+  // PQ rows
+  var pqItems = td.pq_criteria||[];
+  var pqHtml = pqItems.slice(0,20).map(function(c,i){
+    var s = c.nascent_status||'Review';
+    var sc = s.includes('Not')?'pv-not':s==='Met'?'pv-met':s==='Conditional'?'pv-cond':'pv-rev';
+    var sl = s.includes('Not')?'Not Met':s==='Met'?'Met':s==='Conditional'?'Cond':'Rev';
+    return '<div class="preview-pq-row">'+
+      '<div class="preview-pq-num">'+(i+1)+'</div>'+
+      '<div class="preview-pq-body">'+
+        '<div class="preview-pq-text">'+esc((c.criteria||'').substring(0,120))+(c.criteria&&c.criteria.length>120?'…':'')+'</div>'+
+        (c.clause_ref?'<div class="preview-pq-clause">'+esc(c.clause_ref)+'</div>':'')+
+        '<div style="font-size:10px;color:var(--text3);margin-top:3px">'+esc((c.nascent_remark||'').substring(0,80))+'</div>'+
+        '<button class="chatbot-fix-btn" style="margin-top:4px" onclick="fixViaChatbot('+i+',\'pq\')">✏ Fix via chatbot</button>'+
+      '</div>'+
+      '<div class="'+sc+'">'+sl+'</div>'+
+    '</div>';
+  }).join('');
+
+  // TQ rows
+  var tqItems = td.tq_criteria||[];
+  var tqHtml = '';
+  var tqTotal = 0; var tqMax = 0;
+  tqItems.forEach(function(c){
+    tqTotal += parseFloat(c.nascent_score||0)||0;
+    tqMax   += parseFloat(c.max_marks||0)||0;
+  });
+  if (tqItems.length) {
+    tqHtml = '<div class="preview-section">TQ Score Estimate</div>'+
+      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;background:var(--bg3);border-radius:var(--radius);padding:12px 16px;border:1px solid var(--border)">'+
+        '<div style="text-align:center"><div style="font-size:28px;font-weight:800;font-family:var(--mono);color:var(--blue)">'+Math.round(tqTotal)+'</div><div style="font-size:10px;color:var(--text3)">Nascent Score</div></div>'+
+        '<div style="color:var(--text3)">/ '+Math.round(tqMax)+'</div>'+
+        (td.tq_min_qualifying_score?'<div style="font-size:11px;color:var(--text3)">Min qualifying: '+td.tq_min_qualifying_score+'</div>':'')+
+        '<div class="'+((tqTotal>=70)?'pv-met':(tqTotal>=50)?'pv-cond':'pv-not')+'" style="margin-left:auto;font-size:14px">'+
+          (tqTotal>=70?'Qualifies':'Borderline')+
+        '</div>'+
+      '</div>';
+  }
+
+  // Notes
+  var notesHtml = '';
+  var notes = td.notes||[];
+  if (notes.length) {
+    notesHtml = '<div class="preview-section">Key Notes</div>'+
+      notes.slice(0,5).map(function(n){
+        var t = typeof n==='string'?n:(n.title?n.title+': '+n.detail:n.detail||'');
+        return '<div style="font-size:12px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border);line-height:1.5">'+esc(t.substring(0,200))+'</div>';
+      }).join('');
+  }
+
+  document.getElementById('preview-body').innerHTML =
+    // Verdict
+    '<div class="preview-verdict" style="border-color:'+col+';background:'+bgcol+'">'+
+      '<div style="flex:1">'+
+        '<div class="preview-verdict-label" style="color:'+col+'">'+v+'</div>'+
+        (reason?'<div class="preview-verdict-reason">'+esc(reason.substring(0,300))+'</div>':'')+
+      '</div>'+
+      '<div style="display:flex;gap:16px;flex-shrink:0">'+
+        '<div class="preview-score-item"><div class="preview-score-num" style="color:var(--green)">'+green+'</div><div class="preview-score-lbl">Met</div></div>'+
+        '<div class="preview-score-item"><div class="preview-score-num" style="color:var(--amber)">'+amber+'</div><div class="preview-score-lbl">Cond.</div></div>'+
+        '<div class="preview-score-item"><div class="preview-score-num" style="color:var(--red)">'+red+'</div><div class="preview-score-lbl">Not Met</div></div>'+
+      '</div>'+
+    '</div>'+
+    // Snapshot
+    (snapHtml?'<div class="preview-section">Tender Snapshot</div><div class="preview-snap-grid">'+snapHtml+'</div>':'')+
+    // PQ
+    (pqHtml?'<div class="preview-section">PQ Criteria ('+pqItems.length+')</div>'+pqHtml:'')+
+    // TQ
+    tqHtml+
+    // Notes
+    notesHtml+
+    // Chatbot tip
+    '<div style="margin-top:20px;padding:12px;background:var(--purple-bg);border:1px solid rgba(167,139,250,.2);border-radius:var(--radius);font-size:12px;color:var(--purple)">'+
+    '💡 To correct any result, click <b>Fix via chatbot</b> on any row, or open the chatbot and type: "Change PQ 3 to Met" or "Update verdict to Conditional"'+
+    '</div>';
+
+  document.getElementById('preview-panel').classList.add('open');
+  document.getElementById('preview-overlay').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('preview-panel').classList.remove('open');
+  document.getElementById('preview-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// FIX VIA CHATBOT (self-learning entry point)
+// ═══════════════════════════════════════════════════════════
+function fixViaChatbot(idx, type) {
+  closePreview();
+  G.chatOpen = true;
+  var win = document.getElementById('chatwin');
+  win.classList.add('open');
+  var el = document.getElementById('chat-msgs');
+  if (!el.children.length) {
+    addBotMsg('Hi! I am your Bid Assistant. Tell me what to fix.');
+  }
+  var item = type==='pq' ? (G_previewData&&G_previewData.pq_criteria&&G_previewData.pq_criteria[idx]) : null;
+  var hint = item ? 'Change PQ '+(idx+1)+' ("'+((item.criteria||'').substring(0,40))+'...") to ' : 'Tell me what to change:';
+  document.getElementById('chat-input').value = hint;
+  document.getElementById('chat-input').focus();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SELF-LEARNING — Save corrections, update profile
+// ═══════════════════════════════════════════════════════════
+async function saveCorrection(correctionData) {
+  // Save to backend — corrections.json + update nascent_profile if relevant
+  try {
+    await fetch('/save-correction', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(correctionData)
+    });
+    showCorrectionToast();
+  } catch(e) {
+    console.log('Correction save failed:', e.message);
+  }
+}
+
+function showCorrectionToast() {
+  var el = document.getElementById('correction-toast');
+  el.style.display = 'block';
+  setTimeout(function(){ el.style.display = 'none'; }, 3000);
+}
+
+// Intercept chat responses for corrections
+var _origSendChat = sendChat;
+async function sendChat(msg) {
+  var input = document.getElementById('chat-input');
+  var text = msg || input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addUserMsg(text);
+
+  // Detect correction patterns
+  var correctionPatterns = [
+    /change\s+pq\s+(\d+)\s+to\s+(met|not met|conditional)/i,
+    /update\s+(verdict|pq|tq)\s+.*to\s+(bid|no-bid|conditional|met|not met)/i,
+    /mark\s+pq\s+(\d+)\s+as\s+(met|not met|conditional)/i,
+    /set\s+(criterion|criteria)\s+(\d+)\s+to\s+(met|not met|conditional)/i,
+  ];
+  var isCorrection = correctionPatterns.some(function(p){ return p.test(text); });
+
+  try {
+    var r = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      message: text,
+      context: G_previewData ? {tender_data: G_previewData} : {}
+    })});
+    var d = await r.json();
+    addBotMsg(d.response||d.message||'No response');
+
+    // If chatbot applied a correction, save it for self-learning
+    if (isCorrection && d.correction_applied) {
+      saveCorrection({
+        text: text,
+        correction: d.correction_applied,
+        tender_no: G_previewData&&G_previewData.tender_no,
+        timestamp: new Date().toISOString()
+      });
+      // Refresh preview if data was updated
+      if (d.updated_tender_data) {
+        G_previewData = d.updated_tender_data;
+        openPreviewPanel(G_previewData, G_previewFile);
+      }
+    } else if (isCorrection) {
+      // Even if backend didn't confirm, save the instruction locally
+      saveCorrection({ text: text, timestamp: new Date().toISOString() });
+    }
+  } catch(e) { addBotMsg('Error connecting to assistant. Try again.'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// EMAIL MODAL
+// ═══════════════════════════════════════════════════════════
+var G_emailMode = 'team'; // 'team' or 'client'
+
+function openEmailModal(mode) {
+  G_emailMode = mode || 'team';
+  var td = G_previewData || G.lastAnalysis;
+  if (!td) { toast('Analyse a tender first','info'); return; }
+
+  var v = (td.overall_verdict&&td.overall_verdict.verdict) || td.verdict || 'REVIEW';
+  var tname = td.tender_name || td.org_name || 'Tender';
+  var tno   = td.tender_no || '';
+  var deadline = td.bid_submission_date || '—';
+  var emd = td.emd || '—';
+  var reason = (td.overall_verdict&&td.overall_verdict.reason) || td.reason || '';
+  var green = (td.overall_verdict&&td.overall_verdict.green)||0;
+  var amber = (td.overall_verdict&&td.overall_verdict.amber)||0;
+  var red   = (td.overall_verdict&&td.overall_verdict.red)||0;
+
+  if (mode === 'team') {
+    document.getElementById('email-modal-title').textContent = 'Email to Team';
+    document.getElementById('email-to').value = 'bid.team@nascentinfo.com';
+    document.getElementById('email-subject').value =
+      '[BID/NO-BID] '+v+' — '+tname.substring(0,60)+(tno?' | '+tno:'');
+    var pqSummary = (td.pq_criteria||[]).slice(0,5).map(function(c,i){
+      return (i+1)+'. '+((c.criteria||'').substring(0,80))+'... → '+(c.nascent_status||'Review');
+    }).join('\n');
+    document.getElementById('email-body').value =
+      'Dear Team,\n\n'+
+      'Please find below the Bid/No-Bid analysis for the following tender:\n\n'+
+      'Tender: '+tname+'\n'+
+      (tno?'Tender No.: '+tno+'\n':'')+
+      'Organisation: '+(td.org_name||'—')+'\n'+
+      'Submission Deadline: '+deadline+'\n'+
+      'EMD: '+emd+'\n'+
+      'Estimated Cost: '+(td.estimated_cost||'—')+'\n\n'+
+      'VERDICT: '+v+'\n'+
+      reason+'\n\n'+
+      'PQ Summary: Met: '+green+' | Conditional: '+amber+' | Not Met: '+red+'\n\n'+
+      (pqSummary?'Key PQ Criteria:\n'+pqSummary+'\n\n':'')+
+      (G_previewFile?'Word Report: '+window.location.origin+'/download/'+G_previewFile+'\n\n':'')+
+      'Please review and confirm bid decision.\n\n'+
+      'Regards,\nBid/No-Bid System\nNascent Info Technologies Pvt. Ltd.';
+    document.getElementById('email-attach-note').textContent =
+      G_previewFile ? '📎 Report link included in body: /download/'+G_previewFile : '';
+
+  } else {
+    // Client mode — email to tender authority
+    var authority = td.contact || td.prebid_query_date || '';
+    // Try to extract email from contact field
+    var emailMatch = authority.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+    document.getElementById('email-modal-title').textContent = 'Email Pre-Bid Queries to Authority';
+    document.getElementById('email-to').value = emailMatch ? emailMatch[1] : (document.getElementById('pb-authority-email').value||'');
+    document.getElementById('email-subject').value =
+      'Pre-Bid Queries — '+tname.substring(0,60)+(tno?' ('+tno+')':'');
+
+    var queries = (td.prebid_queries||G.lastPrebidQueries||[]);
+    var qBody = queries.map(function(q,i){
+      return 'Q'+(i+1)+(q.clause?' ('+q.clause+')':'')+'\n'+
+        (q.rfp_text?'RFP Clause: '+q.rfp_text.substring(0,150)+'\n':'')+
+        'Query: '+(q.query||q)+'\n'+
+        'Desired Clarification: '+(q.desired_clarification||'Written confirmation required.')+'\n';
+    }).join('\n');
+
+    document.getElementById('email-body').value =
+      'To,\nThe Tender Authority\n'+tname+'\n\n'+
+      'Sub: Pre-Bid Queries — '+tname+(tno?' (Ref: '+tno+')':'')+'\n\n'+
+      'Dear Sir/Madam,\n\n'+
+      'We, Nascent Info Technologies Pvt. Ltd. (MSME, UDYAM-GJ-01-0007420), '+
+      'Ahmedabad, Gujarat, wish to participate in the above-referenced tender. '+
+      'We request clarification on the following points before the pre-bid query deadline'+(td.prebid_query_date?' of '+td.prebid_query_date:'')+':\n\n'+
+      qBody+'\n'+
+      'We request your kind consideration and written responses to the above queries '+
+      'so that we can prepare a complete and compliant bid.\n\n'+
+      'Thanking you,\n\n'+
+      'Nascent Info Technologies Pvt. Ltd.\n'+
+      'A-805, Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad 380015\n'+
+      'nascent.tender@nascentinfo.com | +91-79-40200400\n'+
+      'MSME | CMMI L3 | ISO 9001 | ISO 27001 | ISO 20000';
+    document.getElementById('email-attach-note').textContent = '';
+  }
+
+  document.getElementById('email-modal').classList.add('open');
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.remove('open');
+}
+
+function copyEmailToClipboard() {
+  var subject = document.getElementById('email-subject').value;
+  var body = document.getElementById('email-body').value;
+  var full = 'To: '+document.getElementById('email-to').value+
+    '\nSubject: '+subject+'\n\n'+body;
+  navigator.clipboard.writeText(full).then(function(){
+    toast('Email copied to clipboard','success');
+  });
+}
+
+function sendEmailDraft() {
+  var to = encodeURIComponent(document.getElementById('email-to').value);
+  var subject = encodeURIComponent(document.getElementById('email-subject').value);
+  var body = encodeURIComponent(document.getElementById('email-body').value);
+  // mailto: works for Gmail, Outlook, Apple Mail — opens default client
+  window.location.href = 'mailto:'+to+'?subject='+subject+'&body='+body;
+  closeEmailModal();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRE-BID STANDALONE MODE
+// ═══════════════════════════════════════════════════════════
+var G_standalonePrebidFile = null;
+var G_lastPrebidQueries = [];
+
+function switchPbMode(mode) {
+  document.getElementById('pb-linked-mode').style.display = mode==='linked' ? '' : 'none';
+  document.getElementById('pb-standalone-mode').style.display = mode==='standalone' ? '' : 'none';
+  document.getElementById('pb-queries-output').style.display = 'none';
+  document.getElementById('pb-mode-linked').classList.toggle('active', mode==='linked');
+  document.getElementById('pb-mode-standalone').classList.toggle('active', mode==='standalone');
+}
+
+function pbStandaloneFileChanged(input) {
+  var file = input.files[0];
+  if (!file) return;
+  G_standalonePrebidFile = file;
+  var fn = document.getElementById('pb-standalone-filename');
+  fn.textContent = '✓ ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+  fn.style.display = 'block';
+  document.getElementById('pb-standalone-drop').classList.remove('drag-active');
+  document.getElementById('pb-standalone-btn').disabled = false;
+}
+
+function pbStandaloneDrop(event) {
+  event.preventDefault();
+  document.getElementById('pb-standalone-drop').classList.remove('drag-active');
+  var file = event.dataTransfer.files[0];
+  if (!file) return;
+  G_standalonePrebidFile = file;
+  var fn = document.getElementById('pb-standalone-filename');
+  fn.textContent = '✓ ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+  fn.style.display = 'block';
+  document.getElementById('pb-standalone-btn').disabled = false;
+}
+
+async function generateStandalonePrebid() {
+  if (!G_standalonePrebidFile) { toast('Please upload an RFP file first','info'); return; }
+  showLoad('Analysing RFP and generating pre-bid queries...');
+  var fd = new FormData();
+  fd.append('files', G_standalonePrebidFile);
+  fd.append('prebid_only', 'true'); // hint to backend
+  try {
+    var r = await fetch('/process-files', {method:'POST', body:fd});
+    var d = await r.json();
+    hideLoad();
+    if (d.status !== 'success' && d.detail) throw new Error(d.detail);
+
+    var td = d.tender_data || d;
+    G_previewData = td;
+    G_previewFile = d.download_file;
+
+    // Auto-fill authority email if found
+    var contact = td.contact || '';
+    var emailMatch = contact.match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) document.getElementById('pb-authority-email').value = emailMatch[1];
+
+    var queries = td.prebid_queries || [];
+    G_lastPrebidQueries = queries;
+    G.lastAnalysis = td;
+
+    renderPrebidDraggable(queries, td.tender_name||td.org_name||'Tender');
+    document.getElementById('pb-standalone-result').innerHTML =
+      '<div class="alert alert-ok" style="margin-bottom:10px">'+
+      '✓ '+queries.length+' pre-bid queries generated from '+esc(G_standalonePrebidFile.name)+
+      '</div>';
+    toast(queries.length+' pre-bid queries generated','success');
+  } catch(e) {
+    hideLoad();
+    document.getElementById('pb-standalone-result').innerHTML =
+      '<div class="alert alert-danger">Error: '+esc(e.message)+'</div>';
+    toast('Failed: '+e.message,'error');
+  }
+}
+
+function renderPrebidDraggable(queries, tenderName) {
+  if (!queries.length) {
+    document.getElementById('pb-queries-output').style.display = 'none';
+    return;
+  }
+  document.getElementById('pb-queries-title').textContent =
+    'Pre-Bid Queries ('+queries.length+') — ' + (tenderName||'').substring(0,50);
+
+  var list = document.getElementById('pb-draggable-list');
+  list.innerHTML = queries.map(function(q, i){
+    var qtext = q.query || (typeof q==='string'?q:'');
+    var clause = q.clause || '';
+    return '<div class="pb-query-item" draggable="true" data-idx="'+i+'" '+
+      'ondragstart="pbDragStart(event)" ondragover="pbDragOver(event)" '+
+      'ondrop="pbDrop(event)" ondragend="pbDragEnd(event)">'+
+      '<div class="pb-drag-handle">⋮⋮</div>'+
+      '<div class="pb-query-num">Q'+(i+1)+'</div>'+
+      '<div class="pb-query-body">'+
+        (clause?'<div class="pb-query-clause">'+esc(clause)+'</div>':'')+
+        '<div class="pb-query-text">'+esc(qtext)+'</div>'+
+      '</div>'+
+      '<div class="pb-query-actions">'+
+        '<button class="act-btn gray btn-xs" onclick="pbEditQuery('+i+')" title="Edit via chatbot">✏</button>'+
+        '<button class="act-btn red btn-xs" onclick="pbRemoveQuery('+i+')" title="Remove">✕</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  document.getElementById('pb-queries-output').style.display = 'block';
+  document.getElementById('pb-email-btn').style.display = 'flex';
+}
+
+// Drag-to-reorder for pre-bid queries
+var _pbDragIdx = -1;
+function pbDragStart(e) {
+  _pbDragIdx = parseInt(e.currentTarget.dataset.idx);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function pbDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+function pbDrop(e) {
+  e.preventDefault();
+  var toIdx = parseInt(e.currentTarget.dataset.idx);
+  if (_pbDragIdx === -1 || _pbDragIdx === toIdx) return;
+  var qs = G_lastPrebidQueries;
+  var moved = qs.splice(_pbDragIdx, 1)[0];
+  qs.splice(toIdx, 0, moved);
+  G_lastPrebidQueries = qs;
+  renderPrebidDraggable(qs, G_previewData&&(G_previewData.tender_name||G_previewData.org_name)||'');
+}
+function pbDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  _pbDragIdx = -1;
+}
+function pbRemoveQuery(idx) {
+  G_lastPrebidQueries.splice(idx, 1);
+  renderPrebidDraggable(G_lastPrebidQueries, G_previewData&&(G_previewData.tender_name||G_previewData.org_name)||'');
+}
+function pbEditQuery(idx) {
+  G.chatOpen = true;
+  document.getElementById('chatwin').classList.add('open');
+  var q = G_lastPrebidQueries[idx];
+  var hint = 'Edit pre-bid query '+(idx+1)+': "'+((q.query||q).toString().substring(0,60))+'..." — change to: ';
+  document.getElementById('chat-input').value = hint;
+  document.getElementById('chat-input').focus();
+}
+
+// Load prebid for linked tender — also render draggable
+var _origLoadPrebidForTender = loadPrebidForTender;
+async function loadPrebidForTender() {
+  var tid = document.getElementById('pb-select').value; if(!tid) return;
+  var el = document.getElementById('pb-content');
+  el.innerHTML = '<div class="card"><div class="muted">Loading...</div></div>';
+  try {
+    var r = await fetch('/prebid-queries/'+tid); var d = await r.json();
+    var qs = d.queries||[];
+    G_lastPrebidQueries = qs;
+
+    // Find tender data
+    var td = G.tenders.find(function(t){return t.t247_id===tid;});
+    var tname = td ? (td.brief||td.org_name||tid) : tid;
+
+    if (!qs.length) {
+      el.innerHTML='<div class="card" style="text-align:center;color:var(--text3);padding:40px">No pre-bid queries. Analyse this tender first.</div>';
+      document.getElementById('pb-queries-output').style.display='none';
+      return;
+    }
+    el.innerHTML = '';
+    renderPrebidDraggable(qs, tname);
+    if (td) { G_previewData = td; }
+    document.getElementById('pb-email-btn').style.display = 'flex';
+  } catch(e) { el.innerHTML='<div class="alert alert-danger">Error: '+esc(e.message)+'</div>'; }
+}
 
 </script>
 </body>

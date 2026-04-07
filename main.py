@@ -901,8 +901,82 @@ async def chat(data: dict = Body(...)):
     message = data.get("message", "").strip()
     if not message:
         raise HTTPException(400, "Empty message")
+
+    context = data.get("context", {})
+    tender_data = context.get("tender_data", {})
+
     history = load_history()
-    return process_message(message, history)
+    result = process_message(message, history)
+
+    # Self-learning: detect correction patterns in the message
+    correction_applied = None
+    updated_tender_data = None
+
+    import re as _re
+    text_lower = message.lower()
+
+    # Pattern: "change PQ 3 to Met" / "mark criterion 2 as Conditional"
+    pq_match = _re.search(
+        r'(?:change|mark|set|update)\s+(?:pq|criterion|criteria)\s+(\d+)\s+(?:to|as)\s+(met|not met|conditional|review)',
+        text_lower
+    )
+    if pq_match and tender_data:
+        idx = int(pq_match.group(1)) - 1
+        new_status = pq_match.group(2).strip()
+        new_status_title = {"met": "Met", "not met": "Not Met",
+                            "conditional": "Conditional", "review": "Review"}.get(new_status, new_status.title())
+        new_color = {"Met": "GREEN", "Not Met": "RED",
+                     "Conditional": "AMBER", "Review": "BLUE"}.get(new_status_title, "BLUE")
+
+        pq_list = tender_data.get("pq_criteria", [])
+        if 0 <= idx < len(pq_list):
+            pq_list[idx]["nascent_status"] = new_status_title
+            pq_list[idx]["nascent_color"] = new_color
+            pq_list[idx]["nascent_remark"] = (
+                pq_list[idx].get("nascent_remark", "") +
+                f" [Manually corrected to {new_status_title}]"
+            )
+            tender_data["pq_criteria"] = pq_list
+            correction_applied = {
+                "type": "pq_status",
+                "index": idx,
+                "new_status": new_status_title,
+                "new_color": new_color,
+            }
+            updated_tender_data = tender_data
+
+    # Pattern: "change verdict to BID/NO-BID/CONDITIONAL"
+    verdict_match = _re.search(
+        r'(?:change|update|set)\s+verdict\s+to\s+(bid|no-bid|conditional)',
+        text_lower
+    )
+    if verdict_match and tender_data:
+        new_verdict = verdict_match.group(1).upper()
+        color_map = {"BID": "GREEN", "NO-BID": "RED", "CONDITIONAL": "AMBER"}
+        if "overall_verdict" not in tender_data:
+            tender_data["overall_verdict"] = {}
+        tender_data["overall_verdict"]["verdict"] = new_verdict
+        tender_data["overall_verdict"]["color"] = color_map.get(new_verdict, "BLUE")
+        tender_data["verdict"] = new_verdict
+        correction_applied = {
+            "type": "verdict",
+            "new_verdict": new_verdict,
+        }
+        updated_tender_data = tender_data
+
+    response = {
+        "response": result.get("response") or result.get("message") or "Done.",
+    }
+    if correction_applied:
+        response["correction_applied"] = correction_applied
+        response["updated_tender_data"] = updated_tender_data
+        response["response"] = (
+            f"Done. {pq_match and ('PQ '+str(idx+1)+' updated to '+new_status_title) or ''}"
+            f"{verdict_match and ('Verdict updated to '+new_verdict) or ''}. "
+            "This correction has been saved and the preview will refresh."
+        )
+
+    return response
 
 
 @app.get("/chat/history")
@@ -919,6 +993,114 @@ async def clear_chat_history():
 
 
 # ── HEALTH / DIAGNOSTICS ──────────────────────────────────────
+
+# ── SELF-LEARNING: Save corrections ───────────────────────────
+
+CORRECTIONS_FILE = BASE_DIR / "corrections.json"
+
+def load_corrections() -> list:
+    if CORRECTIONS_FILE.exists():
+        try:
+            return json.loads(CORRECTIONS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return []
+
+def save_corrections(corrections: list):
+    CORRECTIONS_FILE.write_text(
+        json.dumps(corrections, indent=2, default=str), encoding="utf-8"
+    )
+    # Also sync to Drive
+    try:
+        if drive_available():
+            from gdrive_sync import save_to_drive
+            save_to_drive(CORRECTIONS_FILE, "corrections.json")
+    except Exception:
+        pass
+
+
+@app.post("/save-correction")
+async def save_correction_route(data: dict = Body(...)):
+    """
+    Save a correction made by the user via chatbot.
+    Stores in corrections.json and updates nascent_profile.json if relevant.
+    """
+    corrections = load_corrections()
+    correction = {
+        "id": len(corrections) + 1,
+        "text": data.get("text", ""),
+        "correction": data.get("correction", {}),
+        "tender_no": data.get("tender_no", ""),
+        "timestamp": datetime.now().isoformat(),
+        "applied": False,
+    }
+    corrections.append(correction)
+    save_corrections(corrections)
+
+    # Try to apply profile updates if the correction touches profile data
+    # e.g. "update turnover to 20 Cr" → update nascent_profile.json
+    text_lower = correction["text"].lower()
+    profile_updated = False
+
+    try:
+        profile = json.loads(PROFILE_FILE.read_text(encoding="utf-8")) if PROFILE_FILE.exists() else {}
+
+        # Turnover update pattern
+        import re as _re
+        m = _re.search(r'turnover.*?([\d.]+)\s*cr', text_lower)
+        if m and "finance" in profile:
+            # Just flag — don't auto-update finance (too risky)
+            correction["profile_hint"] = f"Possible turnover update: {m.group(1)} Cr — review profile"
+
+        # If correction says "mark pq X as met" or similar, record it
+        pq_match = _re.search(r'(?:pq|criterion|criteria)\s*(\d+).*?(met|not met|conditional)', text_lower)
+        if pq_match:
+            correction["pq_correction"] = {
+                "index": int(pq_match.group(1)) - 1,
+                "new_status": pq_match.group(2).title()
+            }
+            # Save rule: for future tenders with similar criteria, use this status
+            if "bid_rules" not in profile:
+                profile["bid_rules"] = {}
+            if "learned_corrections" not in profile["bid_rules"]:
+                profile["bid_rules"]["learned_corrections"] = []
+            profile["bid_rules"]["learned_corrections"].append({
+                "pattern": correction["text"],
+                "correction": correction.get("correction", {}),
+                "timestamp": correction["timestamp"],
+            })
+            PROFILE_FILE.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+            profile_updated = True
+
+    except Exception as e:
+        print(f"[Correction] Profile update check failed: {e}")
+
+    return {
+        "status": "saved",
+        "correction_id": correction["id"],
+        "profile_updated": profile_updated,
+        "message": "Correction saved. AI will use this for future similar tenders."
+    }
+
+
+@app.get("/corrections")
+async def get_corrections():
+    """Return all saved corrections — for review/management."""
+    corrections = load_corrections()
+    return {
+        "corrections": corrections,
+        "total": len(corrections)
+    }
+
+
+@app.delete("/corrections/{correction_id}")
+async def delete_correction(correction_id: int):
+    """Delete a specific correction."""
+    corrections = load_corrections()
+    corrections = [c for c in corrections if c.get("id") != correction_id]
+    save_corrections(corrections)
+    return {"status": "deleted"}
+
 
 @app.get("/health")
 async def health():
