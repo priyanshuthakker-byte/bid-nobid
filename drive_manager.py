@@ -98,7 +98,7 @@ class DriveManager:
 
                 SCOPES = ["https://www.googleapis.com/auth/drive"]
                 flow = InstalledAppFlow.from_client_secrets_file(creds_file.name, SCOPES)
-                creds = flow.run_local_server(port=8080)
+                creds = flow.run_console()
                 self._svc = build("drive", "v3", credentials=creds)
 
                 # Root folder can be your My Drive or a folder ID you set
