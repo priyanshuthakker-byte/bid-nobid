@@ -6,7 +6,7 @@ FastAPI backend — all routes including vault, reports listing, checklist, prof
 import zipfile, tempfile, shutil, json, re, os
 from pathlib import Path
 from datetime import datetime, date
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -29,12 +29,31 @@ from tracker import (
     PIPELINE_STAGES, STAGE_COLORS,
 )
 
+# Import DriveManager flow for OAuth
+from drive_manager import get_drive, flow
+from googleapiclient.discovery import build
+
 app = FastAPI(title="Bid/No-Bid System v6", version="6.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+
+# --- NEW ROUTE FOR OAUTH CALLBACK ---
+@app.get("/oauth-callback")
+def oauth_callback(request: Request):
+    global flow
+    code = request.query_params.get("code")
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+
+    dm = get_drive()
+    dm._svc = build("drive", "v3", credentials=creds)
+
+    print("✅ Drive connected with OAuth")
+    return {"status": "Drive connected with OAuth"}
+# --- END NEW ROUTE ---
 
 BASE_DIR    = Path(__file__).parent
 OUTPUT_DIR  = BASE_DIR / "data"
