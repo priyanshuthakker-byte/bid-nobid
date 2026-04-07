@@ -4,6 +4,7 @@ Owns the entire NIT-BidNoBid/ folder structure in Google Drive.
 """
 
 import json, os, io, re
+flow = None   # global Flow object for OAuth
 from pathlib import Path
 from typing import Optional
 
@@ -45,9 +46,10 @@ class DriveManager:
         self._file_cache:   dict = {}    # (folder_id, filename) → file_id
 
     # ── INIT ─────────────────────────────────────────────────────
-    def init(self) -> bool:
-        """Connect to Drive and ensure folder structure exists. Returns True on success."""
-        global flow
+def init(self) -> bool:
+    """Connect to Drive and ensure folder structure exists. Returns True on success."""
+    global flow   # make sure we update the module-level flow
+
 
         raw_oauth = os.environ.get("OAUTH_CREDENTIALS", "").strip()
         if raw_oauth:
