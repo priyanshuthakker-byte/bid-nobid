@@ -79,76 +79,51 @@ class DriveManager:
         self._file_cache:   dict = {}    # (folder_id, filename) → file_id
 
     # ── INIT ─────────────────────────────────────────────────────
-    # ── INIT ─────────────────────────────────────────────────────
-    def init(self) -> bool:
-        """Connect to Drive and ensure folder structure exists. Returns True on success."""
+def init(self) -> bool:
+    """Connect to Drive and ensure folder structure exists. Returns True on success."""
 
-        # 1. Try OAuth first (your own Google account)
-        raw_oauth = os.environ.get("OAUTH_CREDENTIALS", "").strip()
-        if raw_oauth:
-            try:
-                import json, tempfile
-                from google_auth_oauthlib.flow import InstalledAppFlow
-                from googleapiclient.discovery import build
-
-                # Save credentials.json temporarily
-                creds_file = tempfile.NamedTemporaryFile(delete=False)
-                creds_file.write(raw_oauth.encode("utf-8"))
-                creds_file.close()
-
-                SCOPES = ["https://www.googleapis.com/auth/drive"]
-                flow = InstalledAppFlow.from_client_secrets_file(creds_file.name, SCOPES)
-                creds = flow.run_console()
-                self._svc = build("drive", "v3", credentials=creds)
-
-                # Root folder can be your My Drive or a folder ID you set
-                root = os.environ.get("GDRIVE_FOLDER_ID", "").strip()
-                self._root_id = root if root else "root"
-
-                print("✅ Drive connected with OAuth")
-                return True
-            except Exception as e:
-                print(f"❌ OAuth init failed: {e}")
-                return False
-
-        # 2. Fallback to Service Account (existing code)
-        raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
-        if not raw:
-            print("⚠️  GDRIVE_CREDENTIALS not set — Drive disabled")
-            return False
-        root = os.environ.get("GDRIVE_FOLDER_ID", "").strip()
-        if not root:
-            print("⚠️  GDRIVE_FOLDER_ID not set — Drive disabled")
-            print("   Fix: create NIT-BidNoBid folder in Drive, share with service account, set GDRIVE_FOLDER_ID")
-            return False
+    raw_oauth = os.environ.get("OAUTH_CREDENTIALS", "").strip()
+    if raw_oauth:
         try:
-            creds_data = json.loads(raw)
-            self._creds_data = creds_data
-            from google.oauth2.service_account import Credentials
+            import json, tempfile
+            from google_auth_oauthlib.flow import Flow
             from googleapiclient.discovery import build
-            creds = Credentials.from_service_account_info(
-                creds_data, scopes=["https://www.googleapis.com/auth/drive"]
+
+            # Save credentials.json temporarily
+            creds_file = tempfile.NamedTemporaryFile(delete=False)
+            creds_file.write(raw_oauth.encode("utf-8"))
+            creds_file.close()
+
+            SCOPES = ["https://www.googleapis.com/auth/drive"]
+            flow = Flow.from_client_secrets_file(
+                creds_file.name,
+                scopes=SCOPES,
+                redirect_uri=os.environ.get("OAUTH_REDIRECT_URI", "https://bid-nobid.onrender.com/oauth-callback")
             )
-            self._svc     = build("drive", "v3", credentials=creds)
-            self._root_id = root
-            # Verify connection
-            self._svc.files().list(pageSize=1, fields="files(id)").execute()
-            # Ensure all top-level subfolders exist
-            self._ensure_folder(FOLDER_CONFIG)
-            self._ensure_folder(FOLDER_VAULT)
-            self._ensure_folder(FOLDER_TENDERS)
-            self._ensure_folder(FOLDER_EXPORTS)
-            print(f"✅ Drive connected | Root: {root}")
+
+            # Generate authorization URL
+            auth_url, _ = flow.authorization_url(prompt='consent')
+            print(f"👉 Please visit this URL to authorize: {auth_url}")
+
+            # NOTE: You need to implement a /oauth-callback route in your FastAPI app
+            # Example:
+            # @app.get("/oauth-callback")
+            # def oauth_callback(request: Request):
+            #     code = request.query_params.get("code")
+            #     flow.fetch_token(code=code)
+            #     creds = flow.credentials
+            #     self._svc = build("drive", "v3", credentials=creds)
+            #     print("✅ Drive connected with OAuth")
+
             return True
-        except json.JSONDecodeError as e:
-            print(f"❌ GDRIVE_CREDENTIALS is not valid JSON: {e}")
-            return False
         except Exception as e:
-            print(f"❌ Drive init failed: {e}")
+            print(f"❌ OAuth init failed: {e}")
             return False
 
-    def is_available(self) -> bool:
-        return self._svc is not None
+    # Fallback to Service Account
+    raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
+    ...
+
 
 
     # ── FOLDER MANAGEMENT ────────────────────────────────────────
