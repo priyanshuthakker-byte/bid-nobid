@@ -79,8 +79,39 @@ class DriveManager:
         self._file_cache:   dict = {}    # (folder_id, filename) → file_id
 
     # ── INIT ─────────────────────────────────────────────────────
+    # ── INIT ─────────────────────────────────────────────────────
     def init(self) -> bool:
         """Connect to Drive and ensure folder structure exists. Returns True on success."""
+
+        # 1. Try OAuth first (your own Google account)
+        raw_oauth = os.environ.get("OAUTH_CREDENTIALS", "").strip()
+        if raw_oauth:
+            try:
+                import json, tempfile
+                from google_auth_oauthlib.flow import InstalledAppFlow
+                from googleapiclient.discovery import build
+
+                # Save credentials.json temporarily
+                creds_file = tempfile.NamedTemporaryFile(delete=False)
+                creds_file.write(raw_oauth.encode("utf-8"))
+                creds_file.close()
+
+                SCOPES = ["https://www.googleapis.com/auth/drive"]
+                flow = InstalledAppFlow.from_client_secrets_file(creds_file.name, SCOPES)
+                creds = flow.run_local_server(port=8080)
+                self._svc = build("drive", "v3", credentials=creds)
+
+                # Root folder can be your My Drive or a folder ID you set
+                root = os.environ.get("GDRIVE_FOLDER_ID", "").strip()
+                self._root_id = root if root else "root"
+
+                print("✅ Drive connected with OAuth")
+                return True
+            except Exception as e:
+                print(f"❌ OAuth init failed: {e}")
+                return False
+
+        # 2. Fallback to Service Account (existing code)
         raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
         if not raw:
             print("⚠️  GDRIVE_CREDENTIALS not set — Drive disabled")
@@ -118,6 +149,7 @@ class DriveManager:
 
     def is_available(self) -> bool:
         return self._svc is not None
+
 
     # ── FOLDER MANAGEMENT ────────────────────────────────────────
     def _ensure_folder(self, name: str, parent_id: str = None) -> Optional[str]:
