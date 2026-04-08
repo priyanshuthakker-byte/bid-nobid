@@ -3,7 +3,7 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
-import zipfile, tempfile, shutil, json, re, os
+import zipfile, tempfile, shutil, json, re
 from pathlib import Path
 from datetime import datetime, date
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request

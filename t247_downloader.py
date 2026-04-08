@@ -1,4 +1,3 @@
-import zipfile
 """
 T247 Downloader v2.0 — Nascent Info Technologies Bid/No-Bid System
 
@@ -20,7 +19,6 @@ DOES NOT touch nprocure / GeM / any government portal directly.
 """
 
 import re
-import json
 import time
 import logging
 import requests

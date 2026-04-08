@@ -2,15 +2,14 @@
 Submission Package Generator
 Generates all bid submission documents auto-filled from Nascent Profile + tender data
 """
-import json, re, os
+import json, re
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime
 
 try:
     from docx import Document
     from docx.shared import Pt, Cm, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_TABLE_ALIGNMENT
     DOCX_OK = True
 except ImportError:
     DOCX_OK = False
@@ -111,11 +110,11 @@ def sign_block(doc, p_data):
     doc.add_paragraph()
     doc.add_paragraph()
     doc.add_paragraph()
-    para(doc, f"Authorised Signatory")
+    para(doc, "Authorised Signatory")
     para(doc, f"Name: {p_data['signatory']}")
     para(doc, f"Designation: {p_data.get('signatory_designation','CAO')}")
     para(doc, f"Date: {today_str()}")
-    para(doc, f"Place: Ahmedabad")
+    para(doc, "Place: Ahmedabad")
 
 def save_doc(doc, path):
     doc.save(str(path))
@@ -443,7 +442,7 @@ def gen_prebid_letter(tender, p_data, queries, out_path):
     para(doc, f"Sub: Pre-Bid Queries for Tender No. {tender.get('tender_no', tender.get('ref_no',''))}", bold=True)
     doc.add_paragraph()
     para(doc, "Dear Sir/Madam,")
-    para(doc, f"With reference to the above tender, we request clarification on the following points:")
+    para(doc, "With reference to the above tender, we request clarification on the following points:")
     doc.add_paragraph()
     table = doc.add_table(rows=1, cols=3)
     table.style = 'Table Grid'

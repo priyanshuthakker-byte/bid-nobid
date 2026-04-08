@@ -3,8 +3,7 @@ drive_manager.py — Google Drive file system for NIT Bid/No-Bid
 Owns the entire NIT-BidNoBid/ folder structure in Google Drive.
 """
 
-import json, os, io, re
-from pathlib import Path
+import os, re
 from typing import Optional
 
 # Global Flow object for OAuth
@@ -80,7 +79,6 @@ class DriveManager:
                 return False
 
         # Fallback to Service Account
-        raw = os.environ.get("GDRIVE_CREDENTIALS", "").strip()
         # ... keep your existing service account fallback logic here ...
 
 

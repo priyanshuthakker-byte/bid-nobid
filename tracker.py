@@ -396,7 +396,6 @@ def generate_doc_checklist(tender_data: Dict) -> List[Dict]:
     4. EMD-specific item if EMD is required
     5. MSME EMD exemption if applicable
     """
-    today = date.today()
     deadline_str = tender_data.get("bid_submission_date", "")
     tender_no = tender_data.get("tender_no", "")
 
@@ -475,11 +474,9 @@ def generate_doc_checklist(tender_data: Dict) -> List[Dict]:
 
     # ── 3. RFP-specific docs from PQ criteria ─────────────────
     pq = tender_data.get("pq_criteria", [])
-    existing_keys = {item["doc"].lower() for item in checklist}
 
     for item in pq:
         docs_text = item.get("details", "")
-        criteria = item.get("criteria", "")
         clause = item.get("clause_ref", "")
         status_color = item.get("nascent_color", "GREEN")
 

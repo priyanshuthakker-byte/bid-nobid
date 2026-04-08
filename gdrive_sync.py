@@ -178,16 +178,16 @@ def load_from_drive(local_path, filename="tenders_db.json"):
             _, done = dl.next_chunk()
         data = buf.getvalue()
         if len(data) < 10:
-            print(f"Drive file is empty")
+            print("Drive file is empty")
             return False
         try:
             parsed = json.loads(data)
             tender_count = len(parsed.get("tenders", {}))
             if tender_count == 0:
-                print(f"Drive file has 0 tenders — skipping")
+                print("Drive file has 0 tenders — skipping")
                 return False
         except json.JSONDecodeError:
-            print(f"Drive file is not valid JSON")
+            print("Drive file is not valid JSON")
             return False
         local_path.parent.mkdir(exist_ok=True, parents=True)
         local_path.write_bytes(data)

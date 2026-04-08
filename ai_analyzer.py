@@ -16,7 +16,7 @@ Pipeline:
 
 import json, re, os, urllib.request, urllib.error, logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 CONFIG_PATH = Path(__file__).parent / "config.json"
@@ -906,7 +906,7 @@ def normalize_status(s: str):
 def prebid_passed(date_str: str) -> bool:
     """Check if pre-bid query deadline has passed."""
     import re as _re
-    from datetime import datetime, date
+    from datetime import date
     if not date_str or date_str in ("—", "Not specified", ""):
         return False
     nums = _re.findall(r'\d+', str(date_str))
