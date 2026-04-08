@@ -266,17 +266,47 @@ async def import_excel(file: UploadFile = File(...)):
 async def dashboard():
     db = load_db()
     tenders = list(db["tenders"].values())
+
     stats = {
-        "total": len(tenders),
-        "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
-        "no_bid": sum(1 for t in tenders if t.get("verdict") == "NO-BID"),
-        "conditional": sum(1 for t in tenders if t.get("verdict") == "CONDITIONAL"),
-        "review": sum(1 for t in tenders if t.get("verdict") == "REVIEW"),
-        "analysed": sum(1 for t in tenders if t.get("bid_no_bid_done")),
-        "deadline_today": sum(1 for t in tenders if days_left(t.get("deadline", "")) == 0),
-        "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline", "")) <= 3),
+        "total": 0,
+        "bid": 0,
+        "no_bid": 0,
+        "conditional": 0,
+        "review": 0,
+        "analysed": 0,
+        "deadline_today": 0,
+        "deadline_3days": 0,
     }
-    tenders_sorted = sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))
+
+    enriched = []
+    for t in tenders:
+        dl = days_left(t.get("deadline", ""))
+        item = dict(t)
+        item["_days_left_sort"] = dl
+        enriched.append(item)
+
+        stats["total"] += 1
+        verdict = item.get("verdict")
+        if verdict == "BID":
+            stats["bid"] += 1
+        elif verdict == "NO-BID":
+            stats["no_bid"] += 1
+        elif verdict == "CONDITIONAL":
+            stats["conditional"] += 1
+        elif verdict == "REVIEW":
+            stats["review"] += 1
+
+        if item.get("bid_no_bid_done"):
+            stats["analysed"] += 1
+        if dl == 0:
+            stats["deadline_today"] += 1
+        elif 0 < dl <= 3:
+            stats["deadline_3days"] += 1
+
+    tenders_sorted = sorted(enriched, key=lambda t: t.get("_days_left_sort", 999))
+    for t in tenders_sorted:
+        t.pop("_days_left_sort", None)
+
     return {"stats": stats, "tenders": tenders_sorted}
 
 
