@@ -200,6 +200,11 @@ async def root():
         return HTMLResponse(content=index.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>Bid/No-Bid System v6</h1>")
 
+@app.head("/")
+async def root_head():
+    # Render health checks may send HEAD requests; return 200 to avoid false unhealthy status.
+    return Response(status_code=200)
+
 
 @app.get("/profile-page", response_class=HTMLResponse)
 async def profile_page():
@@ -1190,6 +1195,13 @@ async def health():
         "tenders_loaded": len(db.get("tenders", {})),
         "vault_local_files": len(list(VAULT_DIR.iterdir())) if VAULT_DIR.exists() else 0,
     }
+
+
+@app.get("/healthz")
+@app.head("/healthz")
+async def healthz():
+    # Lightweight probe endpoint for Render/Cloudflare health checks.
+    return Response(status_code=200)
 
 
 @app.get("/test-ai")
