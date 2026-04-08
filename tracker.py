@@ -10,12 +10,13 @@ Checklist now has:
 - Stamp paper: No / Rs.10 / Rs.100 / Rs.500
 """
 
-import json, re
+import json, re, os
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from typing import Dict, List
 
-OUTPUT_DIR = Path(__file__).parent / "data"
+RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+OUTPUT_DIR = RUNTIME_DIR / "data"
 OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 DB_FILE = OUTPUT_DIR / "tenders_db.json"
 
