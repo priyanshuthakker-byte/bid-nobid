@@ -4,6 +4,7 @@ FastAPI backend — all routes including vault, reports listing, checklist, prof
 """
 
 import zipfile, tempfile, shutil, json, re
+import asyncio
 from pathlib import Path
 from datetime import datetime, date
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
@@ -76,18 +77,32 @@ async def startup_event():
     TEMP_DIR.mkdir(exist_ok=True, parents=True)
     VAULT_DIR.mkdir(exist_ok=True, parents=True)
 
-    drive_ok = init_drive()
+    try:
+        drive_ok = await asyncio.wait_for(asyncio.to_thread(init_drive), timeout=20)
+    except asyncio.TimeoutError:
+        drive_ok = False
+        print("Google Drive init timed out after 20s — continuing without Drive")
+    except Exception as e:
+        drive_ok = False
+        print(f"Google Drive init failed during startup: {e}")
+
     print(f"Google Drive: {'Connected' if drive_ok else 'Not configured'}")
 
     if drive_ok:
-        # Load DB from Drive
+        # Load DB from Drive (non-blocking startup with per-attempt timeout)
         for attempt in range(3):
             try:
-                success = load_from_drive(DB_FILE)
+                success = await asyncio.wait_for(
+                    asyncio.to_thread(load_from_drive, DB_FILE),
+                    timeout=20,
+                )
                 if success:
                     db = load_db()
                     print(f"Loaded {len(db.get('tenders', {}))} tenders from Google Drive")
                     break
+                time.sleep(2)
+            except asyncio.TimeoutError:
+                print(f"Drive load attempt {attempt+1} timed out")
                 time.sleep(2)
             except Exception as e:
                 print(f"Drive load attempt {attempt+1} failed: {e}")
@@ -95,8 +110,13 @@ async def startup_event():
 
         # Load profile from Drive
         try:
-            load_profile_from_drive(PROFILE_FILE)
+            await asyncio.wait_for(
+                asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
+                timeout=20,
+            )
             print("Profile loaded from Drive")
+        except asyncio.TimeoutError:
+            print("Profile load from Drive timed out")
         except Exception:
             pass
     else:
@@ -167,6 +187,11 @@ def extract_all_zips(folder: Path):
 
 
 # ── STATIC PAGES ──────────────────────────────────────────────
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -241,17 +266,47 @@ async def import_excel(file: UploadFile = File(...)):
 async def dashboard():
     db = load_db()
     tenders = list(db["tenders"].values())
+
     stats = {
-        "total": len(tenders),
-        "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
-        "no_bid": sum(1 for t in tenders if t.get("verdict") == "NO-BID"),
-        "conditional": sum(1 for t in tenders if t.get("verdict") == "CONDITIONAL"),
-        "review": sum(1 for t in tenders if t.get("verdict") == "REVIEW"),
-        "analysed": sum(1 for t in tenders if t.get("bid_no_bid_done")),
-        "deadline_today": sum(1 for t in tenders if days_left(t.get("deadline", "")) == 0),
-        "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline", "")) <= 3),
+        "total": 0,
+        "bid": 0,
+        "no_bid": 0,
+        "conditional": 0,
+        "review": 0,
+        "analysed": 0,
+        "deadline_today": 0,
+        "deadline_3days": 0,
     }
-    tenders_sorted = sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))
+
+    enriched = []
+    for t in tenders:
+        dl = days_left(t.get("deadline", ""))
+        item = dict(t)
+        item["_days_left_sort"] = dl
+        enriched.append(item)
+
+        stats["total"] += 1
+        verdict = item.get("verdict")
+        if verdict == "BID":
+            stats["bid"] += 1
+        elif verdict == "NO-BID":
+            stats["no_bid"] += 1
+        elif verdict == "CONDITIONAL":
+            stats["conditional"] += 1
+        elif verdict == "REVIEW":
+            stats["review"] += 1
+
+        if item.get("bid_no_bid_done"):
+            stats["analysed"] += 1
+        if dl == 0:
+            stats["deadline_today"] += 1
+        elif 0 < dl <= 3:
+            stats["deadline_3days"] += 1
+
+    tenders_sorted = sorted(enriched, key=lambda t: t.get("_days_left_sort", 999))
+    for t in tenders_sorted:
+        t.pop("_days_left_sort", None)
+
     return {"stats": stats, "tenders": tenders_sorted}
 
 
