@@ -94,12 +94,12 @@ def generate_prebid_queries(tender_data: Dict) -> List[Dict]:
             if "cert-in" in kw or "stqc" in kw:
                 queries.append({
                     "clause": "Certification",
-                    "query": f"Whether CERT-In/STQC empanelment is mandatory for all team members or only for specific roles? Can the bidder hire empanelled sub-contractors for these activities?",
+                    "query": "Whether CERT-In/STQC empanelment is mandatory for all team members or only for specific roles? Can the bidder hire empanelled sub-contractors for these activities?",
                 })
             elif "office in" in kw or "registered in" in kw:
                 queries.append({
                     "clause": "Office Requirement",
-                    "query": f"Please clarify whether having a registered office in the state is mandatory at the time of bid submission, or can this be established after award?",
+                    "query": "Please clarify whether having a registered office in the state is mandatory at the time of bid submission, or can this be established after award?",
                 })
             elif ".net" in kw or "asp.net" in kw or "microsoft" in kw:
                 queries.append({

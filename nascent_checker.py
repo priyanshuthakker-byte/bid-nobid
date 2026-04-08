@@ -208,9 +208,9 @@ class NascentChecker:
 
     def check_gst_pan(self, criteria_text: str) -> Dict:
         return self._met(
-            f"GST Registration: 24AACCN3670J1ZG — active. "
-            f"PAN: AACCN3670J — active. "
-            f"Both certificates available, self-attested copies to be submitted."
+            "GST Registration: 24AACCN3670J1ZG — active. "
+            "PAN: AACCN3670J — active. "
+            "Both certificates available, self-attested copies to be submitted."
         )
 
     def check_cmmi(self, criteria_text: str) -> Dict:
@@ -273,7 +273,6 @@ class NascentChecker:
         text = criteria_text.lower()
         required_cr = self._extract_amount_cr(criteria_text)
         needs_mobile = any(k in text for k in ["mobile gis", "mobile app", "mobile application", "android", "ios"])
-        needs_central = any(k in text for k in ["central server", "central gis", "gis server"])
 
         gis_projects = [p for p in self.projects if any(
             t in p.get("tags", []) for t in ["GIS Survey", "GIS Mapping", "Web GIS", "GIS Portal", "Mobile App", "GIS"]
@@ -327,7 +326,6 @@ class NascentChecker:
         """
         required = self._extract_number(
             criteria_text, ["employee", "staff", "manpower", "headcount", "personnel", "people"])
-        text_lower = criteria_text.lower()
 
         # All Nascent employees are IT/ITeS employees
         it_count = self.it_employees_total  # = total employees (pure IT company)
@@ -439,16 +437,7 @@ class NascentChecker:
 
     def check_project_experience(self, criteria_text: str) -> Dict:
         """Check general project experience — value, count, type."""
-        text = criteria_text.lower()
         required_cr = self._extract_amount_cr(criteria_text)
-        required_count = self._extract_number(criteria_text, ["project", "assignment", "work"])
-
-        # Determine project type from criteria
-        is_analytics = any(k in text for k in ["analytic", "mis", "bi ", "business intelligence",
-                                                "dashboard", "data", "report"])
-        is_gov = any(k in text for k in ["government", "govt", "central", "state", "psu",
-                                          "e-governance", "egov"])
-        is_msme_sector = any(k in text for k in ["msme", "industry", "industries", "udyog"])
 
         relevant = self.projects if self.projects else []
 

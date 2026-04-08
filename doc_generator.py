@@ -22,7 +22,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any
 import re as _re
 
 C = {
@@ -992,8 +992,8 @@ class BidDocGenerator:
 
         assessment_rows = [
             ("Financial Eligibility",
-             f"Avg Turnover (3yr): Rs. 17.18 Cr | Net Worth: Rs. 26.09 Cr | "
-             f"MSME: UDYAM-GJ-01-0007420"),
+             "Avg Turnover (3yr): Rs. 17.18 Cr | Net Worth: Rs. 26.09 Cr | "
+             "MSME: UDYAM-GJ-01-0007420"),
             ("Company Registration",   "Private Ltd. since 2006 — 19 years in operation"),
             ("CMMI Certification",     "CMMI V2.0 Level 3 — valid till 19-Dec-2026"),
             ("ISO Certifications",     "ISO 9001:2015 | ISO 27001:2022 | ISO 20000-1:2018 — all valid till Sep-2028"),

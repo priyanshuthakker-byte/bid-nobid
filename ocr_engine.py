@@ -41,7 +41,7 @@ def _check_poppler() -> bool:
     if _POPPLER_OK is not None:
         return _POPPLER_OK
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["pdftoppm", "-h"],
             capture_output=True, timeout=5
         )

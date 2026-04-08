@@ -12,10 +12,8 @@ Snapshot fields extracted from HTML portal data first,
 then supplemented/overridden by RFP document content.
 """
 
-import re, json, logging
+import re, logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from datetime import datetime, date
 
 logger = logging.getLogger(__name__)
 
