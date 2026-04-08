@@ -3,10 +3,9 @@ services:
     name: bid-nobid
     env: python
     plan: free
-    buildCommand: |
-      apt-get update -qq && apt-get install -y -qq tesseract-ocr poppler-utils libgomp1
-      pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+    healthCheckPath: /
     envVars:
       - key: GEMINI_API_KEY
         sync: false
