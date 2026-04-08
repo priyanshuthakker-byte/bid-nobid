@@ -168,6 +168,11 @@ def extract_all_zips(folder: Path):
 
 # ── STATIC PAGES ──────────────────────────────────────────────
 
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     index = BASE_DIR / "index.html"
