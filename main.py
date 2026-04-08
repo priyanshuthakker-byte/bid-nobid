@@ -1142,6 +1142,13 @@ async def health():
     }
 
 
+@app.get("/healthz")
+@app.head("/healthz")
+async def healthz():
+    # Lightweight probe endpoint for Render/Cloudflare health checks.
+    return Response(status_code=200)
+
+
 @app.get("/test-ai")
 async def test_ai():
     from ai_analyzer import get_api_key, call_gemini
