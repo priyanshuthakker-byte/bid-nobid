@@ -4,6 +4,7 @@ FastAPI backend — all routes including vault, reports listing, checklist, prof
 """
 
 import zipfile, tempfile, shutil, json, re
+import asyncio
 from pathlib import Path
 from datetime import datetime, date
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
@@ -76,18 +77,32 @@ async def startup_event():
     TEMP_DIR.mkdir(exist_ok=True, parents=True)
     VAULT_DIR.mkdir(exist_ok=True, parents=True)
 
-    drive_ok = init_drive()
+    try:
+        drive_ok = await asyncio.wait_for(asyncio.to_thread(init_drive), timeout=20)
+    except asyncio.TimeoutError:
+        drive_ok = False
+        print("Google Drive init timed out after 20s — continuing without Drive")
+    except Exception as e:
+        drive_ok = False
+        print(f"Google Drive init failed during startup: {e}")
+
     print(f"Google Drive: {'Connected' if drive_ok else 'Not configured'}")
 
     if drive_ok:
-        # Load DB from Drive
+        # Load DB from Drive (non-blocking startup with per-attempt timeout)
         for attempt in range(3):
             try:
-                success = load_from_drive(DB_FILE)
+                success = await asyncio.wait_for(
+                    asyncio.to_thread(load_from_drive, DB_FILE),
+                    timeout=20,
+                )
                 if success:
                     db = load_db()
                     print(f"Loaded {len(db.get('tenders', {}))} tenders from Google Drive")
                     break
+                time.sleep(2)
+            except asyncio.TimeoutError:
+                print(f"Drive load attempt {attempt+1} timed out")
                 time.sleep(2)
             except Exception as e:
                 print(f"Drive load attempt {attempt+1} failed: {e}")
@@ -95,8 +110,13 @@ async def startup_event():
 
         # Load profile from Drive
         try:
-            load_profile_from_drive(PROFILE_FILE)
+            await asyncio.wait_for(
+                asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
+                timeout=20,
+            )
             print("Profile loaded from Drive")
+        except asyncio.TimeoutError:
+            print("Profile load from Drive timed out")
         except Exception:
             pass
     else:
