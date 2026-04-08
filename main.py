@@ -3,7 +3,7 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
-import zipfile, tempfile, shutil, json, re
+import zipfile, tempfile, shutil, json, re, os
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
@@ -57,11 +57,12 @@ def oauth_callback(request: Request):
 # --- END NEW ROUTE ---
 
 BASE_DIR    = Path(__file__).parent
-OUTPUT_DIR  = BASE_DIR / "data"
-TEMP_DIR    = BASE_DIR / "temp"
-VAULT_DIR   = BASE_DIR / "vault"          # local vault cache (survives Render if Drive connected)
+RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+OUTPUT_DIR  = RUNTIME_DIR / "data"
+TEMP_DIR    = RUNTIME_DIR / "temp"
+VAULT_DIR   = RUNTIME_DIR / "vault"       # local vault cache (survives Render instance while alive)
 DB_FILE     = OUTPUT_DIR / "tenders_db.json"
-PROFILE_FILE = BASE_DIR / "nascent_profile.json"
+PROFILE_FILE = RUNTIME_DIR / "nascent_profile.json"
 
 for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
     d.mkdir(exist_ok=True, parents=True)
