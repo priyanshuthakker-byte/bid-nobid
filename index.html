@@ -1979,7 +1979,7 @@ function toggleFav(tid) {
 async function restoreTender(tid) {
   try {
     await fetch('/tender/'+tid+'/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    var t = G.tenders.find(function(x){return x.t247_id===tid;});
+    var t = G.tenders.find(function(x){return String(x.t247_id)===String(tid);});
     if (t) t.status='Identified';
     toast('Tender restored','success'); renderDash();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -2098,7 +2098,7 @@ async function uploadDB(input) {
 // ═══════════════════════════════════════════════════════════
 function goAnalyse(tid) {
   G.activeTid = tid;
-  var t = G.tenders.find(function(x){return x.t247_id===tid;});
+  var t = G.tenders.find(function(x){return String(x.t247_id)===String(tid);});
   document.getElementById('an-tid').value = tid;
   if (t) {
     var badge = document.getElementById('an-active-badge');
@@ -2437,7 +2437,7 @@ async function updateStage(tid, stage) {
   try {
     await fetch('/tender/'+tid+'/stage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:stage})});
     toast('Stage updated: '+stage,'success');
-    var t = G.tenders.find(function(x){return x.t247_id===tid;});
+    var t = G.tenders.find(function(x){return String(x.t247_id)===String(tid);});
     if (t) t.status = stage;
   } catch(e){toast('Failed to update stage','error');}
 }
@@ -2554,7 +2554,7 @@ async function skipTender(tid) {
   if (!confirm('Skip tender '+tid+'? It will move to the Skipped filter.')) return;
   try {
     await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Not interested'})});
-    var t = G.tenders.find(function(x){return x.t247_id===tid;});
+    var t = G.tenders.find(function(x){return String(x.t247_id)===String(tid);});
     if (t) t.status='Not Interested';
     toast('Tender moved to Skipped','success'); renderDash();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -2564,7 +2564,7 @@ async function skipTender(tid) {
 // DETAIL PANEL
 // ═══════════════════════════════════════════════════════════
 function openDetail(tid) {
-  var t = G.tenders.find(function(x){return x.t247_id===tid;});
+  var t = G.tenders.find(function(x){return String(x.t247_id)===String(tid);});
   if (!t) { toast('Tender not found','error'); return; }
   var v = verdict(t);
   var col = v==='BID'?'var(--green)':v==='NO-BID'?'var(--red)':v==='CONDITIONAL'?'var(--amber)':'var(--blue)';
@@ -3993,7 +3993,7 @@ async function loadPrebidForTender() {
     G_lastPrebidQueries = qs;
 
     // Find tender data
-    var td = G.tenders.find(function(t){return t.t247_id===tid;});
+    var td = G.tenders.find(function(t){return String(t.t247_id)===String(tid);});
     var tname = td ? (td.brief||td.org_name||tid) : tid;
 
     if (!qs.length) {
