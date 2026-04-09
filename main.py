@@ -1117,6 +1117,197 @@ async def delete_correction(correction_id: int):
     return {"status": "deleted"}
 
 
+
+
+# ── RECLASSIFY ALL ────────────────────────────────────────────
+
+@app.post("/reclassify-all")
+async def reclassify_all():
+    """Re-run bid rules on every tender that has not been manually analysed."""
+    from excel_processor import classify_tender, invalidate_rules_cache
+    invalidate_rules_cache()
+    db = load_db()
+    bid = no_bid = conditional = review = 0
+    for tid, t in db["tenders"].items():
+        if t.get("bid_no_bid_done"):
+            continue  # don't overwrite AI-analysed verdicts
+        brief       = t.get("brief", "")
+        cost_raw    = float(t.get("estimated_cost_raw", 0) or 0)
+        eligibility = t.get("eligibility", "")
+        checklist   = t.get("checklist", "")
+        result = classify_tender(brief, cost_raw, eligibility, checklist)
+        t["verdict"]       = result["verdict"]
+        t["verdict_color"] = result.get("verdict_color", "")
+        t["reason"]        = result.get("reason", "")
+        if result["verdict"] == "BID":        bid += 1
+        elif result["verdict"] == "NO-BID":   no_bid += 1
+        elif result["verdict"] == "CONDITIONAL": conditional += 1
+        else:                                 review += 1
+    save_db(db)
+    return {
+        "status": "ok",
+        "count": bid + no_bid + conditional + review,
+        "bid": bid, "no_bid": no_bid,
+        "conditional": conditional, "review": review,
+    }
+
+
+# ── TENDER SKIP / RESTORE ─────────────────────────────────────
+
+@app.post("/tender/{t247_id}/skip")
+async def skip_tender(t247_id: str, data: dict = Body(...)):
+    db = load_db()
+    t = db["tenders"].get(t247_id)
+    if not t:
+        raise HTTPException(404, "Tender not found")
+    t["status"] = "Not Interested"
+    t["skip_reason"] = data.get("reason", "Not interested")
+    t["status_updated_at"] = datetime.now().isoformat()
+    db["tenders"][t247_id] = t
+    save_db(db)
+    return {"status": "skipped"}
+
+
+@app.post("/tender/{t247_id}/restore")
+async def restore_tender(t247_id: str):
+    db = load_db()
+    t = db["tenders"].get(t247_id)
+    if not t:
+        raise HTTPException(404, "Tender not found")
+    t["status"] = "Identified"
+    t.pop("skip_reason", None)
+    t["status_updated_at"] = datetime.now().isoformat()
+    db["tenders"][t247_id] = t
+    save_db(db)
+    return {"status": "restored"}
+
+
+# ── CHECKLIST ITEM TOGGLE ─────────────────────────────────────
+
+@app.post("/checklist/{t247_id}/item")
+async def toggle_checklist_item(t247_id: str, data: dict = Body(...)):
+    """Toggle a single checklist item done/undone without replacing the whole list."""
+    db = load_db()
+    t = db["tenders"].get(t247_id)
+    if not t:
+        raise HTTPException(404, "Tender not found")
+    item_id   = str(data.get("id", ""))
+    done      = bool(data.get("done", False))
+    checklist = t.get("doc_checklist", [])
+    updated   = False
+    for item in checklist:
+        if str(item.get("id", "")) == item_id or str(item.get("label", "")) == item_id:
+            item["done"] = done
+            if done:
+                item["status"] = "Done"
+            elif item.get("status") == "Done":
+                item["status"] = "Pending"
+            updated = True
+            break
+    if updated:
+        done_count = sum(1 for i in checklist if i.get("done"))
+        total = max(len(checklist), 1)
+        t["doc_checklist"] = checklist
+        t["checklist_pct"] = round(done_count / total * 100)
+        db["tenders"][t247_id] = t
+        save_db(db)
+    return {"status": "ok", "updated": updated}
+
+
+# ── PRE-BID LETTER GENERATION ─────────────────────────────────
+
+@app.post("/tender/{t247_id}/generate-prebid-letter")
+async def generate_prebid_letter(t247_id: str):
+    """Generate a pre-bid queries Word document for a tender."""
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    queries = tender.get("prebid_queries", [])
+    if not queries:
+        from prebid_generator import generate_prebid_queries
+        queries = generate_prebid_queries(tender)
+    if not queries:
+        raise HTTPException(400, "No pre-bid queries available. Analyse the tender first.")
+    tender["prebid_queries"] = queries
+    generator = BidDocGenerator()
+    safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
+    filename = f"PreBid_{safe_no}.docx"
+    output_path = OUTPUT_DIR / filename
+    # Generate a focused pre-bid letter document
+    # We reuse BidDocGenerator but pass prebid_only mode via a flag
+    tender["_prebid_letter_only"] = True
+    try:
+        generator.generate(tender, str(output_path))
+    finally:
+        tender.pop("_prebid_letter_only", None)
+    if not output_path.exists():
+        raise HTTPException(500, "Document generation failed")
+    return {
+        "status": "ok",
+        "filename": filename,
+        "download_url": f"/download/{filename}",
+        "query_count": len(queries),
+    }
+
+
+# ── SUBMISSION PACKAGE (alias for /submission-package) ────────
+
+@app.post("/generate-docs/{t247_id}")
+async def generate_docs(t247_id: str):
+    """Alias route called by frontend submission page."""
+    if not _has_submission_generator:
+        # Fallback: generate the bid analysis report as the submission document
+        tender = get_tender(t247_id)
+        if not tender:
+            raise HTTPException(404, "Tender not found")
+        generator = BidDocGenerator()
+        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
+        filename = f"BidNoBid_{safe_no}.docx"
+        output_path = OUTPUT_DIR / filename
+        generator.generate(tender, str(output_path))
+        return {
+            "status": "ok",
+            "files": [{"name": "Bid Analysis Report", "filename": filename}],
+            "zip_url": None,
+            "message": f"Generated 1 document",
+        }
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    result = generate_submission_package(tender, OUTPUT_DIR)
+    if result.get("error"):
+        raise HTTPException(500, result["error"])
+    return {
+        "status": "ok",
+        "files": result.get("files", []),
+        "zip_url": f"/download-zip/{result['zip_file']}" if result.get("zip_file") else None,
+        "message": result.get("message", "Package generated"),
+    }
+
+
+# ── TEST T247 CONNECTION ──────────────────────────────────────
+
+@app.get("/test-t247")
+async def test_t247():
+    return {
+        "status": "info",
+        "message": "T247 auto-download is not available on Render free tier. "
+                   "Visit tender247.com, download the ZIP manually, then upload in Analyse page.",
+    }
+
+
+# ── SHEET STATUS (Google Sheets — not used, stub for UI) ──────
+
+@app.get("/sheet-status")
+async def sheet_status():
+    return {
+        "connected": False,
+        "reason": "Google Sheets integration not configured. Using Google Drive for persistence.",
+        "tabs": [],
+        "required_tabs": {},
+        "optional_tabs": {},
+    }
+
 # ── HEALTH / DIAGNOSTICS ──────────────────────────────────────
 
 @app.get("/health")
