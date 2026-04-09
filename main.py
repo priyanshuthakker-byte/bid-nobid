@@ -3,7 +3,7 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
-import zipfile, tempfile, shutil, json, re
+import zipfile, tempfile, shutil, json, re, os
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
@@ -57,11 +57,12 @@ def oauth_callback(request: Request):
 # --- END NEW ROUTE ---
 
 BASE_DIR    = Path(__file__).parent
-OUTPUT_DIR  = BASE_DIR / "data"
-TEMP_DIR    = BASE_DIR / "temp"
-VAULT_DIR   = BASE_DIR / "vault"          # local vault cache (survives Render if Drive connected)
+RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+OUTPUT_DIR  = RUNTIME_DIR / "data"
+TEMP_DIR    = RUNTIME_DIR / "temp"
+VAULT_DIR   = RUNTIME_DIR / "vault"       # local vault cache (survives Render instance while alive)
 DB_FILE     = OUTPUT_DIR / "tenders_db.json"
-PROFILE_FILE = BASE_DIR / "nascent_profile.json"
+PROFILE_FILE = RUNTIME_DIR / "nascent_profile.json"
 
 for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
     d.mkdir(exist_ok=True, parents=True)
@@ -69,19 +70,50 @@ for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
 
 # ── STARTUP ───────────────────────────────────────────────────
 
+async def _drive_warm_sync():
+    """Run Drive reads after startup so health checks are not blocked."""
+    # Load DB from Drive with bounded retries.
+    for attempt in range(2):
+        try:
+            success = await asyncio.wait_for(
+                asyncio.to_thread(load_from_drive, DB_FILE),
+                timeout=12,
+            )
+            if success:
+                db = load_db()
+                print(f"Loaded {len(db.get('tenders', {}))} tenders from Google Drive")
+                break
+        except asyncio.TimeoutError:
+            print(f"Drive DB load attempt {attempt + 1} timed out")
+        except Exception as e:
+            print(f"Drive DB load attempt {attempt + 1} failed: {e}")
+        await asyncio.sleep(1)
+
+    # Load profile from Drive.
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
+            timeout=12,
+        )
+        print("Profile loaded from Drive")
+    except asyncio.TimeoutError:
+        print("Profile load from Drive timed out")
+    except Exception as e:
+        print(f"Profile load from Drive failed: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
-    import time
     print("Starting Bid/No-Bid System v6...")
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     TEMP_DIR.mkdir(exist_ok=True, parents=True)
     VAULT_DIR.mkdir(exist_ok=True, parents=True)
 
     try:
-        drive_ok = await asyncio.wait_for(asyncio.to_thread(init_drive), timeout=20)
+        drive_ok = await asyncio.wait_for(asyncio.to_thread(init_drive), timeout=8)
     except asyncio.TimeoutError:
         drive_ok = False
-        print("Google Drive init timed out after 20s — continuing without Drive")
+        print("Google Drive init timed out after 8s — continuing without Drive")
     except Exception as e:
         drive_ok = False
         print(f"Google Drive init failed during startup: {e}")
@@ -89,42 +121,13 @@ async def startup_event():
     print(f"Google Drive: {'Connected' if drive_ok else 'Not configured'}")
 
     if drive_ok:
-        # Load DB from Drive (non-blocking startup with per-attempt timeout)
-        for attempt in range(3):
-            try:
-                success = await asyncio.wait_for(
-                    asyncio.to_thread(load_from_drive, DB_FILE),
-                    timeout=20,
-                )
-                if success:
-                    db = load_db()
-                    print(f"Loaded {len(db.get('tenders', {}))} tenders from Google Drive")
-                    break
-                time.sleep(2)
-            except asyncio.TimeoutError:
-                print(f"Drive load attempt {attempt+1} timed out")
-                time.sleep(2)
-            except Exception as e:
-                print(f"Drive load attempt {attempt+1} failed: {e}")
-                time.sleep(2)
-
-        # Load profile from Drive
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
-                timeout=20,
-            )
-            print("Profile loaded from Drive")
-        except asyncio.TimeoutError:
-            print("Profile load from Drive timed out")
-        except Exception:
-            pass
+        # Do not block startup on external APIs.
+        asyncio.create_task(_drive_warm_sync())
+    elif DB_FILE.exists():
+        db = load_db()
+        print(f"Using local DB: {len(db.get('tenders', {}))} tenders")
     else:
-        if DB_FILE.exists():
-            db = load_db()
-            print(f"Using local DB: {len(db.get('tenders', {}))} tenders")
-        else:
-            print("No DB found — fresh start")
+        print("No DB found — fresh start")
 
     print("Server ready")
 
