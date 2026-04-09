@@ -3,7 +3,10 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
+codex/investigate-web-server-error-521-88e83c
+import zipfile, tempfile, shutil, json, re, os, uuid
 import zipfile, tempfile, shutil, json, re, os
+main
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
@@ -19,6 +22,7 @@ from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_co
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
+from submission_generator import generate_submission_package
 from gdrive_sync import (
     init_drive, save_to_drive, load_from_drive, is_available as drive_available,
     vault_upload, vault_download, vault_list, vault_delete,
@@ -175,6 +179,30 @@ def days_left(deadline_str: str) -> int:
 
 def prebid_passed(date_str: str) -> bool:
     return days_left(date_str) < 0
+
+
+def build_quality_flags(tender_data: dict) -> list[str]:
+    """Basic deterministic validation flags to reduce wrong-AI risk."""
+    flags = []
+    if not tender_data.get("tender_no"):
+        flags.append("Tender number missing")
+    if not tender_data.get("org_name"):
+        flags.append("Organization name missing")
+    if not tender_data.get("bid_submission_date"):
+        flags.append("Bid submission date missing")
+    if not tender_data.get("emd"):
+        flags.append("EMD not found")
+    if not tender_data.get("estimated_cost"):
+        flags.append("Estimated cost not found")
+
+    verdict = (tender_data.get("overall_verdict", {}) or {}).get("verdict") or tender_data.get("verdict")
+    if not verdict:
+        flags.append("Final verdict not available")
+
+    pq = tender_data.get("pq_criteria", [])
+    if isinstance(pq, list) and not pq:
+        flags.append("PQ criteria list is empty")
+    return flags
 
 
 def extract_all_zips(folder: Path):
@@ -355,6 +383,9 @@ async def process_files(
         doc_files = []
         for ext in ["*.pdf", "*.docx", "*.doc", "*.txt", "*.html", "*.htm", "*.xlsx"]:
             doc_files.extend(extract_dir.rglob(ext))
+        image_files = []
+        for ext in ["*.png", "*.jpg", "*.jpeg", "*.webp"]:
+            image_files.extend(extract_dir.rglob(ext))
 
         # Deduplicate
         seen, unique = set(), []
@@ -366,6 +397,22 @@ async def process_files(
 
         if not doc_files:
             raise HTTPException(400, "No readable documents found in uploaded files.")
+
+        # Try logo detection for better presentation in generated docs.
+        logo_file = None
+        if image_files:
+            pref = [f for f in image_files if any(k in f.name.lower() for k in ["logo", "emblem", "seal"])]
+            logo_file = (pref[0] if pref else image_files[0])
+            try:
+                logo_store = OUTPUT_DIR / "logos"
+                logo_store.mkdir(exist_ok=True, parents=True)
+                safe_ext = logo_file.suffix.lower() if logo_file.suffix else ".png"
+                saved_logo = logo_store / f"{uuid.uuid4().hex}{safe_ext}"
+                shutil.copy2(logo_file, saved_logo)
+                logo_file = saved_logo
+            except Exception:
+                # Keep best-effort only; no failure on logo copy issues.
+                pass
 
         # Separate corrigendum from main
         corrigendum_files = [f for f in doc_files if
@@ -425,6 +472,15 @@ async def process_files(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
 
+ codex/investigate-web-server-error-521-88e83c
+        if logo_file:
+            tender_data["client_logo_file"] = str(logo_file)
+
+        quality_flags = build_quality_flags(tender_data)
+        tender_data["quality_flags"] = quality_flags
+        tender_data["quality_score"] = max(0, 100 - 10 * len(quality_flags))
+
+ main
         prebid_mode = str(prebid_only).strip().lower() in {"1", "true", "yes", "y"}
 
         if prebid_mode:
@@ -498,6 +554,18 @@ async def download_file(filename: str):
         path=str(file_path),
         filename=Path(filename).name,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+
+@app.get("/download-zip/{filename}")
+async def download_zip(filename: str):
+    file_path = OUTPUT_DIR / Path(filename).name
+    if not file_path.exists():
+        raise HTTPException(404, "File not found")
+    return FileResponse(
+        path=str(file_path),
+        filename=Path(filename).name,
+        media_type="application/zip"
     )
 
 
@@ -630,6 +698,42 @@ async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved"}
+
+
+@app.post("/submission-package/{t247_id}")
+async def create_submission_package(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    result = generate_submission_package(tender, OUTPUT_DIR)
+    if result.get("error"):
+        raise HTTPException(500, result["error"])
+    if "zip_file" in result:
+        result["download_url"] = f"/download-zip/{result['zip_file']}"
+    return result
+
+
+@app.get("/email-draft/{t247_id}")
+async def email_draft(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    verdict = tender.get("verdict", "REVIEW")
+    subject = f"[{verdict}] Tender Analysis - {tender.get('tender_no', t247_id)}"
+    body = (
+        f"Team,\n\n"
+        f"Please find the latest analysis for tender {tender.get('tender_no', t247_id)}.\n"
+        f"Organization: {tender.get('org_name', 'N/A')}\n"
+        f"Deadline: {tender.get('deadline', tender.get('bid_submission_date', 'N/A'))}\n"
+        f"Verdict: {verdict}\n\n"
+        f"Key reason: {tender.get('reason', '')}\n\n"
+        f"Next action:\n"
+        f"- Review analysis preview\n"
+        f"- Confirm pre-bid query requirements\n"
+        f"- Approve submission package generation\n\n"
+        f"Regards,\nBid Automation System"
+    )
+    return {"subject": subject, "body": body}
 
 
 # ── CHECKLIST ─────────────────────────────────────────────────
