@@ -7,7 +7,7 @@ import zipfile, tempfile, shutil, json, re, os
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, Form
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -326,7 +326,11 @@ async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
 
 
 @app.post("/process-files")
-async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
+async def process_files(
+    files: List[UploadFile] = File(...),
+    t247_id: str = "",
+    prebid_only: str = Form(""),
+):
     if not files:
         raise HTTPException(400, "No files uploaded")
 
@@ -420,6 +424,22 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             tender_data["overall_verdict"] = checker.get_overall_verdict(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
+
+        prebid_mode = str(prebid_only).strip().lower() in {"1", "true", "yes", "y"}
+
+        if prebid_mode:
+            # Standalone pre-bid path: avoid heavy report generation/save side effects.
+            tender_data["prebid_queries"] = generate_prebid_queries(tender_data)
+            return {
+                "status": "success",
+                "prebid_only": True,
+                "ai_used": ai_used,
+                "has_corrigendum": tender_data.get("has_corrigendum", False),
+                "corrigendum_files": tender_data.get("corrigendum_files", []),
+                "files_processed": [f.name for f in doc_files],
+                "tender_data": tender_data,
+                "download_file": None,
+            }
 
         # Generate Word doc
         generator = BidDocGenerator()
@@ -1249,6 +1269,15 @@ async def test_groq():
 @app.post("/auto-download/{t247_id}")
 async def auto_download_tender(t247_id: str):
     try:
+        import importlib.util
+        if importlib.util.find_spec("downloader") is None:
+            return {
+                "status": "unavailable",
+                "message": (
+                    "Tender247 auto-download module is not installed in this deployment. "
+                    "Please use manual upload for now."
+                ),
+            }
         from downloader import download_sync, is_playwright_available
         if not is_playwright_available():
             return {"status": "unavailable",
