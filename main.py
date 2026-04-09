@@ -3,11 +3,7 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
-
- 
 import zipfile, tempfile, shutil, json, re, os, uuid
-import zipfile, tempfile, shutil, json, re, os
-main
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
@@ -23,7 +19,6 @@ from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_co
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
-from submission_generator import generate_submission_package
 from gdrive_sync import (
     init_drive, save_to_drive, load_from_drive, is_available as drive_available,
     vault_upload, vault_download, vault_list, vault_delete,
@@ -35,9 +30,19 @@ from tracker import (
     PIPELINE_STAGES, STAGE_COLORS,
 )
 
-# Import DriveManager flow for OAuth
-from drive_manager import get_drive, flow
-from googleapiclient.discovery import build
+# Safe optional imports — modules added by other AI that may not exist yet
+try:
+    from submission_generator import generate_submission_package
+    _has_submission_generator = True
+except ImportError:
+    _has_submission_generator = False
+
+try:
+    from ocr_engine import is_available as ocr_available
+    _has_ocr = True
+except ImportError:
+    _has_ocr = False
+    def ocr_available(): return False
 
 app = FastAPI(title="Bid/No-Bid System v6", version="6.0")
 
@@ -46,26 +51,11 @@ app.add_middleware(
     allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 
-# --- NEW ROUTE FOR OAUTH CALLBACK ---
-@app.get("/oauth-callback")
-def oauth_callback(request: Request):
-    global flow
-    code = request.query_params.get("code")
-    flow.fetch_token(code=code)
-    creds = flow.credentials
-
-    dm = get_drive()
-    dm._svc = build("drive", "v3", credentials=creds)
-
-    print("✅ Drive connected with OAuth")
-    return {"status": "Drive connected with OAuth"}
-# --- END NEW ROUTE ---
-
 BASE_DIR    = Path(__file__).parent
 RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
 OUTPUT_DIR  = RUNTIME_DIR / "data"
 TEMP_DIR    = RUNTIME_DIR / "temp"
-VAULT_DIR   = RUNTIME_DIR / "vault"       # local vault cache (survives Render instance while alive)
+VAULT_DIR   = RUNTIME_DIR / "vault"
 DB_FILE     = OUTPUT_DIR / "tenders_db.json"
 PROFILE_FILE = RUNTIME_DIR / "nascent_profile.json"
 
@@ -77,7 +67,6 @@ for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
 
 async def _drive_warm_sync():
     """Run Drive reads after startup so health checks are not blocked."""
-    # Load DB from Drive with bounded retries.
     for attempt in range(2):
         try:
             success = await asyncio.wait_for(
@@ -94,7 +83,6 @@ async def _drive_warm_sync():
             print(f"Drive DB load attempt {attempt + 1} failed: {e}")
         await asyncio.sleep(1)
 
-    # Load profile from Drive.
     try:
         await asyncio.wait_for(
             asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
@@ -126,7 +114,6 @@ async def startup_event():
     print(f"Google Drive: {'Connected' if drive_ok else 'Not configured'}")
 
     if drive_ok:
-        # Do not block startup on external APIs.
         asyncio.create_task(_drive_warm_sync())
     elif DB_FILE.exists():
         db = load_db()
@@ -182,8 +169,7 @@ def prebid_passed(date_str: str) -> bool:
     return days_left(date_str) < 0
 
 
-def build_quality_flags(tender_data: dict) -> list[str]:
-    """Basic deterministic validation flags to reduce wrong-AI risk."""
+def build_quality_flags(tender_data: dict) -> list:
     flags = []
     if not tender_data.get("tender_no"):
         flags.append("Tender number missing")
@@ -195,11 +181,9 @@ def build_quality_flags(tender_data: dict) -> list[str]:
         flags.append("EMD not found")
     if not tender_data.get("estimated_cost"):
         flags.append("Estimated cost not found")
-
     verdict = (tender_data.get("overall_verdict", {}) or {}).get("verdict") or tender_data.get("verdict")
     if not verdict:
         flags.append("Final verdict not available")
-
     pq = tender_data.get("pq_criteria", [])
     if isinstance(pq, list) and not pq:
         flags.append("PQ criteria list is empty")
@@ -220,11 +204,6 @@ def extract_all_zips(folder: Path):
 
 # ── STATIC PAGES ──────────────────────────────────────────────
 
-@app.get("/healthz")
-async def healthz():
-    return {"status": "ok"}
-
-
 @app.get("/", response_class=HTMLResponse)
 async def root():
     index = BASE_DIR / "index.html"
@@ -234,9 +213,7 @@ async def root():
 
 @app.head("/")
 async def root_head():
-    # Render health checks may send HEAD requests; return 200 to avoid false unhealthy status.
     return Response(status_code=200)
-
 
 @app.get("/profile-page", response_class=HTMLResponse)
 async def profile_page():
@@ -244,7 +221,6 @@ async def profile_page():
     if p.exists():
         return HTMLResponse(content=p.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>Profile page not found</h1>", status_code=404)
-
 
 @app.get("/dashboard-page", response_class=HTMLResponse)
 async def dashboard_page():
@@ -303,47 +279,29 @@ async def import_excel(file: UploadFile = File(...)):
 async def dashboard():
     db = load_db()
     tenders = list(db["tenders"].values())
-
     stats = {
-        "total": 0,
-        "bid": 0,
-        "no_bid": 0,
-        "conditional": 0,
-        "review": 0,
-        "analysed": 0,
-        "deadline_today": 0,
-        "deadline_3days": 0,
+        "total": 0, "bid": 0, "no_bid": 0, "conditional": 0,
+        "review": 0, "analysed": 0, "deadline_today": 0, "deadline_3days": 0,
     }
-
     enriched = []
     for t in tenders:
         dl = days_left(t.get("deadline", ""))
         item = dict(t)
         item["_days_left_sort"] = dl
         enriched.append(item)
-
         stats["total"] += 1
         verdict = item.get("verdict")
-        if verdict == "BID":
-            stats["bid"] += 1
-        elif verdict == "NO-BID":
-            stats["no_bid"] += 1
-        elif verdict == "CONDITIONAL":
-            stats["conditional"] += 1
-        elif verdict == "REVIEW":
-            stats["review"] += 1
-
-        if item.get("bid_no_bid_done"):
-            stats["analysed"] += 1
-        if dl == 0:
-            stats["deadline_today"] += 1
-        elif 0 < dl <= 3:
-            stats["deadline_3days"] += 1
+        if verdict == "BID": stats["bid"] += 1
+        elif verdict == "NO-BID": stats["no_bid"] += 1
+        elif verdict == "CONDITIONAL": stats["conditional"] += 1
+        elif verdict == "REVIEW": stats["review"] += 1
+        if item.get("bid_no_bid_done"): stats["analysed"] += 1
+        if dl == 0: stats["deadline_today"] += 1
+        elif 0 < dl <= 3: stats["deadline_3days"] += 1
 
     tenders_sorted = sorted(enriched, key=lambda t: t.get("_days_left_sort", 999))
     for t in tenders_sorted:
         t.pop("_days_left_sort", None)
-
     return {"stats": stats, "tenders": tenders_sorted}
 
 
@@ -380,7 +338,6 @@ async def process_files(
             else:
                 shutil.copy2(dest, extract_dir / fname)
 
-        # Collect all documents
         doc_files = []
         for ext in ["*.pdf", "*.docx", "*.doc", "*.txt", "*.html", "*.htm", "*.xlsx"]:
             doc_files.extend(extract_dir.rglob(ext))
@@ -388,7 +345,6 @@ async def process_files(
         for ext in ["*.png", "*.jpg", "*.jpeg", "*.webp"]:
             image_files.extend(extract_dir.rglob(ext))
 
-        # Deduplicate
         seen, unique = set(), []
         for f in doc_files:
             if f.name not in seen:
@@ -399,7 +355,6 @@ async def process_files(
         if not doc_files:
             raise HTTPException(400, "No readable documents found in uploaded files.")
 
-        # Try logo detection for better presentation in generated docs.
         logo_file = None
         if image_files:
             pref = [f for f in image_files if any(k in f.name.lower() for k in ["logo", "emblem", "seal"])]
@@ -412,10 +367,8 @@ async def process_files(
                 shutil.copy2(logo_file, saved_logo)
                 logo_file = saved_logo
             except Exception:
-                # Keep best-effort only; no failure on logo copy issues.
                 pass
 
-        # Separate corrigendum from main
         corrigendum_files = [f for f in doc_files if
             any(k in f.name.lower() for k in
                 ["corrigendum", "addendum", "amendment", "corr_", "addend", "revised", "rectification"])]
@@ -435,7 +388,6 @@ async def process_files(
             tender_data["has_corrigendum"] = True
             tender_data["corrigendum_files"] = [f.name for f in corrigendum_files]
 
-        # Build combined text for AI
         all_text = ""
         for f in sorted(doc_files, key=lambda x: (
             0 if any(k in x.name.lower() for k in ["rfp", "nit", "tender", "bid"]) else
@@ -445,7 +397,6 @@ async def process_files(
             if t and t.strip():
                 all_text += f"\n\n=== FILE: {f.name} ===\n{t}"
 
-        # AI analysis
         config = load_config()
         api_key = config.get("gemini_api_key", "")
         ai_used = False
@@ -464,7 +415,6 @@ async def process_files(
                 "Go to Settings to configure AI."
             )
 
-        # Nascent checker
         checker = NascentChecker()
         if not tender_data.get("overall_verdict"):
             tender_data["pq_criteria"] = checker.check_all(tender_data.get("pq_criteria", []))
@@ -473,8 +423,6 @@ async def process_files(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
 
-
-
         if logo_file:
             tender_data["client_logo_file"] = str(logo_file)
 
@@ -482,11 +430,9 @@ async def process_files(
         tender_data["quality_flags"] = quality_flags
         tender_data["quality_score"] = max(0, 100 - 10 * len(quality_flags))
 
- main
         prebid_mode = str(prebid_only).strip().lower() in {"1", "true", "yes", "y"}
 
         if prebid_mode:
-            # Standalone pre-bid path: avoid heavy report generation/save side effects.
             tender_data["prebid_queries"] = generate_prebid_queries(tender_data)
             return {
                 "status": "success",
@@ -499,13 +445,11 @@ async def process_files(
                 "download_file": None,
             }
 
-        # Generate Word doc
         generator = BidDocGenerator()
         safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
         generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
 
-        # Save to DB
         if t247_id:
             db_record = get_tender(t247_id)
             db_record.update({
@@ -545,7 +489,7 @@ async def process_files(
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-# ── DOWNLOAD WORD DOC ─────────────────────────────────────────
+# ── DOWNLOAD ──────────────────────────────────────────────────
 
 @app.get("/download/{filename}")
 async def download_file(filename: str):
@@ -557,7 +501,6 @@ async def download_file(filename: str):
         filename=Path(filename).name,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
-
 
 @app.get("/download-zip/{filename}")
 async def download_zip(filename: str):
@@ -571,7 +514,7 @@ async def download_zip(filename: str):
     )
 
 
-# ── REPORTS / BID-NO-BID LISTING ─────────────────────────────
+# ── REPORTS ───────────────────────────────────────────────────
 
 @app.get("/reports")
 async def list_reports():
@@ -586,16 +529,13 @@ async def list_reports():
         for f in files[:100]
     ]
 
-
 @app.get("/reports-list")
 async def reports_list():
-    """Enhanced reports list with tender metadata — powers the Bid/No-Bid listing page."""
     try:
         db = load_db()
         reports = []
         for fname in sorted(OUTPUT_DIR.glob("BidNoBid_*.docx"),
                             key=lambda f: f.stat().st_mtime, reverse=True):
-            # Try to find matching tender in DB
             tender = None
             for tid, t in db["tenders"].items():
                 ref = (t.get("tender_no", "") or "").replace("/", "_")
@@ -629,14 +569,12 @@ async def get_tender_detail(t247_id: str):
         raise HTTPException(404, "Tender not found")
     return t
 
-
 @app.get("/tender-quickview/{t247_id}")
 async def tender_quickview(t247_id: str):
     t = get_tender(t247_id)
     if not t:
         raise HTTPException(404, "Tender not found")
     return t
-
 
 @app.post("/tender/{t247_id}/status")
 async def update_status(t247_id: str, data: dict = Body(...)):
@@ -645,24 +583,18 @@ async def update_status(t247_id: str, data: dict = Body(...)):
     save_tender(t247_id, tender)
     return {"status": "saved"}
 
-
 @app.post("/tender/{t247_id}/stage")
 async def update_stage(t247_id: str, data: dict = Body(...)):
     db = load_db()
     t = db["tenders"].get(t247_id, {})
-    if "status" in data:
-        t["status"] = data["status"]
-    if "notes" in data:
-        t["notes_internal"] = data["notes"]
-    if "outcome_value" in data:
-        t["outcome_value"] = data["outcome_value"]
-    if "outcome_notes" in data:
-        t["outcome_notes"] = data["outcome_notes"]
+    if "status" in data: t["status"] = data["status"]
+    if "notes" in data: t["notes_internal"] = data["notes"]
+    if "outcome_value" in data: t["outcome_value"] = data["outcome_value"]
+    if "outcome_notes" in data: t["outcome_notes"] = data["outcome_notes"]
     t["status_updated_at"] = datetime.now().isoformat()
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved", "new_stage": t.get("status")}
-
 
 @app.delete("/tender/{t247_id}")
 async def delete_tender(t247_id: str):
@@ -681,12 +613,10 @@ async def get_prebid_queries(data: dict = Body(...)):
     queries = generate_prebid_queries(data)
     return {"queries": queries}
 
-
 @app.get("/prebid-queries/{t247_id}")
 async def get_saved_prebid_queries(t247_id: str):
     tender = get_tender(t247_id)
     return {"queries": tender.get("prebid_queries", [])}
-
 
 @app.post("/prebid-sent/{t247_id}")
 async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
@@ -701,9 +631,10 @@ async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
     save_db(db)
     return {"status": "saved"}
 
-
 @app.post("/submission-package/{t247_id}")
 async def create_submission_package(t247_id: str):
+    if not _has_submission_generator:
+        raise HTTPException(501, "Submission package generator not yet available in this deployment.")
     tender = get_tender(t247_id)
     if not tender:
         raise HTTPException(404, "Tender not found")
@@ -713,7 +644,6 @@ async def create_submission_package(t247_id: str):
     if "zip_file" in result:
         result["download_url"] = f"/download-zip/{result['zip_file']}"
     return result
-
 
 @app.get("/email-draft/{t247_id}")
 async def email_draft(t247_id: str):
@@ -729,10 +659,6 @@ async def email_draft(t247_id: str):
         f"Deadline: {tender.get('deadline', tender.get('bid_submission_date', 'N/A'))}\n"
         f"Verdict: {verdict}\n\n"
         f"Key reason: {tender.get('reason', '')}\n\n"
-        f"Next action:\n"
-        f"- Review analysis preview\n"
-        f"- Confirm pre-bid query requirements\n"
-        f"- Approve submission package generation\n\n"
         f"Regards,\nBid Automation System"
     )
     return {"subject": subject, "body": body}
@@ -746,12 +672,9 @@ async def get_checklist(t247_id: str):
     t = db["tenders"].get(t247_id, {})
     if not t:
         raise HTTPException(404, "Tender not found")
-    # Return saved checklist or generate from PQ + Excel data
     if "doc_checklist" in t and t["doc_checklist"]:
         return {"checklist": t["doc_checklist"], "t247_id": t247_id, "source": "saved"}
-    # Generate from PQ criteria + Excel checklist column
     checklist = generate_doc_checklist(t)
-    # Also merge any checklist items from Excel import
     excel_checklist = t.get("checklist", [])
     if excel_checklist and isinstance(excel_checklist, list):
         existing_docs = {item["doc"] for item in checklist}
@@ -764,7 +687,6 @@ async def get_checklist(t247_id: str):
                     "done": False,
                 })
     return {"checklist": checklist, "t247_id": t247_id, "source": "generated"}
-
 
 @app.post("/checklist/{t247_id}")
 async def save_checklist(t247_id: str, data: dict = Body(...)):
@@ -788,11 +710,9 @@ async def get_profile():
     from nascent_checker import load_profile
     return load_profile()
 
-
 @app.post("/profile")
 async def update_profile(data: dict = Body(...)):
     PROFILE_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    # Also save to Drive so it survives restarts
     try:
         save_profile_to_drive(data)
     except Exception:
@@ -800,107 +720,75 @@ async def update_profile(data: dict = Body(...)):
     return {"status": "saved"}
 
 
-# ── VAULT: DOCUMENT STORAGE ───────────────────────────────────
+# ── VAULT ─────────────────────────────────────────────────────
 
 @app.post("/vault/upload")
-async def vault_upload_endpoint(
-    file: UploadFile = File(...),
-    category: str = "general"
-):
-    """Upload a company document (PAN, cert, completion cert, etc.) to Drive vault."""
+async def vault_upload_endpoint(file: UploadFile = File(...), category: str = "general"):
     allowed_categories = ["company", "financial", "certification", "project", "legal", "general"]
     if category not in allowed_categories:
         category = "general"
-
     file_bytes = await file.read()
     filename = file.filename or "document"
-
     if not drive_available():
-        # Save locally as fallback
         safe_name = re.sub(r'[^\w\-.]', '_', f"{category}_{filename}")
         local_path = VAULT_DIR / safe_name
         local_path.write_bytes(file_bytes)
         return {
-            "success": True,
-            "file_id": safe_name,
-            "filename": safe_name,
-            "category": category,
-            "drive_url": None,
-            "local_only": True,
+            "success": True, "file_id": safe_name, "filename": safe_name,
+            "category": category, "drive_url": None, "local_only": True,
             "message": "Saved locally — Drive not connected. File may be lost on restart.",
             "size_kb": len(file_bytes) // 1024,
         }
-
     result = vault_upload(file_bytes, filename, category)
     if result["success"]:
-        # Also cache locally
-        safe_name = result["filename"]
-        (VAULT_DIR / safe_name).write_bytes(file_bytes)
+        (VAULT_DIR / result["filename"]).write_bytes(file_bytes)
     return result
-
 
 @app.get("/vault/list")
 async def vault_list_endpoint():
-    """List all documents in the vault."""
     if drive_available():
         files = vault_list()
     else:
-        # Local fallback
         files = [
             {
-                "file_id": f.name,
-                "filename": f.name,
+                "file_id": f.name, "filename": f.name,
                 "size_kb": round(f.stat().st_size / 1024, 1),
                 "category": f.name.split("_")[0] if "_" in f.name else "general",
-                "local_only": True,
-                "drive_url": None,
+                "local_only": True, "drive_url": None,
             }
             for f in sorted(VAULT_DIR.iterdir()) if f.is_file()
         ]
     return {"files": files, "total": len(files), "drive_connected": drive_available()}
 
-
 @app.get("/vault/download/{file_id}")
 async def vault_download_endpoint(file_id: str):
-    """Download a document from the vault."""
-    # Try local cache first
     local = VAULT_DIR / file_id
     if local.exists():
         ext = local.suffix.lower()
         mime_map = {
-            ".pdf": "application/pdf",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
+            ".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
             ".png": "image/png",
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         }
         return FileResponse(str(local), filename=file_id,
                             media_type=mime_map.get(ext, "application/octet-stream"))
-
     if not drive_available():
         raise HTTPException(404, "File not found locally and Drive not connected")
-
     file_bytes = vault_download(file_id)
     if not file_bytes:
         raise HTTPException(404, "File not found in vault")
-
     return Response(
-        content=file_bytes,
-        media_type="application/octet-stream",
+        content=file_bytes, media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename={file_id}"}
     )
 
-
 @app.delete("/vault/{file_id}")
 async def vault_delete_endpoint(file_id: str):
-    """Delete a document from the vault."""
     deleted = False
-    # Delete local cache
     local = VAULT_DIR / file_id
     if local.exists():
         local.unlink()
         deleted = True
-    # Delete from Drive
     if drive_available():
         deleted = vault_delete(file_id) or deleted
     if deleted:
@@ -919,7 +807,6 @@ async def get_config_route():
         "gemini_api_key_preview": (key[:8] + "..." + key[-4:]) if key else "",
     }
 
-
 @app.get("/config-full")
 async def get_config_full():
     config = load_config()
@@ -932,7 +819,6 @@ async def get_config_full():
             all_keys.append(k)
     masked = [(k[:8] + "..." + k[-4:]) if len(k) > 12 else k[:4] + "..." for k in all_keys]
     return {"gemini_api_keys": masked, "total_keys": len(all_keys), "ai_active": bool(all_keys)}
-
 
 @app.post("/config")
 async def update_config_route(data: dict = Body(...)):
@@ -950,12 +836,11 @@ async def update_config_route(data: dict = Body(...)):
     return {"status": "saved", "keys_saved": len(config.get("gemini_api_keys", []))}
 
 
-# ── ALERTS / PIPELINE / REPORTS ──────────────────────────────
+# ── ALERTS / PIPELINE ─────────────────────────────────────────
 
 @app.get("/alerts")
 async def get_alerts():
     return {"alerts": get_deadline_alerts()}
-
 
 @app.get("/pipeline")
 async def get_pipeline():
@@ -964,7 +849,6 @@ async def get_pipeline():
         "stage_list": PIPELINE_STAGES,
         "stage_colors": STAGE_COLORS,
     }
-
 
 @app.get("/win-loss")
 async def get_win_loss():
@@ -1069,14 +953,12 @@ async def upload_db(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(500, str(e))
 
-
 @app.post("/sync-drive")
 async def sync_drive():
     if not drive_available():
         return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
     db = load_db()
     ok = save_to_drive(DB_FILE)
-    # Also sync profile
     if PROFILE_FILE.exists():
         try:
             profile_data = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))
@@ -1087,7 +969,6 @@ async def sync_drive():
     if ok:
         return {"status": "ok", "message": f"Synced {count} tenders + profile to Drive"}
     return JSONResponse({"status": "error", "message": "Sync failed"}, status_code=500)
-
 
 @app.get("/drive-status")
 async def drive_status():
@@ -1112,18 +993,14 @@ async def chat(data: dict = Body(...)):
 
     context = data.get("context", {})
     tender_data = context.get("tender_data", {})
-
     history = load_history()
     result = process_message(message, history)
 
-    # Self-learning: detect correction patterns in the message
     correction_applied = None
     updated_tender_data = None
-
     import re as _re
     text_lower = message.lower()
 
-    # Pattern: "change PQ 3 to Met" / "mark criterion 2 as Conditional"
     pq_match = _re.search(
         r'(?:change|mark|set|update)\s+(?:pq|criterion|criteria)\s+(\d+)\s+(?:to|as)\s+(met|not met|conditional|review)',
         text_lower
@@ -1135,25 +1012,18 @@ async def chat(data: dict = Body(...)):
                             "conditional": "Conditional", "review": "Review"}.get(new_status, new_status.title())
         new_color = {"Met": "GREEN", "Not Met": "RED",
                      "Conditional": "AMBER", "Review": "BLUE"}.get(new_status_title, "BLUE")
-
         pq_list = tender_data.get("pq_criteria", [])
         if 0 <= idx < len(pq_list):
             pq_list[idx]["nascent_status"] = new_status_title
             pq_list[idx]["nascent_color"] = new_color
             pq_list[idx]["nascent_remark"] = (
-                pq_list[idx].get("nascent_remark", "") +
-                f" [Manually corrected to {new_status_title}]"
+                pq_list[idx].get("nascent_remark", "") + f" [Manually corrected to {new_status_title}]"
             )
             tender_data["pq_criteria"] = pq_list
-            correction_applied = {
-                "type": "pq_status",
-                "index": idx,
-                "new_status": new_status_title,
-                "new_color": new_color,
-            }
+            correction_applied = {"type": "pq_status", "index": idx,
+                                   "new_status": new_status_title, "new_color": new_color}
             updated_tender_data = tender_data
 
-    # Pattern: "change verdict to BID/NO-BID/CONDITIONAL"
     verdict_match = _re.search(
         r'(?:change|update|set)\s+verdict\s+to\s+(bid|no-bid|conditional)',
         text_lower
@@ -1166,31 +1036,25 @@ async def chat(data: dict = Body(...)):
         tender_data["overall_verdict"]["verdict"] = new_verdict
         tender_data["overall_verdict"]["color"] = color_map.get(new_verdict, "BLUE")
         tender_data["verdict"] = new_verdict
-        correction_applied = {
-            "type": "verdict",
-            "new_verdict": new_verdict,
-        }
+        correction_applied = {"type": "verdict", "new_verdict": new_verdict}
         updated_tender_data = tender_data
 
-    response = {
-        "response": result.get("response") or result.get("message") or "Done.",
-    }
+    response = {"response": result.get("response") or result.get("message") or "Done."}
     if correction_applied:
         response["correction_applied"] = correction_applied
         response["updated_tender_data"] = updated_tender_data
+        idx_label = str(idx + 1) if pq_match else ""
         response["response"] = (
-            f"Done. {pq_match and ('PQ '+str(idx+1)+' updated to '+new_status_title) or ''}"
-            f"{verdict_match and ('Verdict updated to '+new_verdict) or ''}. "
-            "This correction has been saved and the preview will refresh."
+            f"Done. "
+            f"{'PQ ' + idx_label + ' updated to ' + new_status_title if pq_match else ''}"
+            f"{'Verdict updated to ' + new_verdict if verdict_match else ''}. "
+            "Correction saved and preview will refresh."
         )
-
     return response
-
 
 @app.get("/chat/history")
 async def get_chat_history():
     return {"history": load_history()}
-
 
 @app.delete("/chat/history")
 async def clear_chat_history():
@@ -1200,9 +1064,7 @@ async def clear_chat_history():
     return {"status": "cleared"}
 
 
-# ── HEALTH / DIAGNOSTICS ──────────────────────────────────────
-
-# ── SELF-LEARNING: Save corrections ───────────────────────────
+# ── CORRECTIONS (SELF-LEARNING) ───────────────────────────────
 
 CORRECTIONS_FILE = BASE_DIR / "corrections.json"
 
@@ -1215,24 +1077,15 @@ def load_corrections() -> list:
     return []
 
 def save_corrections(corrections: list):
-    CORRECTIONS_FILE.write_text(
-        json.dumps(corrections, indent=2, default=str), encoding="utf-8"
-    )
-    # Also sync to Drive
+    CORRECTIONS_FILE.write_text(json.dumps(corrections, indent=2, default=str), encoding="utf-8")
     try:
         if drive_available():
-            from gdrive_sync import save_to_drive
             save_to_drive(CORRECTIONS_FILE, "corrections.json")
     except Exception:
         pass
 
-
 @app.post("/save-correction")
 async def save_correction_route(data: dict = Body(...)):
-    """
-    Save a correction made by the user via chatbot.
-    Stores in corrections.json and updates nascent_profile.json if relevant.
-    """
     corrections = load_corrections()
     correction = {
         "id": len(corrections) + 1,
@@ -1244,77 +1097,31 @@ async def save_correction_route(data: dict = Body(...)):
     }
     corrections.append(correction)
     save_corrections(corrections)
-
-    # Try to apply profile updates if the correction touches profile data
-    # e.g. "update turnover to 20 Cr" → update nascent_profile.json
-    text_lower = correction["text"].lower()
-    profile_updated = False
-
-    try:
-        profile = json.loads(PROFILE_FILE.read_text(encoding="utf-8")) if PROFILE_FILE.exists() else {}
-
-        # Turnover update pattern
-        import re as _re
-        m = _re.search(r'turnover.*?([\d.]+)\s*cr', text_lower)
-        if m and "finance" in profile:
-            # Just flag — don't auto-update finance (too risky)
-            correction["profile_hint"] = f"Possible turnover update: {m.group(1)} Cr — review profile"
-
-        # If correction says "mark pq X as met" or similar, record it
-        pq_match = _re.search(r'(?:pq|criterion|criteria)\s*(\d+).*?(met|not met|conditional)', text_lower)
-        if pq_match:
-            correction["pq_correction"] = {
-                "index": int(pq_match.group(1)) - 1,
-                "new_status": pq_match.group(2).title()
-            }
-            # Save rule: for future tenders with similar criteria, use this status
-            if "bid_rules" not in profile:
-                profile["bid_rules"] = {}
-            if "learned_corrections" not in profile["bid_rules"]:
-                profile["bid_rules"]["learned_corrections"] = []
-            profile["bid_rules"]["learned_corrections"].append({
-                "pattern": correction["text"],
-                "correction": correction.get("correction", {}),
-                "timestamp": correction["timestamp"],
-            })
-            PROFILE_FILE.write_text(json.dumps(profile, indent=2), encoding="utf-8")
-            profile_updated = True
-
-    except Exception as e:
-        print(f"[Correction] Profile update check failed: {e}")
-
     return {
         "status": "saved",
         "correction_id": correction["id"],
-        "profile_updated": profile_updated,
-        "message": "Correction saved. AI will use this for future similar tenders."
+        "message": "Correction saved."
     }
-
 
 @app.get("/corrections")
 async def get_corrections():
-    """Return all saved corrections — for review/management."""
     corrections = load_corrections()
-    return {
-        "corrections": corrections,
-        "total": len(corrections)
-    }
-
+    return {"corrections": corrections, "total": len(corrections)}
 
 @app.delete("/corrections/{correction_id}")
 async def delete_correction(correction_id: int):
-    """Delete a specific correction."""
     corrections = load_corrections()
     corrections = [c for c in corrections if c.get("id") != correction_id]
     save_corrections(corrections)
     return {"status": "deleted"}
 
 
+# ── HEALTH / DIAGNOSTICS ──────────────────────────────────────
+
 @app.get("/health")
 async def health():
     config = load_config()
     db = load_db()
-    from ocr_engine import is_available as ocr_available
     return {
         "status": "ok",
         "version": "6.0",
@@ -1325,13 +1132,10 @@ async def health():
         "vault_local_files": len(list(VAULT_DIR.iterdir())) if VAULT_DIR.exists() else 0,
     }
 
-
 @app.get("/healthz")
 @app.head("/healthz")
 async def healthz():
-    # Lightweight probe endpoint for Render/Cloudflare health checks.
     return Response(status_code=200)
-
 
 @app.get("/test-ai")
 async def test_ai():
@@ -1344,7 +1148,6 @@ async def test_ai():
         return {"status": "success", "api_key_present": True, "gemini_response": result[:100]}
     except Exception as e:
         return {"status": "error", "api_key_present": True, "error": str(e)}
-
 
 @app.get("/test-groq")
 async def test_groq():
@@ -1371,7 +1174,6 @@ async def test_groq():
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
-
 @app.post("/auto-download/{t247_id}")
 async def auto_download_tender(t247_id: str):
     try:
@@ -1379,15 +1181,11 @@ async def auto_download_tender(t247_id: str):
         if importlib.util.find_spec("downloader") is None:
             return {
                 "status": "unavailable",
-                "message": (
-                    "Tender247 auto-download module is not installed in this deployment. "
-                    "Please use manual upload for now."
-                ),
+                "message": "Tender247 auto-download not available in this deployment. Please use manual upload.",
             }
         from downloader import download_sync, is_playwright_available
         if not is_playwright_available():
-            return {"status": "unavailable",
-                    "message": "Playwright not installed."}
+            return {"status": "unavailable", "message": "Playwright not installed."}
         zip_path = download_sync(t247_id)
         if zip_path:
             return {"status": "success", "zip_path": zip_path, "t247_id": t247_id}
