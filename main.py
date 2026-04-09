@@ -958,6 +958,10 @@ async def sync_drive():
 @app.get("/drive-status")
 async def drive_status():
     db = load_db()
+ codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
+    tenders_count = len(db.get("tenders", {}))
+
+main
     oauth_fields = {
         "GDRIVE_OAUTH_CLIENT_ID": bool(os.environ.get("GDRIVE_OAUTH_CLIENT_ID", "").strip()),
         "GDRIVE_OAUTH_CLIENT_SECRET": bool(os.environ.get("GDRIVE_OAUTH_CLIENT_SECRET", "").strip()),
@@ -969,7 +973,12 @@ async def drive_status():
         "auth_mode": get_auth_mode(),
         "oauth2_env": oauth_fields,
         "service_account_env": service_account_set,
+ codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
+        "tenders_in_db": tenders_count,
+        "tenders_in_memory": tenders_count,  # backward-compatible alias for older UI code
+
         "tenders_in_db": len(db.get("tenders", {})),
+ main
         "db_file_exists": DB_FILE.exists(),
         "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
         "profile_exists": PROFILE_FILE.exists(),
