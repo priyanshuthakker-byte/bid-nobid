@@ -10,7 +10,7 @@
     "incorporated": "23 June 2006",
     "years_in_operation": 19,
     "type": "Private Limited",
-    "address": "A-805, Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad – 380015, Gujarat",
+    "address": "A-805, Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad \u2013 380015, Gujarat",
     "city": "Ahmedabad",
     "state": "Gujarat",
     "pin": "380015",
@@ -20,7 +20,9 @@
     "bank": "State Bank of India, SG Highway Branch, Ahmedabad",
     "bank_account": "[to be filled]",
     "bank_ifsc": "[to be filled]",
-    "total_employees": "67"
+    "total_employees": "67",
+    "udyam": "UDYAM-GJ-01-0007420",
+    "msme": true
   },
   "authorised_signatory": {
     "name": "Hitesh Patel",
@@ -38,7 +40,10 @@
     "gis_specialists": 11,
     "it_developers": 21,
     "qa_pm_ba_support": 35,
-    "epf_registered": true
+    "epf_registered": true,
+    "total_confirmed": 67,
+    "it_dev_staff": 21,
+    "gis_staff": 11
   },
   "certifications": {
     "cmmi": {
@@ -60,7 +65,9 @@
       "standard": "ISO/IEC 20000-1:2018",
       "valid_till": "08-Sep-2028",
       "scope": "IT Service Management"
-    }
+    },
+    "cert_in": false,
+    "stqc": false
   },
   "domains": [
     "GIS Application Development",
@@ -103,7 +110,7 @@
   "projects": [
     {
       "id": "P001",
-      "name": "AMC GIS – Ahmedabad Municipal Corporation",
+      "name": "AMC GIS \u2013 Ahmedabad Municipal Corporation",
       "client": "Ahmedabad Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -134,7 +141,7 @@
     },
     {
       "id": "P002",
-      "name": "JuMC GIS – Junagadh Municipal Corporation",
+      "name": "JuMC GIS \u2013 Junagadh Municipal Corporation",
       "client": "Junagadh Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -161,7 +168,7 @@
     },
     {
       "id": "P003",
-      "name": "BMC GIS Mobile App – Bhavnagar Municipal Corporation",
+      "name": "BMC GIS Mobile App \u2013 Bhavnagar Municipal Corporation",
       "client": "Bhavnagar Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -201,7 +208,7 @@
     },
     {
       "id": "P004",
-      "name": "VMC GIS + ERP – Vadodara Municipal Corporation",
+      "name": "VMC GIS + ERP \u2013 Vadodara Municipal Corporation",
       "client": "Vadodara Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -230,7 +237,7 @@
     },
     {
       "id": "P005",
-      "name": "KVIC Mobile GIS – Khadi Village Industries Commission",
+      "name": "KVIC Mobile GIS \u2013 Khadi Village Industries Commission",
       "client": "Khadi Village Industries Commission (KVIC)",
       "client_type": "Central Government PSU",
       "state": "PAN India",
@@ -262,7 +269,7 @@
     },
     {
       "id": "P006",
-      "name": "PCSCL Smart City – Pimpri-Chinchwad Smart City",
+      "name": "PCSCL Smart City \u2013 Pimpri-Chinchwad Smart City",
       "client": "Pimpri Chinchwad Smart City Corp Ltd (PCSCL)",
       "client_type": "Smart City SPV",
       "state": "Maharashtra",
@@ -280,7 +287,7 @@
         "municipal",
         "large scale"
       ],
-      "scope": "Integrated Smart City platform — GIS, ERP, SCADA, IoT dashboards, citizen portal, command & control centre",
+      "scope": "Integrated Smart City platform \u2014 GIS, ERP, SCADA, IoT dashboards, citizen portal, command & control centre",
       "technologies": [
         "GeoServer",
         "PostGIS",
@@ -293,7 +300,7 @@
     },
     {
       "id": "P007",
-      "name": "AMC Heritage App (AHA) – Ahmedabad Smart City",
+      "name": "AMC Heritage App (AHA) \u2013 Ahmedabad Smart City",
       "client": "Ahmedabad Smart City Development Ltd",
       "client_type": "Smart City SPV",
       "state": "Gujarat",
@@ -325,7 +332,7 @@
     },
     {
       "id": "P008",
-      "name": "NSO FOD Survey – National Statistics Office",
+      "name": "NSO FOD Survey \u2013 National Statistics Office",
       "client": "National Statistics Office (NSO) / MoSPI",
       "client_type": "Central Government Ministry",
       "state": "PAN India",
@@ -357,7 +364,7 @@
     },
     {
       "id": "P009",
-      "name": "NP Lalganj GIS – Nagar Panchayat Lalganj",
+      "name": "NP Lalganj GIS \u2013 Nagar Panchayat Lalganj",
       "client": "Nagar Panchayat Lalganj",
       "client_type": "ULB / Nagar Panchayat",
       "state": "Uttar Pradesh",
@@ -384,7 +391,7 @@
     },
     {
       "id": "P010",
-      "name": "SMC GIS Mobile App – Surat Municipal Corporation",
+      "name": "SMC GIS Mobile App \u2013 Surat Municipal Corporation",
       "client": "Surat Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -421,7 +428,7 @@
   },
   "emd_exemption": {
     "eligible": true,
-    "basis": "MSME Service Provider — Public Procurement Policy for MSMEs Order 2012 (amended 2018)",
+    "basis": "MSME Service Provider \u2014 Public Procurement Policy for MSMEs Order 2012 (amended 2018)",
     "reference": "DoE OM F.No.6/18/2019-PPD dated 16.11.2020"
   },
   "metadata": {
@@ -575,21 +582,21 @@
       "construction and maintenance of road"
     ],
     "do_not_bid_remarks": {
-      "road construction": "Civil construction — not Nascent domain",
-      "civil work": "Civil work — not Nascent domain",
-      "construction of": "Civil construction — not Nascent domain",
-      "supply of material": "Material supply only — not IT/software",
-      "security guard": "Security manpower — not Nascent domain",
-      "housekeeping": "Facility management manpower — not IT",
-      "catering": "Catering services — not Nascent domain",
-      "printing of": "Printing services — not Nascent domain",
-      "medicine": "Pharmaceutical — not Nascent domain",
-      "insurance": "Insurance — not Nascent domain",
-      "electrical work": "Electrical installation — not IT domain",
-      "sewerage network": "Civil pipeline work — not IT/software",
-      "sewerage pipeline": "Civil pipeline work — not IT/software",
-      "procurement of security": "Security manpower supply — not Nascent domain",
-      "hiring of security": "Security manpower — not Nascent domain"
+      "road construction": "Civil construction \u2014 not Nascent domain",
+      "civil work": "Civil work \u2014 not Nascent domain",
+      "construction of": "Civil construction \u2014 not Nascent domain",
+      "supply of material": "Material supply only \u2014 not IT/software",
+      "security guard": "Security manpower \u2014 not Nascent domain",
+      "housekeeping": "Facility management manpower \u2014 not IT",
+      "catering": "Catering services \u2014 not Nascent domain",
+      "printing of": "Printing services \u2014 not Nascent domain",
+      "medicine": "Pharmaceutical \u2014 not Nascent domain",
+      "insurance": "Insurance \u2014 not Nascent domain",
+      "electrical work": "Electrical installation \u2014 not IT domain",
+      "sewerage network": "Civil pipeline work \u2014 not IT/software",
+      "sewerage pipeline": "Civil pipeline work \u2014 not IT/software",
+      "procurement of security": "Security manpower supply \u2014 not Nascent domain",
+      "hiring of security": "Security manpower \u2014 not Nascent domain"
     },
     "conditional": [
       "cert-in",
@@ -642,10 +649,12 @@
       "2023-24": 16.36,
       "2024-25": 18.83
     },
-    "avg_turnover_last_3_fy": "Rs. 17.18 Cr",
+    "avg_turnover_last_3_fy": 17.18,
     "avg_turnover_cr": 17.18,
-    "net_worth_cr": "26.09",
+    "net_worth_cr": 26.09,
     "solvency_amount_cr": "",
-    "ca_name": "Anuj J. Sharedalal"
+    "ca_name": "Anuj J. Sharedalal",
+    "avg_turnover_last_2_fy": 17.6,
+    "avg_turnover_last_5_fy": 16.23
   }
 }
