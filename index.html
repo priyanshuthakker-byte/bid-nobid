@@ -1762,6 +1762,8 @@ function showPage(name) {
   if (name==='profile') loadProfile();
   if (name==='settings') loadSettings();
 }
+ codex/identify-system-implementation-gaps-and-oauth2-oap0qu
+=======
  codex/identify-system-implementation-gaps-and-oauth2-rf0wij
 =======
 codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
@@ -1775,6 +1777,8 @@ document.querySelectorAll('.sb-btn[data-page]').forEach(function(b){
 
  main
  main
+
+
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════
@@ -3226,6 +3230,9 @@ async function checkStatus() {
     var lbl = document.getElementById('drive-label');
     var sysVal = document.getElementById('sys-drive-val');
     if (d.drive_connected) {
+ codex/identify-system-implementation-gaps-and-oauth2-oap0qu
+      var tendersCount = pickCount();
+=======
 codex/identify-system-implementation-gaps-and-oauth2-rf0wij
       var tendersCount = pickCount();
 
@@ -3234,7 +3241,7 @@ codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
 
       var tendersCount = d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0;
  main
- main
+
       if (dot) { dot.className='dot dot-green'; dot.style.animation='none'; }
       if (lbl) lbl.textContent = 'Drive: '+tendersCount+' tenders';
       if (sysVal) { sysVal.textContent = 'Connected'; sysVal.style.color='var(--green)'; }
@@ -3245,6 +3252,9 @@ codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
     }
     // Update tenders count in settings
     var st = document.getElementById('sys-tenders');
+ codex/identify-system-implementation-gaps-and-oauth2-oap0qu
+    if (st) st.textContent = pickCount();
+=======
  codex/identify-system-implementation-gaps-and-oauth2-rf0wij
     if (st) st.textContent = pickCount();
  codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
@@ -3252,7 +3262,7 @@ codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
 
     if (st) st.textContent = (d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0);
  main
- main
+
   } catch(e){ 
     var lbl = document.getElementById('drive-label'); 
     if (lbl) lbl.textContent = 'Drive: error';
