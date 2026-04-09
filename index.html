@@ -1116,18 +1116,18 @@ textarea.email-input{resize:vertical;min-height:180px;line-height:1.6}
           <span style="font-size:12px;color:var(--text3);margin-left:10px">Saved to server · used for scoring &amp; matching</span>
         </div>
         <div class="topbar-right">
-          <button class="btn btn-ghost btn-sm" onclick="switchProfileTab('bidrules')">⚙ Bid Rules</button>
+          <button class="btn btn-ghost btn-sm" onclick="switchProfileTab('bidrules', event)">⚙ Bid Rules</button>
           <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
         </div>
       </div>
       <div class="page-body">
         <div class="tab-row">
-          <div class="tab active" onclick="switchProfileTab('company')">🏢 Company</div>
-          <div class="tab" onclick="switchProfileTab('finance')">💰 Finance</div>
-          <div class="tab" onclick="switchProfileTab('certs')">🏅 Certifications</div>
-          <div class="tab" onclick="switchProfileTab('projects')">📁 Projects</div>
-          <div class="tab" onclick="switchProfileTab('team')">💻 Tech Stack</div>
-          <div class="tab" onclick="switchProfileTab('bidrules')">⚙ Bid Rules</div>
+          <div class="tab active" onclick="switchProfileTab('company', event)">🏢 Company</div>
+          <div class="tab" onclick="switchProfileTab('finance', event)">💰 Finance</div>
+          <div class="tab" onclick="switchProfileTab('certs', event)">🏅 Certifications</div>
+          <div class="tab" onclick="switchProfileTab('projects', event)">📁 Projects</div>
+          <div class="tab" onclick="switchProfileTab('team', event)">💻 Tech Stack</div>
+          <div class="tab" onclick="switchProfileTab('bidrules', event)">⚙ Bid Rules</div>
         </div>
 
         <!-- ── COMPANY TAB ── -->
@@ -1763,7 +1763,10 @@ function showPage(name) {
   if (name==='settings') loadSettings();
 }
 document.querySelectorAll('.sb-btn[data-page]').forEach(function(b){
-  b.addEventListener('click', function(){ showPage(b.dataset.page); });
+  b.addEventListener('click', function(e){
+    e.preventDefault();
+    showPage(b.dataset.page);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -2599,7 +2602,7 @@ var profileTabActive = 'company';
 var _editingProjectIdx = -1;
 var _stateOffices = [];
 
-function switchProfileTab(tab) {
+function switchProfileTab(tab, evt) {
   ['company','finance','certs','projects','team','bidrules'].forEach(function(t){
     var el = document.getElementById('profile-tab-'+t);
     if (el) el.classList.remove('active');
@@ -2607,7 +2610,7 @@ function switchProfileTab(tab) {
   document.querySelectorAll('#page-profile .tab').forEach(function(t){t.classList.remove('active');});
   var activeEl = document.getElementById('profile-tab-'+tab);
   if (activeEl) activeEl.classList.add('active');
-  event.target.classList.add('active');
+  if (evt && evt.target && evt.target.classList) evt.target.classList.add('active');
   profileTabActive = tab;
   if (tab === 'bidrules') renderRuleEffectiveness();
 }
@@ -3211,8 +3214,9 @@ async function checkStatus() {
     var lbl = document.getElementById('drive-label');
     var sysVal = document.getElementById('sys-drive-val');
     if (d.drive_connected) {
+      var tendersCount = d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0;
       if (dot) { dot.className='dot dot-green'; dot.style.animation='none'; }
-      if (lbl) lbl.textContent = 'Drive: '+d.tenders_in_memory+' tenders';
+      if (lbl) lbl.textContent = 'Drive: '+tendersCount+' tenders';
       if (sysVal) { sysVal.textContent = 'Connected'; sysVal.style.color='var(--green)'; }
     } else {
       if (dot) dot.className='dot dot-red';
@@ -3221,7 +3225,7 @@ async function checkStatus() {
     }
     // Update tenders count in settings
     var st = document.getElementById('sys-tenders');
-    if (st) st.textContent = d.tenders_in_memory||G.tenders.length;
+    if (st) st.textContent = (d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0);
   } catch(e){ 
     var lbl = document.getElementById('drive-label'); 
     if (lbl) lbl.textContent = 'Drive: error';
