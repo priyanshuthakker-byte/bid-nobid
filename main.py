@@ -473,7 +473,7 @@ async def process_files(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
 
- "codex/investigate-web-server-error-521-88e83c"
+
 
         if logo_file:
             tender_data["client_logo_file"] = str(logo_file)
