@@ -43,7 +43,7 @@ NASCENT = """NASCENT INFO TECHNOLOGIES PVT. LTD.:
 - Tech: Java/Spring Boot, Python/Django, React/Angular, Flutter, QGIS, ArcGIS, GeoServer, PostgreSQL, MongoDB
 - Projects: AMC GIS (10.55Cr), JuMC GIS (9.78Cr), VMC GIS+ERP (20.5Cr), KVIC Mobile GIS (PAN India),
   PCSCL Smart City, TCGL, BMC Android+iOS GIS, NSO Census, NP Lalganj
-- Signatory: Hitesh Patel (CAO) | POA valid: 01/04/2026-31/03/2027
+- Signatory: Hitesh Patel (CAO) | POA: EXPIRED 31-Mar-2026 — renewal required before submission
 - Address: A-805 Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad 380015
 - MD: Maulik Bhagat | nascent.tender@nascentinfo.com"""
 
