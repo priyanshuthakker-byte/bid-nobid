@@ -3,7 +3,10 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
+codex/investigate-web-server-error-521-88e83c
 import zipfile, tempfile, shutil, json, re, os, uuid
+import zipfile, tempfile, shutil, json, re, os
+main
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
@@ -469,6 +472,7 @@ async def process_files(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
 
+ codex/investigate-web-server-error-521-88e83c
         if logo_file:
             tender_data["client_logo_file"] = str(logo_file)
 
@@ -476,6 +480,7 @@ async def process_files(
         tender_data["quality_flags"] = quality_flags
         tender_data["quality_score"] = max(0, 100 - 10 * len(quality_flags))
 
+ main
         prebid_mode = str(prebid_only).strip().lower() in {"1", "true", "yes", "y"}
 
         if prebid_mode:

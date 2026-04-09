@@ -2169,9 +2169,12 @@ async function analyseTender() {
       logLine('… still running, parsing files and AI extraction in progress …','warn');
     }, 15000);
     logLine('Extracting text from documents...','');
+codex/investigate-web-server-error-521-88e83c
     var r = await fetchWithTimeout('/process-files',{method:'POST',body:fd}, 480000);
     var d = await parseJsonResponseSafe(r);
     if (hb) clearInterval(hb);
+    var r = await fetch('/process-files',{method:'POST',body:fd});
+    var d = await parseJsonResponseSafe(r); main
     hideLoad();
     if (!r.ok) throw new Error(d.detail || d.message || ('HTTP '+r.status));
     if (d.status !== 'success' && d.detail) throw new Error(d.detail);
@@ -3823,12 +3826,17 @@ async function generateStandalonePrebid() {
   fd.append('prebid_only', 'true'); // hint to backend
   var hb = null;
   try {
+codex/investigate-web-server-error-521-88e83c
     hb = setInterval(function(){
       toast('Pre-bid generation running...','info');
     }, 18000);
     var r = await fetchWithTimeout('/process-files', {method:'POST', body:fd}, 420000);
     var d = await parseJsonResponseSafe(r);
     if (hb) clearInterval(hb);
+=======
+    var r = await fetch('/process-files', {method:'POST', body:fd});
+    var d = await parseJsonResponseSafe(r);
+main
     hideLoad();
     if (!r.ok) throw new Error(d.detail || d.message || ('HTTP '+r.status));
     if (d.status !== 'success' && d.detail) throw new Error(d.detail);
