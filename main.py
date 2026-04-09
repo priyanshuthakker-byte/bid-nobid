@@ -22,7 +22,7 @@ from chatbot import process_message, load_history
 from gdrive_sync import (
     init_drive, save_to_drive, load_from_drive, is_available as drive_available,
     vault_upload, vault_download, vault_list, vault_delete,
-    save_profile_to_drive, load_profile_from_drive,
+    get_auth_mode,
 )
 from tracker import (
     get_deadline_alerts, get_pipeline_stats,
@@ -82,18 +82,6 @@ async def _drive_warm_sync():
         except Exception as e:
             print(f"Drive DB load attempt {attempt + 1} failed: {e}")
         await asyncio.sleep(1)
-
-    try:
-        await asyncio.wait_for(
-            asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
-            timeout=12,
-        )
-        print("Profile loaded from Drive")
-    except asyncio.TimeoutError:
-        print("Profile load from Drive timed out")
-    except Exception as e:
-        print(f"Profile load from Drive failed: {e}")
-
 
 @app.on_event("startup")
 async def startup_event():
@@ -707,16 +695,19 @@ async def save_checklist(t247_id: str, data: dict = Body(...)):
 
 @app.get("/profile")
 async def get_profile():
+    candidates = [PROFILE_FILE, BASE_DIR / "nascent_profile.json"]
+    for path in candidates:
+        try:
+            if path.exists():
+                return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
     from nascent_checker import load_profile
     return load_profile()
 
 @app.post("/profile")
 async def update_profile(data: dict = Body(...)):
     PROFILE_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    try:
-        save_profile_to_drive(data)
-    except Exception:
-        pass
     return {"status": "saved"}
 
 
@@ -959,23 +950,28 @@ async def sync_drive():
         return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
     db = load_db()
     ok = save_to_drive(DB_FILE)
-    if PROFILE_FILE.exists():
-        try:
-            profile_data = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))
-            save_profile_to_drive(profile_data)
-        except Exception:
-            pass
     count = len(db.get("tenders", {}))
     if ok:
-        return {"status": "ok", "message": f"Synced {count} tenders + profile to Drive"}
+        return {"status": "ok", "message": f"Synced {count} tenders to Drive"}
     return JSONResponse({"status": "error", "message": "Sync failed"}, status_code=500)
 
 @app.get("/drive-status")
 async def drive_status():
     db = load_db()
+    tenders_count = len(db.get("tenders", {}))
+    oauth_fields = {
+        "GDRIVE_OAUTH_CLIENT_ID": bool(os.environ.get("GDRIVE_OAUTH_CLIENT_ID", "").strip()),
+        "GDRIVE_OAUTH_CLIENT_SECRET": bool(os.environ.get("GDRIVE_OAUTH_CLIENT_SECRET", "").strip()),
+        "GDRIVE_OAUTH_REFRESH_TOKEN": bool(os.environ.get("GDRIVE_OAUTH_REFRESH_TOKEN", "").strip()),
+    }
+    service_account_set = bool(os.environ.get("GDRIVE_CREDENTIALS", "").strip())
     return {
         "drive_connected": drive_available(),
-        "tenders_in_db": len(db.get("tenders", {})),
+        "auth_mode": get_auth_mode(),
+        "oauth2_env": oauth_fields,
+        "service_account_env": service_account_set,
+        "tenders_in_db": tenders_count,
+        "tenders_in_memory": tenders_count,  # backward-compatible alias for older UI code
         "db_file_exists": DB_FILE.exists(),
         "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
         "profile_exists": PROFILE_FILE.exists(),

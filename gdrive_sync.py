@@ -10,33 +10,66 @@ from pathlib import Path
 _drive_service = None
 _file_id_cache = {}
 _credentials = None
+_auth_mode = "none"
 
 VAULT_FOLDER_NAME = "nascent_vault"
 
 
 def init_drive():
-    global _drive_service, _credentials
+    global _drive_service, _credentials, _auth_mode
     try:
-        creds_json = os.environ.get("GDRIVE_CREDENTIALS")
-        if not creds_json:
-            print("GDRIVE_CREDENTIALS env var not set")
-            return False
-        from google.oauth2.service_account import Credentials
+        # OAuth2 (user credentials) takes precedence when fully configured.
+        client_id = os.environ.get("GDRIVE_OAUTH_CLIENT_ID", "").strip()
+        client_secret = os.environ.get("GDRIVE_OAUTH_CLIENT_SECRET", "").strip()
+        refresh_token = os.environ.get("GDRIVE_OAUTH_REFRESH_TOKEN", "").strip()
+        access_token = os.environ.get("GDRIVE_OAUTH_ACCESS_TOKEN", "").strip()
+
         from googleapiclient.discovery import build
-        creds_data = json.loads(creds_json)
-        _credentials = creds_data
-        creds = Credentials.from_service_account_info(
-            creds_data,
-            scopes=["https://www.googleapis.com/auth/drive"]
-        )
+
+        if client_id and client_secret and refresh_token:
+            from google.oauth2.credentials import Credentials
+
+            creds = Credentials(
+                token=access_token or None,
+                refresh_token=refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=client_id,
+                client_secret=client_secret,
+                scopes=["https://www.googleapis.com/auth/drive"],
+            )
+            _credentials = {
+                "type": "oauth2",
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "access_token": access_token,
+            }
+            _auth_mode = "oauth2"
+        else:
+            creds_json = os.environ.get("GDRIVE_CREDENTIALS")
+            if not creds_json:
+                print("Neither OAuth2 nor service account Drive credentials are configured")
+                return False
+            from google.oauth2.service_account import Credentials
+
+            creds_data = json.loads(creds_json)
+            _credentials = {"type": "service_account", "payload": creds_data}
+            creds = Credentials.from_service_account_info(
+                creds_data,
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
+            _auth_mode = "service_account"
+
         _drive_service = build("drive", "v3", credentials=creds)
         _drive_service.files().list(pageSize=1, fields="files(id)").execute()
-        print("Google Drive connected successfully")
+        print(f"Google Drive connected successfully via {_auth_mode}")
         return True
     except json.JSONDecodeError as e:
+        _auth_mode = "none"
         print(f"GDRIVE_CREDENTIALS is not valid JSON: {e}")
         return False
     except Exception as e:
+        _auth_mode = "none"
         print(f"Google Drive init failed: {e}")
         return False
 
@@ -46,12 +79,25 @@ def _reconnect():
     try:
         if not _credentials:
             return False
-        from google.oauth2.service_account import Credentials
         from googleapiclient.discovery import build
-        creds = Credentials.from_service_account_info(
-            _credentials,
-            scopes=["https://www.googleapis.com/auth/drive"]
-        )
+        if _credentials.get("type") == "oauth2":
+            from google.oauth2.credentials import Credentials
+
+            creds = Credentials(
+                token=_credentials.get("access_token") or None,
+                refresh_token=_credentials.get("refresh_token"),
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=_credentials.get("client_id"),
+                client_secret=_credentials.get("client_secret"),
+                scopes=["https://www.googleapis.com/auth/drive"],
+            )
+        else:
+            from google.oauth2.service_account import Credentials
+
+            creds = Credentials.from_service_account_info(
+                _credentials["payload"],
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
         _drive_service = build("drive", "v3", credentials=creds)
         print("Google Drive reconnected")
         return True
@@ -391,3 +437,7 @@ def load_profile_from_drive(local_path: Path) -> bool:
 
 def is_available():
     return _drive_service is not None
+
+
+def get_auth_mode() -> str:
+    return _auth_mode
