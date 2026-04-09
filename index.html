@@ -574,48 +574,48 @@ textarea.email-input{resize:vertical;min-height:180px;line-height:1.6}
   </div>
   <div class="sb-scroll">
     <div class="sb-section">Main</div>
-    <button class="sb-btn active" data-page="dashboard">
+    <button type="button" class="sb-btn active" data-page="dashboard" onclick="showPage('dashboard')">
       <span class="ico">📊</span>Dashboard
       <span class="sb-badge" id="nb-total">0</span>
     </button>
-    <button class="sb-btn" data-page="tenders">
+    <button type="button" class="sb-btn" data-page="tenders" onclick="showPage('tenders')">
       <span class="ico">📋</span>All Tenders
     </button>
 
     <div class="sb-section">Analysis</div>
-    <button class="sb-btn" data-page="analyse">
+    <button type="button" class="sb-btn" data-page="analyse" onclick="showPage('analyse')">
       <span class="ico">🔍</span>Analyse Tender
     </button>
-    <button class="sb-btn" data-page="prebid">
+    <button type="button" class="sb-btn" data-page="prebid" onclick="showPage('prebid')">
       <span class="ico">✉️</span>Pre-Bid Queries
     </button>
-    <button class="sb-btn" data-page="checklist">
+    <button type="button" class="sb-btn" data-page="checklist" onclick="showPage('checklist')">
       <span class="ico">✅</span>Checklist
     </button>
-    <button class="sb-btn" data-page="reports">
+    <button type="button" class="sb-btn" data-page="reports" onclick="showPage('reports')">
       <span class="ico">📑</span>Reports
     </button>
 
     <div class="sb-section">Pipeline</div>
-    <button class="sb-btn" data-page="tracker">
+    <button type="button" class="sb-btn" data-page="tracker" onclick="showPage('tracker')">
       <span class="ico">🎯</span>Bid Tracker
       <span class="sb-badge" id="nb-bid">0</span>
     </button>
-    <button class="sb-btn" data-page="winloss">
+    <button type="button" class="sb-btn" data-page="winloss" onclick="showPage('winloss')">
       <span class="ico">🏆</span>Win / Loss
     </button>
-    <button class="sb-btn" data-page="submission">
+    <button type="button" class="sb-btn" data-page="submission" onclick="showPage('submission')">
       <span class="ico">📦</span>Submission Pkg
     </button>
-    <button class="sb-btn" data-page="vault">
+    <button type="button" class="sb-btn" data-page="vault" onclick="showPage('vault')">
       <span class="ico">🗄️</span>Document Vault
     </button>
 
     <div class="sb-section">System</div>
-    <button class="sb-btn" data-page="profile">
+    <button type="button" class="sb-btn" data-page="profile" onclick="showPage('profile')">
       <span class="ico">🏢</span>Nascent Profile
     </button>
-    <button class="sb-btn" data-page="settings">
+    <button type="button" class="sb-btn" data-page="settings" onclick="showPage('settings')">
       <span class="ico">⚙️</span>Settings
     </button>
   </div>
@@ -1116,18 +1116,18 @@ textarea.email-input{resize:vertical;min-height:180px;line-height:1.6}
           <span style="font-size:12px;color:var(--text3);margin-left:10px">Saved to server · used for scoring &amp; matching</span>
         </div>
         <div class="topbar-right">
-          <button class="btn btn-ghost btn-sm" onclick="switchProfileTab('bidrules')">⚙ Bid Rules</button>
+          <button class="btn btn-ghost btn-sm" onclick="switchProfileTab('bidrules', event)">⚙ Bid Rules</button>
           <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
         </div>
       </div>
       <div class="page-body">
         <div class="tab-row">
-          <div class="tab active" onclick="switchProfileTab('company')">🏢 Company</div>
-          <div class="tab" onclick="switchProfileTab('finance')">💰 Finance</div>
-          <div class="tab" onclick="switchProfileTab('certs')">🏅 Certifications</div>
-          <div class="tab" onclick="switchProfileTab('projects')">📁 Projects</div>
-          <div class="tab" onclick="switchProfileTab('team')">💻 Tech Stack</div>
-          <div class="tab" onclick="switchProfileTab('bidrules')">⚙ Bid Rules</div>
+          <div class="tab active" onclick="switchProfileTab('company', event)">🏢 Company</div>
+          <div class="tab" onclick="switchProfileTab('finance', event)">💰 Finance</div>
+          <div class="tab" onclick="switchProfileTab('certs', event)">🏅 Certifications</div>
+          <div class="tab" onclick="switchProfileTab('projects', event)">📁 Projects</div>
+          <div class="tab" onclick="switchProfileTab('team', event)">💻 Tech Stack</div>
+          <div class="tab" onclick="switchProfileTab('bidrules', event)">⚙ Bid Rules</div>
         </div>
 
         <!-- ── COMPANY TAB ── -->
@@ -1763,7 +1763,10 @@ function showPage(name) {
   if (name==='settings') loadSettings();
 }
 document.querySelectorAll('.sb-btn[data-page]').forEach(function(b){
-  b.addEventListener('click', function(){ showPage(b.dataset.page); });
+  b.addEventListener('click', function(e){
+    e.preventDefault();
+    showPage(b.dataset.page);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -2599,7 +2602,7 @@ var profileTabActive = 'company';
 var _editingProjectIdx = -1;
 var _stateOffices = [];
 
-function switchProfileTab(tab) {
+function switchProfileTab(tab, evt) {
   ['company','finance','certs','projects','team','bidrules'].forEach(function(t){
     var el = document.getElementById('profile-tab-'+t);
     if (el) el.classList.remove('active');
@@ -2607,7 +2610,7 @@ function switchProfileTab(tab) {
   document.querySelectorAll('#page-profile .tab').forEach(function(t){t.classList.remove('active');});
   var activeEl = document.getElementById('profile-tab-'+tab);
   if (activeEl) activeEl.classList.add('active');
-  event.target.classList.add('active');
+  if (evt && evt.target && evt.target.classList) evt.target.classList.add('active');
   profileTabActive = tab;
   if (tab === 'bidrules') renderRuleEffectiveness();
 }
@@ -3207,12 +3210,19 @@ function goToPage(pageName) {
 async function checkStatus() {
   try {
     var r = await fetch('/drive-status'); var d = await r.json();
+    function pickCount() {
+      if (d && d.tenders_in_memory !== undefined && d.tenders_in_memory !== null) return d.tenders_in_memory;
+      if (d && d.tenders_in_db !== undefined && d.tenders_in_db !== null) return d.tenders_in_db;
+      if (G && G.tenders && G.tenders.length !== undefined) return G.tenders.length;
+      return 0;
+    }
     var dot = document.getElementById('drive-dot');
     var lbl = document.getElementById('drive-label');
     var sysVal = document.getElementById('sys-drive-val');
     if (d.drive_connected) {
+      var tendersCount = pickCount();
       if (dot) { dot.className='dot dot-green'; dot.style.animation='none'; }
-      if (lbl) lbl.textContent = 'Drive: '+d.tenders_in_memory+' tenders';
+      if (lbl) lbl.textContent = 'Drive: '+tendersCount+' tenders';
       if (sysVal) { sysVal.textContent = 'Connected'; sysVal.style.color='var(--green)'; }
     } else {
       if (dot) dot.className='dot dot-red';
@@ -3221,7 +3231,7 @@ async function checkStatus() {
     }
     // Update tenders count in settings
     var st = document.getElementById('sys-tenders');
-    if (st) st.textContent = d.tenders_in_memory||G.tenders.length;
+    if (st) st.textContent = pickCount();
   } catch(e){ 
     var lbl = document.getElementById('drive-label'); 
     if (lbl) lbl.textContent = 'Drive: error';

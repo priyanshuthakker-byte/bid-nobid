@@ -7,20 +7,25 @@ Conditional only for: EMD exemption query, local office, CERT-In, STQC,
 or any criterion where a genuine caveat exists regardless of numbers.
 """
 
-import json, re
+import json, re, os
 from pathlib import Path
 from datetime import datetime, date
 from typing import Dict, List, Optional
 
-PROFILE_PATH = Path(__file__).parent / "nascent_profile.json"
+BASE_DIR = Path(__file__).parent
+RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+RUNTIME_PROFILE_PATH = RUNTIME_DIR / "nascent_profile.json"
+REPO_PROFILE_PATH = BASE_DIR / "nascent_profile.json"
 
 
 def load_profile() -> Dict:
-    try:
-        with open(PROFILE_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return _default_profile()
+    for profile_path in [RUNTIME_PROFILE_PATH, REPO_PROFILE_PATH]:
+        try:
+            with open(profile_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            continue
+    return _default_profile()
 
 
 def _default_profile() -> Dict:
