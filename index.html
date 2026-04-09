@@ -3220,7 +3220,9 @@ async function checkStatus() {
     var lbl = document.getElementById('drive-label');
     var sysVal = document.getElementById('sys-drive-val');
     if (d.drive_connected) {
+codex/identify-system-implementation-gaps-and-oauth2-s73uxj
       var tendersCount = pickCount();
+      var tendersCount = d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0; main
       if (dot) { dot.className='dot dot-green'; dot.style.animation='none'; }
       if (lbl) lbl.textContent = 'Drive: '+tendersCount+' tenders';
       if (sysVal) { sysVal.textContent = 'Connected'; sysVal.style.color='var(--green)'; }
@@ -3231,7 +3233,10 @@ async function checkStatus() {
     }
     // Update tenders count in settings
     var st = document.getElementById('sys-tenders');
+codex/identify-system-implementation-gaps-and-oauth2-s73uxj
     if (st) st.textContent = pickCount();
+    if (st) st.textContent = (d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0);
+main
   } catch(e){ 
     var lbl = document.getElementById('drive-label'); 
     if (lbl) lbl.textContent = 'Drive: error';
