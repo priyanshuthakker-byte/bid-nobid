@@ -613,11 +613,10 @@ function viewTenderDetail(tid) {
     }).join('')+
     '</tbody></table>'+
     '<div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap">'+
-      '<button class="btn btn-primary btn-sm" onclick="closeDetail();setActive(\''+safeTid+'\',\'\');showPage(\'analyse\')">🔍 Analyse</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="closeDetail();setActive(\''+safeTid+'\',\'\');showPage(\'checklist\')">✅ Checklist</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="closeDetail();setActive(\''+safeTid+'\',\'\');showPage(\'documents\')">📄 Documents</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="skipTender(\''+safeTid+'\')">🚫 Skip</button>'+
-    '</div>';
+    '<button class="btn btn-primary btn-sm" onclick="closeDetail();setActive(\''+tid+'\',\'\');showPage(\'analyse\')">🔍 Analyse</button>'+
+'<button class="btn btn-ghost btn-sm" onclick="closeDetail();setActive(\''+tid+'\',\'\');showPage(\'checklist\')">✅ Checklist</button>'+
+'<button class="btn btn-ghost btn-sm" onclick="closeDetail();setActive(\''+tid+'\',\'\');showPage(\'documents\')">📄 Documents</button>'+
+'<button class="btn btn-ghost btn-sm" onclick="closeDetail();autoDownload(\''+tid+'\')">⬇ Auto-download</button>'+
 
   document.getElementById('detail-panel').classList.add('open');
   document.getElementById('detail-overlay').classList.add('open');
