@@ -958,17 +958,7 @@ async def sync_drive():
 @app.get("/drive-status")
 async def drive_status():
     db = load_db()
- codex/identify-system-implementation-gaps-and-oauth2-oap0qu
     tenders_count = len(db.get("tenders", {}))
-
- codex/identify-system-implementation-gaps-and-oauth2-rf0wij
-    tenders_count = len(db.get("tenders", {}))
-
- codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
-    tenders_count = len(db.get("tenders", {}))
-
-main
-
 
     oauth_fields = {
         "GDRIVE_OAUTH_CLIENT_ID": bool(os.environ.get("GDRIVE_OAUTH_CLIENT_ID", "").strip()),
@@ -976,32 +966,13 @@ main
         "GDRIVE_OAUTH_REFRESH_TOKEN": bool(os.environ.get("GDRIVE_OAUTH_REFRESH_TOKEN", "").strip()),
     }
     service_account_set = bool(os.environ.get("GDRIVE_CREDENTIALS", "").strip())
- codex/identify-system-implementation-gaps-and-oauth2-oap0qu
-
-
- codex/identify-system-implementation-gaps-and-oauth2-rf0wij
-
-
- main
     return {
         "drive_connected": drive_available(),
         "auth_mode": get_auth_mode(),
         "oauth2_env": oauth_fields,
         "service_account_env": service_account_set,
- codex/identify-system-implementation-gaps-and-oauth2-oap0qu
         "tenders_in_db": tenders_count,
-        "tenders_in_memory": tenders_count,  # backward-compatible alias for older UI code
-
- codex/identify-system-implementation-gaps-and-oauth2-rf0wij
-        "tenders_in_db": tenders_count,
-        "tenders_in_memory": tenders_count,  # backward-compatible alias for older UI code
-
- codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
-        "tenders_in_db": tenders_count,
-        "tenders_in_memory": tenders_count,  # backward-compatible alias for older UI code
-
-        "tenders_in_db": len(db.get("tenders", {})),
- main
+        "tenders_in_memory": tenders_count,
         "db_file_exists": DB_FILE.exists(),
         "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
         "profile_exists": PROFILE_FILE.exists(),
@@ -1069,13 +1040,17 @@ async def chat(data: dict = Body(...)):
     if correction_applied:
         response["correction_applied"] = correction_applied
         response["updated_tender_data"] = updated_tender_data
-        idx_label = str(idx + 1) if pq_match else ""
-        response["response"] = (
-            f"Done. "
-            f"{'PQ ' + idx_label + ' updated to ' + new_status_title if pq_match else ''}"
-            f"{'Verdict updated to ' + new_verdict if verdict_match else ''}. "
-            "Correction saved and preview will refresh."
-        )
+        pq_label = ""
+        verdict_label = ""
+        if pq_match and "idx" in dir():
+            try:
+                pq_label = f"PQ {idx + 1} updated to {new_status_title}"
+            except Exception:
+                pass
+        if verdict_match and correction_applied.get("type") == "verdict":
+            verdict_label = f"Verdict updated to {correction_applied.get('new_verdict', '')}"
+        msg_parts = [p for p in [pq_label, verdict_label] if p]
+        response["response"] = "Done. " + " | ".join(msg_parts) + ". Correction saved and preview will refresh."
     return response
 
 @app.get("/chat/history")
