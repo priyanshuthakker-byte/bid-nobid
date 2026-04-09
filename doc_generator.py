@@ -293,6 +293,34 @@ class BidDocGenerator:
             cell_write(c1, val, bold=hl, size=9, color=(C["orange"] if hl else None))
         self.doc.add_paragraph()
 
+        # Snapshot traceability matrix for cross-checking (Clause / Sub-Clause / Page No)
+        trace_map = data.get("snapshot_trace", {}) if isinstance(data.get("snapshot_trace", {}), dict) else {}
+        p_trace = self.doc.add_paragraph()
+        add_run(p_trace, "Snapshot Cross-Check References", bold=True, size=10, color=C["dark_blue"])
+        t_trace = self.doc.add_table(rows=1, cols=4)
+        t_trace.alignment = WD_TABLE_ALIGNMENT.CENTER
+        set_table_borders(t_trace, color=C["mid_blue"])
+        hrow = t_trace.rows[0]
+        for hcell, hdr in zip(hrow.cells, ["Snapshot Field", "Clause No", "Sub-Clause No", "Page No"]):
+            set_bg(hcell, C["mid_blue"]); set_borders(hcell, color="FFFFFF", size=4)
+            p = hcell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            add_run(p, hdr, bold=True, size=8, color="FFFFFF")
+
+        for idx, (key, _raw_val) in enumerate(fields):
+            ref = trace_map.get(key, {}) if isinstance(trace_map.get(key, {}), dict) else {}
+            row = t_trace.add_row()
+            bg = C["white"] if idx % 2 == 0 else C["alt_row"]
+            vals = [
+                key,
+                ref.get("clause_no", "—"),
+                ref.get("sub_clause_no", "—"),
+                ref.get("page_no", "—"),
+            ]
+            for c, v in zip(row.cells, vals):
+                set_bg(c, bg); set_borders(c)
+                cell_write(c, flatten_value(v), size=8)
+        self.doc.add_paragraph()
+
     # ── SECTION 2: JV / CONSORTIUM CONDITIONS ─────────────────
     def _section_jv_conditions(self, data):
         jv_conditions = data.get("jv_conditions", [])
@@ -336,70 +364,46 @@ class BidDocGenerator:
             add_run(p, strip_emojis(str(background)), size=9)
             self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
-        # 3b — Work Components (rich numbered table)
+        # 3b — Work Components (narrative, not table)
         scope_items = data.get("scope_items", [])
         if not scope_items:
             p = self.doc.add_paragraph()
             add_run(p, "Scope not extracted — refer tender document.", italic=True, size=9)
         else:
-            # Check if items are rich dicts or plain strings
+            p_head = self.doc.add_paragraph()
+            p_head.paragraph_format.space_after = Pt(3)
+            add_run(p_head, "Major Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
             is_rich = scope_items and isinstance(scope_items[0], dict)
-            if is_rich:
-                # Rich format: {title, section_ref, description, deliverables}
-                p_head = self.doc.add_paragraph()
-                p_head.paragraph_format.space_after = Pt(3)
-                add_run(p_head, "Major Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
-                table = self.doc.add_table(rows=1, cols=4)
-                table.alignment = WD_TABLE_ALIGNMENT.CENTER
-                set_table_borders(table, color=C["mid_blue"])
-                hrow = table.rows[0]; repeat_header(hrow)
-                for hcell, hdr in zip(hrow.cells, ["Sr.", "Component / Section", "Description & Deliverables", "Tech / Platform"]):
-                    set_bg(hcell, C["dark_blue"]); set_borders(hcell, color="FFFFFF", size=4)
-                    p = hcell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(3)
-                    add_run(p, hdr, bold=True, size=9, color="FFFFFF")
-                for ri, item in enumerate(scope_items):
-                    row = table.add_row()
-                    bg = C["white"] if ri % 2 == 0 else C["alt_row"]
-                    c0 = row.cells[0]; c0.width = Cm(0.9)
-                    set_bg(c0, C["label_col"]); set_borders(c0)
-                    cell_write(c0, str(item.get("sl_no", ri+1)), bold=True, size=9,
-                               color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
-                    c1 = row.cells[1]; c1.width = Cm(5.0)
-                    set_bg(c1, C["light_blue"] if ri == 0 else bg); set_borders(c1)
-                    title = item.get("title", "")
-                    sec   = item.get("section_ref", "")
-                    cell_write(c1, f"{title}\n({sec})" if sec else title, bold=True, size=9, color=C["dark_blue"])
-                    c2 = row.cells[2]; c2.width = Cm(14.5)
-                    set_bg(c2, bg); set_borders(c2)
-                    desc = strip_emojis(item.get("description", ""))
+            for idx, item in enumerate(scope_items, 1):
+                p = self.doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.1)
+                p.paragraph_format.space_after = Pt(4)
+                if is_rich and isinstance(item, dict):
+                    title = strip_emojis(item.get("title", "") or "")
+                    sec = strip_emojis(item.get("section_ref", "") or "")
+                    desc = strip_emojis(item.get("description", "") or "")
+                    tech = strip_emojis(item.get("tech_platform", "") or "")
                     deliverables = item.get("deliverables", [])
+                    line1 = f"{idx}. {title}" if title else f"{idx}."
+                    if sec:
+                        line1 += f" (Clause {sec})"
+                    add_run(p, line1, bold=True, size=9, color=C["dark_blue"])
+                    if desc:
+                        p2 = self.doc.add_paragraph()
+                        p2.paragraph_format.left_indent = Inches(0.35)
+                        p2.paragraph_format.space_after = Pt(2)
+                        add_run(p2, desc, size=9)
                     if deliverables:
-                        dl_text = " | Deliverables: " + "; ".join(f"({chr(96+i+1)}) {d}" for i, d in enumerate(deliverables) if d)
-                        cell_write(c2, desc + dl_text, size=9)
-                    else:
-                        cell_write(c2, desc, size=9)
-                    c3 = row.cells[3]; c3.width = Cm(5.1)
-                    set_bg(c3, bg); set_borders(c3)
-                    cell_write(c3, strip_emojis(item.get("tech_platform", "—")), size=8, italic=True, color=C["gray"])
-            else:
-                # Plain string list — numbered table
-                p_head = self.doc.add_paragraph()
-                p_head.paragraph_format.space_after = Pt(3)
-                add_run(p_head, "Work Components & Deliverables", bold=True, size=10, color=C["dark_blue"])
-                table = self.doc.add_table(rows=0, cols=2)
-                table.alignment = WD_TABLE_ALIGNMENT.CENTER
-                set_table_borders(table, color=C["mid_blue"])
-                for idx, item in enumerate(scope_items):
-                    row = table.add_row()
-                    bg = C["white"] if idx % 2 == 0 else C["alt_row"]
-                    c0 = row.cells[0]; c0.width = Cm(1.2)
-                    set_bg(c0, C["label_col"]); set_borders(c0)
-                    cell_write(c0, str(idx+1), bold=True, size=9, color=C["dark_blue"],
-                               align=WD_ALIGN_PARAGRAPH.CENTER)
-                    c1 = row.cells[1]; c1.width = Cm(24.3)
-                    set_bg(c1, bg); set_borders(c1)
-                    cell_write(c1, strip_emojis(str(item)), size=9)
+                        p3 = self.doc.add_paragraph()
+                        p3.paragraph_format.left_indent = Inches(0.35)
+                        p3.paragraph_format.space_after = Pt(2)
+                        add_run(p3, "Deliverables: " + "; ".join(str(d) for d in deliverables if d), size=8, italic=True)
+                    if tech:
+                        p4 = self.doc.add_paragraph()
+                        p4.paragraph_format.left_indent = Inches(0.35)
+                        add_run(p4, f"Technology/Platform: {tech}", size=8, color=C["gray"])
+                else:
+                    add_run(p, f"{idx}. {strip_emojis(str(item))}", size=9)
 
         # 3c — Key Integrations (if provided)
         integrations = data.get("key_integrations", [])
@@ -453,15 +457,17 @@ class BidDocGenerator:
         # + Nascent columns: Nascent Status | Nascent Remarks
         headers = [
             "S.N.",
-            "Basic\nRequirement",
+            "Clause No",
+            "Sub-Clause No",
+            "Page No",
             "Specific Requirements\n(word-for-word from tender)",
             "Documents Required\n(as per tender)",
             "Nascent\nStatus",
             "Nascent Remarks /\nPre-Bid Query",
         ]
-        col_widths = [Cm(0.9), Cm(3.5), Cm(8.5), Cm(5.5), Cm(2.0), Cm(6.1)]
+        col_widths = [Cm(0.8), Cm(2.3), Cm(2.5), Cm(1.5), Cm(7.5), Cm(4.5), Cm(1.8), Cm(5.5)]
 
-        table = self.doc.add_table(rows=1, cols=6)
+        table = self.doc.add_table(rows=1, cols=8)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         set_table_borders(table, color=C["mid_blue"])
         hrow = table.rows[0]; repeat_header(hrow)
@@ -490,32 +496,55 @@ class BidDocGenerator:
             cell_write(cells[0], str(item.get("sl_no", ri+1)), bold=True, size=9,
                        color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
 
-            # Col 1: Basic Requirement (clause_ref — from RFP)
+            # Col 1: Clause number from RFP
             cells[1].width = col_widths[1]
             set_bg(cells[1], C["light_blue"]); set_borders(cells[1])
             cell_write(cells[1], strip_emojis(str(item.get("clause_ref", "—") or "—")),
                        bold=True, size=8, color=C["dark_blue"])
 
-            # Col 2: Specific Requirements — WORD FOR WORD from RFP
+            # Col 2: Sub-clause number from RFP
             cells[2].width = col_widths[2]
-            set_bg(cells[2], bg); set_borders(cells[2])
-            cell_write(cells[2], strip_emojis(str(item.get("criteria", "") or "")), size=9)
+            set_bg(cells[2], C["light_blue"]); set_borders(cells[2])
+            cell_write(cells[2], strip_emojis(str(item.get("sub_clause_ref", item.get("sub_clause_no", "—")) or "—")),
+                       bold=True, size=8, color=C["dark_blue"])
 
-            # Col 3: Documents Required — WORD FOR WORD from RFP
+            # Col 3: Page number from RFP
             cells[3].width = col_widths[3]
-            set_bg(cells[3], bg); set_borders(cells[3])
-            cell_write(cells[3], strip_emojis(str(item.get("details", "") or "")), size=8)
-
-            # Col 4: Nascent Status (added by analysis)
-            cells[4].width = col_widths[4]
-            set_bg(cells[4], C[s_bg]); set_borders(cells[4])
-            cell_write(cells[4], sym, bold=True, size=8, color=C[s_tc],
+            set_bg(cells[3], C["label_col"]); set_borders(cells[3])
+            cell_write(cells[3], strip_emojis(str(item.get("page_no", "—") or "—")), size=8,
                        align=WD_ALIGN_PARAGRAPH.CENTER)
 
-            # Col 5: Nascent Remarks (added by analysis)
+            # Col 4: Specific Requirements — WORD FOR WORD from RFP
+            cells[4].width = col_widths[4]
+            set_bg(cells[4], bg); set_borders(cells[4])
+            cell_write(cells[4], strip_emojis(str(item.get("criteria", "") or "")), size=8)
+
+            # Col 5: Documents Required — WORD FOR WORD from RFP
             cells[5].width = col_widths[5]
-            set_bg(cells[5], C[s_bg] if sc != "BLUE" else bg); set_borders(cells[5])
-            cell_write(cells[5], strip_emojis(str(item.get("nascent_remark", "") or "")), size=8)
+            set_bg(cells[5], bg); set_borders(cells[5])
+            cell_write(cells[5], strip_emojis(str(item.get("details", "") or "")), size=8)
+
+            # Col 6: Nascent Status (added by analysis)
+            cells[6].width = col_widths[6]
+            set_bg(cells[6], C[s_bg]); set_borders(cells[6])
+            cell_write(cells[6], sym, bold=True, size=8, color=C[s_tc],
+                       align=WD_ALIGN_PARAGRAPH.CENTER)
+
+            # Col 7: Nascent Remarks (added by analysis)
+            cells[7].width = col_widths[7]
+            set_bg(cells[7], C[s_bg] if sc != "BLUE" else bg); set_borders(cells[7])
+            cell_write(cells[7], strip_emojis(str(item.get("nascent_remark", "") or "")), size=8)
+
+        # Add-on section for criteria-like points extracted outside PQ/TQ
+        extra_points = data.get("additional_criteria_notes", [])
+        if extra_points:
+            self.doc.add_paragraph()
+            p = self.doc.add_paragraph()
+            add_run(p, "Additional Criteria Mentioned Outside PQ/TQ", bold=True, size=10, color=C["dark_blue"])
+            for i, note in enumerate(extra_points, 1):
+                px = self.doc.add_paragraph()
+                px.paragraph_format.left_indent = Inches(0.2)
+                add_run(px, f"{i}. {strip_emojis(str(note))}", size=8)
 
         self.doc.add_paragraph()
 
@@ -525,10 +554,8 @@ class BidDocGenerator:
         if not tq:
             return
         self._sec_heading("5", "Technical Evaluation (TQ) Criteria",
-                          "Columns 1–5 reproduced word-for-word from tender | "
-                          "Columns 6–7 added by Nascent analysis")
+                          "Replica from tender + Nascent AI scoring columns")
 
-        # TQ total marks and min qualifying score
         tq_total = data.get("tq_total_marks", "")
         tq_min = data.get("tq_min_qualifying_score", "")
         tq_nascent_est = data.get("tq_nascent_estimated_total", "")
@@ -544,20 +571,20 @@ class BidDocGenerator:
                 info_parts.append(f"Nascent Estimated Score: {tq_nascent_est}")
             add_run(p, " | ".join(info_parts), bold=True, size=9, color=C["dark_blue"])
 
-        # RFP columns: S. No. | Criteria | Evaluation Criteria | Documents Required | Maximum Marks
-        # + Nascent columns: Nascent Score | Nascent Remarks
         headers = [
             "S. No.",
-            "Criteria\n(word-for-word\nfrom tender)",
-            "Evaluation Criteria\n(slabs & marks —\nword-for-word from tender)",
-            "Documents\nRequired\n(as per tender)",
-            "Maximum\nMarks",
-            "Nascent\nScore",
-            "Nascent Remarks /\nScore Justification",
+            "Clause",
+            "Sub-Clause",
+            "Page",
+            "Criteria\n(word-for-word)",
+            "Evaluation Criteria\n(word-for-word)",
+            "Docs Required",
+            "Max",
+            "Nascent Score / Remarks",
         ]
-        col_widths = [Cm(0.9), Cm(4.5), Cm(6.0), Cm(3.5), Cm(1.5), Cm(1.5), Cm(8.6)]
+        col_widths = [Cm(0.8), Cm(1.8), Cm(2.0), Cm(1.2), Cm(4.5), Cm(5.5), Cm(3.0), Cm(1.2), Cm(6.8)]
 
-        table = self.doc.add_table(rows=1, cols=7)
+        table = self.doc.add_table(rows=1, cols=9)
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         set_table_borders(table, color=C["mid_blue"])
         hrow = table.rows[0]; repeat_header(hrow)
@@ -566,12 +593,11 @@ class BidDocGenerator:
             cell.width = w
             set_bg(cell, C["dark_blue"]); set_borders(cell, color="FFFFFF", size=4)
             p = cell.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.paragraph_format.space_before = Pt(3); p.paragraph_format.space_after = Pt(3)
+            p.paragraph_format.space_before = Pt(2); p.paragraph_format.space_after = Pt(2)
             add_run(p, hdr, bold=True, size=8, color="FFFFFF")
 
         total_nascent = 0
         total_max = 0
-
         for ri, item in enumerate(tq):
             if not isinstance(item, dict):
                 continue
@@ -579,99 +605,67 @@ class BidDocGenerator:
             bg = C["white"] if ri % 2 == 0 else C["alt_row"]
             raw_status = item.get("nascent_status", "Review")
             sym = clean_status(raw_status)
-            sc  = item.get("nascent_color") or status_color(sym)
+            sc = item.get("nascent_color") or status_color(sym)
             s_bg, s_tc = STATUS_STYLE.get(sc, ("blue_bg", "blue_text"))
             cells = row.cells
 
-            # Parse max marks and nascent score for totals
             try:
-                max_m = float(str(item.get("max_marks", "0")).strip() or "0")
-                total_max += max_m
+                total_max += float(str(item.get("max_marks", "0")).strip() or "0")
             except Exception:
                 pass
             try:
-                n_score = float(str(item.get("nascent_score", "0")).strip() or "0")
-                total_nascent += n_score
+                total_nascent += float(str(item.get("nascent_score", "0")).strip() or "0")
             except Exception:
                 pass
 
-            # Col 0: S. No.
-            cells[0].width = col_widths[0]
-            set_bg(cells[0], C["label_col"]); set_borders(cells[0])
-            cell_write(cells[0], str(item.get("sl_no", ri+1)), bold=True, size=9,
-                       color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
+            vals = [
+                str(item.get("sl_no", ri + 1)),
+                item.get("clause_ref", "—"),
+                item.get("sub_clause_ref", item.get("sub_clause_no", "—")),
+                item.get("page_no", "—"),
+                item.get("criteria", ""),
+                item.get("eval_criteria", item.get("details", "")),
+                item.get("documents_required", ""),
+                item.get("max_marks", "—"),
+                f"{item.get('nascent_score', '—')} | {item.get('nascent_remark', '')}",
+            ]
+            for ci, (cell, val) in enumerate(zip(cells, vals)):
+                set_bg(cell, C[s_bg] if ci == 8 and sc != "BLUE" else bg if ci >= 4 else C["label_col"] if ci in [0, 3, 7] else C["light_blue"])
+                set_borders(cell)
+                align = WD_ALIGN_PARAGRAPH.CENTER if ci in [0, 3, 7] else WD_ALIGN_PARAGRAPH.LEFT
+                color = C[s_tc] if ci == 8 and sc != "BLUE" else (C["dark_blue"] if ci in [0, 1, 2, 3, 7] else None)
+                cell_write(cell, strip_emojis(str(val or "—")), size=8, color=color, align=align, bold=(ci in [0, 7]))
 
-            # Col 1: Criteria — WORD FOR WORD from RFP
-            cells[1].width = col_widths[1]
-            set_bg(cells[1], bg); set_borders(cells[1])
-            cell_write(cells[1], strip_emojis(str(item.get("criteria", "") or "")), size=8)
-
-            # Col 2: Evaluation Criteria (slabs) — WORD FOR WORD from RFP
-            cells[2].width = col_widths[2]
-            set_bg(cells[2], bg); set_borders(cells[2])
-            # Use eval_criteria if available, else fall back to details
-            eval_text = (item.get("eval_criteria") or item.get("details") or "")
-            cell_write(cells[2], strip_emojis(str(eval_text)), size=8)
-
-            # Col 3: Documents Required — WORD FOR WORD from RFP
-            cells[3].width = col_widths[3]
-            set_bg(cells[3], bg); set_borders(cells[3])
-            docs_text = (item.get("documents_required") or "")
-            if not docs_text:
-                # Try to extract from details field if it has "Documents:" marker
-                details_full = str(item.get("details", ""))
-                if "Documents:" in details_full:
-                    docs_text = details_full.split("Documents:")[-1].strip()
-            cell_write(cells[3], strip_emojis(str(docs_text)), size=8)
-
-            # Col 4: Maximum Marks (from RFP)
-            cells[4].width = col_widths[4]
-            set_bg(cells[4], C["label_col"]); set_borders(cells[4])
-            cell_write(cells[4], str(item.get("max_marks", "—") or "—"),
-                       bold=True, size=9, color=C["dark_blue"],
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
-
-            # Col 5: Nascent Score (added by analysis)
-            cells[5].width = col_widths[5]
-            set_bg(cells[5], C[s_bg]); set_borders(cells[5])
-            cell_write(cells[5], str(item.get("nascent_score", "—") or "—"),
-                       bold=True, size=9, color=C[s_tc],
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
-
-            # Col 6: Nascent Remarks (added by analysis)
-            cells[6].width = col_widths[6]
-            set_bg(cells[6], C[s_bg] if sc != "BLUE" else bg); set_borders(cells[6])
-            cell_write(cells[6], strip_emojis(str(item.get("nascent_remark", "") or "")), size=8)
-
-        # Total row
         if total_max > 0:
-            trow = table.add_row()
-            set_bg(trow.cells[0], C["dark_blue"]); set_borders(trow.cells[0])
-            set_bg(trow.cells[1], C["dark_blue"]); set_borders(trow.cells[1])
-            cell_write(trow.cells[1], "Grand Total", bold=True, size=9, color="FFFFFF")
-            for ci in [2, 3]:
-                set_bg(trow.cells[ci], C["dark_blue"]); set_borders(trow.cells[ci])
-            set_bg(trow.cells[4], C["dark_blue"]); set_borders(trow.cells[4])
-            cell_write(trow.cells[4], str(int(total_max)), bold=True, size=10,
-                       color="FFFFFF", align=WD_ALIGN_PARAGRAPH.CENTER)
-            sc_color = "GREEN" if total_nascent >= 70 else "AMBER" if total_nascent >= 50 else "RED"
-            s_bg2, s_tc2 = STATUS_STYLE.get(sc_color, ("green_bg", "green_text"))
-            set_bg(trow.cells[5], C[s_bg2]); set_borders(trow.cells[5])
-            cell_write(trow.cells[5], str(int(total_nascent)), bold=True, size=10,
-                       color=C[s_tc2], align=WD_ALIGN_PARAGRAPH.CENTER)
-            set_bg(trow.cells[6], C[s_bg2]); set_borders(trow.cells[6])
+            p = self.doc.add_paragraph()
             min_q = data.get("tq_min_qualifying_score", "70")
-            cell_write(trow.cells[6],
-                       f"Nascent estimated score: {int(total_nascent)}/{int(total_max)}. "
-                       f"Minimum qualifying: {min_q}.",
-                       bold=True, size=8, color=C[s_tc2])
-
+            add_run(
+                p,
+                f"TQ total (Nascent estimate): {int(total_nascent)}/{int(total_max)} | Minimum qualifying: {min_q}",
+                bold=True, size=9, color=C["dark_blue"]
+            )
         self.doc.add_paragraph()
 
     # ── SECTION 6: PAYMENT TERMS ──────────────────────────────
     def _section_payment(self, data):
         self._sec_heading("6", "Payment Schedule & Terms",
                           "Source: Tender document — milestone-linked payment schedule")
+        work_schedule = data.get("work_schedule", data.get("project_timelines", []))
+        if work_schedule:
+            p_ws = self.doc.add_paragraph()
+            add_run(p_ws, "Work Schedule", bold=True, size=10, color=C["dark_blue"])
+            for i, ws in enumerate(work_schedule, 1):
+                p = self.doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.2)
+                if isinstance(ws, dict):
+                    task = ws.get("task", ws.get("milestone", f"Item {i}"))
+                    timeline = ws.get("timeline", ws.get("due", ""))
+                    clause = ws.get("clause_ref", "—")
+                    add_run(p, f"{i}. {strip_emojis(str(task))} | Timeline: {strip_emojis(str(timeline))} | Clause: {strip_emojis(str(clause))}", size=8)
+                else:
+                    add_run(p, f"{i}. {strip_emojis(str(ws))}", size=8)
+            self.doc.add_paragraph()
+
         items = data.get("payment_terms", [])
 
         if items and isinstance(items[0], dict) and "milestone" in items[0]:
@@ -732,6 +726,15 @@ class BidDocGenerator:
                 c1 = row.cells[1]; c1.width = Cm(24.3)
                 set_bg(c1, bg); set_borders(c1)
                 cell_write(c1, strip_emojis(flatten_value(item)), size=9)
+        terms_text = data.get("payment_terms_text", [])
+        if terms_text:
+            self.doc.add_paragraph()
+            p_t = self.doc.add_paragraph()
+            add_run(p_t, "Specific Payment Terms", bold=True, size=10, color=C["dark_blue"])
+            for i, term in enumerate(terms_text, 1):
+                p = self.doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.2)
+                add_run(p, f"{i}. {strip_emojis(str(term))}", size=8)
         self.doc.add_paragraph()
 
     # ── SECTION 7: PENALTY & RISK ─────────────────────────────

@@ -3,7 +3,7 @@ chatbot.py — Bid Assistant Chatbot
 Answers questions about tenders using AI + tender database context.
 THIS FILE WAS MISSING — /chat endpoint failed silently without it.
 """
-import json
+import json, os
 import logging
 from pathlib import Path
 from typing import List, Dict, Any
@@ -11,7 +11,8 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_DIR = Path(__file__).parent / "data"
+RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+OUTPUT_DIR = RUNTIME_DIR / "data"
 OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 HISTORY_FILE = OUTPUT_DIR / "chat_history.json"
 DB_FILE = OUTPUT_DIR / "tenders_db.json"

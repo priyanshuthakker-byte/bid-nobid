@@ -3,11 +3,11 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
-import zipfile, tempfile, shutil, json, re
+import zipfile, tempfile, shutil, json, re, os
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, Form
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -19,6 +19,7 @@ from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_co
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
+from submission_generator import generate_submission_package
 from gdrive_sync import (
     init_drive, save_to_drive, load_from_drive, is_available as drive_available,
     vault_upload, vault_download, vault_list, vault_delete,
@@ -57,11 +58,12 @@ def oauth_callback(request: Request):
 # --- END NEW ROUTE ---
 
 BASE_DIR    = Path(__file__).parent
-OUTPUT_DIR  = BASE_DIR / "data"
-TEMP_DIR    = BASE_DIR / "temp"
-VAULT_DIR   = BASE_DIR / "vault"          # local vault cache (survives Render if Drive connected)
+RUNTIME_DIR = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+OUTPUT_DIR  = RUNTIME_DIR / "data"
+TEMP_DIR    = RUNTIME_DIR / "temp"
+VAULT_DIR   = RUNTIME_DIR / "vault"       # local vault cache (survives Render instance while alive)
 DB_FILE     = OUTPUT_DIR / "tenders_db.json"
-PROFILE_FILE = BASE_DIR / "nascent_profile.json"
+PROFILE_FILE = RUNTIME_DIR / "nascent_profile.json"
 
 for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
     d.mkdir(exist_ok=True, parents=True)
@@ -69,19 +71,50 @@ for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
 
 # ── STARTUP ───────────────────────────────────────────────────
 
+async def _drive_warm_sync():
+    """Run Drive reads after startup so health checks are not blocked."""
+    # Load DB from Drive with bounded retries.
+    for attempt in range(2):
+        try:
+            success = await asyncio.wait_for(
+                asyncio.to_thread(load_from_drive, DB_FILE),
+                timeout=12,
+            )
+            if success:
+                db = load_db()
+                print(f"Loaded {len(db.get('tenders', {}))} tenders from Google Drive")
+                break
+        except asyncio.TimeoutError:
+            print(f"Drive DB load attempt {attempt + 1} timed out")
+        except Exception as e:
+            print(f"Drive DB load attempt {attempt + 1} failed: {e}")
+        await asyncio.sleep(1)
+
+    # Load profile from Drive.
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
+            timeout=12,
+        )
+        print("Profile loaded from Drive")
+    except asyncio.TimeoutError:
+        print("Profile load from Drive timed out")
+    except Exception as e:
+        print(f"Profile load from Drive failed: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
-    import time
     print("Starting Bid/No-Bid System v6...")
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     TEMP_DIR.mkdir(exist_ok=True, parents=True)
     VAULT_DIR.mkdir(exist_ok=True, parents=True)
 
     try:
-        drive_ok = await asyncio.wait_for(asyncio.to_thread(init_drive), timeout=20)
+        drive_ok = await asyncio.wait_for(asyncio.to_thread(init_drive), timeout=8)
     except asyncio.TimeoutError:
         drive_ok = False
-        print("Google Drive init timed out after 20s — continuing without Drive")
+        print("Google Drive init timed out after 8s — continuing without Drive")
     except Exception as e:
         drive_ok = False
         print(f"Google Drive init failed during startup: {e}")
@@ -89,42 +122,13 @@ async def startup_event():
     print(f"Google Drive: {'Connected' if drive_ok else 'Not configured'}")
 
     if drive_ok:
-        # Load DB from Drive (non-blocking startup with per-attempt timeout)
-        for attempt in range(3):
-            try:
-                success = await asyncio.wait_for(
-                    asyncio.to_thread(load_from_drive, DB_FILE),
-                    timeout=20,
-                )
-                if success:
-                    db = load_db()
-                    print(f"Loaded {len(db.get('tenders', {}))} tenders from Google Drive")
-                    break
-                time.sleep(2)
-            except asyncio.TimeoutError:
-                print(f"Drive load attempt {attempt+1} timed out")
-                time.sleep(2)
-            except Exception as e:
-                print(f"Drive load attempt {attempt+1} failed: {e}")
-                time.sleep(2)
-
-        # Load profile from Drive
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(load_profile_from_drive, PROFILE_FILE),
-                timeout=20,
-            )
-            print("Profile loaded from Drive")
-        except asyncio.TimeoutError:
-            print("Profile load from Drive timed out")
-        except Exception:
-            pass
+        # Do not block startup on external APIs.
+        asyncio.create_task(_drive_warm_sync())
+    elif DB_FILE.exists():
+        db = load_db()
+        print(f"Using local DB: {len(db.get('tenders', {}))} tenders")
     else:
-        if DB_FILE.exists():
-            db = load_db()
-            print(f"Using local DB: {len(db.get('tenders', {}))} tenders")
-        else:
-            print("No DB found — fresh start")
+        print("No DB found — fresh start")
 
     print("Server ready")
 
@@ -172,6 +176,30 @@ def days_left(deadline_str: str) -> int:
 
 def prebid_passed(date_str: str) -> bool:
     return days_left(date_str) < 0
+
+
+def build_quality_flags(tender_data: dict) -> list[str]:
+    """Basic deterministic validation flags to reduce wrong-AI risk."""
+    flags = []
+    if not tender_data.get("tender_no"):
+        flags.append("Tender number missing")
+    if not tender_data.get("org_name"):
+        flags.append("Organization name missing")
+    if not tender_data.get("bid_submission_date"):
+        flags.append("Bid submission date missing")
+    if not tender_data.get("emd"):
+        flags.append("EMD not found")
+    if not tender_data.get("estimated_cost"):
+        flags.append("Estimated cost not found")
+
+    verdict = (tender_data.get("overall_verdict", {}) or {}).get("verdict") or tender_data.get("verdict")
+    if not verdict:
+        flags.append("Final verdict not available")
+
+    pq = tender_data.get("pq_criteria", [])
+    if isinstance(pq, list) and not pq:
+        flags.append("PQ criteria list is empty")
+    return flags
 
 
 def extract_all_zips(folder: Path):
@@ -323,7 +351,11 @@ async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
 
 
 @app.post("/process-files")
-async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
+async def process_files(
+    files: List[UploadFile] = File(...),
+    t247_id: str = "",
+    prebid_only: str = Form(""),
+):
     if not files:
         raise HTTPException(400, "No files uploaded")
 
@@ -418,6 +450,26 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
 
+        quality_flags = build_quality_flags(tender_data)
+        tender_data["quality_flags"] = quality_flags
+        tender_data["quality_score"] = max(0, 100 - 10 * len(quality_flags))
+
+        prebid_mode = str(prebid_only).strip().lower() in {"1", "true", "yes", "y"}
+
+        if prebid_mode:
+            # Standalone pre-bid path: avoid heavy report generation/save side effects.
+            tender_data["prebid_queries"] = generate_prebid_queries(tender_data)
+            return {
+                "status": "success",
+                "prebid_only": True,
+                "ai_used": ai_used,
+                "has_corrigendum": tender_data.get("has_corrigendum", False),
+                "corrigendum_files": tender_data.get("corrigendum_files", []),
+                "files_processed": [f.name for f in doc_files],
+                "tender_data": tender_data,
+                "download_file": None,
+            }
+
         # Generate Word doc
         generator = BidDocGenerator()
         safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
@@ -475,6 +527,18 @@ async def download_file(filename: str):
         path=str(file_path),
         filename=Path(filename).name,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+
+@app.get("/download-zip/{filename}")
+async def download_zip(filename: str):
+    file_path = OUTPUT_DIR / Path(filename).name
+    if not file_path.exists():
+        raise HTTPException(404, "File not found")
+    return FileResponse(
+        path=str(file_path),
+        filename=Path(filename).name,
+        media_type="application/zip"
     )
 
 
@@ -607,6 +671,42 @@ async def mark_prebid_sent(t247_id: str, data: dict = Body(...)):
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved"}
+
+
+@app.post("/submission-package/{t247_id}")
+async def create_submission_package(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    result = generate_submission_package(tender, OUTPUT_DIR)
+    if result.get("error"):
+        raise HTTPException(500, result["error"])
+    if "zip_file" in result:
+        result["download_url"] = f"/download-zip/{result['zip_file']}"
+    return result
+
+
+@app.get("/email-draft/{t247_id}")
+async def email_draft(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    verdict = tender.get("verdict", "REVIEW")
+    subject = f"[{verdict}] Tender Analysis - {tender.get('tender_no', t247_id)}"
+    body = (
+        f"Team,\n\n"
+        f"Please find the latest analysis for tender {tender.get('tender_no', t247_id)}.\n"
+        f"Organization: {tender.get('org_name', 'N/A')}\n"
+        f"Deadline: {tender.get('deadline', tender.get('bid_submission_date', 'N/A'))}\n"
+        f"Verdict: {verdict}\n\n"
+        f"Key reason: {tender.get('reason', '')}\n\n"
+        f"Next action:\n"
+        f"- Review analysis preview\n"
+        f"- Confirm pre-bid query requirements\n"
+        f"- Approve submission package generation\n\n"
+        f"Regards,\nBid Automation System"
+    )
+    return {"subject": subject, "body": body}
 
 
 # ── CHECKLIST ─────────────────────────────────────────────────
@@ -1246,6 +1346,15 @@ async def test_groq():
 @app.post("/auto-download/{t247_id}")
 async def auto_download_tender(t247_id: str):
     try:
+        import importlib.util
+        if importlib.util.find_spec("downloader") is None:
+            return {
+                "status": "unavailable",
+                "message": (
+                    "Tender247 auto-download module is not installed in this deployment. "
+                    "Please use manual upload for now."
+                ),
+            }
         from downloader import download_sync, is_playwright_available
         if not is_playwright_available():
             return {"status": "unavailable",
