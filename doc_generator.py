@@ -210,6 +210,17 @@ class BidDocGenerator:
         p4 = c0.add_paragraph(); p4.paragraph_format.space_after = Pt(4)
         add_run(p4, "MSME | CMMI V2.0 L3 | ISO 9001 | ISO 27001 | ISO 20000", size=8, color="FFF2CC")
 
+        # Optional client logo (best-effort) if detected from tender docs.
+        logo_path = data.get("client_logo_file", "")
+        if logo_path:
+            try:
+                p_logo = c0.add_paragraph()
+                p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r_logo = p_logo.add_run()
+                r_logo.add_picture(str(logo_path), width=Cm(2.2))
+            except Exception:
+                pass
+
         c1 = table.rows[0].cells[1]; c1.width = Cm(15.5)
         set_bg(c1, C["mid_blue"]); set_borders(c1, color="FFFFFF", size=6)
         p = c1.paragraphs[0]; p.alignment = WD_ALIGN_PARAGRAPH.CENTER

@@ -3,7 +3,7 @@ Bid/No-Bid Automation v6
 FastAPI backend — all routes including vault, reports listing, checklist, profiles
 """
 
-import zipfile, tempfile, shutil, json, re, os
+import zipfile, tempfile, shutil, json, re, os, uuid
 import asyncio
 from pathlib import Path
 from datetime import datetime, date
@@ -380,6 +380,9 @@ async def process_files(
         doc_files = []
         for ext in ["*.pdf", "*.docx", "*.doc", "*.txt", "*.html", "*.htm", "*.xlsx"]:
             doc_files.extend(extract_dir.rglob(ext))
+        image_files = []
+        for ext in ["*.png", "*.jpg", "*.jpeg", "*.webp"]:
+            image_files.extend(extract_dir.rglob(ext))
 
         # Deduplicate
         seen, unique = set(), []
@@ -391,6 +394,22 @@ async def process_files(
 
         if not doc_files:
             raise HTTPException(400, "No readable documents found in uploaded files.")
+
+        # Try logo detection for better presentation in generated docs.
+        logo_file = None
+        if image_files:
+            pref = [f for f in image_files if any(k in f.name.lower() for k in ["logo", "emblem", "seal"])]
+            logo_file = (pref[0] if pref else image_files[0])
+            try:
+                logo_store = OUTPUT_DIR / "logos"
+                logo_store.mkdir(exist_ok=True, parents=True)
+                safe_ext = logo_file.suffix.lower() if logo_file.suffix else ".png"
+                saved_logo = logo_store / f"{uuid.uuid4().hex}{safe_ext}"
+                shutil.copy2(logo_file, saved_logo)
+                logo_file = saved_logo
+            except Exception:
+                # Keep best-effort only; no failure on logo copy issues.
+                pass
 
         # Separate corrigendum from main
         corrigendum_files = [f for f in doc_files if
@@ -449,6 +468,9 @@ async def process_files(
             tender_data["overall_verdict"] = checker.get_overall_verdict(
                 tender_data["pq_criteria"] + tender_data["tq_criteria"]
             )
+
+        if logo_file:
+            tender_data["client_logo_file"] = str(logo_file)
 
         quality_flags = build_quality_flags(tender_data)
         tender_data["quality_flags"] = quality_flags

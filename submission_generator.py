@@ -97,6 +97,14 @@ def para(doc, text, size=11, bold=False, center=False):
 
 def letterhead(doc, p_data):
     """Add company letterhead block"""
+    logo = p_data.get("client_logo_file", "")
+    if logo:
+        try:
+            p_logo = doc.add_paragraph()
+            p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_logo.add_run().add_picture(str(logo), width=Cm(2.0))
+        except Exception:
+            pass
     h(doc, p_data["name"], size=14, bold=True, center=True, color=(0, 70, 127))
     para(doc, f"CIN: {p_data['cin']}  |  PAN: {p_data['pan']}  |  GSTIN: {p_data['gstin']}", size=9, center=True)
     para(doc, p_data.get("address","Ahmedabad, Gujarat"), size=9, center=True)
@@ -519,6 +527,8 @@ def generate_submission_package(tender: dict, output_dir: Path) -> dict:
         return {"error": "python-docx not installed"}
 
     p_data = load_profile()
+    if tender.get("client_logo_file"):
+        p_data["client_logo_file"] = tender.get("client_logo_file")
     output_dir.mkdir(exist_ok=True, parents=True)
 
     tender_no_safe = re.sub(r'[^\w\-]', '_', tender.get('tender_no', tender.get('t247_id','tender')))[:30]
