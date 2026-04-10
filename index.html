@@ -829,7 +829,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
   checkHealth();
   loadReports();
-  loadProfileEditor();
 
   // Drag & Drop
   const dz = document.getElementById('zip-drop');
@@ -847,21 +846,34 @@ document.addEventListener('DOMContentLoaded', () => {
 const pageTitles = {
   dashboard: 'Dashboard', tenders: 'All Tenders',
   analyse: 'Analyse Tender', prebid: 'Pre-Bid Queries',
-  reports: 'Reports', tracker: 'Bid Tracker', winloss: 'Win / Loss Stats', profile: 'Nascent Profile', settings: 'Settings'
+  reports: 'Reports', alerts: 'Deadline Alerts', tracker: 'Bid Tracker',
+  winloss: 'Win / Loss Stats', profile: 'Nascent Profile', settings: 'Settings'
 };
 
-function showPage(name) {
+function showPage(name, callerEl) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  document.getElementById('page-title').textContent = pageTitles[name] || name;
-  event.currentTarget.classList.add('active');
+  const pageEl = document.getElementById('page-' + name);
+  if (pageEl) pageEl.classList.add('active');
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = pageTitles[name] || name;
+  // Activate nav item — use caller element or find by matching onclick
+  const navEl = callerEl || (typeof event !== 'undefined' && event && event.currentTarget) || null;
+  if (navEl && navEl.classList) {
+    navEl.classList.add('active');
+  } else {
+    // Find nav item by matching page name in onclick attribute
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if ((n.getAttribute('onclick')||'').includes("'"+name+"'")) n.classList.add('active');
+    });
+  }
   if (name === 'tenders') renderTendersTable(allTenders);
   if (name === 'reports') loadReports();
   if (name === 'settings') loadSettings();
   if (name === 'alerts') loadAlerts();
   if (name === 'tracker') loadTracker();
   if (name === 'winloss') loadWinLoss();
+  if (name === 'profile') loadProfileEditor();
 }
 
 function switchTab(tab, el) {
@@ -990,6 +1002,7 @@ let sortDir = 1;
 function applyDashFilter(verdict, cardEl) {
   currentFilter = verdict === 'ALL' ? 'ALL' : verdict;
   showPage('tenders');
+  // nav handled by showPage
   document.querySelectorAll('.stat-card').forEach(c => c.style.outline = '');
   if (cardEl && verdict !== 'ALL') cardEl.style.outline = '3px solid #1E293B';
   const bar = document.getElementById('dash-filter-bar');
@@ -1116,8 +1129,6 @@ function handleSearchKey(e) {
       // Show all results in tenders table
       closeSearchDropdown();
       showPage('tenders');
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.querySelectorAll('.nav-item')[1].classList.add('active');
       renderTendersTable(allTenders);
     }
   } else if (e.key === 'Escape') {
@@ -1578,7 +1589,15 @@ function showChecklistPanel(t247_id, checklist) {
 
 async function toggleChecklistItem(t247_id, idx, rowEl) {
   if (!window._currentChecklist) return;
-  window._currentChecklist.checklist[idx].done = !window._currentChecklist.checklist[idx].done;
+  const item = window._currentChecklist.checklist[idx];
+  item.done = !item.done;
+  // Persist to backend
+  try {
+    await fetch('/checklist/'+t247_id+'/item', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id: item.id || item.doc_key || String(idx), done: item.done})
+    });
+  } catch(e) {}
   openChecklist(t247_id); // Re-render
 }
 
@@ -1821,8 +1840,6 @@ const ALLOWED_EXTS = ['.zip','.pdf','.docx','.doc','.txt'];
 function goAnalyse(t247_id) {
   document.getElementById('analyse-t247-id').value = t247_id;
   showPage('analyse');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.nav-item')[2].classList.add('active');
 }
 
 function handleZipSelect(input) {
@@ -2073,8 +2090,6 @@ async function generatePrebidFromResult() {
     });
     const d = await r.json();
     showPage('prebid');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.nav-item')[3].classList.add('active');
     renderPrebidQueries(d);
   } catch(e) {
     toast('Failed to generate queries: ' + e.message, 'error');
