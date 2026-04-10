@@ -67,6 +67,7 @@ for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
 
 async def _drive_warm_sync():
     """Run Drive reads after startup so health checks are not blocked."""
+    # Load tenders DB from Drive
     for attempt in range(2):
         try:
             success = await asyncio.wait_for(
@@ -82,6 +83,19 @@ async def _drive_warm_sync():
         except Exception as e:
             print(f"Drive DB load attempt {attempt + 1} failed: {e}")
         await asyncio.sleep(1)
+
+    # Load profile from Drive (so UI edits survive restarts)
+    try:
+        profile_ok = await asyncio.wait_for(
+            asyncio.to_thread(load_from_drive, PROFILE_FILE, "nascent_profile.json"),
+            timeout=10,
+        )
+        if profile_ok:
+            print("Loaded nascent_profile.json from Google Drive")
+        else:
+            print("No profile in Drive — using repo default")
+    except Exception as e:
+        print(f"Profile Drive load skipped: {e}")
 
 @app.on_event("startup")
 async def startup_event():
@@ -708,6 +722,13 @@ async def get_profile():
 @app.post("/profile")
 async def update_profile(data: dict = Body(...)):
     PROFILE_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    # Also save to Drive so changes survive restarts and redeployments
+    try:
+        if drive_available():
+            save_to_drive(PROFILE_FILE, "nascent_profile.json")
+            print("Profile saved to Google Drive")
+    except Exception as e:
+        print(f"Profile Drive save failed (local save still OK): {e}")
     return {"status": "saved"}
 
 
