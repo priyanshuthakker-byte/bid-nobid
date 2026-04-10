@@ -1289,11 +1289,33 @@ async def generate_docs(t247_id: str):
 
 @app.get("/test-t247")
 async def test_t247():
-    return {
-        "status": "info",
-        "message": "T247 auto-download is not available on Render free tier. "
-                   "Visit tender247.com, download the ZIP manually, then upload in Analyse page.",
-    }
+    try:
+        import importlib.util
+        if importlib.util.find_spec("downloader") is None:
+            return {
+                "status": "unavailable",
+                "message": "Downloader module is missing. Add downloader.py to enable auto-download.",
+            }
+        from downloader import is_playwright_available
+        if not is_playwright_available():
+            return {
+                "status": "unavailable",
+                "message": "Playwright is not installed in this deployment. Manual upload remains available.",
+            }
+        cfg = load_config()
+        has_user = bool((cfg.get("t247_username") or os.environ.get("T247_USERNAME", "")).strip())
+        has_pass = bool((cfg.get("t247_password") or os.environ.get("T247_PASSWORD", "")).strip())
+        if not (has_user and has_pass):
+            return {
+                "status": "partial",
+                "message": "Playwright is available, but Tender247 credentials are missing in Settings.",
+            }
+        return {
+            "status": "ok",
+            "message": "Auto-download stack ready (Playwright + credentials configured).",
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 # ── SHEET STATUS (Google Sheets — not used, stub for UI) ──────
@@ -1378,7 +1400,7 @@ async def auto_download_tender(t247_id: str):
         from downloader import download_sync, is_playwright_available
         if not is_playwright_available():
             return {"status": "unavailable", "message": "Playwright not installed."}
-        zip_path = download_sync(t247_id)
+        zip_path = download_sync(t247_id, OUTPUT_DIR)
         if zip_path:
             return {"status": "success", "zip_path": zip_path, "t247_id": t247_id}
         return {"status": "failed", "message": "Could not find download button on T247 page"}

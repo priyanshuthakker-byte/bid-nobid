@@ -773,7 +773,7 @@ textarea.email-input{resize:vertical;min-height:180px;line-height:1.6}
       <div class="page-body">
         <div class="row2">
           <div>
-            <div class="card">
+    <div class="card">
               <div class="card-hd">
                 <div>
                   <div class="card-title">Upload Tender Documents</div>
@@ -783,6 +783,9 @@ textarea.email-input{resize:vertical;min-height:180px;line-height:1.6}
               <div class="form-group">
                 <label>T247 ID (optional — links result to dashboard)</label>
                 <input type="text" id="an-tid" placeholder="e.g. 97290989">
+                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                  <button class="btn btn-ghost btn-sm" onclick="autoFetchT247()">⬇ Auto-fetch from Tender247</button>
+                </div>
               </div>
               <div class="form-group">
                 <label>Documents</label>
@@ -1762,11 +1765,6 @@ function showPage(name) {
   if (name==='profile') loadProfile();
   if (name==='settings') loadSettings();
 }
- codex/identify-system-implementation-gaps-and-oauth2-oap0qu
-=======
- codex/identify-system-implementation-gaps-and-oauth2-rf0wij
-=======
-codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
 
 document.querySelectorAll('.sb-btn[data-page]').forEach(function(b){
   b.addEventListener('click', function(e){
@@ -1774,9 +1772,6 @@ document.querySelectorAll('.sb-btn[data-page]').forEach(function(b){
     showPage(b.dataset.page);
   });
 });
-
- main
- main
 
 
 // ═══════════════════════════════════════════════════════════
@@ -2182,12 +2177,9 @@ async function analyseTender() {
       logLine('… still running, parsing files and AI extraction in progress …','warn');
     }, 15000);
     logLine('Extracting text from documents...','');
-codex/investigate-web-server-error-521-88e83c
     var r = await fetchWithTimeout('/process-files',{method:'POST',body:fd}, 480000);
     var d = await parseJsonResponseSafe(r);
     if (hb) clearInterval(hb);
-    var r = await fetch('/process-files',{method:'POST',body:fd});
-    var d = await parseJsonResponseSafe(r); main
     hideLoad();
     if (!r.ok) throw new Error(d.detail || d.message || ('HTTP '+r.status));
     if (d.status !== 'success' && d.detail) throw new Error(d.detail);
@@ -2224,6 +2216,36 @@ codex/investigate-web-server-error-521-88e83c
     logLine('Error: '+msg,'err');
     document.getElementById('an-result-wrap').innerHTML = '<div class="alert alert-danger">Error: '+esc(msg)+'</div>';
     toast('Analysis failed: '+msg,'error');
+  }
+}
+
+async function autoFetchT247() {
+  var tid = (document.getElementById('an-tid').value || '').trim();
+  if (!tid) {
+    toast('Enter T247 ID first', 'info');
+    return;
+  }
+  showLoad('Fetching tender package from Tender247...');
+  try {
+    var r = await fetch('/auto-download/'+encodeURIComponent(tid), {method:'POST'});
+    var d = await r.json();
+    hideLoad();
+    if (d.status !== 'success' || !d.zip_path) {
+      throw new Error(d.message || 'Auto-download unavailable. Check T247 credentials and Playwright installation.');
+    }
+    var dr = await fetch('/download/'+encodeURIComponent(d.zip_path));
+    if (!dr.ok) throw new Error('Downloaded ZIP could not be loaded from server.');
+    var blob = await dr.blob();
+    var file = new File([blob], d.zip_path, {type:'application/zip'});
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    var input = document.getElementById('an-files');
+    input.files = dt.files;
+    anFilesChanged(input);
+    toast('Tender ZIP fetched. Click "Analyse with AI" to continue.', 'success');
+  } catch (e) {
+    hideLoad();
+    toast('Auto-fetch failed: '+e.message, 'error');
   }
 }
 
@@ -3230,17 +3252,7 @@ async function checkStatus() {
     var lbl = document.getElementById('drive-label');
     var sysVal = document.getElementById('sys-drive-val');
     if (d.drive_connected) {
- codex/identify-system-implementation-gaps-and-oauth2-oap0qu
       var tendersCount = pickCount();
-=======
-codex/identify-system-implementation-gaps-and-oauth2-rf0wij
-      var tendersCount = pickCount();
-
-codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
-      var tendersCount = pickCount();
-
-      var tendersCount = d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0;
- main
 
       if (dot) { dot.className='dot dot-green'; dot.style.animation='none'; }
       if (lbl) lbl.textContent = 'Drive: '+tendersCount+' tenders';
@@ -3252,16 +3264,7 @@ codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
     }
     // Update tenders count in settings
     var st = document.getElementById('sys-tenders');
- codex/identify-system-implementation-gaps-and-oauth2-oap0qu
     if (st) st.textContent = pickCount();
-=======
- codex/identify-system-implementation-gaps-and-oauth2-rf0wij
-    if (st) st.textContent = pickCount();
- codex/identify-system-implementation-gaps-and-oauth2-3gr1m4
-    if (st) st.textContent = pickCount();
-
-    if (st) st.textContent = (d.tenders_in_memory ?? d.tenders_in_db ?? G.tenders.length ?? 0);
- main
 
   } catch(e){ 
     var lbl = document.getElementById('drive-label'); 
@@ -3867,17 +3870,12 @@ async function generateStandalonePrebid() {
   fd.append('prebid_only', 'true'); // hint to backend
   var hb = null;
   try {
-codex/investigate-web-server-error-521-88e83c
     hb = setInterval(function(){
       toast('Pre-bid generation running...','info');
     }, 18000);
     var r = await fetchWithTimeout('/process-files', {method:'POST', body:fd}, 420000);
     var d = await parseJsonResponseSafe(r);
     if (hb) clearInterval(hb);
-=======
-    var r = await fetch('/process-files', {method:'POST', body:fd});
-    var d = await parseJsonResponseSafe(r);
-main
     hideLoad();
     if (!r.ok) throw new Error(d.detail || d.message || ('HTTP '+r.status));
     if (d.status !== 'success' && d.detail) throw new Error(d.detail);
