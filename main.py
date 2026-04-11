@@ -357,30 +357,104 @@ async def import_excel(file: UploadFile = File(...)):
 async def dashboard():
     db = load_db()
     tenders = list(db["tenders"].values())
+    # Load Nascent projects for matching
+    try:
+        profile = json.loads(PROFILE_FILE.read_text(encoding="utf-8")) if PROFILE_FILE.exists() else {}
+        if not profile:
+            profile = json.loads((BASE_DIR / "nascent_profile.json").read_text(encoding="utf-8"))
+        nascent_projects = profile.get("projects", [])
+    except Exception:
+        nascent_projects = []
+
+    # Build project matching index: category → projects
+    cat_map = {}
+    for proj in nascent_projects:
+        for cat in proj.get("similar_categories", []) + proj.get("domains", []):
+            c = cat.lower().strip()
+            if c:
+                if c not in cat_map:
+                    cat_map[c] = []
+                cat_map[c].append({
+                    "name": proj.get("name", ""),
+                    "value": proj.get("value_lakhs", 0) / 100,
+                    "status": proj.get("status", ""),
+                    "wo_no": proj.get("wo_no", ""),
+                    "loi": proj.get("loi_received", ""),
+                    "cc": proj.get("completion_cert", ""),
+                })
+
     stats = {
         "total": 0, "bid": 0, "no_bid": 0, "conditional": 0,
         "review": 0, "analysed": 0, "deadline_today": 0, "deadline_3days": 0,
+        "won": 0, "submitted": 0,
     }
+
     enriched = []
     for t in tenders:
-        dl = days_left(t.get("deadline", ""))
+        dl = days_left(t.get("deadline", "") or t.get("bid_submission_date", ""))
         item = dict(t)
+        item["days_left"] = dl
         item["_days_left_sort"] = dl
+
+        # Auto project matching from brief + eligibility text
+        brief_lower = (item.get("brief","") + " " + item.get("org_name","") + " " +
+                       item.get("eligibility","") + " " + item.get("tender_name","")).lower()
+
+        matches = []
+        partial = []
+        for cat, projs in cat_map.items():
+            if cat in brief_lower:
+                for proj in projs:
+                    entry = {**proj, "matched_on": cat}
+                    if entry not in matches:
+                        matches.append(entry)
+
+        # Score: STRONG if 2+ categories match, PARTIAL if 1
+        seen_names = {}
+        for m in matches:
+            n = m["name"]
+            seen_names[n] = seen_names.get(n, 0) + 1
+        strong_matches = [m for m in matches if seen_names.get(m["name"],0) >= 2]
+        partial_matches = [m for m in matches if seen_names.get(m["name"],0) == 1 and m not in strong_matches]
+
+        # Deduplicate by project name
+        def dedup(lst):
+            seen = set()
+            out = []
+            for m in lst:
+                if m["name"] not in seen:
+                    seen.add(m["name"])
+                    out.append(m)
+            return out
+
+        item["_strong_matches"] = dedup(strong_matches)[:4]
+        item["_partial_matches"] = dedup(partial_matches)[:3]
+        item["_match_count"] = len(dedup(strong_matches)) + len(dedup(partial_matches))
+
+        # Use AI project_matches if we have them (more accurate)
+        if item.get("project_matches"):
+            ai_matches = item["project_matches"]
+            item["_strong_matches"] = [m for m in ai_matches if m.get("strength")=="STRONG"][:3]
+            item["_partial_matches"] = [m for m in ai_matches if m.get("strength")!="STRONG"][:2]
+            item["_match_count"] = len(ai_matches)
+
         enriched.append(item)
         stats["total"] += 1
-        verdict = item.get("verdict")
+        verdict = item.get("verdict","")
         if verdict == "BID": stats["bid"] += 1
         elif verdict == "NO-BID": stats["no_bid"] += 1
         elif verdict == "CONDITIONAL": stats["conditional"] += 1
         elif verdict == "REVIEW": stats["review"] += 1
         if item.get("bid_no_bid_done"): stats["analysed"] += 1
+        if item.get("outcome") == "Won" or item.get("status") == "Won": stats["won"] += 1
+        if item.get("status") == "Submitted": stats["submitted"] += 1
         if dl == 0: stats["deadline_today"] += 1
         elif 0 < dl <= 3: stats["deadline_3days"] += 1
 
     tenders_sorted = sorted(enriched, key=lambda t: t.get("_days_left_sort", 999))
     for t in tenders_sorted:
         t.pop("_days_left_sort", None)
-    return {"stats": stats, "tenders": tenders_sorted}
+    return {"stats": stats, "tenders": tenders_sorted, "nascent_projects": nascent_projects}
 
 
 # ── PROCESS ZIP / FILES ───────────────────────────────────────
@@ -482,6 +556,19 @@ async def process_files(
         if api_key and all_text.strip():
             passed = prebid_passed(_v(tender_data.get("prebid_query_date", "")))
             ai_result = analyze_with_gemini(all_text, passed)
+            # Track API usage for quota display
+            try:
+                quota_file = OUTPUT_DIR / "api_quota.json"
+                today_str = __import__('datetime').date.today().isoformat()
+                quota = {"date": today_str, "calls": 0}
+                if quota_file.exists():
+                    q = json.loads(quota_file.read_text())
+                    if q.get("date") == today_str:
+                        quota = q
+                quota["calls"] = quota.get("calls", 0) + 8  # ~8 Gemini calls per analysis
+                quota_file.write_text(json.dumps(quota))
+            except Exception:
+                pass
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
                 ai_used = True
@@ -800,15 +887,26 @@ async def get_profile():
 
 @app.post("/profile")
 async def update_profile(data: dict = Body(...)):
-    PROFILE_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    # Also save to Drive so changes survive restarts and redeployments
+    # Save to both runtime location AND repo location
+    profile_json = json.dumps(data, indent=2, ensure_ascii=False)
+    PROFILE_FILE.parent.mkdir(exist_ok=True, parents=True)
+    PROFILE_FILE.write_text(profile_json, encoding="utf-8")
+    # Also overwrite the repo copy so it survives redeploys via GitHub
+    repo_profile = BASE_DIR / "nascent_profile.json"
+    try:
+        repo_profile.write_text(profile_json, encoding="utf-8")
+    except Exception as e:
+        print(f"Repo profile write failed (OK if read-only): {e}")
+    # Sync to Google Drive
+    drive_saved = False
     try:
         if drive_available():
-            save_to_drive(PROFILE_FILE, "nascent_profile.json")
-            print("Profile saved to Google Drive")
+            drive_saved = save_to_drive(PROFILE_FILE, "nascent_profile.json")
+            if drive_saved:
+                print("✅ Profile saved to Google Drive")
     except Exception as e:
         print(f"Profile Drive save failed (local save still OK): {e}")
-    return {"status": "saved"}
+    return {"status": "saved", "drive": drive_saved, "path": str(PROFILE_FILE)}
 
 
 # ── VAULT ─────────────────────────────────────────────────────
@@ -1455,14 +1553,39 @@ async def search_guidelines(q: str = ""):
 async def health():
     config = load_config()
     db = load_db()
+    all_keys = config.get("gemini_api_keys", [])
+    primary = config.get("gemini_api_key", "")
+    if primary and primary not in all_keys:
+        all_keys = [primary] + all_keys
+    key_count = len([k for k in all_keys if k and len(k) > 20])
+    # Gemini free tier: 1500 req/day per key, resets at midnight UTC (5:30 AM IST)
+    # We track calls in a simple daily counter file
+    quota_file = OUTPUT_DIR / "api_quota.json"
+    quota = {"date": "", "calls": 0}
+    try:
+        if quota_file.exists():
+            quota = json.loads(quota_file.read_text())
+    except Exception:
+        pass
+    today_str = __import__('datetime').date.today().isoformat()
+    if quota.get("date") != today_str:
+        quota = {"date": today_str, "calls": 0}
+    calls_today = quota.get("calls", 0)
+    daily_limit = 1500 * max(key_count, 1)
+    remaining = max(0, daily_limit - calls_today)
     return {
         "status": "ok",
-        "version": "6.0",
+        "version": "7.0",
         "ai_configured": bool(config.get("gemini_api_key")),
+        "gemini_key_count": key_count,
         "drive_sync": drive_available(),
+        "drive_connected": drive_available(),
         "ocr_available": ocr_available(),
         "tenders_loaded": len(db.get("tenders", {})),
         "vault_local_files": len(list(VAULT_DIR.iterdir())) if VAULT_DIR.exists() else 0,
+        "api_calls_today": calls_today,
+        "api_daily_limit": daily_limit,
+        "api_remaining": remaining,
     }
 
 @app.get("/healthz")
