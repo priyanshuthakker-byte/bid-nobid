@@ -488,6 +488,7 @@ tr:last-child td{border-bottom:none;}
               <span class="verdict-score" style="color:var(--amber)" id="vs-a"></span>
               <span class="verdict-score" style="color:var(--red)" id="vs-r"></span>
             </div>
+            <div id="vs-projects" style="margin-top:8px"></div>
           </div>
           <div id="ai-warning-alert" style="display:none;margin-top:12px;padding:10px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:12px;color:#92400E;">
             ⚠ <span id="ai-warning-text"></span>
@@ -510,6 +511,7 @@ tr:last-child td{border-bottom:none;}
                 <div class="tab" onclick="switchTab('scope',this)">Scope</div>
                 <div class="tab" onclick="switchTab('pq',this)">PQ Criteria</div>
                 <div class="tab" onclick="switchTab('tq',this)">TQ Criteria</div>
+                <div class="tab" onclick="switchTab('work',this)">Work Schedule</div>
                 <div class="tab" onclick="switchTab('payment',this)">Payment</div>
                 <div class="tab" onclick="switchTab('checklist',this)">Checklist</div>
               </div>
@@ -517,6 +519,7 @@ tr:last-child td{border-bottom:none;}
               <div id="tab-scope" style="display:none"></div>
               <div id="tab-pq" style="display:none"></div>
               <div id="tab-tq" style="display:none"></div>
+              <div id="tab-work" style="display:none"></div>
               <div id="tab-payment" style="display:none"></div>
               <div id="tab-checklist" style="display:none"></div>
             </div>
@@ -884,7 +887,7 @@ function showPage(name, callerEl) {
 }
 
 function switchTab(tab, el) {
-  ['snapshot','scope','pq','tq','payment','checklist'].forEach(t => {
+  ['snapshot','scope','pq','tq','work','payment','checklist'].forEach(t => {
     const tabEl = document.getElementById('tab-'+t); if(tabEl) tabEl.style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1985,7 +1988,30 @@ function renderResults(data) {
   safeText('vs-a', `${vd.amber||0} Conditional`);
   safeText('vs-r', `${vd.red||0} Not Met`);
 
-  safeText('result-title', (td.tender_no || '—') + ' · ' + (td.org_name || ''));
+  // TQ score summary in verdict
+  if (td.tq_nascent_estimated_total && td.tq_total_marks) {
+    const vtEl2 = el('vt');
+    if (vtEl2) vtEl2.textContent += ` | TQ: ${td.tq_nascent_estimated_total}/${td.tq_total_marks} marks`;
+  }
+
+  // Project matches below verdict
+  const projMatches = td.project_matches || [];
+  const matchEl = el('vs-projects');
+  if (matchEl && projMatches.length) {
+    matchEl.innerHTML = '<div style="font-size:11px;font-weight:600;color:#64748B;margin-top:10px;margin-bottom:6px">MATCHING NASCENT PROJECTS</div>' +
+      projMatches.map(m => {
+        const str = m.strength||'MODERATE';
+        const sc = str==='STRONG'?'#059669':str==='MODERATE'?'#D97706':'#94A3B8';
+        return `<div style="font-size:11px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
+          <span style="color:${sc};font-weight:600">● ${esc(m.matching_project||'')} (${esc(m.project_value||'')})</span>
+          <span style="color:#64748B;margin-left:6px">${esc(m.relevance||'')}</span>
+        </div>`;
+      }).join('');
+  } else if (matchEl) {
+    matchEl.innerHTML = '';
+  }
+
+  safeText('result-title', snapVal(td.tender_no || '—') + ' · ' + snapVal(td.org_name || ''));
 
   // AI status badge
   if (data.ai_used) {
@@ -2002,63 +2028,130 @@ function renderResults(data) {
     }
   }
 
-  // Snapshot tab
+  // Snapshot tab — with clause+page refs from new AI pipeline
+  function snapVal(f) {
+    if (!f) return '—';
+    if (typeof f === 'object' && f.value !== undefined) return esc(f.value||'—');
+    return esc(String(f));
+  }
+  function snapRef(f) {
+    if (!f || typeof f !== 'object') return '';
+    const cr = f.clause_ref||''; const pg = f.page_no||'';
+    if (cr==='—' && pg==='—') return '';
+    const parts = [cr!=='—'?cr:'', pg!=='—'?pg:''].filter(Boolean);
+    return parts.length ? `<span style="font-size:10px;color:#94A3B8;margin-left:6px">[${parts.join(', ')}]</span>` : '';
+  }
+  // Hard disqualifiers alert at very top
+  const hardDQ = td.hard_disqualifiers || [];
+  let dqHtml = '';
+  if (hardDQ.length) {
+    dqHtml = `<div style="padding:12px 16px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#DC2626;margin-bottom:8px">⛔ HARD DISQUALIFIERS — ${hardDQ.length} FOUND</div>` +
+      hardDQ.map(d => `<div style="font-size:12px;color:#991B1B;padding:6px 0;border-bottom:1px solid #FECACA">
+        <span style="font-weight:600">${esc(d.criterion||'')}</span>
+        <span style="color:#94A3B8;font-size:11px;margin-left:6px">[${esc(d.clause_ref||'—')}]</span><br>
+        <span style="color:#DC2626">${esc(d.reason||'')}</span>
+        ${d.queryable==='YES' ? `<span style="color:#D97706;margin-left:8px">⚡ Resolvable via pre-bid query</span>` : ''}
+      </div>`).join('') + '</div>';
+  }
+  // Confidence level
+  const conf = td.confidence_level||'';
+  const confColor = conf==='HIGH'?'#059669':conf==='MEDIUM'?'#D97706':'#DC2626';
+  const confHtml = conf ? `<div style="font-size:11px;color:${confColor};font-weight:600;margin-bottom:12px">Analysis confidence: ${conf} — ${esc(td.confidence_reason||'')}</div>` : '';
+  
   const snapFields = [
     ['Tender No.', td.tender_no],
-    ['Organization', td.org_name],
     ['Tender Name', td.tender_name],
-    ['Portal', td.portal],
+    ['Organization', td.org_name],
+    ['Portal / Submission URL', td.portal],
+    ['Tender Type / Mode', td.tender_type],
+    ['Mode of Selection', td.mode_of_selection],
+    ['No. of Covers', td.no_of_covers],
     ['Bid Submission Deadline', td.bid_submission_date],
-    ['Bid Opening Date', td.bid_opening_date],
+    ['Bid Opening Date (Tech)', td.bid_opening_date],
+    ['Bid Opening Date (Finance)', td.commercial_opening_date],
+    ['Pre-Bid Meeting', td.prebid_meeting],
     ['Pre-Bid Query Deadline', td.prebid_query_date],
+    ['Pre-Bid Query Format', td.prebid_query_format],
     ['Estimated Cost', td.estimated_cost],
     ['Tender Fee', td.tender_fee],
-    ['EMD', td.emd],
-    ['EMD Exemption', td.emd_exemption],
-    ['PBG', td.performance_security],
+    ['EMD / Bid Security', td.emd],
+    ['EMD Exemption (MSME)', td.emd_exemption],
+    ['Performance Security', td.performance_security],
     ['Contract Period', td.contract_period],
+    ['Bid Validity', td.bid_validity],
     ['JV / Consortium', td.jv_allowed],
     ['Location', td.location],
-    ['Contact', td.contact],
+    ['Contact Officer', td.contact],
+    ['Technology (Mandatory)', td.technology_mandatory],
     ['Files Processed', (data.files_processed||[]).join(', ')],
-    ['Scope Background', td.scope_background],
     ['AI Warning', td.ai_warning],
   ];
-  document.getElementById('tab-snapshot').innerHTML =
-    '<table>' + snapFields.map(([k,v]) => `
-      <tr>
-        <td style="font-weight:600;color:#64748B;font-size:12px;width:180px;padding:8px 12px;
-          background:#F8FAFC;border-bottom:1px solid #E2E8F0">${esc(k)}</td>
-        <td style="font-size:13px;padding:8px 12px;border-bottom:1px solid #E2E8F0">
-          ${esc(v||'—')}</td>
-      </tr>`).join('') + '</table>';
+  document.getElementById('tab-snapshot').innerHTML = dqHtml + confHtml +
+    '<div class="table-wrap"><table>' + snapFields.map(([k,f]) => {
+      const v = snapVal(f);
+      if (v === '—' || !v) return '';
+      const ref = snapRef(f);
+      const isCritical = k.includes('Deadline') || k.includes('EMD') || k.includes('JV') || k.includes('Mode');
+      return `<tr>
+        <td style="font-weight:600;color:#64748B;font-size:11px;width:200px;padding:8px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;white-space:nowrap">${esc(k)}</td>
+        <td style="font-size:13px;padding:8px 12px;border-bottom:1px solid #E2E8F0;color:${isCritical?'#1E293B':'#374151'};font-weight:${isCritical?'500':'400'}">${v}${ref}</td>
+      </tr>`;
+    }).filter(Boolean).join('') + '</table></div>';
 
-  // Scope tab
-  const scope = td.scope_items || [];
-  document.getElementById('tab-scope').innerHTML = scope.length ?
-    scope.map(s => {
-      if (typeof s === 'string') return `<div style="padding:8px 0;font-size:13px;border-bottom:1px solid #E2E8F0;color:#1E293B;line-height:1.6">• ${esc(s)}</div>`;
-      const title = esc(s.title || s.sl_no || '');
-      const desc  = esc(s.description || s.scope || '');
-      const tech  = s.tech_platform ? `<span style="font-size:11px;color:#3B82F6;margin-left:8px">${esc(s.tech_platform)}</span>` : '';
-      const dels  = Array.isArray(s.deliverables) && s.deliverables.length
-        ? `<div style="font-size:11px;color:#64748B;margin-top:4px">Deliverables: ${s.deliverables.map(esc).join(', ')}</div>` : '';
-      return `<div style="padding:12px 0;border-bottom:1px solid #E2E8F0;line-height:1.6">
-        <div style="font-size:13px;font-weight:600;color:#1E293B">• ${title}${tech}</div>
-        ${desc ? `<div style="font-size:12px;color:#475569;margin-top:4px">${desc}</div>` : ''}
+  // Scope tab — uses scope_sections (new) or scope_items (compat)
+  const scopeSections = td.scope_sections || [];
+  const scopeItems = td.scope_items || [];
+  const scopeSrc = scopeSections.length ? scopeSections : scopeItems;
+  
+  let scopeHtml = '';
+  if (td.scope_background) {
+    scopeHtml += `<div style="padding:14px 16px;background:#F8FAFC;border-left:3px solid #3B82F6;border-radius:0 8px 8px 0;margin-bottom:16px;font-size:13px;color:#374151;line-height:1.7">${esc(td.scope_background)}</div>`;
+  }
+  if (scopeSrc.length) {
+    scopeHtml += scopeSrc.map(s => {
+      if (typeof s === 'string') return `<div style="padding:8px 0;font-size:13px;border-bottom:1px solid #E2E8F0;color:#1E293B">• ${esc(s)}</div>`;
+      const secNo = s.section_no ? `<span style="font-size:11px;color:#94A3B8;margin-right:8px">${esc(s.section_no)}</span>` : '';
+      const pgNo = s.page_no && s.page_no!=='—' ? `<span style="font-size:10px;color:#94A3B8;margin-left:8px">[${esc(s.page_no)}]</span>` : '';
+      const title = esc(s.section_title || s.title || '');
+      const desc = esc(s.prose || s.description || '');
+      const tech = (s.tech_specified||s.tech_platform) && (s.tech_specified||s.tech_platform)!=='—'
+        ? `<span style="font-size:10px;color:#fff;background:#3B82F6;padding:1px 7px;border-radius:10px;margin-left:8px">${esc(s.tech_specified||s.tech_platform)}</span>` : '';
+      const phase = s.phase && s.phase!=='—' ? `<span style="font-size:10px;color:#D97706;background:#FFFBEB;padding:1px 7px;border-radius:10px;margin-left:4px">${esc(s.phase)}</span>` : '';
+      const dels = Array.isArray(s.deliverables) && s.deliverables.length
+        ? `<div style="font-size:11px;color:#059669;margin-top:6px">📋 Deliverables: ${s.deliverables.map(esc).join(' · ')}</div>` : '';
+      return `<div style="padding:14px 0;border-bottom:1px solid #E2E8F0">
+        <div style="font-size:13px;font-weight:600;color:#1E293B;margin-bottom:6px">${secNo}${title}${tech}${phase}${pgNo}</div>
+        ${desc ? `<div style="font-size:12px;color:#475569;line-height:1.8">${desc}</div>` : ''}
         ${dels}
       </div>`;
-    }).join('') :
-    '<div style="color:#94A3B8;padding:20px">No scope extracted</div>';
+    }).join('');
+  } else {
+    scopeHtml += '<div style="color:#94A3B8;padding:20px">No scope extracted</div>';
+  }
+  // Key integrations
+  const integrations = td.key_integrations || [];
+  if (integrations.length) {
+    scopeHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#64748B;margin:16px 0 8px">Key Integrations</div>' +
+      integrations.map(ig => `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #F1F5F9;font-size:12px">
+        <span style="font-weight:600;color:#1E293B;min-width:140px">${esc(ig.system||'')}</span>
+        <span style="color:#3B82F6;min-width:80px">${esc(ig.type||'')}</span>
+        <span style="color:#475569">${esc(ig.purpose||'')} ${ig.section_ref?`<span style="color:#94A3B8">[${esc(ig.section_ref)}]</span>`:''}</span>
+      </div>`).join('');
+  }
+  document.getElementById('tab-scope').innerHTML = scopeHtml;
 
-  // PQ tab
-  renderCriteriaTab('tab-pq', td.pq_criteria || []);
+  // PQ tab - full replica with evidence + math
+  renderPQTab(td.pq_criteria || []);
 
-  // TQ tab
-  renderCriteriaTab('tab-tq', td.tq_criteria || []);
+  // TQ tab - with slab calculations
+  renderTQTab(td.tq_criteria || [], td);
+  
+  // Work Schedule tab
+  renderWorkScheduleTab(td);
 
   // Payment tab
-  const payments = td.payment_terms || [];
+  const payments = td.payment_schedule || td.payment_terms || [];
   const penalties = td.penalty_clauses || [];
   if (payments.length || penalties.length) {
     let payHtml = '';
@@ -2101,22 +2194,150 @@ function renderResults(data) {
     }
     if (checklist.length) {
       clHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;margin-bottom:10px">Submission Checklist</div>';
-      clHtml += '<div class="table-wrap"><table><thead><tr><th style="width:40%">Document</th><th style="width:20%">Annexure</th><th>Status</th></tr></thead><tbody>';
-      clHtml += checklist.map(c => {
-        const st = c.status||'Prepare';
-        const stColor = st.includes('CRITICAL') ? '#DC2626' : st==='Ready' ? '#059669' : '#D97706';
-        return `<tr>
-          <td style="font-size:12px;font-weight:500">${esc(c.document||c.doc||'')}</td>
-          <td style="font-size:11px;color:#64748B;text-align:center">${esc(c.annexure||'—')}</td>
-          <td><span style="font-size:11px;font-weight:600;color:${stColor}">${esc(st)}</span></td>
-        </tr>`;
-      }).join('');
-      clHtml += '</tbody></table></div>';
+      // Group by category
+      const clGroups = {};
+      checklist.forEach(c => { const cat = c.category||'General'; if(!clGroups[cat]) clGroups[cat]=[]; clGroups[cat].push(c); });
+      Object.entries(clGroups).forEach(([cat, items]) => {
+        clHtml += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;margin:12px 0 6px;padding-bottom:4px;border-bottom:2px solid #E2E8F0">${esc(cat)}</div>`;
+        clHtml += '<div class="table-wrap"><table><thead><tr><th>Document</th><th style="width:100px">Annexure / Cl.</th><th style="width:100px">Status</th><th>Note</th></tr></thead><tbody>';
+        clHtml += items.map(c => {
+          const st = c.status||'Prepare';
+          const isCrit = st.includes('CRITICAL') || (c.nascent_note||'').includes('⚠');
+          const stColor = isCrit ? '#DC2626' : st==='Ready' ? '#059669' : '#D97706';
+          const ref = c.clause_ref&&c.clause_ref!=='—' ? c.clause_ref : (c.annexure||'—');
+          return `<tr style="background:${isCrit?'#FFF5F5':''}">
+            <td style="font-size:12px;font-weight:${isCrit?'600':'400'}">${esc(c.document||c.doc||'')}</td>
+            <td style="font-size:10px;color:#64748B;text-align:center">${esc(ref)}</td>
+            <td><span style="font-size:11px;font-weight:600;color:${stColor}">${esc(st)}</span></td>
+            <td style="font-size:10px;color:${isCrit?'#DC2626':'#64748B'}">${esc(c.nascent_note||'')}</td>
+          </tr>`;
+        }).join('');
+        clHtml += '</tbody></table></div>';
+      });
     }
     document.getElementById('tab-checklist').innerHTML = clHtml;
   } else {
     document.getElementById('tab-checklist').innerHTML = '<div style="color:#94A3B8;padding:20px">No checklist generated — re-analyse to generate</div>';
   }
+}
+
+function renderPQTab(criteria) {
+  const el = document.getElementById('tab-pq');
+  if (!criteria.length) { el.innerHTML = '<div style="color:#94A3B8;padding:20px">No PQ criteria extracted</div>'; return; }
+  const statusColors = {'Met':['#ECFDF5','#059669'],'Not Met':['#FEF2F2','#DC2626'],'Conditional':['#FFFBEB','#D97706'],'Review':['#EFF6FF','#2563EB']};
+  el.innerHTML = '<div class="table-wrap" style="overflow-x:auto"><table style="min-width:900px"><thead><tr>' +
+    '<th style="width:40px">Sr.</th>' +
+    '<th style="width:90px">Clause<br><span style="font-weight:400;color:#94A3B8">Page</span></th>' +
+    '<th style="width:130px">Basic Req.</th>' +
+    '<th>RFP Criteria (word-for-word)</th>' +
+    '<th style="width:80px">Status</th>' +
+    '<th>Evidence / Calculation</th>' +
+    '<th style="width:120px">Documents Required</th>' +
+    '</tr></thead><tbody>' +
+    criteria.map(c => {
+      const [bg,tc] = statusColors[c.nascent_status||'Review']||['#EFF6FF','#2563EB'];
+      const ref = [c.clause_ref&&c.clause_ref!=='—'?c.clause_ref:'', c.page_no&&c.page_no!=='—'?c.page_no:''].filter(Boolean).join(' ');
+      const calc = c.calculation_shown && c.calculation_shown!=='—' ? `<div style="font-size:10px;color:#1D4ED8;background:#EFF6FF;padding:4px 6px;border-radius:4px;margin-top:4px">${esc(c.calculation_shown)}</div>` : '';
+      const evid = c.evidence_projects && c.evidence_projects!=='—' ? `<div style="font-size:10px;color:#047857;background:#ECFDF5;padding:4px 6px;border-radius:4px;margin-top:4px">${esc(c.evidence_projects)}</div>` : '';
+      const queryTag = (c.raises_query||'').includes('YES') ? `<div style="font-size:10px;color:#D97706;margin-top:4px">⚡ Pre-bid query raised</div>` : '';
+      return `<tr style="background:${bg}08">
+        <td style="text-align:center;font-weight:700;font-size:12px;color:#64748B">${esc(c.sl_no||'')}</td>
+        <td style="font-size:10px;color:#64748B;text-align:center">${esc(ref)}</td>
+        <td style="font-size:11px;font-weight:600;color:#374151">${esc(c.clause_header||'—')}</td>
+        <td style="font-size:11px;line-height:1.6;color:#1E293B">${esc(c.criteria||'')}</td>
+        <td><span style="display:inline-block;padding:3px 8px;border-radius:12px;background:${bg};color:${tc};font-size:10px;font-weight:700;white-space:nowrap">${esc(c.nascent_status||'Review')}</span></td>
+        <td style="font-size:11px;color:#475569;line-height:1.5">${esc(c.nascent_remark||'')}${calc}${evid}${queryTag}</td>
+        <td style="font-size:10px;color:#64748B;line-height:1.5">${esc(c.documents_required||c.details||'—')}</td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderTQTab(criteria, td) {
+  const el = document.getElementById('tab-tq');
+  if (!criteria.length) { el.innerHTML = '<div style="color:#94A3B8;padding:20px">No TQ criteria extracted</div>'; return; }
+  const statusColors = {'Met':['#ECFDF5','#059669'],'Not Met':['#FEF2F2','#DC2626'],'Conditional':['#FFFBEB','#D97706'],'Review':['#EFF6FF','#2563EB']};
+  // Score summary
+  const totalEst = td.tq_nascent_estimated_total||'';
+  const totalMax = td.tq_total_marks||'';
+  const minQ = td.tq_min_qualifying_score||'';
+  let scoreSummary = '';
+  if (totalEst || totalMax) {
+    const pct = totalMax ? Math.round(100*parseFloat(totalEst)/parseFloat(totalMax)) : 0;
+    const qualifies = minQ ? parseFloat(totalEst) >= parseFloat(minQ) : null;
+    scoreSummary = `<div style="padding:12px 16px;background:${qualifies===false?'#FEF2F2':qualifies===true?'#ECFDF5':'#EFF6FF'};border:1px solid ${qualifies===false?'#FECACA':qualifies===true?'#A7F3D0':'#BFDBFE'};border-radius:8px;margin-bottom:12px;display:flex;gap:24px;align-items:center">
+      <div><div style="font-size:11px;color:#64748B">Nascent Estimated Score</div><div style="font-size:20px;font-weight:700;color:${qualifies===false?'#DC2626':qualifies===true?'#059669':'#2563EB'}">${totalEst} / ${totalMax}</div></div>
+      ${minQ?`<div><div style="font-size:11px;color:#64748B">Min. Qualifying</div><div style="font-size:16px;font-weight:700;color:#374151">${minQ}</div></div>`:''}
+      ${qualifies!==null?`<div style="font-size:13px;font-weight:700;color:${qualifies?'#059669':'#DC2626'}">${qualifies?'✅ QUALIFIES':'❌ BELOW MINIMUM'}</div>`:''}
+    </div>`;
+  }
+  el.innerHTML = scoreSummary + '<div class="table-wrap" style="overflow-x:auto"><table style="min-width:900px"><thead><tr>' +
+    '<th style="width:40px">Sr.</th>' +
+    '<th style="width:80px">Clause / Page</th>' +
+    '<th>Criteria (RFP exact)</th>' +
+    '<th>Evaluation Criteria (every slab)</th>' +
+    '<th style="width:60px">Max</th>' +
+    '<th style="width:60px">Score</th>' +
+    '<th>Slab Calculation</th>' +
+    '<th style="width:80px">Status</th>' +
+    '</tr></thead><tbody>' +
+    criteria.map(c => {
+      const [bg,tc] = statusColors[c.nascent_status||'Review']||['#EFF6FF','#2563EB'];
+      const ref = [c.clause_ref&&c.clause_ref!=='—'?c.clause_ref:'', c.page_no&&c.page_no!=='—'?c.page_no:''].filter(Boolean).join(' ');
+      return `<tr style="background:${bg}08">
+        <td style="text-align:center;font-weight:700;font-size:12px;color:#64748B">${esc(c.sl_no||'')}</td>
+        <td style="font-size:10px;color:#64748B;text-align:center">${esc(ref)}</td>
+        <td style="font-size:11px;line-height:1.6;color:#1E293B">${esc(c.criteria||'')}</td>
+        <td style="font-size:10px;color:#374151;line-height:1.6;background:#FAFAFA">${esc(c.eval_criteria||c.details||'—')}</td>
+        <td style="text-align:center;font-weight:700;font-size:13px;color:#374151">${esc(c.max_marks||'')}</td>
+        <td style="text-align:center;font-weight:700;font-size:14px;color:${tc}">${esc(c.nascent_score||'')}</td>
+        <td style="font-size:10px;color:#1D4ED8;background:#EFF6FF;line-height:1.6">${esc(c.slab_calculation||c.nascent_remark||'')}</td>
+        <td><span style="display:inline-block;padding:3px 6px;border-radius:10px;background:${bg};color:${tc};font-size:10px;font-weight:700">${esc(c.nascent_status||'Review')}</span></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+  // Key personnel
+  const kp = (td.key_personnel||[]);
+  if (kp.length) {
+    el.innerHTML += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#64748B;margin:16px 0 8px">Key Personnel Requirements</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Role</th><th>Qualification Required</th><th>Experience Required</th><th style="width:60px">Marks</th><th>Nascent Match</th></tr></thead><tbody>' +
+      kp.map(p => `<tr><td style="font-weight:600;font-size:12px">${esc(p.role||'')}</td><td style="font-size:11px">${esc(p.qualification||'')}</td><td style="font-size:11px">${esc(p.experience||'')}</td><td style="text-align:center;font-weight:700">${esc(p.max_marks||'')}</td><td style="font-size:11px;color:#059669">${esc(p.nascent_remark||'')}</td></tr>`).join('') +
+      '</tbody></table></div>';
+  }
+}
+
+function renderWorkScheduleTab(td) {
+  const el = document.getElementById('tab-work');
+  const ws = td.work_schedule || [];
+  if (!ws.length) {
+    el.innerHTML = '<div style="color:#94A3B8;padding:20px">No work schedule extracted — not all tenders have explicit timeline tables</div>';
+    return;
+  }
+  // Summary header
+  let header = '';
+  if (td.total_project_duration||td.phase_a_duration||td.go_live_deadline) {
+    header = `<div style="display:flex;gap:20px;flex-wrap:wrap;padding:12px 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:12px;font-size:12px">
+      ${td.total_project_duration?`<div><div style="color:#64748B;font-size:10px">Total Duration</div><div style="font-weight:600">${esc(td.total_project_duration)}</div></div>`:''}
+      ${td.phase_a_duration?`<div><div style="color:#64748B;font-size:10px">Phase A (Dev)</div><div style="font-weight:600">${esc(td.phase_a_duration)}</div></div>`:''}
+      ${td.phase_b_duration?`<div><div style="color:#64748B;font-size:10px">Phase B (O&M)</div><div style="font-weight:600">${esc(td.phase_b_duration)}</div></div>`:''}
+      ${td.go_live_deadline?`<div><div style="color:#64748B;font-size:10px">Go-Live</div><div style="font-weight:600;color:#DC2626">${esc(td.go_live_deadline)}</div></div>`:''}
+      ${td.ld_rate?`<div><div style="color:#64748B;font-size:10px">LD Rate</div><div style="font-weight:600;color:#DC2626">${esc(td.ld_rate)}</div></div>`:''}
+    </div>`;
+  }
+  el.innerHTML = header + '<div class="table-wrap"><table><thead><tr>' +
+    '<th style="width:60px">Milestone</th><th>Activity</th><th style="width:120px">Timeline</th><th>Deliverable</th><th style="width:80px">Clause / Page</th><th style="width:60px">LD?</th><th>Notes</th>' +
+    '</tr></thead><tbody>' +
+    ws.map((m,i) => {
+      const isPhaseB = (m.phase||'').includes('B') || (m.milestone_name||'').toLowerCase().includes('o&m') || (m.activity||'').toLowerCase().includes('maintenance');
+      const bg = isPhaseB ? '#FFFBEB' : (i%2===0?'#FFFFFF':'#F8FAFC');
+      return `<tr style="background:${bg}">
+        <td style="font-weight:700;font-size:12px;color:#374151;text-align:center">${esc(m.milestone_no||String(i+1))}</td>
+        <td style="font-size:12px;font-weight:500">${esc(m.milestone_name||'')} ${m.activity?`<div style="font-size:11px;color:#64748B;margin-top:2px">${esc(m.activity)}</div>`:''}</td>
+        <td style="font-size:12px;font-weight:600;color:#2563EB">${esc(m.timeline||'—')}</td>
+        <td style="font-size:11px;color:#374151">${esc(m.deliverable||'—')}</td>
+        <td style="font-size:10px;color:#64748B;text-align:center">${esc([m.clause_ref&&m.clause_ref!=='—'?m.clause_ref:'',m.page_no&&m.page_no!=='—'?m.page_no:''].filter(Boolean).join(' ')||'—')}</td>
+        <td style="text-align:center;font-size:11px;color:${m.ld_applicable==='YES'?'#DC2626':'#94A3B8'};font-weight:600">${m.ld_applicable==='YES'?'⚠ YES':'—'}</td>
+        <td style="font-size:11px;color:#059669">${esc(m.nascent_note||'')}</td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
 }
 
 function renderCriteriaTab(tabId, criteria) {
@@ -2218,19 +2439,22 @@ function renderPrebidQueries(data) {
     // Handle both formats: {clause,query} and {query_no,subject,query_text,...}
     const num    = q.query_no || String(i+1);
     const clause = esc(q.clause || q.clause_ref || 'General');
-    const subj   = esc(q.subject || q.clause || 'Query ' + num);
-    const text   = esc(q.query_text || q.query || q.rfp_text || '');
-    const rfp    = q.rfp_text && q.query_text ? `<div style="font-size:11px;color:#64748B;background:#F8FAFC;padding:6px 10px;border-radius:4px;margin:6px 0;border-left:2px solid #CBD5E1">RFP: ${esc(q.rfp_text)}</div>` : '';
-    const desired = q.desired_clarification ? `<div style="font-size:11px;color:#1D4ED8;margin-top:4px">Seeking: ${esc(q.desired_clarification)}</div>` : '';
+    const subj   = esc(q.subject || q.gap_addressed || q.clause || 'Query ' + num);
+    const text   = esc(q.query_text || q.query || '');
+    const pg     = q.page_no && q.page_no!=='—' ? ` · Pg.${esc(q.page_no)}` : '';
+    const rfp    = q.rfp_text ? `<div style="font-size:11px;color:#64748B;background:#F8FAFC;padding:6px 10px;border-radius:4px;margin:6px 0;border-left:2px solid #CBD5E1;font-style:italic">"${esc(String(q.rfp_text).substring(0,300))}"</div>` : '';
+    const guideline = q.guideline_cited && q.guideline_cited!=='None' ? `<div style="font-size:10px;color:#059669;background:#ECFDF5;padding:4px 8px;border-radius:4px;margin-top:6px">📋 Guideline: ${esc(q.guideline_cited)}</div>` : '';
+    const desired = q.clarification_sought ? `<div style="font-size:11px;color:#1D4ED8;margin-top:4px;font-weight:500">Clarification needed: ${esc(q.clarification_sought)}</div>` : '';
     const priority = q.priority || 'MEDIUM';
     return `<div class="query-item priority-${priority.toLowerCase()}">
       <div class="query-header">
         <span class="query-no">Q${num}</span>
         <span class="query-subject" style="font-size:13px">${subj}</span>
-        <span class="badge ${priority==='HIGH'?'badge-red':priority==='MEDIUM'?'badge-amber':'badge-blue'}" style="margin-left:auto">${clause}</span>
+        <span class="badge ${priority==='HIGH'?'badge-red':priority==='MEDIUM'?'badge-amber':'badge-blue'}" style="margin-left:auto">${clause}${pg}</span>
       </div>
       ${rfp}
       <div class="query-text">${text}</div>
+      ${guideline}
       ${desired}
     </div>`;
   }).join('');
