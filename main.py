@@ -27,6 +27,59 @@ def _v(field_val, default=""):
         return default
     return str(field_val)
 
+def sanitize_tender_data(data: dict) -> dict:
+    """
+    Walk the tender_data dict after AI analysis and replace all None values
+    with empty strings/lists so downstream code never hits None + str errors.
+    Also flattens snapshot fields from {value, clause_ref, page_no} to plain strings
+    for storage in tenders DB (the structured data stays in the response to frontend).
+    """
+    STRING_FIELDS = [
+        "tender_no","tender_id","org_name","dept_name","tender_name","portal",
+        "tender_type","mode_of_selection","no_of_covers","bid_start_date",
+        "bid_submission_date","bid_opening_date","commercial_opening_date",
+        "prebid_meeting","prebid_query_date","estimated_cost","tender_fee","emd",
+        "emd_exemption","performance_security","contract_period","bid_validity",
+        "jv_allowed","location","contact","technology_mandatory","scope_background",
+        "corrigendum_note","verdict","ai_warning","ld_rate","go_live_deadline",
+        "total_project_duration","phase_a_duration","phase_b_duration",
+        "tq_min_qualifying_score","tq_total_marks","tq_nascent_estimated_total",
+        "prebid_email_subject","prebid_query_format_used","confidence_level",
+        "pbg_details","ip_ownership","exit_clause","advance_payment","retention_money",
+        "phase_a_total_percent","phase_b_total_percent",
+    ]
+    LIST_FIELDS = [
+        "pq_criteria","tq_criteria","scope_items","scope_sections","key_integrations",
+        "payment_terms","payment_schedule","penalty_clauses","notes","submission_checklist",
+        "work_schedule","project_matches","action_items","key_strengths","key_risks",
+        "hard_disqualifiers","prebid_queries","key_personnel","corrigendum_files",
+        "files_processed","quality_flags",
+    ]
+    for field in STRING_FIELDS:
+        val = data.get(field)
+        if val is None:
+            data[field] = ""
+        elif isinstance(val, dict):
+            # Snapshot field — keep structured form for response but also set plain value
+            data[field] = val  # keep dict for frontend display
+        elif not isinstance(val, str):
+            data[field] = str(val)
+    for field in LIST_FIELDS:
+        val = data.get(field)
+        if val is None:
+            data[field] = []
+        elif not isinstance(val, list):
+            data[field] = []
+    # Sanitize None values inside list items
+    for field in LIST_FIELDS:
+        items = data.get(field, [])
+        for item in items:
+            if isinstance(item, dict):
+                for k, v in list(item.items()):
+                    if v is None:
+                        item[k] = "" if k not in ("done",) else False
+    return data
+
 
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
@@ -73,6 +126,10 @@ PROFILE_FILE = RUNTIME_DIR / "nascent_profile.json"
 
 for d in [OUTPUT_DIR, TEMP_DIR, VAULT_DIR]:
     d.mkdir(exist_ok=True, parents=True)
+
+# Initialise DB file if not present so sync-drive never fails
+if not DB_FILE.exists():
+    DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
 
 
 # ── STARTUP ───────────────────────────────────────────────────
@@ -432,6 +489,9 @@ async def process_files(
                 "Gemini API key not configured — using basic extraction only. "
                 "Go to Settings to configure AI."
             )
+
+        # Always sanitize — removes None values, ensures all fields are proper types
+        tender_data = sanitize_tender_data(tender_data)
 
         checker = NascentChecker()
         if not tender_data.get("overall_verdict"):

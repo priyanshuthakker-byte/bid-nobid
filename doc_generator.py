@@ -779,7 +779,7 @@ class BidDocGenerator:
             vals = [
                 item.get("type",""), item.get("condition",""),
                 item.get("penalty",""),
-                (item.get("max_cap","") + " | " + item.get("clause_ref","")).strip(" | ")
+                ((str(item.get("max_cap") or "")) + " | " + (str(item.get("clause_ref") or ""))).strip(" | ")
             ]
             for cell, val in zip(row.cells, vals):
                 set_bg(cell, bg); set_borders(cell)
@@ -871,20 +871,20 @@ class BidDocGenerator:
             cell_write(c0, f"Q{qi+1}", bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
             c1 = row.cells[1]; c1.width = Cm(3.0)
             set_bg(c1, bg); set_borders(c1)
-            cell_write(c1, strip_emojis(str(q.get("clause","—"))), size=8)
+            cell_write(c1, strip_emojis(str((str(q.get("clause") or "—")))), size=8)
             c2 = row.cells[2]; c2.width = Cm(1.5)
             set_bg(c2, bg); set_borders(c2)
-            cell_write(c2, str(q.get("page_no","—")), size=8, align=WD_ALIGN_PARAGRAPH.CENTER)
+            cell_write(c2, str((str(q.get("page_no") or "—"))), size=8, align=WD_ALIGN_PARAGRAPH.CENTER)
             c3 = row.cells[3]; c3.width = Cm(5.5)
             set_bg(c3, bg); set_borders(c3)
             rfp_txt = q.get("rfp_text","")
             cell_write(c3, strip_emojis(str(rfp_txt))[:300] if rfp_txt else "—", size=8, italic=True, color=C["gray"])
             c4 = row.cells[4]; c4.width = Cm(8.0)
             set_bg(c4, C["blue_bg"]); set_borders(c4)
-            cell_write(c4, strip_emojis(str(q.get("query",""))), size=9)
+            cell_write(c4, strip_emojis(str((str(q.get("query") or "")))), size=9)
             c5 = row.cells[5]; c5.width = Cm(6.5)
             set_bg(c5, C["alt_row"]); set_borders(c5)
-            cell_write(c5, strip_emojis(str(q.get("desired_clarification","Written confirmation."))), size=8, italic=True)
+            cell_write(c5, strip_emojis(str((str(q.get("desired_clarification") or "Written confirmation.")))), size=8, italic=True)
         self.doc.add_paragraph()
 
     # ── SECTION 10a: NOTES & CHECKLIST ────────────────────────
@@ -931,10 +931,10 @@ class BidDocGenerator:
                 if isinstance(cond, dict):
                     c0 = row.cells[0]; c0.width = Cm(5)
                     set_bg(c0, C["label_col"]); set_borders(c0)
-                    cell_write(c0, strip_emojis(cond.get("term","")), bold=True, size=9, color=C["dark_blue"])
+                    cell_write(c0, strip_emojis((str(cond.get("term") or ""))), bold=True, size=9, color=C["dark_blue"])
                     c1 = row.cells[1]; c1.width = Cm(20.5)
                     set_bg(c1, bg); set_borders(c1)
-                    cell_write(c1, strip_emojis(cond.get("details","")), size=9)
+                    cell_write(c1, strip_emojis((str(cond.get("details") or ""))), size=9)
                 else:
                     set_bg(row.cells[0], C["label_col"]); set_borders(row.cells[0])
                     cell_write(row.cells[0], str(ri+1), bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
@@ -963,10 +963,10 @@ class BidDocGenerator:
                     cell_write(c0, str(ri2+1), bold=True, size=9, color=C["dark_blue"], align=WD_ALIGN_PARAGRAPH.CENTER)
                     c1 = row2.cells[1]; c1.width = Cm(12.0)
                     set_bg(c1, bg2); set_borders(c1)
-                    cell_write(c1, strip_emojis(item.get("document","")), size=9)
+                    cell_write(c1, strip_emojis((str(item.get("document") or ""))), size=9)
                     c2 = row2.cells[2]; c2.width = Cm(4.0)
                     set_bg(c2, bg2); set_borders(c2)
-                    cell_write(c2, item.get("annexure","—"), size=8, italic=True)
+                    cell_write(c2, (str(item.get("annexure") or "—")), size=8, italic=True)
                     c3 = row2.cells[3]; c3.width = Cm(8.6)
                     set_bg(c3, s_bg); set_borders(c3)
                     cell_write(c3, strip_emojis(status), size=9)
@@ -1109,13 +1109,13 @@ class BidDocGenerator:
                        align=WD_ALIGN_PARAGRAPH.CENTER)
             c1 = row.cells[1]; c1.width = Cm(13.0)
             set_bg(c1, C[bg]); set_borders(c1)
-            cell_write(c1, strip_emojis(str(item.get("action",""))), size=9)
+            cell_write(c1, strip_emojis(str((str(item.get("action") or "")))), size=9)
             c2 = row.cells[2]; c2.width = Cm(4.0)
             set_bg(c2, C["alt_row"]); set_borders(c2)
-            cell_write(c2, str(item.get("responsible","Bid Team")), size=8)
+            cell_write(c2, str((str(item.get("responsible") or "Bid Team"))), size=8)
             c3 = row.cells[3]; c3.width = Cm(4.0)
             set_bg(c3, C["alt_row"]); set_borders(c3)
-            cell_write(c3, str(item.get("target_date","")), size=8)
+            cell_write(c3, str((str(item.get("target_date") or ""))), size=8)
             c4 = row.cells[4]; c4.width = Cm(3.6)
             set_bg(c4, C[bg]); set_borders(c4)
             cell_write(c4, pri, bold=True, size=8, color=C[tc],

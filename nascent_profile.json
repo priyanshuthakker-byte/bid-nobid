@@ -22,7 +22,17 @@
     "bank_ifsc": "[to be filled]",
     "total_employees": "67",
     "udyam": "UDYAM-GJ-01-0007420",
-    "msme": true
+    "msme": true,
+    "legal_status": "Private Limited Company",
+    "year_of_incorporation": 2006,
+    "authorised_signatory": "Hitesh Patel \u2014 Chief Administrative Officer",
+    "md": "Maulik Bhagat",
+    "din_md": "",
+    "poa_validity": "01/04/2025 \u2014 31/03/2026 (EXPIRED)",
+    "poa_alert": "\u26a0 POA of Hitesh Patel EXPIRED 31-Mar-2026 \u2014 MUST RENEW before any bid submission",
+    "tender_email": "nascent.tender@nascentinfo.com",
+    "gem_seller_id": "",
+    "alternate_address": ""
   },
   "authorised_signatory": {
     "name": "Hitesh Patel",
@@ -47,27 +57,45 @@
   },
   "certifications": {
     "cmmi": {
-      "level": "CMMI V2.0 Level 3",
-      "valid_till": "19-Dec-2026",
-      "certificate_no": "[to be filled]"
+      "level": 3,
+      "version": "V2.0 (DEV)",
+      "benchmark_id": "68617",
+      "issuer": "CUNIX Infotech Pvt. Ltd.",
+      "valid_from": "14-Dec-2023",
+      "valid_to": "19-Dec-2026",
+      "status": "ACTIVE"
     },
     "iso_9001": {
       "standard": "ISO 9001:2015",
-      "valid_till": "08-Sep-2028",
-      "scope": "Quality Management System"
+      "cert_no": "25EQPE64",
+      "issuer": "Assurance Quality Certification LLC",
+      "valid_from": "09-Sep-2025",
+      "valid_to": "08-Sep-2028",
+      "status": "ACTIVE"
     },
     "iso_27001": {
       "standard": "ISO/IEC 27001:2022",
-      "valid_till": "08-Sep-2028",
-      "scope": "Information Security Management"
+      "cert_no": "25EQPG58",
+      "issuer": "Assurance Quality Certification LLC",
+      "valid_from": "09-Sep-2025",
+      "valid_to": "08-Sep-2028",
+      "status": "ACTIVE"
     },
     "iso_20000": {
       "standard": "ISO/IEC 20000-1:2018",
-      "valid_till": "08-Sep-2028",
-      "scope": "IT Service Management"
+      "cert_no": "25ZQZQ030409IT",
+      "issuer": "International Quality Certification Services UK Ltd",
+      "valid_from": "09-Sep-2025",
+      "valid_to": "08-Sep-2028",
+      "status": "ACTIVE"
     },
     "cert_in": false,
-    "stqc": false
+    "stqc": false,
+    "ogc": {
+      "standard": "OGC Compliance - CityLayers 2.0",
+      "pid": "1600",
+      "status": "ACTIVE"
+    }
   },
   "domains": [
     "GIS Application Development",
@@ -647,14 +675,56 @@
     "turnover_by_year": {
       "2022-23": 16.36,
       "2023-24": 16.36,
-      "2024-25": 18.83
+      "2024-25": 18.83,
+      "2019-20": 17.42,
+      "2020-21": 9.17,
+      "2021-22": 20.42
     },
     "avg_turnover_last_3_fy": 17.18,
     "avg_turnover_cr": 17.18,
     "net_worth_cr": 26.09,
-    "solvency_amount_cr": "",
+    "solvency_amount_cr": 2.61,
     "ca_name": "Anuj J. Sharedalal",
     "avg_turnover_last_2_fy": 17.6,
     "avg_turnover_last_5_fy": 16.23
+  },
+  "technology": {
+    "core_stack": [
+      "Java/Spring Boot",
+      "Python/FastAPI",
+      "React.js",
+      "Angular",
+      "Flutter",
+      "Android"
+    ],
+    "gis_stack": [
+      "QGIS",
+      "ArcGIS",
+      "GeoServer",
+      "PostGIS",
+      "CityLayers 2.0",
+      "OpenLayers",
+      "MapLibre"
+    ],
+    "database": [
+      "PostgreSQL",
+      "MySQL",
+      "MongoDB",
+      "Redis"
+    ],
+    "cloud": [
+      "AWS",
+      "Azure",
+      "Docker",
+      "Jenkins"
+    ],
+    "not_available": [
+      "Microsoft .NET",
+      "MS SQL Server",
+      "SAP",
+      "Oracle ERP",
+      "CERT-In empanelment",
+      "STQC"
+    ]
   }
 }
