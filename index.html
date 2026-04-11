@@ -489,6 +489,9 @@ tr:last-child td{border-bottom:none;}
               <span class="verdict-score" style="color:var(--red)" id="vs-r"></span>
             </div>
           </div>
+          <div id="ai-warning-alert" style="display:none;margin-top:12px;padding:10px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:12px;color:#92400E;">
+            ⚠ <span id="ai-warning-text"></span>
+          </div>
           <div class="card">
             <div class="card-header">
               <div class="card-title" id="result-title">Analysis Results</div>
@@ -507,11 +510,15 @@ tr:last-child td{border-bottom:none;}
                 <div class="tab" onclick="switchTab('scope',this)">Scope</div>
                 <div class="tab" onclick="switchTab('pq',this)">PQ Criteria</div>
                 <div class="tab" onclick="switchTab('tq',this)">TQ Criteria</div>
+                <div class="tab" onclick="switchTab('payment',this)">Payment</div>
+                <div class="tab" onclick="switchTab('checklist',this)">Checklist</div>
               </div>
               <div id="tab-snapshot"></div>
               <div id="tab-scope" style="display:none"></div>
               <div id="tab-pq" style="display:none"></div>
               <div id="tab-tq" style="display:none"></div>
+              <div id="tab-payment" style="display:none"></div>
+              <div id="tab-checklist" style="display:none"></div>
             </div>
           </div>
         </div>
@@ -836,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
   dz.addEventListener('drop', e => {
     e.preventDefault(); dz.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) handleZipFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files));
   });
 });
 
@@ -877,7 +884,7 @@ function showPage(name, callerEl) {
 }
 
 function switchTab(tab, el) {
-  ['snapshot','scope','pq','tq'].forEach(t => {
+  ['snapshot','scope','pq','tq','payment','checklist'].forEach(t => {
     const tabEl = document.getElementById('tab-'+t); if(tabEl) tabEl.style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -2014,6 +2021,8 @@ function renderResults(data) {
     ['Location', td.location],
     ['Contact', td.contact],
     ['Files Processed', (data.files_processed||[]).join(', ')],
+    ['Scope Background', td.scope_background],
+    ['AI Warning', td.ai_warning],
   ];
   document.getElementById('tab-snapshot').innerHTML =
     '<table>' + snapFields.map(([k,v]) => `
@@ -2027,8 +2036,19 @@ function renderResults(data) {
   // Scope tab
   const scope = td.scope_items || [];
   document.getElementById('tab-scope').innerHTML = scope.length ?
-    scope.map(s => `<div style="padding:8px 0;font-size:13px;border-bottom:1px solid #E2E8F0;
-      color:#1E293B;line-height:1.6">• ${esc(s)}</div>`).join('') :
+    scope.map(s => {
+      if (typeof s === 'string') return `<div style="padding:8px 0;font-size:13px;border-bottom:1px solid #E2E8F0;color:#1E293B;line-height:1.6">• ${esc(s)}</div>`;
+      const title = esc(s.title || s.sl_no || '');
+      const desc  = esc(s.description || s.scope || '');
+      const tech  = s.tech_platform ? `<span style="font-size:11px;color:#3B82F6;margin-left:8px">${esc(s.tech_platform)}</span>` : '';
+      const dels  = Array.isArray(s.deliverables) && s.deliverables.length
+        ? `<div style="font-size:11px;color:#64748B;margin-top:4px">Deliverables: ${s.deliverables.map(esc).join(', ')}</div>` : '';
+      return `<div style="padding:12px 0;border-bottom:1px solid #E2E8F0;line-height:1.6">
+        <div style="font-size:13px;font-weight:600;color:#1E293B">• ${title}${tech}</div>
+        ${desc ? `<div style="font-size:12px;color:#475569;margin-top:4px">${desc}</div>` : ''}
+        ${dels}
+      </div>`;
+    }).join('') :
     '<div style="color:#94A3B8;padding:20px">No scope extracted</div>';
 
   // PQ tab
@@ -2036,6 +2056,67 @@ function renderResults(data) {
 
   // TQ tab
   renderCriteriaTab('tab-tq', td.tq_criteria || []);
+
+  // Payment tab
+  const payments = td.payment_terms || [];
+  const penalties = td.penalty_clauses || [];
+  if (payments.length || penalties.length) {
+    let payHtml = '';
+    if (payments.length) {
+      payHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #E2E8F0">Payment Milestones</div>';
+      payHtml += '<div class="table-wrap"><table><thead><tr><th>Milestone</th><th>Activity / Trigger</th><th>Timeline</th><th>Payment %</th></tr></thead><tbody>';
+      payHtml += payments.map(p => `<tr>
+        <td style="font-weight:600;font-size:12px">${esc(p.milestone||'—')}</td>
+        <td style="font-size:12px">${esc(p.activity||p.scope||'—')}</td>
+        <td style="font-size:12px;color:#64748B">${esc(p.timeline||'—')}</td>
+        <td style="font-size:12px;font-weight:600;color:#059669">${esc(p.payment_percent||'—')}</td>
+      </tr>`).join('');
+      payHtml += '</tbody></table></div>';
+    }
+    if (penalties.length) {
+      payHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#DC2626;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #FECACA">Penalty / LD Clauses</div>';
+      payHtml += penalties.map(p => `<div style="padding:10px 12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;margin-bottom:8px;font-size:12px">
+        <div style="font-weight:600;color:#DC2626">${esc(p.type||'Penalty')}</div>
+        <div style="color:#475569;margin-top:4px">${esc(p.condition||'')}</div>
+        <div style="color:#B91C1C;font-weight:600;margin-top:4px">${esc(p.penalty||'')}${p.max_cap ? ' (Max: '+esc(p.max_cap)+')' : ''}</div>
+      </div>`).join('');
+    }
+    document.getElementById('tab-payment').innerHTML = payHtml;
+  } else {
+    document.getElementById('tab-payment').innerHTML = '<div style="color:#94A3B8;padding:20px">No payment terms extracted — re-analyse if needed</div>';
+  }
+
+  // Checklist tab
+  const checklist = td.submission_checklist || [];
+  const notes = td.notes || [];
+  if (checklist.length || notes.length) {
+    let clHtml = '';
+    if (notes.length) {
+      clHtml += '<div style="margin-bottom:16px">';
+      clHtml += notes.map(n => `<div style="padding:10px 14px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;margin-bottom:8px;font-size:12px">
+        <div style="font-weight:600;color:#1D4ED8">${esc(n.title||'Note')}</div>
+        <div style="color:#1E40AF;margin-top:3px">${esc(n.detail||'')}</div>
+      </div>`).join('');
+      clHtml += '</div>';
+    }
+    if (checklist.length) {
+      clHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;margin-bottom:10px">Submission Checklist</div>';
+      clHtml += '<div class="table-wrap"><table><thead><tr><th style="width:40%">Document</th><th style="width:20%">Annexure</th><th>Status</th></tr></thead><tbody>';
+      clHtml += checklist.map(c => {
+        const st = c.status||'Prepare';
+        const stColor = st.includes('CRITICAL') ? '#DC2626' : st==='Ready' ? '#059669' : '#D97706';
+        return `<tr>
+          <td style="font-size:12px;font-weight:500">${esc(c.document||c.doc||'')}</td>
+          <td style="font-size:11px;color:#64748B;text-align:center">${esc(c.annexure||'—')}</td>
+          <td><span style="font-size:11px;font-weight:600;color:${stColor}">${esc(st)}</span></td>
+        </tr>`;
+      }).join('');
+      clHtml += '</tbody></table></div>';
+    }
+    document.getElementById('tab-checklist').innerHTML = clHtml;
+  } else {
+    document.getElementById('tab-checklist').innerHTML = '<div style="color:#94A3B8;padding:20px">No checklist generated — re-analyse to generate</div>';
+  }
 }
 
 function renderCriteriaTab(tabId, criteria) {
@@ -2129,21 +2210,30 @@ function renderPrebidQueries(data) {
   }
 
   list.innerHTML = `<div style="margin-bottom:16px;font-size:13px;color:#64748B">
-    ${queries.length} pre-bid quer${queries.length===1?'y':'ies'} generated · 
-    Send to: <strong>${esc(data.send_to||'—')}</strong> · 
-    Deadline: <strong>${esc(data.deadline||'—')}</strong>
+    ${queries.length} pre-bid quer${queries.length===1?'y':'ies'} generated
+    ${data.send_to ? '· Send to: <strong>'+esc(data.send_to)+'</strong>' : ''}
+    ${data.deadline ? '· Deadline: <strong>'+esc(data.deadline)+'</strong>' : ''}
   </div>` +
-  queries.map(q => `
-    <div class="query-item priority-${(q.priority||'medium').toLowerCase()}">
+  queries.map((q, i) => {
+    // Handle both formats: {clause,query} and {query_no,subject,query_text,...}
+    const num    = q.query_no || String(i+1);
+    const clause = esc(q.clause || q.clause_ref || 'General');
+    const subj   = esc(q.subject || q.clause || 'Query ' + num);
+    const text   = esc(q.query_text || q.query || q.rfp_text || '');
+    const rfp    = q.rfp_text && q.query_text ? `<div style="font-size:11px;color:#64748B;background:#F8FAFC;padding:6px 10px;border-radius:4px;margin:6px 0;border-left:2px solid #CBD5E1">RFP: ${esc(q.rfp_text)}</div>` : '';
+    const desired = q.desired_clarification ? `<div style="font-size:11px;color:#1D4ED8;margin-top:4px">Seeking: ${esc(q.desired_clarification)}</div>` : '';
+    const priority = q.priority || 'MEDIUM';
+    return `<div class="query-item priority-${priority.toLowerCase()}">
       <div class="query-header">
-        <span class="query-no">${q.query_no}</span>
-        <span class="query-subject" style="font-size:14px">${esc(q.subject)}</span>
-        <span class="badge ${q.priority==='HIGH'?'badge-red':q.priority==='MEDIUM'?'badge-amber':'badge-blue'}"
-          style="margin-left:auto">${q.priority}</span>
+        <span class="query-no">Q${num}</span>
+        <span class="query-subject" style="font-size:13px">${subj}</span>
+        <span class="badge ${priority==='HIGH'?'badge-red':priority==='MEDIUM'?'badge-amber':'badge-blue'}" style="margin-left:auto">${clause}</span>
       </div>
-      <div class="query-meta">Ref: ${esc(q.clause_ref||'—')} · Policy: ${esc(q.policy_ref||'—')}</div>
-      <div class="query-text">${esc(q.query_text)}</div>
-    </div>`).join('');
+      ${rfp}
+      <div class="query-text">${text}</div>
+      ${desired}
+    </div>`;
+  }).join('');
 
   // Email template
   if (data.email_template) {

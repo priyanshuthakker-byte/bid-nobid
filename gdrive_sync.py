@@ -142,17 +142,19 @@ def load_from_drive(local_path, filename="tenders_db.json"):
         while not done:
             _, done = dl.next_chunk()
         data = buf.getvalue()
-        if len(data) < 10:
+        if len(data) < 5:
             print(f"⚠️  Drive file is empty")
             return False
         try:
             parsed = json.loads(data)
-            tender_count = len(parsed.get("tenders", {}))
-            if tender_count == 0:
-                print(f"⚠️  Drive file has 0 tenders — skipping")
-                return False
+            # Only apply tenders check to the main DB file, not profile or other files
+            if filename == "tenders_db.json":
+                tender_count = len(parsed.get("tenders", {}))
+                if tender_count == 0:
+                    print(f"⚠️  Drive tenders_db has 0 tenders — skipping")
+                    return False
         except json.JSONDecodeError:
-            print(f"❌ Drive file is not valid JSON")
+            print(f"❌ Drive file is not valid JSON: {filename}")
             return False
         local_path.parent.mkdir(exist_ok=True, parents=True)
         local_path.write_bytes(data)

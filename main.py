@@ -138,6 +138,10 @@ def load_db() -> dict:
 
 
 def save_db(db: dict):
+    # Always ensure tenders key exists
+    if "tenders" not in db:
+        db["tenders"] = {}
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
         save_to_drive(DB_FILE)
@@ -970,6 +974,10 @@ async def sync_drive():
     if not drive_available():
         return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
     db = load_db()
+    # Ensure DB file exists before trying to save it
+    if not DB_FILE.exists():
+        DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+        DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
     ok = save_to_drive(DB_FILE)
     count = len(db.get("tenders", {}))
     if ok:
