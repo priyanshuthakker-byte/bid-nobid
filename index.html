@@ -291,9 +291,22 @@ tr:last-child td{border-bottom:none;}
     </div>
   </nav>
   <div class="sidebar-footer">
-    <div class="api-status">
-      <div class="api-dot" id="api-dot"></div>
-      <span id="api-status-text">Gemini AI not configured</span>
+    <div class="api-status" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px;width:100%">
+        <div class="api-dot" id="api-dot"></div>
+        <span id="api-status-text" style="font-size:12px">Gemini AI not configured</span>
+      </div>
+      <div id="ai-quota-bar" style="display:none;width:100%">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748B;margin-bottom:3px">
+          <span>API Requests Today</span>
+          <span id="quota-text">0 / 1500</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+          <div id="quota-fill" style="height:100%;background:#10B981;border-radius:2px;transition:width 0.4s;width:0%"></div>
+        </div>
+        <div id="quota-reset" style="font-size:10px;color:#64748B;margin-top:3px"></div>
+      </div>
+      <div id="drive-status-line" style="font-size:10px;color:#64748B;width:100%"></div>
     </div>
   </div>
 </aside>
@@ -339,50 +352,89 @@ tr:last-child td{border-bottom:none;}
 
     <!-- ═══ DASHBOARD PAGE ═══ -->
     <div class="page active" id="page-dashboard">
-      <div class="stats-grid" id="stats-grid">
-        <div class="stat-card blue" onclick="applyDashFilter('ALL',this)" style="cursor:pointer" title="Show all tenders">
-          <div class="stat-label">Total Tenders</div>
-          <div class="stat-value" id="stat-total">0</div>
-          <div class="stat-sub">From T247 Excel</div>
+      
+      <!-- Stats Row -->
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px" id="stats-grid">
+        <div class="stat-card blue" onclick="applyDashFilter('ALL',this)" style="cursor:pointer;padding:16px">
+          <div class="stat-label" style="font-size:10px">TOTAL</div>
+          <div class="stat-value" id="stat-total" style="font-size:26px">0</div>
+          <div class="stat-sub">Tenders</div>
         </div>
-        <div class="stat-card green" onclick="applyDashFilter('BID',this)" style="cursor:pointer" title="Show BID tenders">
-          <div class="stat-label">BID</div>
-          <div class="stat-value" id="stat-bid">0</div>
-          <div class="stat-sub">Click to filter</div>
+        <div class="stat-card green" onclick="applyDashFilter('BID',this)" style="cursor:pointer;padding:16px">
+          <div class="stat-label" style="font-size:10px">BID</div>
+          <div class="stat-value" id="stat-bid" style="font-size:26px">0</div>
+          <div class="stat-sub">Recommended</div>
         </div>
-        <div class="stat-card amber" onclick="applyDashFilter('CONDITIONAL',this)" style="cursor:pointer" title="Show Conditional tenders">
-          <div class="stat-label">Conditional</div>
-          <div class="stat-value" id="stat-cond">0</div>
-          <div class="stat-sub">Click to filter</div>
+        <div class="stat-card amber" onclick="applyDashFilter('CONDITIONAL',this)" style="cursor:pointer;padding:16px">
+          <div class="stat-label" style="font-size:10px">CONDITIONAL</div>
+          <div class="stat-value" id="stat-cond" style="font-size:26px">0</div>
+          <div class="stat-sub">Needs check</div>
         </div>
-        <div class="stat-card red" onclick="applyDashFilter('NO-BID',this)" style="cursor:pointer" title="Show No-Bid tenders">
-          <div class="stat-label">No-Bid</div>
-          <div class="stat-value" id="stat-nobid">0</div>
-          <div class="stat-sub">Click to filter</div>
+        <div class="stat-card red" onclick="applyDashFilter('NO-BID',this)" style="cursor:pointer;padding:16px">
+          <div class="stat-label" style="font-size:10px">NO-BID</div>
+          <div class="stat-value" id="stat-nobid" style="font-size:26px">0</div>
+          <div class="stat-sub">Ruled out</div>
         </div>
-      </div>
-      <div id="dash-filter-bar" style="display:none;margin-bottom:16px;padding:10px 16px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;display:flex;align-items:center;justify-content:space-between;font-size:13px;">
-        <span id="dash-filter-label" style="color:#1D4ED8;font-weight:600"></span>
-        <button class="btn btn-outline btn-sm" onclick="clearDashFilter()">Clear Filter</button>
-      </div>
-
-      <!-- Urgent deadlines -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">⚠️ Urgent Deadlines (Next 7 Days)</div>
+        <div class="stat-card" style="padding:16px;border-color:#E2E8F0;cursor:pointer" onclick="dashFeedFilter('all',this)">
+          <div class="stat-label" style="font-size:10px">ANALYSED</div>
+          <div class="stat-value" id="stat-analysed" style="font-size:26px;color:#8B5CF6">0</div>
+          <div class="stat-sub">AI done</div>
         </div>
-        <div class="card-body" id="urgent-tenders">
-          <div class="empty"><div class="empty-icon">📅</div><p>Import Excel to see deadlines</p></div>
+        <div class="stat-card" style="padding:16px;border-color:#E2E8F0;cursor:pointer" onclick="dashFeedFilter('urgent',this)">
+          <div class="stat-label" style="font-size:10px">URGENT</div>
+          <div class="stat-value" id="stat-urgent" style="font-size:26px;color:#EF4444">0</div>
+          <div class="stat-sub">≤7 days</div>
         </div>
       </div>
 
-      <!-- BID tenders -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">✅ BID Recommended</div>
+      <!-- Two column layout -->
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+        
+        <!-- Left: Smart tender cards with project matching -->
+        <div>
+          <!-- Urgent + BID tenders as rich cards -->
+          <div class="card">
+            <div class="card-header" style="padding:12px 16px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="card-title">Bid Intelligence Feed</div>
+                <span style="font-size:11px;color:#94A3B8">— Top priority tenders with project matching</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="filter-btn active" onclick="dashFeedFilter('priority',this)" style="font-size:11px;padding:4px 10px">Priority</button>
+                <button class="filter-btn" onclick="dashFeedFilter('bid',this)" style="font-size:11px;padding:4px 10px">BID</button>
+                <button class="filter-btn" onclick="dashFeedFilter('urgent',this)" style="font-size:11px;padding:4px 10px">Urgent</button>
+                <button class="filter-btn" onclick="dashFeedFilter('all',this)" style="font-size:11px;padding:4px 10px">All</button>
+              </div>
+            </div>
+            <div id="dash-feed" style="padding:0"></div>
+          </div>
         </div>
-        <div class="card-body" id="bid-tenders">
-          <div class="empty"><div class="empty-icon">📋</div><p>No tenders yet</p></div>
+
+        <!-- Right: Quick panels -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <!-- Pipeline mini-kanban -->
+          <div class="card">
+            <div class="card-header" style="padding:12px 16px">
+              <div class="card-title" style="font-size:13px">Pipeline Status</div>
+            </div>
+            <div id="dash-pipeline" style="padding:12px 16px"></div>
+          </div>
+          <!-- Upcoming deadlines -->
+          <div class="card">
+            <div class="card-header" style="padding:12px 16px">
+              <div class="card-title" style="font-size:13px">⚠ Deadline Watch</div>
+            </div>
+            <div id="urgent-tenders" style="padding:0"></div>
+          </div>
+          <!-- Drive sync status -->
+          <div class="card" id="drive-panel" style="padding:14px 16px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:12px;font-weight:600;color:#374151">☁ Google Drive</div>
+              <span id="drive-panel-status" style="font-size:11px;color:#94A3B8">Checking...</span>
+            </div>
+            <div id="drive-panel-detail" style="font-size:11px;color:#64748B;margin-top:6px"></div>
+            <button class="btn btn-outline btn-sm" onclick="manualSync()" style="margin-top:10px;width:100%;justify-content:center">Sync Now</button>
+          </div>
         </div>
       </div>
     </div>
@@ -985,16 +1037,56 @@ async function checkHealth() {
     const badge = document.getElementById('ai-badge');
     if (d.ai_configured) {
       dot.classList.add('active');
-      txt.textContent = 'Gemini AI active';
+      const kc = d.gemini_key_count || 1;
+      txt.textContent = `Gemini AI active (${kc} key${kc>1?'s':''})`;
       badge.textContent = '● AI On';
       badge.style.background = 'rgba(16,185,129,0.15)';
     } else {
+      dot.classList.remove('active');
       txt.textContent = 'Gemini AI not configured';
       badge.textContent = '● AI Off';
     }
     const hi = document.getElementById('health-info');
     if (hi) hi.innerHTML = `<div><b>AI Status:</b> ${d.ai_configured ? 'Active' : 'Not configured'}</div>`;
-  } catch(e) {}
+    
+    // AI Quota bar
+    const quotaBar = document.getElementById('ai-quota-bar');
+    if (quotaBar && d.ai_configured) {
+      quotaBar.style.display = 'block';
+      const used = d.api_calls_today || 0;
+      const limit = d.api_daily_limit || 1500;
+      const pct = Math.min(100, Math.round(used/limit*100));
+      const fill = document.getElementById('quota-fill');
+      const qtxt = document.getElementById('quota-text');
+      const qreset = document.getElementById('quota-reset');
+      if (fill) { fill.style.width = pct+'%'; fill.style.background = pct>85?'#EF4444':pct>60?'#F59E0B':'#10B981'; }
+      if (qtxt) qtxt.textContent = `${used.toLocaleString()} / ${limit.toLocaleString()} req`;
+      if (qreset) {
+        const now = new Date();
+        const hoursLeft = 24 - now.getHours();
+        qreset.textContent = `Resets ~${hoursLeft}h (5:30 AM IST)`;
+      }
+    }
+    // Drive status in sidebar
+    const driveLine = document.getElementById('drive-status-line');
+    if (driveLine) {
+      if (d.drive_connected) {
+        driveLine.innerHTML = '<span style="color:#10B981">☁ Drive synced</span>';
+      } else {
+        driveLine.innerHTML = '<span style="color:#EF4444">☁ Drive disconnected</span>';
+      }
+    }
+    // Show remaining quota prominently if < 300 remaining
+    if (d.api_remaining !== undefined && d.api_remaining < 300) {
+      const badge = document.getElementById('ai-badge');
+      if (badge) {
+        badge.textContent = `⚠ ${d.api_remaining} req left`;
+        badge.style.background = d.api_remaining < 100 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)';
+        badge.style.color = d.api_remaining < 100 ? '#EF4444' : '#F59E0B';
+        badge.style.borderColor = d.api_remaining < 100 ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)';
+      }
+    }
+  } catch(e) { console.error('Health check error:', e); }
 }
 
 // ═══════════════════════════════════════════
@@ -1022,64 +1114,217 @@ async function importExcel(input) {
 // ═══════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════
+// Nascent projects loaded from dashboard
+let nascentProjects = [];
+
+let _dashMode = 'priority';
+
 async function loadDashboard() {
   try {
     const r = await fetch('/dashboard');
     const d = await r.json();
     allTenders = d.tenders || [];
+    nascentProjects = d.nascent_projects || [];
     const s = d.stats || {};
 
-    document.getElementById('stat-total').textContent = s.total || 0;
-    document.getElementById('stat-bid').textContent = s.bid || 0;
-    document.getElementById('stat-cond').textContent = s.conditional || 0;
-    document.getElementById('stat-nobid').textContent = s.no_bid || 0;
-    document.getElementById('badge-total').textContent = s.total || 0;
+    // Stats row
+    const _s = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+    _s('stat-total', s.total || 0);
+    _s('stat-bid', s.bid || 0);
+    _s('stat-cond', s.conditional || 0);
+    _s('stat-nobid', s.no_bid || 0);
+    _s('badge-total', s.total || 0);
+    _s('stat-analysed', s.analysed || 0);
+    _s('stat-urgent', allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict !== 'NO-BID').length);
+    _s('stat-won', s.won || 0);
+    _s('stat-submitted', s.submitted || 0);
 
-    // Urgent tenders
-    const urgent = allTenders.filter(t =>
-      t.days_left >= 0 && t.days_left <= 7 &&
-      t.verdict !== 'NO-BID');
+    // Main feed
+    renderDashFeed(_dashMode);
+
+    // Deadline watch (right panel)
+    const urgent = allTenders
+      .filter(t => t.days_left >= 0 && t.days_left <= 14 && t.verdict !== 'NO-BID')
+      .slice(0, 8);
     const urgentEl = document.getElementById('urgent-tenders');
-    if (urgent.length === 0) {
-      urgentEl.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><p>No urgent deadlines in next 7 days</p></div>';
-    } else {
-      urgentEl.innerHTML = urgentTable(urgent);
+    if (urgentEl) {
+      urgentEl.innerHTML = urgent.length ? urgent.map(t => `
+        <div style="padding:8px 14px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;gap:10px" onclick="openQuickView('${t.t247_id}')" style="cursor:pointer">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((t.brief||t.tender_name||'—').substring(0,45))}</div>
+            <div style="font-size:10px;color:#64748B">${esc(t.org_name||'—').substring(0,30)}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${verdictBadge(t.verdict)}
+            <div style="font-size:10px;font-weight:700;color:${t.days_left<=3?'#DC2626':t.days_left<=7?'#D97706':'#64748B'};margin-top:3px">${t.days_left===0?'TODAY':t.days_left+'d left'}</div>
+          </div>
+        </div>`).join('')
+        : '<div style="padding:16px;font-size:12px;color:#94A3B8;text-align:center">No urgent deadlines ✅</div>';
     }
 
-    // BID tenders
-    const bids = allTenders.filter(t => t.verdict === 'BID');
-    const bidEl = document.getElementById('bid-tenders');
-    if (bids.length === 0) {
-      bidEl.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>No BID tenders yet — import Excel</p></div>';
-    } else {
-      bidEl.innerHTML = urgentTable(bids.slice(0,8));
+    // Pipeline mini (right panel)
+    const stages = {};
+    allTenders.forEach(t => { const s = t.status||'Identified'; stages[s]=(stages[s]||0)+1; });
+    const stageCols = {'Won':'#059669','Submitted':'#2563EB','Documents Ready':'#7C3AED','Under Evaluation':'#0891B2','Pre-bid Sent':'#8B5CF6','Analysed':'#3B82F6','Identified':'#94A3B8','No-Bid':'#DC2626'};
+    const pipelineEl = document.getElementById('dash-pipeline');
+    if (pipelineEl) {
+      pipelineEl.innerHTML = Object.entries(stages)
+        .sort((a,b) => b[1]-a[1])
+        .map(([s,n]) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F8FAFC">
+          <span style="font-size:11px;color:#374151">${esc(s)}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:${Math.min(80,n*20)}px;height:4px;background:${stageCols[s]||'#94A3B8'};border-radius:2px;min-width:4px"></div>
+            <span style="font-size:11px;font-weight:700;color:${stageCols[s]||'#374151'};min-width:16px;text-align:right">${n}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    // Drive panel
+    const driveStatus = document.getElementById('drive-panel-status');
+    const driveDetail = document.getElementById('drive-panel-detail');
+    try {
+      const dr = await fetch('/drive-status');
+      const dd = await dr.json();
+      if (driveStatus) driveStatus.innerHTML = dd.drive_connected
+        ? '<span style="color:#059669;font-weight:600">● Connected</span>'
+        : '<span style="color:#EF4444;font-weight:600">● Not connected</span>';
+      if (driveDetail) driveDetail.textContent = dd.drive_connected
+        ? `${dd.tenders_in_db} tenders · ${dd.db_size_kb}KB · Mode: ${dd.auth_mode||'service_account'}`
+        : 'Set GDRIVE_CREDENTIALS in Render environment variables';
+    } catch(e) {
+      if (driveStatus) driveStatus.textContent = 'Error checking Drive';
     }
 
   } catch(e) {
     console.error('Dashboard error:', e);
+    const f = document.getElementById('dash-feed');
+    if(f) f.innerHTML = '<div class="empty"><p style="color:#DC2626">Dashboard load failed: ' + esc(e.message) + '</p></div>';
   }
-  // Load alerts
   loadAlerts();
 }
 
-function urgentTable(tenders) {
-  return `<div class="table-wrap"><table>
-    <thead><tr><th>T247 ID</th><th>Reference No.</th><th>Brief</th><th>Deadline</th><th>Verdict</th><th>Action</th></tr></thead>
-    <tbody>${tenders.map(t => `
-      <tr>
-        <td style="font-family:monospace;font-size:12px">${t.t247_id}</td>
-        <td style="font-size:12px;color:#64748B">${esc((t.ref_no||'—').substring(0,30))}</td>
-        <td style="max-width:300px">
-          <div class="brief-cell" data-brief=\'${(t.brief||'').replace(/\'/g,"\\'")}\' data-org=\'${(t.org_name||'').replace(/\'/g,"\\'")}\' style="font-size:12px;font-weight:500;cursor:default;line-height:1.5">
-            ${esc((t.brief||'').substring(0,75))}${(t.brief||'').length>75?'<span style="color:#94A3B8">...</span>':''}
+function renderDashFeed(mode) {
+  _dashMode = mode;
+  let tenders;
+  if (mode === 'urgent') {
+    tenders = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict !== 'NO-BID');
+  } else if (mode === 'bid') {
+    tenders = allTenders.filter(t => t.verdict === 'BID');
+  } else if (mode === 'priority') {
+    // Smart sort: urgent BID first, then urgent COND, then BID, then COND
+    const urgentBid = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict === 'BID');
+    const urgentCond = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict === 'CONDITIONAL');
+    const bid = allTenders.filter(t => t.verdict === 'BID' && !(t.days_left >= 0 && t.days_left <= 7));
+    const cond = allTenders.filter(t => t.verdict === 'CONDITIONAL' && !(t.days_left >= 0 && t.days_left <= 7));
+    tenders = [...urgentBid, ...urgentCond, ...bid, ...cond].slice(0, 15);
+  } else {
+    tenders = allTenders.slice(0, 20);
+  }
+  const feed = document.getElementById('dash-feed');
+  if (!feed) return;
+  feed.innerHTML = tenders.length
+    ? renderTenderCards(tenders, mode)
+    : '<div class="empty"><div class="empty-icon">📋</div><p>No tenders in this view — import T247 Excel to begin</p></div>';
+}
+
+function dashFeedFilter(mode, el) {
+  document.querySelectorAll('#page-dashboard .filter-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderDashFeed(mode);
+}
+
+function renderTenderCards(tenders, mode) {
+  return '<div style="display:flex;flex-direction:column;gap:0">' +
+    tenders.map(t => {
+      const strongM = t._strong_matches || [];
+      const partialM = t._partial_matches || [];
+      const hasMatch = strongM.length > 0 || partialM.length > 0;
+      const matchCount = (t._match_count || 0);
+      const dl = t.days_left;
+      const dlColor = dl <= 0 ? '#DC2626' : dl <= 3 ? '#D97706' : dl <= 7 ? '#F59E0B' : '#64748B';
+      const stage = t.status || 'Identified';
+      const stageColor = stage === 'Won' ? '#059669' : stage === 'Submitted' ? '#2563EB' : stage === 'Documents Ready' ? '#7C3AED' : '#64748B';
+      
+      // Match badge color
+      const matchBg = matchCount >= 3 ? '#ECFDF5' : matchCount >= 1 ? '#EFF6FF' : '#F8FAFC';
+      const matchBorder = matchCount >= 3 ? '#A7F3D0' : matchCount >= 1 ? '#BFDBFE' : '#E2E8F0';
+      const matchTextColor = matchCount >= 3 ? '#059669' : matchCount >= 1 ? '#2563EB' : '#94A3B8';
+
+      // Eligibility snapshot fields from T247
+      const turnoverReq = t.turnover_req || '';
+      const expReq = t.exp_req || '';
+      const evalMethod = t.eval_method || t.evaluation_method || '';
+      const msme = t.msme_exemption || '';
+      const emd = typeof t.emd === 'object' ? (t.emd?.value || '') : (t.emd || '');
+      const estimatedCost = t.estimated_cost_cr ? 'Rs.' + t.estimated_cost_cr + ' Cr' : (typeof t.estimated_cost === 'object' ? t.estimated_cost?.value || '' : t.estimated_cost || '');
+
+      return `<div style="padding:14px 18px;border-bottom:1px solid #F1F5F9;display:flex;gap:16px;align-items:flex-start;transition:background 0.15s;cursor:default" onmouseenter="this.style.background='#F8FAFC'" onmouseleave="this.style.background=''">
+        
+        <!-- Left: verdict + ID -->
+        <div style="flex-shrink:0;text-align:center;width:60px">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:4px">${t.t247_id || '—'}</div>
+          ${verdictBadge(t.verdict)}
+          ${dl >= 0 ? `<div style="font-size:10px;font-weight:700;color:${dlColor};margin-top:5px">${dl === 0 ? 'TODAY' : dl + 'd'}</div>` : '<div style="font-size:10px;color:#94A3B8;margin-top:5px">Expired</div>'}
+        </div>
+
+        <!-- Middle: brief + matching + snapshot -->
+        <div style="flex:1;min-width:0">
+          <!-- Brief -->
+          <div style="font-size:13px;font-weight:600;color:#1E293B;line-height:1.5;margin-bottom:4px">
+            ${esc((t.brief || t.tender_name || '—').substring(0, 100))}
           </div>
-        </td>
-        <td class="${dlClass(t.days_left)}">${t.deadline || '—'}<br>
-          <span style="font-size:11px">${dlLabel(t.days_left)}</span></td>
-        <td>${verdictBadge(t.verdict)}</td>
-        <td><button class="btn btn-primary btn-sm" onclick="openQuickView('${t.t247_id}')">View</button></td>
-      </tr>`).join('')}
-    </tbody></table></div>`;
+          <div style="font-size:11px;color:#64748B;margin-bottom:8px">
+            ${esc(t.org_name || '—')} ${t.location ? '· ' + esc(t.location) : ''}
+            ${estimatedCost ? '· <span style="font-weight:600;color:#059669">' + esc(estimatedCost) + '</span>' : ''}
+            ${evalMethod ? '· ' + esc(evalMethod) : ''}
+          </div>
+          
+          <!-- T247 Eligibility Snapshot — key fields from Excel -->
+          ${(turnoverReq || expReq || msme) ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            ${turnoverReq ? `<span style="font-size:10px;padding:2px 8px;background:#FEF3C7;color:#92400E;border-radius:12px;border:1px solid #FDE68A">💰 Turnover: ${esc(turnoverReq)}</span>` : ''}
+            ${expReq ? `<span style="font-size:10px;padding:2px 8px;background:#EFF6FF;color:#1D4ED8;border-radius:12px;border:1px solid #BFDBFE">📅 Exp: ${esc(expReq)} yrs</span>` : ''}
+            ${msme && msme.toLowerCase().includes('yes') ? `<span style="font-size:10px;padding:2px 8px;background:#ECFDF5;color:#059669;border-radius:12px;border:1px solid #A7F3D0">✓ MSME Exempt</span>` : ''}
+            ${emd ? `<span style="font-size:10px;padding:2px 8px;background:#F8FAFC;color:#64748B;border-radius:12px;border:1px solid #E2E8F0">EMD: ${esc(String(emd).substring(0,20))}</span>` : ''}
+          </div>` : ''}
+
+          <!-- Project Matching -->
+          ${hasMatch ? `<div style="padding:8px 10px;background:${matchBg};border:1px solid ${matchBorder};border-radius:6px;margin-bottom:6px">
+            <div style="font-size:10px;font-weight:700;color:${matchTextColor};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">
+              ${strongM.length ? '🟢 ' + strongM.length + ' Strong' : ''}${strongM.length && partialM.length ? ' · ' : ''}${partialM.length ? '🔵 ' + partialM.length + ' Partial Match' : ''} — Nascent Experience
+            </div>
+            ${strongM.slice(0,3).map(m => `<div style="font-size:11px;color:#065F46;padding:2px 0;display:flex;align-items:center;gap:6px">
+              <span style="color:#059669;font-weight:700">●</span>
+              <span style="font-weight:600">${esc(m.matching_project || m.name || '')}</span>
+              ${m.project_value || m.value ? `<span style="color:#64748B">(Rs.${esc(String(m.project_value || m.value))}Cr)</span>` : ''}
+              ${m.relevance ? '<span style="color:#94A3B8;font-size:10px">— ' + esc(m.relevance.substring(0,60)) + '</span>' : (m.matched_on ? '<span style="color:#94A3B8;font-size:10px">— matches on ' + esc(m.matched_on) + '</span>' : '')}
+            </div>`).join('')}
+            ${partialM.slice(0,2).map(m => `<div style="font-size:11px;color:#1E40AF;padding:2px 0;display:flex;align-items:center;gap:6px">
+              <span style="color:#3B82F6;font-weight:700">◐</span>
+              <span>${esc(m.matching_project || m.name || '')}</span>
+              ${m.project_value || m.value ? `<span style="color:#94A3B8">(Rs.${esc(String(m.project_value || m.value))}Cr)</span>` : ''}
+              <span style="color:#94A3B8;font-size:10px">partial match</span>
+            </div>`).join('')}
+          </div>` : `<div style="font-size:11px;color:#94A3B8;padding:4px 0">No direct project match found — review eligibility</div>`}
+
+          <!-- Reason from classification -->
+          ${t.reason ? `<div style="font-size:11px;color:#64748B;font-style:italic;margin-top:2px">→ ${esc(t.reason.substring(0,120))}</div>` : ''}
+        </div>
+
+        <!-- Right: stage + action -->
+        <div style="flex-shrink:0;text-align:right;min-width:120px">
+          <div style="font-size:10px;color:${stageColor};font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em">${esc(stage)}</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <button class="btn btn-primary btn-sm" onclick="openQuickView('${t.t247_id}')" style="font-size:11px;padding:5px 10px">View</button>
+            <button class="btn btn-outline btn-sm" onclick="goAnalyse('${t.t247_id}')" style="font-size:11px;padding:5px 10px">${t.bid_no_bid_done ? 'Re-Analyse' : 'Analyse'}</button>
+          </div>
+          ${t.bid_no_bid_done ? '<div style="font-size:9px;color:#059669;margin-top:5px;font-weight:600">✓ AI Done</div>' : ''}
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+function urgentTable(tenders) {
+  return renderTenderCards(tenders, 'urgent');
 }
 
 // ═══════════════════════════════════════════
@@ -3277,9 +3522,13 @@ async function saveProfile() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(p)
     });
-    if (r.ok) {
+    const d = await r.json();
+    if (r.ok && d.status === 'saved') {
       profileData = p;
-      toast('Profile saved successfully', 'success');
+      const driveMsg = d.drive ? ' + Drive ✓' : '';
+      toast('✓ Profile saved' + driveMsg, 'success');
+    } else {
+      toast('Save error: ' + (d.detail || r.status), 'error');
     }
   } catch(e) {
     toast('Save failed: ' + e.message, 'error');
@@ -3353,11 +3602,21 @@ function showSyncStatus(msg, color='var(--text-muted)') {
 
 async function manualSync() {
   const btn = document.getElementById('sync-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing'; }
   showSyncStatus('Syncing...', 'var(--amber)');
   try {
     const r = await fetch('/sync-drive', {method:'POST'});
     const d = await r.json();
+    // Update drive panel status
+    const driveStatus = document.getElementById('drive-panel-status');
+    if (driveStatus) {
+      if (r.ok && d.status === 'ok') {
+        driveStatus.innerHTML = '<span style="color:#059669;font-weight:600">● Synced ' + new Date().toLocaleTimeString() + '</span>';
+      } else {
+        const errMsg = d.message || 'Failed';
+        driveStatus.innerHTML = '<span style="color:#EF4444;font-weight:600">● ' + esc(errMsg) + '</span>';
+      }
+    }
     if (r.ok) {
       showSyncStatus('✅ Synced', 'var(--success)');
       showToast('✅ Synced to Google Drive');
