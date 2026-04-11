@@ -16,6 +16,18 @@ from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config
+
+def _v(field_val, default=""):
+    """Extract plain string value from snapshot field.
+    Snapshot fields are now {value, clause_ref, page_no} dicts or plain strings.
+    """
+    if isinstance(field_val, dict):
+        return str(field_val.get("value", "") or default)
+    if field_val is None:
+        return default
+    return str(field_val)
+
+
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
@@ -177,15 +189,15 @@ def prebid_passed(date_str: str) -> bool:
 
 def build_quality_flags(tender_data: dict) -> list:
     flags = []
-    if not tender_data.get("tender_no"):
+    if not _v(tender_data.get("tender_no")):
         flags.append("Tender number missing")
-    if not tender_data.get("org_name"):
+    if not _v(tender_data.get("org_name")):
         flags.append("Organization name missing")
-    if not tender_data.get("bid_submission_date"):
+    if not _v(tender_data.get("bid_submission_date")):
         flags.append("Bid submission date missing")
-    if not tender_data.get("emd"):
+    if not _v(tender_data.get("emd")):
         flags.append("EMD not found")
-    if not tender_data.get("estimated_cost"):
+    if not _v(tender_data.get("estimated_cost")):
         flags.append("Estimated cost not found")
     verdict = (tender_data.get("overall_verdict", {}) or {}).get("verdict") or tender_data.get("verdict")
     if not verdict:
@@ -408,7 +420,7 @@ async def process_files(
         ai_used = False
 
         if api_key and all_text.strip():
-            passed = prebid_passed(tender_data.get("prebid_query_date", ""))
+            passed = prebid_passed(_v(tender_data.get("prebid_query_date", "")))
             ai_result = analyze_with_gemini(all_text, passed)
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
@@ -452,7 +464,7 @@ async def process_files(
             }
 
         generator = BidDocGenerator()
-        safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
+        safe_no = re.sub(r'[^\w\-]', '_', _v(tender_data.get("tender_no"), "Report"))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
         generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
 
@@ -460,12 +472,12 @@ async def process_files(
             db_record = get_tender(t247_id)
             db_record.update({
                 "t247_id": t247_id,
-                "tender_no": tender_data.get("tender_no"),
-                "org_name": tender_data.get("org_name"),
-                "tender_name": tender_data.get("tender_name"),
-                "bid_submission_date": tender_data.get("bid_submission_date"),
-                "emd": tender_data.get("emd"),
-                "estimated_cost": tender_data.get("estimated_cost"),
+                "tender_no": _v(tender_data.get("tender_no")),
+                "org_name": _v(tender_data.get("org_name")),
+                "tender_name": _v(tender_data.get("tender_name")),
+                "bid_submission_date": _v(tender_data.get("bid_submission_date")),
+                "emd": _v(tender_data.get("emd")),
+                "estimated_cost": _v(tender_data.get("estimated_cost")),
                 "verdict": tender_data.get("overall_verdict", {}).get("verdict", ""),
                 "verdict_color": tender_data.get("overall_verdict", {}).get("color", ""),
                 "bid_no_bid_done": True,
@@ -1259,7 +1271,7 @@ async def generate_prebid_letter(t247_id: str):
         raise HTTPException(400, "No pre-bid queries available. Analyse the tender first.")
     tender["prebid_queries"] = queries
     generator = BidDocGenerator()
-    safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:40]
+    safe_no = re.sub(r'[^\w\-]', '_', _v(tender.get("tender_no"), t247_id))[:40]
     filename = f"PreBid_{safe_no}.docx"
     output_path = OUTPUT_DIR / filename
     # Generate a focused pre-bid letter document

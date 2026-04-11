@@ -144,6 +144,16 @@ def flatten_value(val) -> str:
     return str(val).strip() or "—"
 
 
+def _v(field_val, default="—"):
+    """Extract plain string from snapshot field (may be dict with value/clause_ref/page_no)."""
+    if isinstance(field_val, dict):
+        return str(field_val.get("value", "") or default)
+    if field_val is None:
+        return default
+    s = str(field_val).strip()
+    return s if s else default
+
+
 class BidDocGenerator:
 
     def generate(self, data: Dict[str, Any], output_path: str):
@@ -227,7 +237,7 @@ class BidDocGenerator:
         p.paragraph_format.space_before = Pt(6)
         add_run(p, "BID / NO-BID ANALYSIS", bold=True, size=16, color="FFFFFF")
 
-        tender_title = strip_emojis(data.get("tender_name", data.get("org_name", "")))[:100]
+        tender_title = strip_emojis(_v(data.get("tender_name"), _v(data.get("org_name"), "")))[:100]
         p2 = c1.add_paragraph(); p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
         add_run(p2, tender_title, size=10, color="DEEAF1")
 
@@ -255,13 +265,13 @@ class BidDocGenerator:
         self._sec_heading("1", "Tender Snapshot",
                           "Source: NIT + Portal + RFP — all key fields extracted")
         fields = [
-            ("Tender No. / NIT No.",     data.get("tender_no", "—")),
+            ("Tender No. / NIT No.",     _v(data.get("tender_no"), "—")),
             ("Tender ID (Portal)",        data.get("tender_id", "—")),
             ("T247 ID",                   data.get("t247_id", "—")),
-            ("Organization / Department", data.get("org_name", "—")),
+            ("Organization / Department", _v(data.get("org_name"), "—")),
             ("Sub-Department",            data.get("dept_name", "—")),
             ("Tender Name",               data.get("tender_name", "—")),
-            ("Portal / Website",          data.get("portal", "—")),
+            ("Portal / Website",          _v(data.get("portal"), "—")),
             ("Form of Contract",          data.get("tender_type", "—")),
             ("No. of Covers / Envelopes", data.get("no_of_covers", "—")),
             ("Bid Submission Start",      data.get("bid_start_date", "—")),
@@ -271,9 +281,9 @@ class BidDocGenerator:
             ("Mode of Selection / Eval.", data.get("mode_of_selection", "—")),
             ("Pre-Bid Meeting",           data.get("prebid_meeting", "Not specified")),
             ("Pre-Bid Query Deadline",    data.get("prebid_query_date", "Not specified")),
-            ("Estimated Cost",            data.get("estimated_cost", "Not mentioned — verify portal")),
-            ("Tender Fee",                data.get("tender_fee", "—")),
-            ("EMD / Bid Security",        data.get("emd", "—")),
+            ("Estimated Cost",            _v(data.get("estimated_cost"), "Not mentioned — verify portal")),
+            ("Tender Fee",                _v(data.get("tender_fee"), "—")),
+            ("EMD / Bid Security",        _v(data.get("emd"), "—")),
             ("EMD Exemption",             data.get("emd_exemption", "—")),
             ("Performance Bank Guarantee",data.get("performance_security", "—")),
             ("Period of Work / Contract", data.get("contract_period", "—")),
@@ -281,7 +291,7 @@ class BidDocGenerator:
             ("Post-Implementation / AMC", data.get("post_implementation", "—")),
             ("Technology (Mandatory)",    data.get("technology_mandatory", "—")),
             ("Project Location",          data.get("location", "—")),
-            ("Contact Officer",           data.get("contact", "—")),
+            ("Contact Officer",           _v(data.get("contact"), "—")),
             ("JV / Consortium",           data.get("jv_allowed", "Not specified — verify T&C")),
         ]
         highlight = {"Bid Submission Deadline","EMD / Bid Security","Tender Fee",
@@ -830,7 +840,7 @@ class BidDocGenerator:
             return
 
         prebid_deadline = data.get("prebid_query_date","—")
-        contact_raw = data.get("contact", {})
+        contact_raw = _v(data.get("contact"), "—")
         if isinstance(contact_raw, dict):
             prebid_contact = contact_raw.get("email") or contact_raw.get("name") or "Refer tender document"
         else:
@@ -1140,7 +1150,7 @@ class BidDocGenerator:
         fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r = fp.add_run(
             "CONFIDENTIAL — Bid/No-Bid Analysis | "
-            + data.get("tender_no","—") + " | "
+            + _v(data.get("tender_no"),"—") + " | "
             + "Nascent Info Technologies Pvt. Ltd. | "
             + datetime.now().strftime("%d %b %Y")
             + " | For Internal Use Only"
