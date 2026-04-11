@@ -859,41 +859,59 @@ function switchTab(tab, el) {
 async function checkHealth() {
   try {
     const r = await fetch('/health');
-    const d = await r.json();
+    const rawText = await r.text();
+    let d;
+    try { d = JSON.parse(rawText); } catch(e) { return; }
+    
+    // Update AI pill (new design)
+    const pillTxt = document.getElementById('ai-pill-txt');
+    const aiDot = document.getElementById('ai-dot');
+    const aiPill = document.getElementById('ai-pill');
+    
+    // Also update old-style elements if they exist
     const dot = document.getElementById('api-dot');
     const txt = document.getElementById('api-status-text');
     const badge = document.getElementById('ai-badge');
+    
     if (d.ai_configured) {
-      dot.classList.add('active');
       const kc = d.gemini_key_count || 1;
-      txt.textContent = `Gemini AI active (${kc} key${kc>1?'s':''})`;
-      badge.textContent = '● AI On';
-      badge.style.background = 'rgba(16,185,129,0.15)';
+      const keyLabel = `AI On · ${kc} key${kc>1?'s':''}`;
+      if (pillTxt) pillTxt.textContent = keyLabel;
+      if (aiDot) aiDot.classList.add('on');
+      if (aiPill) { aiPill.style.background = 'rgba(16,185,129,.15)'; aiPill.style.borderColor = 'rgba(16,185,129,.3)'; aiPill.style.color = '#10B981'; }
+      if (dot) dot.classList.add('active');
+      if (txt) txt.textContent = `Gemini AI active (${kc} key${kc>1?'s':''})`;
+      if (badge) { badge.textContent = '● AI On'; badge.style.background = 'rgba(16,185,129,0.15)'; }
     } else {
-      dot.classList.remove('active');
-      txt.textContent = 'Gemini AI not configured';
-      badge.textContent = '● AI Off';
+      if (pillTxt) pillTxt.textContent = 'AI Off — add key in Settings';
+      if (aiDot) aiDot.classList.remove('on');
+      if (aiPill) { aiPill.style.background = 'rgba(239,68,68,.1)'; aiPill.style.borderColor = 'rgba(239,68,68,.3)'; aiPill.style.color = '#EF4444'; }
+      if (dot) dot.classList.remove('active');
+      if (txt) txt.textContent = 'Add Gemini API key in Settings';
+      if (badge) badge.textContent = '● AI Off';
     }
     const hi = document.getElementById('health-info');
     if (hi) hi.innerHTML = `<div><b>AI Status:</b> ${d.ai_configured ? 'Active' : 'Not configured'}</div>`;
     
-    // AI Quota bar
-    const quotaBar = document.getElementById('ai-quota-bar');
-    if (quotaBar && d.ai_configured) {
-      quotaBar.style.display = 'block';
+    // AI Quota bar (sidebar)
+    const quotaWrap = document.getElementById('quota-wrap');
+    if (quotaWrap && d.ai_configured) {
+      quotaWrap.style.display = 'block';
       const used = d.api_calls_today || 0;
       const limit = d.api_daily_limit || 1500;
+      const remaining = d.api_remaining !== undefined ? d.api_remaining : limit - used;
       const pct = Math.min(100, Math.round(used/limit*100));
       const fill = document.getElementById('quota-fill');
-      const qtxt = document.getElementById('quota-text');
+      const qtxt = document.getElementById('quota-txt');
       const qreset = document.getElementById('quota-reset');
       if (fill) { fill.style.width = pct+'%'; fill.style.background = pct>85?'#EF4444':pct>60?'#F59E0B':'#10B981'; }
-      if (qtxt) qtxt.textContent = `${used.toLocaleString()} / ${limit.toLocaleString()} req`;
+      if (qtxt) qtxt.textContent = `${remaining.toLocaleString()} left`;
       if (qreset) {
-        const now = new Date();
-        const hoursLeft = 24 - now.getHours();
-        qreset.textContent = `Resets ~${hoursLeft}h (5:30 AM IST)`;
+        const hoursLeft = 24 - new Date().getHours();
+        qreset.textContent = `Resets in ~${hoursLeft}h IST`;
       }
+    } else if (quotaWrap) {
+      quotaWrap.style.display = 'none';
     }
     // Drive status in sidebar
     const driveLine = document.getElementById('drive-status-line');
@@ -2117,11 +2135,21 @@ async function analyseZip() {
 
   try {
     const r = await fetch('/process-files', { method: 'POST', body: fd });
-    const d = await r.json();
     clearInterval(interval);
     showStep(PROG_STEPS.length);
 
-    if (!r.ok) throw new Error(d.detail || 'Analysis failed');
+    // Always read as text first — server errors return plain text not JSON
+    const rawText = await r.text();
+    let d;
+    try {
+      d = JSON.parse(rawText);
+    } catch(parseErr) {
+      // Server returned non-JSON (HTML error page or plain text traceback)
+      const errLine = rawText.split('\n').find(l => l.includes('Error') || l.includes('error')) || rawText.substring(0, 200);
+      throw new Error('Server error: ' + errLine);
+    }
+
+    if (!r.ok) throw new Error(d.detail || d.message || 'Analysis failed (HTTP ' + r.status + ')');
 
     currentResult = d;
     downloadFile = d.download_file;
@@ -2131,12 +2159,13 @@ async function analyseZip() {
 
   } catch(e) {
     clearInterval(interval);
-    safeStyle('analyse-error').display = 'block';
-    document.getElementById('analyse-error').textContent = 'Error: ' + e.message;
-    toast('Analysis failed', 'error');
+    const errEl = document.getElementById('analyse-error');
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = e.message; }
+    toast('Analysis failed: ' + e.message.substring(0,60), 'error');
+    console.error('Analysis error:', e);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔍 Analyse Tender';
+    btn.innerHTML = '⊕ Analyse';
     const prog2 = document.getElementById('analyse-progress');
     if(prog2) prog2.style.display = 'none';
   }

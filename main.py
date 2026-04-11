@@ -1145,17 +1145,32 @@ async def upload_db(file: UploadFile = File(...)):
 @app.post("/sync-drive")
 async def sync_drive():
     if not drive_available():
-        return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
+        creds_set = bool(os.environ.get("GDRIVE_CREDENTIALS", "").strip())
+        folder_set = bool(os.environ.get("GDRIVE_FOLDER_ID", "").strip())
+        if not creds_set:
+            msg = "GDRIVE_CREDENTIALS not set in Render environment variables"
+        elif not folder_set:
+            msg = "GDRIVE_FOLDER_ID not set in Render environment variables"
+        else:
+            msg = "Google Drive not connected — check credentials"
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    
     db = load_db()
-    # Ensure DB file exists before trying to save it
     if not DB_FILE.exists():
         DB_FILE.parent.mkdir(parents=True, exist_ok=True)
         DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
+    
     ok = save_to_drive(DB_FILE)
     count = len(db.get("tenders", {}))
     if ok:
-        return {"status": "ok", "message": f"Synced {count} tenders to Drive"}
-    return JSONResponse({"status": "error", "message": "Sync failed"}, status_code=500)
+        # Also sync profile
+        try:
+            if PROFILE_FILE.exists():
+                save_to_drive(PROFILE_FILE, "nascent_profile.json")
+        except Exception:
+            pass
+        return {"status": "ok", "message": f"Synced {count} tenders + profile to Drive"}
+    return JSONResponse({"status": "error", "message": "Drive save failed — check Render logs"}, status_code=500)
 
 @app.get("/drive-status")
 async def drive_status():

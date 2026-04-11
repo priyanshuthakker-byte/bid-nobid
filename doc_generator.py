@@ -157,23 +157,43 @@ def _v(field_val, default="—"):
 class BidDocGenerator:
 
     def generate(self, data: Dict[str, Any], output_path: str):
+        import logging
+        logger = logging.getLogger(__name__)
         self.doc = Document()
         self._setup_page()
-        self._header_block(data)
-        self._section_snapshot(data)             # 1. Tender Snapshot
-        self._section_jv_conditions(data)        # 2. JV / Consortium Conditions
-        self._section_scope(data)                # 3. Scope of Work
-        self._section_pq(data)                   # 4. PQ Criteria
-        self._section_tq(data)                   # 5. TQ Criteria (if any)
-        self._section_payment(data)              # 6. Payment Terms
-        self._section_penalty(data)              # 7. Penalty & Risk
-        self._section_portal_discrepancies(data) # 8. Portal vs RFP Discrepancies
-        self._section_prebid_queries(data)       # 9. Pre-Bid Queries (consolidated)
-        self._section_notes(data)                # 10a. Notes + checklist
-        self._section_recommendation(data)       # 10. Verdict
-        self._section_action_items(data)         # 11. Immediate Action Items
-        self._section_authorization()            # 12. Authorization
-        self._footer(data)
+        
+        sections = [
+            ("header",        lambda: self._header_block(data)),
+            ("snapshot",      lambda: self._section_snapshot(data)),
+            ("jv_conditions", lambda: self._section_jv_conditions(data)),
+            ("scope",         lambda: self._section_scope(data)),
+            ("pq",            lambda: self._section_pq(data)),
+            ("tq",            lambda: self._section_tq(data)),
+            ("payment",       lambda: self._section_payment(data)),
+            ("penalty",       lambda: self._section_penalty(data)),
+            ("discrepancies", lambda: self._section_portal_discrepancies(data)),
+            ("prebid",        lambda: self._section_prebid_queries(data)),
+            ("notes",         lambda: self._section_notes(data)),
+            ("recommendation",lambda: self._section_recommendation(data)),
+            ("action_items",  lambda: self._section_action_items(data)),
+            ("authorization", lambda: self._section_authorization()),
+            ("footer",        lambda: self._footer(data)),
+        ]
+        
+        for name, fn in sections:
+            try:
+                fn()
+            except Exception as e:
+                logger.error(f"[DocGenerator] Section '{name}' failed: {e}")
+                # Add a note in the doc rather than crashing
+                try:
+                    p = self.doc.add_paragraph(f"[{name} section could not be generated: {str(e)[:80]}]")
+                    from docx.util import Pt
+                    p.runs[0].font.size = Pt(8)
+                    p.runs[0].font.color.rgb = __import__('docx.shared', fromlist=['RGBColor']).RGBColor(0xDC, 0x26, 0x26)
+                except Exception:
+                    pass
+        
         self.doc.save(output_path)
 
     # ── PAGE SETUP ────────────────────────────────────────────
