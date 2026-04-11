@@ -438,94 +438,94 @@ tr:last-child td{border-bottom:none;}
 
     <!-- ═══ ANALYSE PAGE ═══ -->
     <div class="page" id="page-analyse">
-      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:20px;">
-        
-        <!-- Left: Upload -->
-        <div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Upload Tender ZIP</div></div>
-            <div class="card-body">
-              <div class="form-group">
-                <label class="form-label">T247 ID (optional — links to dashboard)</label>
-                <input class="form-input" id="analyse-t247-id" 
-                       placeholder="e.g. 98610407"/>
+
+      <!-- TOP UPLOAD BAR — always visible, no dependency -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:16px">
+          <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+            <!-- Drop zone -->
+            <div class="drop-zone" id="zip-drop" style="flex:1;min-width:280px;padding:20px;min-height:80px;display:flex;align-items:center;gap:16px;text-align:left">
+              <input type="file" id="zip-input" accept=".zip,.pdf,.docx,.doc,.txt" multiple onchange="handleZipSelect(this)"/>
+              <div style="font-size:28px;flex-shrink:0">📦</div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary)" id="zip-drop-label">Drop RFP documents or click to browse</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">ZIP · PDF · DOCX · DOC · TXT · Multiple files OK · No prior steps needed</div>
+                <div id="zip-selected-inline" style="display:none;margin-top:6px;font-size:12px;color:#059669;font-weight:500"></div>
               </div>
-              <div class="drop-zone" id="zip-drop">
-                <input type="file" id="zip-input" accept=".zip,.pdf,.docx,.doc,.txt" multiple
-                       onchange="handleZipSelect(this)"/>
-                <div class="drop-icon">📦</div>
-                <h3>Drop tender documents here</h3>
-                <p>ZIP, PDF, DOCX or any combination — click to browse</p>
-              </div>
-              <div id="zip-selected" style="display:none;margin-top:12px;padding:10px 14px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;font-size:13px;">
-                <strong id="zip-name"></strong><br>
-                <span id="zip-size" style="color:#64748B;font-size:12px;"></span>
-              </div>
-              <div style="margin-top:8px;font-size:11px;color:#94A3B8;text-align:center">
-                Accepted: .zip &nbsp;·&nbsp; .pdf &nbsp;·&nbsp; .docx &nbsp;·&nbsp; .doc &nbsp;·&nbsp; .txt &nbsp;·&nbsp; Multiple files allowed
-              </div>
-              <button class="btn btn-primary" style="width:100%;margin-top:16px;justify-content:center;padding:12px;" 
-                      id="analyse-btn" onclick="analyseZip()" disabled>
-                Analyse Tender Documents
+            </div>
+            <!-- T247 ID + Analyse button -->
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:200px">
+              <input class="form-input" id="analyse-t247-id" placeholder="T247 ID (optional)" style="font-size:13px"/>
+              <button class="btn btn-primary" style="justify-content:center;padding:10px 20px;" id="analyse-btn" onclick="analyseZip()" disabled>
+                🔍 Analyse Tender
               </button>
-              <!-- Progress -->
-              <div id="analyse-progress" style="display:none;margin-top:16px;">
-                <div id="prog-steps"></div>
-              </div>
-              <div id="analyse-error" style="display:none;margin-top:12px;padding:10px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;font-size:13px;color:#DC2626;"></div>
             </div>
           </div>
+          <!-- Progress bar -->
+          <div id="analyse-progress" style="display:none;margin-top:14px">
+            <div id="prog-bar-wrap" style="height:4px;background:#E2E8F0;border-radius:2px;overflow:hidden;margin-bottom:8px">
+              <div id="prog-bar" style="height:100%;background:#3B82F6;width:0%;transition:width 0.4s;border-radius:2px"></div>
+            </div>
+            <div id="prog-steps" style="font-size:12px;color:#64748B"></div>
+          </div>
+          <div id="analyse-error" style="display:none;margin-top:10px;padding:8px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;font-size:12px;color:#DC2626;"></div>
+        </div>
+      </div>
+
+      <!-- RESULTS — full width below -->
+      <div id="analyse-results" style="display:none">
+        <!-- Verdict + quick stats -->
+        <div id="result-verdict" class="verdict-banner blue" style="margin-bottom:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div style="flex:1">
+              <div class="verdict-title" id="vt" style="font-size:22px;font-weight:800"></div>
+              <div class="verdict-reason" id="vr" style="margin-top:4px;font-size:13px;opacity:0.9;line-height:1.5"></div>
+              <div class="verdict-scores" style="margin-top:10px;display:flex;gap:20px">
+                <span class="verdict-score" style="color:var(--green)" id="vs-g"></span>
+                <span class="verdict-score" style="color:var(--amber)" id="vs-a"></span>
+                <span class="verdict-score" style="color:var(--red)" id="vs-r"></span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button class="btn btn-success btn-sm" id="dl-btn" onclick="downloadReport()">⬇ Word Report</button>
+              <button class="btn btn-outline btn-sm" onclick="generatePrebidFromResult()">✉️ Pre-Bid Queries</button>
+            </div>
+          </div>
+          <div id="vs-projects" style="margin-top:10px"></div>
         </div>
 
-        <!-- Right: Results -->
-        <div id="analyse-results" style="display:none;">
-          <div id="corr-alert" class="corr-alert" style="display:none;">
-            📋 Corrigendum detected — dates/details updated from corrigendum.
-            <span id="corr-files" style="font-size:11px;margin-left:8px;"></span>
+        <div id="corr-alert" class="corr-alert" style="display:none;margin-bottom:12px">
+          📋 Corrigendum detected — dates updated from amendment.
+          <span id="corr-files" style="font-size:11px;margin-left:8px"></span>
+        </div>
+        <div id="ai-warning-alert" style="display:none;margin-bottom:12px;padding:8px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;font-size:12px;color:#92400E">
+          ⚠ <span id="ai-warning-text"></span>
+        </div>
+
+        <!-- Analysis tabs card -->
+        <div class="card">
+          <div class="card-header" style="padding:12px 16px">
+            <div class="card-title" id="result-title" style="font-size:13px"></div>
           </div>
-          <div id="result-verdict" class="verdict-banner blue">
-            <div class="verdict-title" id="vt"></div>
-            <div class="verdict-reason" id="vr"></div>
-            <div class="verdict-scores">
-              <span class="verdict-score" style="color:var(--green)" id="vs-g"></span>
-              <span class="verdict-score" style="color:var(--amber)" id="vs-a"></span>
-              <span class="verdict-score" style="color:var(--red)" id="vs-r"></span>
+          <div style="border-bottom:1px solid var(--border);overflow-x:auto">
+            <div style="display:flex;min-width:max-content;padding:0 4px">
+              <div class="tab active" onclick="switchTab('snapshot',this)" style="padding:10px 14px;white-space:nowrap">📋 Snapshot</div>
+              <div class="tab" onclick="switchTab('scope',this)" style="padding:10px 14px;white-space:nowrap">🎯 Scope</div>
+              <div class="tab" onclick="switchTab('pq',this)" style="padding:10px 14px;white-space:nowrap">✅ PQ Criteria</div>
+              <div class="tab" onclick="switchTab('tq',this)" style="padding:10px 14px;white-space:nowrap">🏆 TQ & Marks</div>
+              <div class="tab" onclick="switchTab('work',this)" style="padding:10px 14px;white-space:nowrap">🗓 Work Schedule</div>
+              <div class="tab" onclick="switchTab('payment',this)" style="padding:10px 14px;white-space:nowrap">💰 Payment</div>
+              <div class="tab" onclick="switchTab('checklist',this)" style="padding:10px 14px;white-space:nowrap">📁 Checklist</div>
             </div>
-            <div id="vs-projects" style="margin-top:8px"></div>
           </div>
-          <div id="ai-warning-alert" style="display:none;margin-top:12px;padding:10px 14px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:12px;color:#92400E;">
-            ⚠ <span id="ai-warning-text"></span>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title" id="result-title">Analysis Results</div>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-success btn-sm" id="dl-btn" onclick="downloadReport()">
-                  ⬇ Download Word
-                </button>
-                <button class="btn btn-outline btn-sm" onclick="generatePrebidFromResult()">
-                  ✉️ Pre-Bid Queries
-                </button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="tabs">
-                <div class="tab active" onclick="switchTab('snapshot',this)">Snapshot</div>
-                <div class="tab" onclick="switchTab('scope',this)">Scope</div>
-                <div class="tab" onclick="switchTab('pq',this)">PQ Criteria</div>
-                <div class="tab" onclick="switchTab('tq',this)">TQ Criteria</div>
-                <div class="tab" onclick="switchTab('work',this)">Work Schedule</div>
-                <div class="tab" onclick="switchTab('payment',this)">Payment</div>
-                <div class="tab" onclick="switchTab('checklist',this)">Checklist</div>
-              </div>
-              <div id="tab-snapshot"></div>
-              <div id="tab-scope" style="display:none"></div>
-              <div id="tab-pq" style="display:none"></div>
-              <div id="tab-tq" style="display:none"></div>
-              <div id="tab-work" style="display:none"></div>
-              <div id="tab-payment" style="display:none"></div>
-              <div id="tab-checklist" style="display:none"></div>
-            </div>
+          <div class="card-body" style="padding:16px;overflow-x:auto">
+            <div id="tab-snapshot"></div>
+            <div id="tab-scope" style="display:none"></div>
+            <div id="tab-pq" style="display:none"></div>
+            <div id="tab-tq" style="display:none"></div>
+            <div id="tab-work" style="display:none"></div>
+            <div id="tab-payment" style="display:none"></div>
+            <div id="tab-checklist" style="display:none"></div>
           </div>
         </div>
       </div>
@@ -533,31 +533,53 @@ tr:last-child td{border-bottom:none;}
 
     <!-- ═══ PRE-BID QUERIES PAGE ═══ -->
     <div class="page" id="page-prebid">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Generate Pre-Bid Queries</div></div>
-            <div class="card-body">
-              <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-                After analysing a tender, click "Pre-Bid Queries" from the Analyse page 
-                to auto-generate queries. Or enter T247 ID below to load from a previous analysis.
-              </p>
-              <div class="form-group">
-                <label class="form-label">T247 ID</label>
-                <input class="form-input" id="prebid-t247" placeholder="Enter T247 ID"/>
+      <!-- Independent input — no previous steps needed -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:16px">
+          <div style="display:flex;gap:16px;align-items:stretch;flex-wrap:wrap">
+            <!-- Option A: Drop files directly -->
+            <div style="flex:1;min-width:240px">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748B;margin-bottom:6px">Option A — Drop Tender Documents</div>
+              <div class="drop-zone" id="prebid-drop" style="padding:16px;min-height:72px;display:flex;align-items:center;gap:12px;text-align:left">
+                <input type="file" id="prebid-file-input" accept=".zip,.pdf,.docx,.doc,.txt" multiple onchange="handlePrebidFiles(this)"/>
+                <span style="font-size:24px;flex-shrink:0">📄</span>
+                <div>
+                  <div style="font-size:12px;font-weight:600" id="prebid-drop-label">Drop RFP files — AI generates queries directly</div>
+                  <div style="font-size:11px;color:#94A3B8">No prior analysis needed</div>
+                </div>
               </div>
-              <button class="btn btn-primary" onclick="loadPrebidQueries()">Load Queries</button>
+            </div>
+            <!-- Divider -->
+            <div style="display:flex;align-items:center;color:#CBD5E1;font-size:12px;font-weight:600">OR</div>
+            <!-- Option B: T247 ID from existing analysis -->
+            <div style="flex:1;min-width:180px">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748B;margin-bottom:6px">Option B — Load from Previous Analysis</div>
+              <input class="form-input" id="prebid-t247" placeholder="Enter T247 ID" style="font-size:13px;margin-bottom:8px"/>
+              <button class="btn btn-outline btn-sm" onclick="loadPrebidQueries()" style="width:100%;justify-content:center">Load from Analysis</button>
+            </div>
+            <!-- Generate button -->
+            <div style="display:flex;flex-direction:column;justify-content:flex-end;min-width:160px">
+              <button class="btn btn-primary" id="prebid-gen-btn" onclick="generatePrebidDirect()" style="padding:10px;justify-content:center" disabled>
+                ✉️ Generate Queries
+              </button>
+              <div id="prebid-gen-status" style="font-size:11px;color:#64748B;margin-top:6px;text-align:center"></div>
             </div>
           </div>
         </div>
-        <div id="prebid-results"></div>
       </div>
-      <div id="prebid-queries-list" style="margin-top:20px;"></div>
-      <div id="email-template-section" style="display:none;margin-top:20px;">
+
+      <!-- Queries output -->
+      <div id="prebid-queries-list"></div>
+
+      <!-- Letter output -->
+      <div id="email-template-section" style="display:none;margin-top:20px">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">Email Template — Ready to Send</div>
-            <button class="btn btn-outline btn-sm" onclick="copyEmail()">📋 Copy</button>
+            <div class="card-title">Pre-Bid Letter — Ready to Send</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="copyEmail()">📋 Copy Letter</button>
+              <button class="btn btn-success btn-sm" onclick="downloadPrebidLetter()">⬇ Download DOCX</button>
+            </div>
           </div>
           <div class="card-body">
             <div class="email-box" id="email-content"></div>
@@ -568,9 +590,30 @@ tr:last-child td{border-bottom:none;}
 
     <!-- ═══ REPORTS PAGE ═══ -->
     <div class="page" id="page-reports">
+      <!-- Independent: Generate Word report from any files, no prior steps needed -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">📝 Generate Word Report Directly</div>
+          <span style="font-size:11px;color:#94A3B8">No prior analysis needed — drop files to generate</span>
+        </div>
+        <div class="card-body" style="padding:16px">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div class="drop-zone" id="report-drop" style="flex:1;min-width:240px;padding:16px;min-height:64px;display:flex;align-items:center;gap:12px;text-align:left">
+              <input type="file" id="report-file-input" accept=".zip,.pdf,.docx,.doc,.txt" multiple onchange="handleReportFiles(this)"/>
+              <span style="font-size:22px">📦</span>
+              <div>
+                <div style="font-size:12px;font-weight:600" id="report-drop-label">Drop tender documents → get Word report</div>
+                <div style="font-size:11px;color:#94A3B8">Independently analyse and generate report in one step</div>
+              </div>
+            </div>
+            <input class="form-input" id="report-t247" placeholder="T247 ID (optional)" style="width:160px;font-size:13px"/>
+            <button class="btn btn-success" id="report-gen-btn" onclick="generateReportDirect()" disabled>⬇ Generate Report</button>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Generated Reports</div>
+          <div class="card-title">Generated Reports History</div>
           <button class="btn btn-outline btn-sm" onclick="loadReports()">Refresh</button>
         </div>
         <div class="card-body" style="padding:0">
@@ -869,14 +912,20 @@ document.addEventListener('DOMContentLoaded', () => {
   checkHealth();
   loadReports();
 
-  // Drag & Drop
-  const dz = document.getElementById('zip-drop');
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('dragover');
-    if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files));
-  });
+  // Universal drag-drop setup — works on all drop zones across all pages
+  function setupDZ(id, handler) {
+    const dz = document.getElementById(id);
+    if (!dz) return;
+    ['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+    ['dragleave','dragend'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('dragover')));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handler(e.dataTransfer.files);
+    });
+  }
+  setupDZ('zip-drop',     files => handleFiles(Array.from(files)));
+  setupDZ('prebid-drop',  files => handlePrebidFiles({files}));
+  setupDZ('report-drop',  files => handleReportFiles({files}));
 });
 
 // ═══════════════════════════════════════════
@@ -886,7 +935,7 @@ const pageTitles = {
   dashboard: 'Dashboard', tenders: 'All Tenders',
   analyse: 'Analyse Tender', prebid: 'Pre-Bid Queries',
   reports: 'Reports', alerts: 'Deadline Alerts', tracker: 'Bid Tracker',
-  winloss: 'Win / Loss Stats', profile: 'Nascent Profile', settings: 'Settings'
+  winloss: 'Win / Loss Stats', profile: 'Nascent Profile', guidelines: 'Guidelines Library', settings: 'Settings'
 };
 
 function showPage(name, callerEl) {
@@ -1889,25 +1938,65 @@ function handleZipSelect(input) {
 }
 
 function handleFiles(files) {
-  // Filter to allowed types
   const valid = files.filter(f => {
     const ext = '.' + f.name.split('.').pop().toLowerCase();
     return ALLOWED_EXTS.includes(ext);
   });
-  if (!valid.length) {
-    toast('No supported files selected (ZIP, PDF, DOCX, DOC, TXT)', 'error');
-    return;
-  }
+  if (!valid.length) { toast('No supported files (ZIP, PDF, DOCX, DOC, TXT)', 'error'); return; }
   selectedFiles = valid;
   const totalSize = valid.reduce((s, f) => s + f.size, 0);
-  const names = valid.map(f => f.name).join(', ');
-  safeStyle('zip-selected').display = 'block';
-  document.getElementById('zip-name').textContent =
-    valid.length === 1 ? valid[0].name : `${valid.length} files: ${names}`;
-  document.getElementById('zip-size').textContent =
-    'Total: ' + (totalSize/1024/1024).toFixed(2) + ' MB';
+  const label = valid.length === 1
+    ? valid[0].name + ' (' + (totalSize/1024).toFixed(0) + ' KB)'
+    : valid.length + ' files — ' + (totalSize/1024/1024).toFixed(2) + ' MB total';
+  // Update new inline label
+  const inlineLabel = document.getElementById('zip-selected-inline');
+  if (inlineLabel) { inlineLabel.textContent = '✓ ' + label; inlineLabel.style.display = 'block'; }
+  // Update drop zone label
+  const dropLabel = document.getElementById('zip-drop-label');
+  if (dropLabel) dropLabel.textContent = label;
   document.getElementById('analyse-btn').disabled = false;
   safeStyle('analyse-error').display = 'none';
+}
+
+// Handle prebid direct file drop
+let prebidFiles = [];
+function handlePrebidFiles(input) {
+  const valid = Array.from(input.files).filter(f => {
+    const ext = '.' + f.name.split('.').pop().toLowerCase();
+    return ALLOWED_EXTS.includes(ext);
+  });
+  if (!valid.length) { toast('No supported files', 'error'); return; }
+  prebidFiles = valid;
+  const label = valid.length === 1 ? valid[0].name : valid.length + ' files';
+  const dl = document.getElementById('prebid-drop-label');
+  if (dl) dl.textContent = '✓ ' + label;
+  const btn = document.getElementById('prebid-gen-btn');
+  if (btn) btn.disabled = false;
+}
+
+async function generatePrebidDirect() {
+  if (!prebidFiles.length) { toast('Drop RFP files first', 'error'); return; }
+  const btn = document.getElementById('prebid-gen-btn');
+  const status = document.getElementById('prebid-gen-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  if (status) status.textContent = 'Analysing RFP and generating queries...';
+  const fd = new FormData();
+  prebidFiles.forEach(f => fd.append('files', f));
+  fd.append('prebid_only', '1');
+  try {
+    const r = await fetch('/process-files', {method:'POST', body:fd});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail||'Failed');
+    const td = d.tender_data || {};
+    const queries = td.prebid_queries || [];
+    renderPrebidQueries({queries, send_to: td.contact, deadline: td.prebid_query_date});
+    if (status) status.textContent = queries.length + ' queries generated';
+  } catch(e) {
+    toast('Generation failed: ' + e.message, 'error');
+    if (status) status.textContent = '';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✉️ Generate Queries'; }
+  }
 }
 
 const PROG_STEPS = [
@@ -1929,24 +2018,21 @@ async function analyseZip() {
 
   // Show progress
   const prog = document.getElementById('analyse-progress');
-  prog.style.display = 'block';
+  if(prog) prog.style.display = 'block';
   const stepsEl = document.getElementById('prog-steps');
+  const progBar = document.getElementById('prog-bar');
   let currentStep = 0;
 
   function showStep(i) {
-    stepsEl.innerHTML = PROG_STEPS.map((s, idx) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;
-        color:${idx<i?'#10B981':idx===i?'#3B82F6':'#94A3B8'}">
-        <span>${idx<i?'✓':idx===i?'●':'○'}</span>
-        <span>${s}</span>
-      </div>`).join('');
+    const pct = Math.round(i / PROG_STEPS.length * 100);
+    if(progBar) progBar.style.width = pct + '%';
+    if(stepsEl) stepsEl.textContent = PROG_STEPS[Math.min(i, PROG_STEPS.length-1)] + '...';
   }
 
-  // Animate steps
   const interval = setInterval(() => {
     showStep(currentStep);
     if (currentStep < PROG_STEPS.length - 1) currentStep++;
-  }, 600);
+  }, 800);
 
   const t247_id = document.getElementById('analyse-t247-id').value.trim();
   const fd = new FormData();
@@ -1975,8 +2061,9 @@ async function analyseZip() {
     toast('Analysis failed', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Analyse Tender Documents';
-    prog.style.display = 'none';
+    btn.textContent = '🔍 Analyse Tender';
+    const prog2 = document.getElementById('analyse-progress');
+    if(prog2) prog2.style.display = 'none';
   }
 }
 
@@ -2117,17 +2204,58 @@ function renderResults(data) {
     ['Files Processed', (data.files_processed||[]).join(', ')],
     ['AI Warning', td.ai_warning],
   ];
-  document.getElementById('tab-snapshot').innerHTML = dqHtml + confHtml +
-    '<div class="table-wrap"><table>' + snapFields.map(([k,f]) => {
-      const v = snapVal(f);
-      if (v === '—' || !v) return '';
-      const ref = snapRef(f);
-      const isCritical = k.includes('Deadline') || k.includes('EMD') || k.includes('JV') || k.includes('Mode');
-      return `<tr>
-        <td style="font-weight:600;color:#64748B;font-size:11px;width:200px;padding:8px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;white-space:nowrap">${esc(k)}</td>
-        <td style="font-size:13px;padding:8px 12px;border-bottom:1px solid #E2E8F0;color:${isCritical?'#1E293B':'#374151'};font-weight:${isCritical?'500':'400'}">${v}${ref}</td>
-      </tr>`;
-    }).filter(Boolean).join('') + '</table></div>';
+  // Build cross-check table: Field | Value | Clause No | Sub-Clause | Page No
+  const snapTableRows = snapFields.map(([k,f]) => {
+    const v = snapVal(f);
+    if (!v || v === '—') return '';
+    const cr = (f && typeof f === 'object') ? (f.clause_ref||'—') : '—';
+    const pg = (f && typeof f === 'object') ? (f.page_no||'—') : '—';
+    // Split clause into clause + sub-clause (e.g. "Cl. 5.2.1" → "5" + "2.1")
+    let clauseNo = '—', subClause = '—';
+    const clauseMatch = cr.replace(/cl\.?|clause|section|sec\.?/gi,'').trim();
+    if (clauseMatch && clauseMatch !== '—') {
+      const parts = clauseMatch.split('.');
+      clauseNo = parts[0]||'—';
+      subClause = parts.slice(1).join('.')||'—';
+    }
+    const isCrit = k.includes('Deadline')||k.includes('EMD')||k.includes('JV')||k.includes('Contract')||k.includes('Mode');
+    const critStyle = isCrit ? 'font-weight:600;color:#1E293B' : 'color:#374151';
+    return `<tr>
+      <td style="font-weight:600;color:#64748B;font-size:11px;padding:7px 12px;background:#F8FAFC;border-bottom:1px solid #F1F5F9;white-space:nowrap;width:180px">${esc(k)}</td>
+      <td style="font-size:12px;padding:7px 12px;border-bottom:1px solid #F1F5F9;${critStyle}">${esc(v)}</td>
+      <td style="font-size:11px;text-align:center;padding:7px 8px;border-bottom:1px solid #F1F5F9;color:#3B82F6;font-weight:600;width:70px">${esc(clauseNo)}</td>
+      <td style="font-size:11px;text-align:center;padding:7px 8px;border-bottom:1px solid #F1F5F9;color:#64748B;width:70px">${esc(subClause)}</td>
+      <td style="font-size:11px;text-align:center;padding:7px 8px;border-bottom:1px solid #F1F5F9;color:#94A3B8;width:60px">${esc(pg)}</td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  // Key strengths + risks compact view
+  const strengths = (td.key_strengths||[]).slice(0,3);
+  const risks = (td.key_risks||[]).slice(0,3);
+  let srHtml = '';
+  if (strengths.length || risks.length) {
+    srHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="padding:12px;background:#F0FDF4;border:1px solid #A7F3D0;border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">✓ Strengths</div>
+        ${strengths.map(s=>`<div style="font-size:11px;color:#065F46;padding:3px 0">• ${esc(s)}</div>`).join('')}
+      </div>
+      <div style="padding:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:#C2410C;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">⚠ Risks</div>
+        ${risks.map(r=>`<div style="font-size:11px;color:#7C2D12;padding:3px 0">• ${esc(r)}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('tab-snapshot').innerHTML = dqHtml + confHtml + srHtml +
+    '<div class="table-wrap"><table style="width:100%">' +
+    '<thead><tr>' +
+    '<th style="width:190px;background:#F1F5F9;font-size:10px;padding:8px 12px;color:#64748B">SNAPSHOT FIELD</th>' +
+    '<th style="background:#F1F5F9;font-size:10px;padding:8px 12px;color:#64748B">VALUE</th>' +
+    '<th style="width:80px;background:#EFF6FF;font-size:10px;padding:8px;text-align:center;color:#2563EB;font-weight:700">CLAUSE NO</th>' +
+    '<th style="width:80px;background:#EFF6FF;font-size:10px;padding:8px;text-align:center;color:#2563EB;font-weight:700">SUB-CLAUSE</th>' +
+    '<th style="width:70px;background:#F0FDF4;font-size:10px;padding:8px;text-align:center;color:#059669;font-weight:700">PAGE NO</th>' +
+    '</tr></thead>' +
+    '<tbody>' + snapTableRows + '</tbody></table></div>';
 
   // Scope tab — uses scope_sections (new) or scope_items (compat)
   const scopeSections = td.scope_sections || [];
@@ -2187,7 +2315,20 @@ function renderResults(data) {
     let payHtml = '';
     if (payments.length) {
       payHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #E2E8F0">Payment Milestones</div>';
-      payHtml += '<div class="table-wrap"><table><thead><tr><th>Milestone</th><th>Activity / Trigger</th><th>Timeline</th><th>Payment %</th></tr></thead><tbody>';
+          // Phase summary strip
+    const phaseA = td.phase_a_total_percent || '';
+    const phaseB = td.phase_b_total_percent || '';
+    const advancePay = td.advance_payment || '';
+    const retentionPay = td.retention_money || '';
+    if (phaseA || phaseB || advancePay) {
+      payHtml += `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:12px 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:16px;font-size:12px">
+        ${phaseA?`<div><div style="color:#64748B;font-size:10px;text-transform:uppercase">Phase A (Dev)</div><div style="font-weight:700;color:#059669;font-size:16px">${esc(phaseA)}</div></div>`:''}
+        ${phaseB?`<div><div style="color:#64748B;font-size:10px;text-transform:uppercase">Phase B (O&M)</div><div style="font-weight:700;color:#3B82F6;font-size:16px">${esc(phaseB)}</div></div>`:''}
+        ${advancePay?`<div><div style="color:#64748B;font-size:10px;text-transform:uppercase">Advance</div><div style="font-weight:700;color:#D97706;font-size:14px">${esc(advancePay)}</div></div>`:''}
+        ${retentionPay?`<div><div style="color:#64748B;font-size:10px;text-transform:uppercase">Retention</div><div style="font-weight:700;color:#DC2626;font-size:14px">${esc(retentionPay)}</div></div>`:''}
+      </div>`;
+    }
+    payHtml += '<div class="table-wrap"><table><thead><tr><th>Milestone</th><th>Activity / Trigger</th><th>Timeline</th><th>Payment %</th></tr></thead><tbody>';
       payHtml += payments.map(p => `<tr>
         <td style="font-weight:600;font-size:12px">${esc(p.milestone||'—')}</td>
         <td style="font-size:12px">${esc(p.activity||p.scope||'—')}</td>
@@ -2203,6 +2344,13 @@ function renderResults(data) {
         <div style="color:#475569;margin-top:4px">${esc(p.condition||'')}</div>
         <div style="color:#B91C1C;font-weight:600;margin-top:4px">${esc(p.penalty||'')}${p.max_cap ? ' (Max: '+esc(p.max_cap)+')' : ''}</div>
       </div>`).join('');
+    }
+    // IP and exit clause
+    if (td.ip_ownership) {
+      payHtml += `<div style="margin-top:16px;padding:10px 14px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;font-size:12px"><span style="font-weight:700;color:#92400E">IP / Source Code Ownership:</span> <span style="color:#78350F">${esc(td.ip_ownership)}</span></div>`;
+    }
+    if (td.exit_clause) {
+      payHtml += `<div style="margin-top:8px;padding:10px 14px;background:#F3F4F6;border:1px solid #D1D5DB;border-radius:8px;font-size:12px"><span style="font-weight:700;color:#374151">Exit / Handover:</span> <span style="color:#4B5563">${esc(td.exit_clause)}</span></div>`;
     }
     document.getElementById('tab-payment').innerHTML = payHtml;
   } else {
@@ -2245,6 +2393,24 @@ function renderResults(data) {
         clHtml += '</tbody></table></div>';
       });
     }
+    // Action items from assessment
+    const actions = td.action_items || [];
+    if (actions.length) {
+      clHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#1D4ED8;margin:20px 0 8px;letter-spacing:0.05em">ACTION ITEMS</div>';
+      clHtml += '<div style="display:grid;gap:8px">';
+      clHtml += actions.map(a => {
+        const pc = a.priority==='URGENT'?'#DC2626':a.priority==='HIGH'?'#D97706':'#2563EB';
+        const pb = a.priority==='URGENT'?'#FEF2F2':a.priority==='HIGH'?'#FFFBEB':'#EFF6FF';
+        return `<div style="padding:10px 14px;background:${pb};border-left:3px solid ${pc};border-radius:0 8px 8px 0;font-size:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-weight:600;color:#1E293B">${esc(a.action||'')}</span>
+            <span style="color:${pc};font-weight:700;font-size:10px">${esc(a.priority||'')}</span>
+          </div>
+          <div style="color:#64748B;font-size:11px">${esc(a.responsible||'')} ${a.target_date?'· '+esc(a.target_date):''}</div>
+        </div>`;
+      }).join('');
+      clHtml += '</div>';
+    }
     document.getElementById('tab-checklist').innerHTML = clHtml;
   } else {
     document.getElementById('tab-checklist').innerHTML = '<div style="color:#94A3B8;padding:20px">No checklist generated — re-analyse to generate</div>';
@@ -2267,9 +2433,9 @@ function renderPQTab(criteria) {
     criteria.map(c => {
       const [bg,tc] = statusColors[c.nascent_status||'Review']||['#EFF6FF','#2563EB'];
       const ref = [c.clause_ref&&c.clause_ref!=='—'?c.clause_ref:'', c.page_no&&c.page_no!=='—'?c.page_no:''].filter(Boolean).join(' ');
-      const calc = c.calculation_shown && c.calculation_shown!=='—' ? `<div style="font-size:10px;color:#1D4ED8;background:#EFF6FF;padding:4px 6px;border-radius:4px;margin-top:4px">${esc(c.calculation_shown)}</div>` : '';
-      const evid = c.evidence_projects && c.evidence_projects!=='—' ? `<div style="font-size:10px;color:#047857;background:#ECFDF5;padding:4px 6px;border-radius:4px;margin-top:4px">${esc(c.evidence_projects)}</div>` : '';
-      const queryTag = (c.raises_query||'').includes('YES') ? `<div style="font-size:10px;color:#D97706;margin-top:4px">⚡ Pre-bid query raised</div>` : '';
+      const calc = c.calculation_shown && c.calculation_shown!=='—' ? `<div style="font-size:10px;color:#fff;background:#2563EB;padding:3px 7px;border-radius:4px;margin-top:4px;display:inline-block">🧮 ${esc(c.calculation_shown)}</div>` : '';
+      const evid = c.evidence_projects && c.evidence_projects!=='—' ? `<div style="font-size:10px;color:#047857;background:#D1FAE5;padding:3px 7px;border-radius:4px;margin-top:4px;display:inline-block">📋 ${esc(c.evidence_projects)}</div>` : '';
+      const queryTag = (c.raises_query||'').includes('YES') ? `<div style="font-size:10px;color:#D97706;font-weight:600;margin-top:4px">⚡ Pre-bid query raised</div>` : '';
       return `<tr style="background:${bg}08">
         <td style="text-align:center;font-weight:700;font-size:12px;color:#64748B">${esc(c.sl_no||'')}</td>
         <td style="font-size:10px;color:#64748B;text-align:center">${esc(ref)}</td>
@@ -2498,9 +2664,62 @@ function renderPrebidQueries(data) {
   document.getElementById('badge-prebid').textContent = queries.length;
 }
 
+// Report page independent functions
+let reportFiles = [];
+function handleReportFiles(input) {
+  const valid = Array.from(input.files||[]).filter(f => {
+    const ext = '.' + f.name.split('.').pop().toLowerCase();
+    return ALLOWED_EXTS.includes(ext);
+  });
+  if (!valid.length) { toast('No supported files', 'error'); return; }
+  reportFiles = valid;
+  const label = valid.length === 1 ? valid[0].name : valid.length + ' files';
+  const dl = document.getElementById('report-drop-label');
+  if (dl) dl.textContent = '✓ ' + label;
+  const btn = document.getElementById('report-gen-btn');
+  if (btn) btn.disabled = false;
+}
+
+async function generateReportDirect() {
+  if (!reportFiles.length) { toast('Drop RFP documents first', 'error'); return; }
+  const btn = document.getElementById('report-gen-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  const fd = new FormData();
+  reportFiles.forEach(f => fd.append('files', f));
+  const t247 = (document.getElementById('report-t247')||{}).value || '';
+  if (t247) fd.append('t247_id', t247);
+  try {
+    const r = await fetch('/process-files', {method:'POST', body:fd});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail||'Failed');
+    if (d.download_url || d.filename) {
+      const url = d.download_url || '/download/' + d.filename;
+      window.open(url, '_blank');
+      toast('Report ready — opening download', 'success');
+    }
+    loadReports();
+  } catch(e) {
+    toast('Report generation failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Generate Report'; }
+  }
+}
+
 function copyEmail() {
   const text = document.getElementById('email-content').textContent;
-  navigator.clipboard.writeText(text).then(() => toast('Email copied!', 'success'));
+  navigator.clipboard.writeText(text).then(() => toast('Letter copied to clipboard', 'success'));
+}
+
+async function downloadPrebidLetter() {
+  const t247 = (document.getElementById('prebid-t247')||{}).value || '';
+  if (!t247) { toast('Enter T247 ID to download letter', 'info'); return; }
+  try {
+    const r = await fetch('/tender/'+t247+'/generate-prebid-letter', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await r.json();
+    if (d.download_url) window.open(d.download_url);
+    else if (d.filename) window.open('/download/'+d.filename);
+    else toast('Letter generated: ' + (d.filename||''), 'success');
+  } catch(e) { toast('Download failed: '+e.message, 'error'); }
 }
 
 // ═══════════════════════════════════════════
