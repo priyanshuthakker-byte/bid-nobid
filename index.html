@@ -283,6 +283,9 @@ tr:last-child td{border-bottom:none;}
     <div class="nav-item" onclick="showPage('profile')">
       <span class="icon">🏢</span> Nascent Profile
     </div>
+    <div class="nav-item" onclick="showPage('guidelines')">
+      <span class="icon">📚</span> Guidelines Library
+    </div>
     <div class="nav-item" onclick="showPage('settings')">
       <span class="icon">⚙️</span> Settings
     </div>
@@ -698,6 +701,32 @@ tr:last-child td{border-bottom:none;}
       </div>
     </div>
 
+    <!-- ═══ GUIDELINES PAGE ═══ -->
+    <div class="page" id="page-guidelines">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div style="font-size:14px;color:var(--text-secondary)">10 built-in Indian procurement guidelines pre-loaded. Add custom guidelines your clients use.</div>
+        </div>
+        <button class="btn btn-primary" onclick="showAddGuidelineForm()">+ Add Custom Guideline</button>
+      </div>
+      <div id="add-guideline-form" style="display:none;margin-bottom:20px;padding:20px;border:1px solid #BFDBFE;background:#EFF6FF;border-radius:8px">
+        <div class="profile-grid">
+          <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="gl-name" placeholder="e.g. State Finance Rules 2019"/></div>
+          <div class="form-group"><label class="form-label">Short Name</label><input class="form-input" id="gl-short" placeholder="e.g. SFR 2019"/></div>
+          <div class="form-group"><label class="form-label">Category</label><input class="form-input" id="gl-cat" placeholder="e.g. State Procurement"/></div>
+          <div class="form-group"><label class="form-label">Authority</label><input class="form-input" id="gl-auth" placeholder="e.g. Government of Gujarat, Finance Dept"/></div>
+        </div>
+        <div class="form-group"><label class="form-label">Keywords (comma separated — when to apply this guideline)</label><input class="form-input" id="gl-keywords" placeholder="e.g. gujarat, state tender, goa"/></div>
+        <div class="form-group"><label class="form-label">Key Provisions (one per line)</label><textarea class="form-input" id="gl-provisions" rows="4" placeholder="Each line = one key provision of this guideline"></textarea></div>
+        <div class="form-group"><label class="form-label">Citation Format (how to cite in queries)</label><input class="form-input" id="gl-cite" placeholder="e.g. Gujarat Finance Department Rule 15(3) dated 01-Apr-2019"/></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" onclick="saveCustomGuideline()">Save Guideline</button>
+          <button class="btn btn-outline" onclick="document.getElementById('add-guideline-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div id="guidelines-list"></div>
+    </div>
+
     <!-- ═══ SETTINGS PAGE ═══ -->
     <div class="page" id="page-settings">
       <div class="card" style="max-width:560px">
@@ -883,6 +912,7 @@ function showPage(name, callerEl) {
   if (name === 'alerts') loadAlerts();
   if (name === 'tracker') loadTracker();
   if (name === 'winloss') loadWinLoss();
+  if (name === 'guidelines') loadGuidelines();
   if (name === 'profile') loadProfileEditor();
 }
 
@@ -2650,37 +2680,53 @@ function renderProfileTab(tab) {
     `;
   }
   else if (tab === 'projects') {
-    const rows = projects.map((proj, i) => `
-      <tr>
-        <td style="font-size:12px;font-weight:600">${i+1}</td>
-        <td style="font-size:12px">${esc(proj.name||'')}</td>
-        <td style="font-size:12px">${esc(proj.client||'')}</td>
-        <td style="font-size:12px">${esc(proj.client_type||'')}</td>
-        <td style="font-size:12px">${esc(proj.state||'')}</td>
-        <td style="font-size:12px">Rs. ${proj.value_cr||0} Cr</td>
-        <td><span class="badge ${proj.status==='Completed'?'badge-green':'badge-blue'}" style="font-size:10px">${proj.status||''}</span></td>
-        <td style="font-size:11px">${(proj.tags||[]).join(', ')}</td>
-        <td>
-          <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:${proj.mobile_gis?'#ECFDF5':'#F1F5F9'};color:${proj.mobile_gis?'#059669':'#94A3B8'}">Mobile: ${proj.mobile_gis?'Yes':'No'}</span>
-        </td>
-      </tr>`).join('');
     el.innerHTML = `
-      <div class="card-header" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:13px;color:#64748B">${projects.length} projects on record — used for GIS experience PQ checks</div>
-        <button class="btn btn-primary btn-sm" onclick="addProject()">+ Add Project</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:13px;color:var(--text-secondary)">${projects.length} projects — WO/LOI/CC data used for automatic PQ evidence matching</div>
+        <button class="btn btn-outline btn-sm" onclick="addNewProject()">+ Add Project</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>#</th><th>Project Name</th><th>Client</th><th>Type</th>
-            <th>State</th><th>Value</th><th>Status</th><th>Tags</th><th>Mobile GIS</th>
-          </tr></thead>
-          <tbody>${rows || '<tr><td colspan="9" style="text-align:center;padding:24px;color:#94A3B8">No projects added</td></tr>'}</tbody>
-        </table>
+      <div class="table-wrap" style="overflow-x:auto">
+      <table style="min-width:1100px">
+        <thead><tr>
+          <th style="width:30px">#</th>
+          <th>Project Name</th>
+          <th style="width:100px">Client</th>
+          <th style="width:80px">State</th>
+          <th style="width:80px">WO Value</th>
+          <th style="width:100px">WO No. / Date</th>
+          <th style="width:80px">LOI</th>
+          <th style="width:100px">Completion Cert</th>
+          <th style="width:80px">Status</th>
+          <th style="width:60px">Edit</th>
+        </tr></thead>
+        <tbody>
+          ${projects.map((proj, i) => {
+            const val = proj.value_lakhs ? (proj.value_lakhs/100).toFixed(2) : (proj.value_cr||'—');
+            const loi = proj.loi_received||'—';
+            const loiColor = loi==='Yes'?'#059669':loi==='No'?'#DC2626':'#D97706';
+            const cc = proj.completion_cert||proj.status||'—';
+            const ccColor = cc.includes('Yes')||cc.includes('Completed')?'#059669':cc.includes('Ongoing')?'#3B82F6':'#D97706';
+            const cats = Array.isArray(proj.similar_categories)?proj.similar_categories.map(c=>`<span style="font-size:9px;background:#EFF6FF;color:#2563EB;padding:1px 5px;border-radius:8px;margin:1px;display:inline-block">${esc(c)}</span>`).join(''):''
+            return `<tr>
+              <td style="text-align:center;font-weight:700;color:#64748B">${i+1}</td>
+              <td>
+                <div style="font-size:12px;font-weight:600">${esc(proj.name||'')}</div>
+                <div style="margin-top:3px">${cats}</div>
+              </td>
+              <td style="font-size:11px;color:#374151">${esc(proj.client||'')}<br><span style="color:#94A3B8">${esc(proj.client_type||'')}</span></td>
+              <td style="font-size:11px">${esc(proj.state||'')}</td>
+              <td style="font-size:12px;font-weight:600;color:#059669">Rs.${val}Cr</td>
+              <td style="font-size:10px;color:#374151">${esc(proj.wo_no||'—')}<br><span style="color:#64748B">${esc(proj.wo_date||'')}</span></td>
+              <td style="font-size:11px;font-weight:600;color:${loiColor}">${loi}${proj.loi_date?'<br><span style="font-size:10px;color:#64748B">'+esc(proj.loi_date)+'</span>':''}</td>
+              <td style="font-size:11px;color:${ccColor}">${esc(cc)}</td>
+              <td><span class="badge ${proj.status==='Completed'||proj.outcome==='Completed'?'badge-green':proj.outcome==='Bidding'?'badge-amber':'badge-blue'}" style="font-size:10px">${esc(proj.status||proj.outcome||'')}</span></td>
+              <td><button class="btn btn-outline btn-sm" onclick="editProject(${i})" style="padding:3px 8px;font-size:11px">Edit</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
       </div>
-      <div style="margin-top:16px;padding:12px 16px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;font-size:12px;color:#1E40AF">
-        ℹ️ To edit a project, update nascent_profile.json directly (Projects array). UI edit coming soon.
-      </div>
+      <div id="project-edit-panel" style="display:none;margin-top:20px;padding:20px;border:1px solid #E2E8F0;border-radius:8px;background:#F8FAFC"></div>
     `;
   }
   else if (tab === 'employees') {
@@ -2848,6 +2894,76 @@ function addPolicy() {
 }
 function addProject() {
   toast('Edit nascent_profile.json to add projects. Open G:\\bid-nobid\\nascent_profile.json', 'info');
+}
+
+function editProject(idx) {
+  const proj = profileData.projects[idx] || {};
+  const panel = document.getElementById('project-edit-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div style="font-size:13px;font-weight:600;margin-bottom:14px">Edit Project: ${esc(proj.name||'New Project')}</div>
+    <div class="profile-grid">
+      ${pField('Project Name','ep-name',proj.name)}
+      ${pField('Client','ep-client',proj.client)}
+      ${pField('Client Type','ep-client-type',proj.client_type)}
+      ${pField('State','ep-state',proj.state)}
+      ${pField('WO Value (Lakhs)','ep-wo-val',proj.value_lakhs||'')}
+      ${pField('WO Number','ep-wo-no',proj.wo_no||'')}
+      ${pField('WO Date','ep-wo-date',proj.wo_date||'')}
+      ${pField('LOI Received (Yes/No/Bidding)','ep-loi',proj.loi_received||'')}
+      ${pField('LOI Date','ep-loi-date',proj.loi_date||'')}
+      ${pField('LOI Reference','ep-loi-ref',proj.loi_ref||'')}
+      ${pField('Completion Cert (Yes-date/No/Ongoing)','ep-cc',proj.completion_cert||'')}
+      ${pField('Status','ep-status',proj.status||'')}
+      ${pField('Outcome','ep-outcome',proj.outcome||'')}
+      ${pField('Client Contact','ep-contact',proj.contact_person||'')}
+    </div>
+    ${pTextarea('Similar Categories (comma separated)','ep-cats',(proj.similar_categories||[]).join(', '),2)}
+    ${pTextarea('Scope / Description','ep-scope',proj.scope||proj.description||'',3)}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="saveProjectEdit(${idx})">Save Project</button>
+      <button class="btn btn-outline" onclick="document.getElementById('project-edit-panel').style.display='none'">Cancel</button>
+    </div>
+  `;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+function addNewProject() {
+  if (!profileData.projects) profileData.projects = [];
+  profileData.projects.push({
+    id: 'P' + String(profileData.projects.length+1).padStart(3,'0'),
+    name:'', client:'', client_type:'', state:'', value_lakhs:0,
+    wo_no:'', wo_date:'', loi_received:'', loi_date:'', loi_ref:'',
+    completion_cert:'', status:'', outcome:'', similar_categories:[],
+    scope:'', contact_person:''
+  });
+  editProject(profileData.projects.length - 1);
+}
+
+function saveProjectEdit(idx) {
+  const proj = profileData.projects[idx] || {};
+  proj.name = (document.getElementById('ep-name')||{}).value || proj.name;
+  proj.client = (document.getElementById('ep-client')||{}).value || '';
+  proj.client_type = (document.getElementById('ep-client-type')||{}).value || '';
+  proj.state = (document.getElementById('ep-state')||{}).value || '';
+  proj.value_lakhs = parseFloat((document.getElementById('ep-wo-val')||{}).value||0)||0;
+  proj.wo_no = (document.getElementById('ep-wo-no')||{}).value || '';
+  proj.wo_date = (document.getElementById('ep-wo-date')||{}).value || '';
+  proj.loi_received = (document.getElementById('ep-loi')||{}).value || '';
+  proj.loi_date = (document.getElementById('ep-loi-date')||{}).value || '';
+  proj.loi_ref = (document.getElementById('ep-loi-ref')||{}).value || '';
+  proj.completion_cert = (document.getElementById('ep-cc')||{}).value || '';
+  proj.status = (document.getElementById('ep-status')||{}).value || '';
+  proj.outcome = (document.getElementById('ep-outcome')||{}).value || '';
+  proj.contact_person = (document.getElementById('ep-contact')||{}).value || '';
+  const catsStr = (document.getElementById('ep-cats')||{}).value || '';
+  proj.similar_categories = catsStr.split(',').map(s=>s.trim()).filter(Boolean);
+  proj.scope = (document.getElementById('ep-scope')||{}).value || '';
+  profileData.projects[idx] = proj;
+  document.getElementById('project-edit-panel').style.display = 'none';
+  renderProfileTab('projects');
+  toast('Project saved in memory — click Save All Changes to persist','success');
 }
 
 async function saveProfile() {
@@ -3051,6 +3167,59 @@ async function saveGroqKey() {
       '<span style="color:#10B981">✓ Groq key saved — 14,400 requests/day available</span>';
     toast('Groq key saved', 'success');
   } catch(e) { toast('Failed to save', 'error'); }
+}
+
+async function loadGuidelines() {
+  try {
+    const r = await fetch('/guidelines');
+    const d = await r.json();
+    const list = document.getElementById('guidelines-list');
+    if (!list) return;
+    const cats = {};
+    (d.guidelines||[]).forEach(gl => {
+      const cat = gl.category||'General';
+      if (!cats[cat]) cats[cat] = [];
+      cats[cat].push(gl);
+    });
+    list.innerHTML = Object.entries(cats).map(([cat, gls]) => `
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #E2E8F0">${esc(cat)}</div>
+        ${gls.map(gl => `<div style="padding:14px;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:8px;background:#fff">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:600;color:#1E293B">${esc(gl.name||'')} ${gl.is_custom?'<span style="font-size:10px;background:#EFF6FF;color:#2563EB;padding:1px 6px;border-radius:8px">Custom</span>':''}</div>
+            <div style="font-size:11px;color:#64748B">${esc(gl.short||'')}</div>
+          </div>
+          <div style="font-size:11px;color:#94A3B8;margin-bottom:8px">Authority: ${esc(gl.authority||'')}</div>
+          <div style="font-size:11px;color:#374151;margin-bottom:6px">Applies when: ${(gl.applies_to||[]).slice(0,6).join(', ')}</div>
+          <div>${(gl.key_provisions||[]).slice(0,3).map(p=>`<div style="font-size:11px;color:#475569;padding:3px 0;border-bottom:1px solid #F8FAFC">• ${esc(p)}</div>`).join('')}</div>
+          <div style="font-size:10px;color:#059669;font-style:italic;margin-top:6px">Cite as: ${esc(gl.cite_as||'')}</div>
+        </div>`).join('')}
+      </div>
+    `).join('');
+  } catch(e) { console.error('Guidelines load error:', e); }
+}
+
+function showAddGuidelineForm() {
+  document.getElementById('add-guideline-form').style.display = 'block';
+}
+
+async function saveCustomGuideline() {
+  const name  = (document.getElementById('gl-name')||{}).value||'';
+  const short = (document.getElementById('gl-short')||{}).value||'';
+  const cat   = (document.getElementById('gl-cat')||{}).value||'Custom';
+  const auth  = (document.getElementById('gl-auth')||{}).value||'';
+  const kwds  = ((document.getElementById('gl-keywords')||{}).value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const provs = ((document.getElementById('gl-provisions')||{}).value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const cite  = (document.getElementById('gl-cite')||{}).value||'';
+  if (!name) { toast('Name required','error'); return; }
+  try {
+    const r = await fetch('/guidelines', {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,short,category:cat,authority:auth,applies_to:kwds,key_provisions:provs,cite_as:cite})});
+    const d = await r.json();
+    toast('Guideline saved: '+name,'success');
+    document.getElementById('add-guideline-form').style.display='none';
+    loadGuidelines();
+  } catch(e) { toast('Save failed: '+e.message,'error'); }
 }
 
 async function loadSettings() {

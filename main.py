@@ -211,11 +211,14 @@ def save_db(db: dict):
     if "tenders" not in db:
         db["tenders"] = {}
     DB_FILE.parent.mkdir(parents=True, exist_ok=True)
-    DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
+    text = json.dumps(db, indent=2, default=str)
+    DB_FILE.write_text(text, encoding="utf-8")
+    # Only sync to Drive if file actually has content
     try:
-        save_to_drive(DB_FILE)
-    except Exception:
-        pass
+        if drive_available() and len(db.get("tenders", {})) >= 0:
+            save_to_drive(DB_FILE)
+    except Exception as e:
+        print(f"Drive save warning: {e}")
 
 
 def get_tender(t247_id: str) -> dict:
@@ -1408,6 +1411,43 @@ async def sheet_status():
         "required_tabs": {},
         "optional_tabs": {},
     }
+
+# ── GUIDELINES LIBRARY ──────────────────────────────────────
+
+@app.get("/guidelines")
+async def get_guidelines():
+    try:
+        from guidelines_library import get_all_guidelines
+        return {"guidelines": get_all_guidelines()}
+    except Exception as e:
+        return {"guidelines": [], "error": str(e)}
+
+@app.post("/guidelines")
+async def add_guideline(data: dict = Body(...)):
+    try:
+        from guidelines_library import add_custom_guideline
+        gl = add_custom_guideline(
+            name=data.get("name",""),
+            short=data.get("short",""),
+            category=data.get("category","Custom"),
+            applies_to=data.get("applies_to",[]),
+            key_provisions=data.get("key_provisions",[]),
+            authority=data.get("authority",""),
+            cite_as=data.get("cite_as",""),
+        )
+        return {"status":"saved","guideline":gl}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/guidelines/search")
+async def search_guidelines(q: str = ""):
+    try:
+        from guidelines_library import find_relevant_guidelines
+        results = find_relevant_guidelines(q)
+        return {"guidelines": results, "query": q}
+    except Exception as e:
+        return {"guidelines":[], "error": str(e)}
+
 
 # ── HEALTH / DIAGNOSTICS ──────────────────────────────────────
 

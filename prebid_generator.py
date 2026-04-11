@@ -13,6 +13,13 @@ import json
 from pathlib import Path
 from typing import List, Dict
 from datetime import date
+try:
+    from guidelines_library import get_guideline_for_query, find_relevant_guidelines
+    _has_guidelines = True
+except ImportError:
+    _has_guidelines = False
+    def get_guideline_for_query(text): return ''
+    def find_relevant_guidelines(text): return []
 
 PROFILE_PATH = Path(__file__).parent / "nascent_profile.json"
 
@@ -59,10 +66,18 @@ def _load_profile() -> dict:
 
 
 def _find_applicable_guideline(query_text: str, criteria_text: str) -> str:
-    """Find applicable government guideline for this query."""
+    """Find applicable government guideline using guidelines_library."""
     combined = (query_text + " " + criteria_text).lower()
+    # Try live library first
+    if _has_guidelines:
+        matches = find_relevant_guidelines(combined)
+        if matches:
+            gl = matches[0]
+            provision = gl.get('key_provisions',[''])[0]
+            return f"{gl.get('cite_as', gl.get('name',''))} — {provision}"
+    # Fallback to built-in dict
     for key, gl in GUIDELINES.items():
-        if any(kw in combined for kw in gl["trigger_words"]):
+        if any(kw in combined for kw in gl['trigger_words']):
             return f"{gl['name']} — {gl['provision']}"
     return ""
 

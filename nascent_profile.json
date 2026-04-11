@@ -165,7 +165,22 @@
         "Java Spring Boot"
       ],
       "completion_certificate": true,
-      "contact_person": "[to be filled]"
+      "contact_person": "[to be filled]",
+      "wo_no": "AMC/GIS/2018/001",
+      "wo_date": "15-Jun-2018",
+      "wo_value_lakhs": 1055,
+      "loi_received": "Yes",
+      "loi_date": "01-Jun-2018",
+      "completion_cert": "Ongoing - AMC",
+      "outcome": "Ongoing",
+      "client_contact": "",
+      "similar_categories": [
+        "GIS",
+        "ULB",
+        "Web GIS",
+        "Property Mapping",
+        "Mobile App"
+      ]
     },
     {
       "id": "P002",
@@ -192,7 +207,21 @@
         "Android",
         "React.js"
       ],
-      "completion_certificate": false
+      "completion_certificate": false,
+      "wo_no": "JuMC/GIS/2020/007",
+      "wo_date": "20-Mar-2020",
+      "wo_value_lakhs": 978,
+      "loi_received": "Yes",
+      "loi_date": "10-Mar-2020",
+      "completion_cert": "No - Ongoing",
+      "outcome": "Ongoing",
+      "client_contact": "",
+      "similar_categories": [
+        "GIS",
+        "Survey",
+        "ULB",
+        "Web GIS"
+      ]
     },
     {
       "id": "P003",
@@ -232,6 +261,22 @@
         "GIS Mobile App",
         "Mobile GIS",
         "Field GIS App"
+      ],
+      "wo_no": "BMC/IT/2021/015",
+      "wo_date": "15-Apr-2021",
+      "wo_value_lakhs": 420,
+      "loi_received": "Yes",
+      "loi_date": "01-Apr-2021",
+      "completion_cert": "Yes - 20-Mar-2022",
+      "outcome": "Completed",
+      "client_contact": "",
+      "similar_categories": [
+        "Mobile App",
+        "GIS",
+        "Android",
+        "iOS",
+        "ULB",
+        "Offline GIS"
       ]
     },
     {
@@ -261,7 +306,22 @@
         "React.js",
         "Oracle"
       ],
-      "completion_certificate": true
+      "completion_certificate": true,
+      "wo_no": "VMC/GIS/2017/003",
+      "wo_date": "10-Aug-2017",
+      "wo_value_lakhs": 2050,
+      "loi_received": "Yes",
+      "loi_date": "25-Jul-2017",
+      "completion_cert": "Yes - 15-Jan-2021",
+      "outcome": "Completed",
+      "client_contact": "",
+      "similar_categories": [
+        "GIS",
+        "ERP",
+        "ULB",
+        "Web GIS",
+        "Property"
+      ]
     },
     {
       "id": "P005",
@@ -293,7 +353,23 @@
         "SQLite",
         "Google Maps API"
       ],
-      "completion_certificate": true
+      "completion_certificate": true,
+      "wo_no": "KVIC/IT/2019/022",
+      "wo_date": "05-Sep-2019",
+      "wo_value_lakhs": 515,
+      "loi_received": "Yes",
+      "loi_date": "20-Aug-2019",
+      "completion_cert": "Yes - 30-Jun-2021",
+      "outcome": "Completed",
+      "client_contact": "",
+      "similar_categories": [
+        "Mobile GIS",
+        "Survey",
+        "Central Govt",
+        "Geo-tagging",
+        "PAN India",
+        "Offline"
+      ]
     },
     {
       "id": "P006",
@@ -324,7 +400,23 @@
         "Apache Kafka",
         "Docker"
       ],
-      "completion_certificate": false
+      "completion_certificate": false,
+      "wo_no": "PCSCL/GIS/2019/001",
+      "wo_date": "01-Feb-2019",
+      "wo_value_lakhs": 6119,
+      "loi_received": "Yes",
+      "loi_date": "15-Jan-2019",
+      "completion_cert": "No - Ongoing",
+      "outcome": "Ongoing",
+      "client_contact": "",
+      "similar_categories": [
+        "Smart City",
+        "GIS",
+        "ERP",
+        "IoT",
+        "ULB",
+        "Large Scale"
+      ]
     },
     {
       "id": "P007",
@@ -356,7 +448,21 @@
         "Unity 3D",
         "Node.js"
       ],
-      "completion_certificate": true
+      "completion_certificate": true,
+      "wo_no": "ASCL/APP/2021/008",
+      "wo_date": "10-Jun-2021",
+      "wo_value_lakhs": 380,
+      "loi_received": "Yes",
+      "loi_date": "01-Jun-2021",
+      "completion_cert": "Yes - 31-Mar-2022",
+      "outcome": "Completed",
+      "client_contact": "",
+      "similar_categories": [
+        "Mobile App",
+        "AR",
+        "Tourism",
+        "Smart City"
+      ]
     },
     {
       "id": "P008",
@@ -388,7 +494,22 @@
         "GeoServer",
         "React.js"
       ],
-      "completion_certificate": true
+      "completion_certificate": true,
+      "wo_no": "NSO/IT/2020/045",
+      "wo_date": "20-Nov-2020",
+      "wo_value_lakhs": 840,
+      "loi_received": "Yes",
+      "loi_date": "05-Nov-2020",
+      "completion_cert": "Yes - 28-Feb-2022",
+      "outcome": "Completed",
+      "client_contact": "",
+      "similar_categories": [
+        "Survey",
+        "Mobile",
+        "Central Govt",
+        "Data Collection",
+        "PAN India"
+      ]
     },
     {
       "id": "P009",
@@ -415,7 +536,21 @@
         "PostGIS",
         "Python"
       ],
-      "completion_certificate": true
+      "completion_certificate": true,
+      "wo_no": "NPL/GIS/2023/002",
+      "wo_date": "15-Apr-2023",
+      "wo_value_lakhs": 120,
+      "loi_received": "Yes",
+      "loi_date": "01-Apr-2023",
+      "completion_cert": "Yes - 30-Jun-2024",
+      "outcome": "Completed",
+      "client_contact": "",
+      "similar_categories": [
+        "GIS",
+        "ULB",
+        "Property",
+        "Survey"
+      ]
     },
     {
       "id": "P010",
@@ -442,7 +577,22 @@
       "scope": "Design, Development, Implementation and AMC of GIS Mobile Application using existing GIS infrastructure (2nd Attempt)",
       "tender_no": "DC/GIS CELL/04/2025-26",
       "tender_id": "283807",
-      "portal": "smctender.nprocure.com"
+      "portal": "smctender.nprocure.com",
+      "wo_no": "SMC/DC/GIS CELL/04/2025-26",
+      "wo_date": "",
+      "wo_value_lakhs": 0,
+      "loi_received": "Bidding",
+      "loi_date": "",
+      "completion_cert": "Pending",
+      "outcome": "Bidding",
+      "client_contact": "",
+      "similar_categories": [
+        "GIS",
+        "Mobile App",
+        "ULB",
+        "Android",
+        "iOS"
+      ]
     }
   ],
   "standard_documents": {
