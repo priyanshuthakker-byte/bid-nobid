@@ -1199,6 +1199,16 @@ async def drive_status():
 
 # ── CHAT ─────────────────────────────────────────────────────
 
+@app.get("/drive-diagnostic")
+async def drive_diagnostic():
+    """Returns clear instructions for fixing Drive sync."""
+    try:
+        from gdrive_sync import get_drive_diagnostic
+        info = get_drive_diagnostic()
+    except Exception as e:
+        info = {"error": str(e)}
+    return info
+
 @app.post("/chat")
 async def chat(data: dict = Body(...)):
     message = data.get("message", "").strip()

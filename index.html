@@ -710,6 +710,14 @@ textarea.fi{min-height:80px;resize:vertical}
 
     <!-- ═══ SETTINGS ═══ -->
     <div class="page" id="page-settings">
+      <!-- Drive diagnostic -->
+      <div class="card" id="drive-diagnostic-card" style="margin-bottom:14px">
+        <div class="card-hd">
+          <div class="card-title">☁ Google Drive Setup</div>
+          <span id="drive-diag-status" style="font-size:11px;color:var(--text3)">Checking...</span>
+        </div>
+        <div class="card-bd" id="drive-diag-body" style="font-size:12px;line-height:1.8"></div>
+      </div>
       <div class="card">
         <div class="card-hd"><div class="card-title">AI Configuration</div></div>
         <div class="card-bd">
@@ -3560,6 +3568,43 @@ async function saveCustomGuideline() {
 }
 
 async function loadSettings() {
+  // Load Drive diagnostic
+  try {
+    const dr = await fetch('/drive-diagnostic');
+    const dd = await dr.json();
+    const statusEl = document.getElementById('drive-diag-status');
+    const bodyEl = document.getElementById('drive-diag-body');
+    if (statusEl) statusEl.textContent = dd.connected ? '✓ Connected' : '✗ Not connected';
+    if (statusEl) statusEl.style.color = dd.connected ? 'var(--green)' : 'var(--red)';
+    if (bodyEl) {
+      if (dd.connected && dd.folder_id_set) {
+        bodyEl.innerHTML = `<div style="color:var(--green);font-weight:600">✓ Google Drive is working correctly</div>
+          <div style="color:var(--text3);margin-top:4px">Folder ID: ${esc(dd.folder_id||'—')} · Service account: ${esc(dd.service_account_email||'—')}</div>`;
+      } else {
+        const steps = dd.folder_id_set ? '' : `
+          <div style="margin-top:12px;padding:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:var(--r)">
+            <div style="font-weight:600;color:#C2410C;margin-bottom:8px">How to fix Drive sync:</div>
+            <div style="color:#7C2D12;line-height:1.9">
+              1. Open <a href="https://drive.google.com" target="_blank" style="color:var(--blue)">drive.google.com</a><br>
+              2. Create a folder named <strong>NIT-BidNoBid</strong><br>
+              3. Right-click the folder → Share → Add: <code style="background:#F1F5F9;padding:1px 5px;border-radius:3px">${esc(dd.service_account_email||'[service account email]')}</code> as <strong>Editor</strong><br>
+              4. Open the folder → copy the ID from the URL (the long string after /folders/)<br>
+              5. Go to <a href="https://dashboard.render.com" target="_blank" style="color:var(--blue)">Render</a> → Your service → Environment → Add: <code>GDRIVE_FOLDER_ID</code> = that ID<br>
+              6. Redeploy the service
+            </div>
+          </div>`;
+        bodyEl.innerHTML = `<div style="color:var(--red);font-weight:600">✗ Drive not working</div>
+          <div style="color:var(--text3);margin-top:4px">Service account: ${esc(dd.service_account_email||'Check GDRIVE_CREDENTIALS')}</div>
+          <div style="color:var(--text3)">Folder ID set: ${dd.folder_id_set ? 'Yes — ' + esc(dd.folder_id||'') : 'No — GDRIVE_FOLDER_ID not configured'}</div>
+          <div style="margin-top:6px;font-size:11px;color:var(--amber)">${esc(dd.fix_instructions||'')}</div>
+          ${steps}`;
+      }
+    }
+  } catch(e) {
+    const bodyEl = document.getElementById('drive-diag-body');
+    if (bodyEl) bodyEl.textContent = 'Could not load Drive status';
+  }
+
   try {
     const r = await fetch('/config-full');
     const d = await r.json();
