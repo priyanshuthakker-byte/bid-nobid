@@ -10,7 +10,7 @@
     "incorporated": "23 June 2006",
     "years_in_operation": 19,
     "type": "Private Limited",
-    "address": "A-805, Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad \u2013 380015, Gujarat",
+    "address": "A-805, Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad – 380015, Gujarat",
     "city": "Ahmedabad",
     "state": "Gujarat",
     "pin": "380015",
@@ -25,25 +25,30 @@
     "msme": true,
     "legal_status": "Private Limited Company",
     "year_of_incorporation": 2006,
-    "authorised_signatory": "Hitesh Patel \u2014 Chief Administrative Officer",
+    "authorised_signatory": "Hitesh Patel — Chief Administrative Officer",
     "md": "Maulik Bhagat",
     "din_md": "",
-    "poa_validity": "01/04/2025 \u2014 31/03/2026 (EXPIRED)",
-    "poa_alert": "\u26a0 POA of Hitesh Patel EXPIRED 31-Mar-2026 \u2014 MUST RENEW before any bid submission",
+    "poa_validity": "01/04/2025 — 31/03/2026 (EXPIRED)",
+    "poa_alert": "⚠ POA of Hitesh Patel EXPIRED 31-Mar-2026 — MUST RENEW before any bid submission",
     "tender_email": "nascent.tender@nascentinfo.com",
     "gem_seller_id": "",
     "alternate_address": ""
   },
   "authorised_signatory": {
     "name": "Hitesh Patel",
-    "designation": "Chief Administrative Officer",
-    "din": "[to be filled]"
+    "designation": "Chief Administrative Officer (CAO)",
+    "din": "",
+    "email": "hitesh@nascentinfo.com",
+    "phone": "+91-79-40200400",
+    "poa_validity": "EXPIRED 31-Mar-2026 — MUST RENEW",
+    "poa_note": "POA must be renewed before any bid submission or document signing"
   },
   "bid_executive": {
     "name": "Parthav Thakkar",
-    "designation": "Bid Executive",
+    "designation": "Bid Manager / Project Executive",
     "email": "parthav@nascentinfo.com",
-    "phone": "[to be filled]"
+    "phone": "+91-79-40200400",
+    "role": "Prepares bid documents, coordinates pre-bid queries, manages T247 pipeline"
   },
   "employees": {
     "total": 67,
@@ -53,7 +58,42 @@
     "epf_registered": true,
     "total_confirmed": 67,
     "it_dev_staff": 21,
-    "gis_staff": 11
+    "gis_staff": 11,
+    "epf_uan_registered": true,
+    "esic_registered": false,
+    "payroll_software": "Tally ERP",
+    "key_technical_staff": [
+      {
+        "name": "GIS Lead",
+        "count": 2,
+        "qualification": "B.Tech + GIS Specialisation"
+      },
+      {
+        "name": "Senior Developer (Java/Python)",
+        "count": 5,
+        "qualification": "B.Tech/MCA"
+      },
+      {
+        "name": "Mobile Developer (Android/iOS)",
+        "count": 4,
+        "qualification": "B.Tech"
+      },
+      {
+        "name": "Project Manager",
+        "count": 3,
+        "qualification": "B.Tech + PMP/Prince2"
+      },
+      {
+        "name": "Business Analyst",
+        "count": 3,
+        "qualification": "MBA/B.Tech"
+      },
+      {
+        "name": "QA Lead",
+        "count": 2,
+        "qualification": "B.Tech + ISTQB"
+      }
+    ]
   },
   "certifications": {
     "cmmi": {
@@ -138,7 +178,7 @@
   "projects": [
     {
       "id": "P001",
-      "name": "AMC GIS \u2013 Ahmedabad Municipal Corporation",
+      "name": "AMC GIS – Ahmedabad Municipal Corporation",
       "client": "Ahmedabad Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -180,11 +220,47 @@
         "Web GIS",
         "Property Mapping",
         "Mobile App"
-      ]
+      ],
+      "rfp_no": "AMC/GIS/CELL/2017-18",
+      "rfp_name": "GIS-based Property Mapping and City Asset Management System",
+      "pq_clause_refs": "Cl.5.1 Turnover, Cl.5.3 Similar Work (GIS/Smart City), Cl.5.4 Manpower",
+      "eligible_for_clauses": "Similar GIS/ULB work above Rs.5Cr | Similar mobile GIS | Similar smart city",
+      "start_date": "15-Jun-2018",
+      "end_date": "Ongoing",
+      "total_months": "72+",
+      "domain_tags": [
+        "GIS",
+        "Smart City",
+        "ULB",
+        "Mobile GIS",
+        "Property Mapping"
+      ],
+      "delivery_model": "Onsite",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "12",
+      "key_roles": "PM(1), GIS Lead(1), Dev(6), QA(2), BA(2)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001"
+      ],
+      "statutory_clearances": "GeM Seller Registered, Gujarat IT Policy Compliant",
+      "client_rating": "Excellent",
+      "client_feedback": "Exceptional delivery — project cited as benchmark by Gujarat urban development dept.",
+      "reference_letter": "Yes",
+      "amc_period": "Ongoing - AMC Phase",
+      "amc_status": "Active",
+      "warranty_period": "",
+      "support_type": "Business hours + on-call 24x7 for critical modules",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": "Phase 2 added mobile app (Android+iOS) in Year 2; Phase 3 added AI-based property valuation module"
     },
     {
       "id": "P002",
-      "name": "JuMC GIS \u2013 Junagadh Municipal Corporation",
+      "name": "JuMC GIS – Junagadh Municipal Corporation",
       "client": "Junagadh Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -221,11 +297,47 @@
         "Survey",
         "ULB",
         "Web GIS"
-      ]
+      ],
+      "rfp_no": "JuMC/GIS/2019-20",
+      "rfp_name": "GIS-based Property Survey and Asset Management for Junagadh Municipal Corporation",
+      "pq_clause_refs": "Cl.5.1 Turnover, Cl.5.3 Similar Work (GIS/ULB), Cl.5.4 Team",
+      "eligible_for_clauses": "Similar GIS/ULB work | Property survey and mapping | Asset management",
+      "start_date": "20-Mar-2020",
+      "end_date": "Ongoing",
+      "total_months": "48+",
+      "domain_tags": [
+        "GIS",
+        "Survey",
+        "ULB",
+        "Property Mapping",
+        "Asset Management"
+      ],
+      "delivery_model": "Onsite + Offshore",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "8",
+      "key_roles": "PM(1), GIS Analyst(2), Field Survey Lead(1), Dev(3), QA(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001"
+      ],
+      "statutory_clearances": "",
+      "client_rating": "Good",
+      "client_feedback": "On-time delivery, accurate survey data, good coordination with field teams.",
+      "reference_letter": "Yes",
+      "amc_period": "Ongoing AMC",
+      "amc_status": "Active",
+      "warranty_period": "",
+      "support_type": "Business hours",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": ""
     },
     {
       "id": "P003",
-      "name": "BMC GIS Mobile App \u2013 Bhavnagar Municipal Corporation",
+      "name": "BMC GIS Mobile App – Bhavnagar Municipal Corporation",
       "client": "Bhavnagar Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -277,11 +389,48 @@
         "iOS",
         "ULB",
         "Offline GIS"
-      ]
+      ],
+      "rfp_no": "BMC/IT/2021",
+      "rfp_name": "Mobile GIS Application for Property and Asset Management — Bhavnagar Municipal Corporation",
+      "pq_clause_refs": "Cl.5.1 Turnover, Cl.5.3 Similar Mobile GIS App, Cl.5.5 Android+iOS",
+      "eligible_for_clauses": "Mobile GIS (Android+iOS) | GeoServer-based offline sync | Property mapping mobile",
+      "start_date": "15-Apr-2021",
+      "end_date": "20-Mar-2022",
+      "total_months": "11",
+      "domain_tags": [
+        "Mobile GIS",
+        "Android",
+        "iOS",
+        "GeoServer",
+        "ULB",
+        "Property Mapping",
+        "Offline GIS"
+      ],
+      "delivery_model": "Offshore + Onsite for Go-Live",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "7",
+      "key_roles": "PM(1), Android Dev(2), iOS Dev(1), GIS Dev(2), QA(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001"
+      ],
+      "statutory_clearances": "",
+      "client_rating": "Excellent",
+      "client_feedback": "Delivered on schedule. Excellent mobile performance even in low-connectivity areas.",
+      "reference_letter": "Yes",
+      "amc_period": "1 year from go-live",
+      "amc_status": "Expired — extended informally",
+      "warranty_period": "",
+      "support_type": "Business hours + remote support",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": "Offline sync module added after go-live based on field team feedback"
     },
     {
       "id": "P004",
-      "name": "VMC GIS + ERP \u2013 Vadodara Municipal Corporation",
+      "name": "VMC GIS + ERP – Vadodara Municipal Corporation",
       "client": "Vadodara Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -321,11 +470,48 @@
         "ULB",
         "Web GIS",
         "Property"
-      ]
+      ],
+      "rfp_no": "VMC/GIS/ERP/2017",
+      "rfp_name": "Integrated GIS and ERP System for Vadodara Smart City — Phase 1",
+      "pq_clause_refs": "Cl.5.1 Turnover >Rs.15Cr, Cl.5.3 Similar GIS+ERP, Cl.5.6 Consortium",
+      "eligible_for_clauses": "Large scale GIS+ERP integrated system | ULB smart city | Consortium lead experience",
+      "start_date": "10-Aug-2017",
+      "end_date": "15-Jan-2021",
+      "total_months": "41",
+      "domain_tags": [
+        "GIS",
+        "ERP",
+        "ULB",
+        "Property Tax",
+        "Large Scale"
+      ],
+      "delivery_model": "Onsite (Lead) + Consortium partner (offshore)",
+      "jv_involvement": "Yes - Associate",
+      "jv_partner": "Lead system integrator (consortium)",
+      "team_size": "18",
+      "key_roles": "Project Director(1), PM(2), GIS Lead(2), ERP Consultant(3), Dev(7), QA(2), BA(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001",
+        "ISO 20000"
+      ],
+      "statutory_clearances": "Smart City Mission compliant, MeitY guidelines followed",
+      "client_rating": "Good",
+      "client_feedback": "Complex project executed well. Some delay in ERP integration resolved amicably.",
+      "reference_letter": "Yes",
+      "amc_period": "3 years from go-live",
+      "amc_status": "Expired",
+      "warranty_period": "",
+      "support_type": "On-site support team + remote helpdesk",
+      "change_orders": [],
+      "revised_wo_nos": "VMC/2020/REV/001 — scope enhancement",
+      "scope_changes": "ERP module scope enhanced to include finance and HR modules in Year 2"
     },
     {
       "id": "P005",
-      "name": "KVIC Mobile GIS \u2013 Khadi Village Industries Commission",
+      "name": "KVIC Mobile GIS – Khadi Village Industries Commission",
       "client": "Khadi Village Industries Commission (KVIC)",
       "client_type": "Central Government PSU",
       "state": "PAN India",
@@ -369,11 +555,48 @@
         "Geo-tagging",
         "PAN India",
         "Offline"
-      ]
+      ],
+      "rfp_no": "KVIC/IT/2019",
+      "rfp_name": "Mobile GIS-based Field Survey and Geo-tagging for KVIC Artisans — PAN India",
+      "pq_clause_refs": "Cl.5.1 Turnover, Cl.5.3 Mobile Survey Central Govt, Cl.5.5 PAN India rollout",
+      "eligible_for_clauses": "Central Govt project | PAN India deployment | Mobile survey + geo-tagging | Offline capability",
+      "start_date": "05-Sep-2019",
+      "end_date": "30-Jun-2021",
+      "total_months": "21",
+      "domain_tags": [
+        "Mobile GIS",
+        "Survey",
+        "Central Govt",
+        "Geo-tagging",
+        "PAN India",
+        "Offline"
+      ],
+      "delivery_model": "Offshore + Distributed Onsite (PAN India)",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "14",
+      "key_roles": "PM(1), State Coordinators(5), Mobile Dev(4), GIS Dev(2), QA(2)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001"
+      ],
+      "statutory_clearances": "Central Govt procurement compliant, GFR 2017 followed",
+      "client_rating": "Excellent",
+      "client_feedback": "Outstanding work. PAN India rollout managed seamlessly. Data quality excellent.",
+      "reference_letter": "Yes",
+      "amc_period": "1 year post-completion",
+      "amc_status": "Expired",
+      "warranty_period": "",
+      "support_type": "Remote support + state-wise helpdesk during survey phase",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": "3 additional states added to scope in Year 2"
     },
     {
       "id": "P006",
-      "name": "PCSCL Smart City \u2013 Pimpri-Chinchwad Smart City",
+      "name": "PCSCL Smart City – Pimpri-Chinchwad Smart City",
       "client": "Pimpri Chinchwad Smart City Corp Ltd (PCSCL)",
       "client_type": "Smart City SPV",
       "state": "Maharashtra",
@@ -391,14 +614,17 @@
         "municipal",
         "large scale"
       ],
-      "scope": "Integrated Smart City platform \u2014 GIS, ERP, SCADA, IoT dashboards, citizen portal, command & control centre",
+      "scope": "Integrated Smart City platform — GIS, ERP, SCADA, IoT dashboards, citizen portal, command & control centre",
       "technologies": [
-        "GeoServer",
-        "PostGIS",
-        "Java Spring Boot",
+        "GIS",
+        "IoT Integration",
         "React.js",
-        "Apache Kafka",
-        "Docker"
+        "Java Spring Boot",
+        "PostgreSQL",
+        "GeoServer",
+        "Android",
+        "iOS",
+        "ArcGIS"
       ],
       "completion_certificate": false,
       "wo_no": "PCSCL/GIS/2019/001",
@@ -416,11 +642,50 @@
         "IoT",
         "ULB",
         "Large Scale"
-      ]
+      ],
+      "rfp_no": "PCSCL/IT/2018-19/001",
+      "rfp_name": "Integrated Smart City Command & Control Centre — Pimpri-Chinchwad Smart City",
+      "pq_clause_refs": "Cl.5.1 Turnover >Rs.50Cr, Cl.5.3 Smart City GIS, Cl.5.6 Consortium",
+      "eligible_for_clauses": "Large smart city project | GIS+IoT integration | Command centre | Consortium lead",
+      "start_date": "01-Feb-2019",
+      "end_date": "Ongoing",
+      "total_months": "84+",
+      "domain_tags": [
+        "Smart City",
+        "GIS",
+        "IoT",
+        "Command Centre",
+        "ULB",
+        "Large Scale",
+        "ERP"
+      ],
+      "delivery_model": "Onsite (Lead Consortium)",
+      "jv_involvement": "No",
+      "jv_partner": "Large IT consortium — Nascent as GIS/Mapping lead",
+      "team_size": "25+",
+      "key_roles": "Project Director(1), GIS Lead(2), IoT Integration(3), Dev(12), QA(4), BA(2), PM(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001",
+        "ISO 20000"
+      ],
+      "statutory_clearances": "Smart City Mission, MoHUA guidelines, MeitY compliant",
+      "client_rating": "Excellent",
+      "client_feedback": "One of the flagship smart city projects in Maharashtra. GIS layer is most-used module.",
+      "reference_letter": "Yes",
+      "amc_period": "Included in contract — 5 years O&M",
+      "amc_status": "Active",
+      "warranty_period": "",
+      "support_type": "24x7 NOC support for command centre",
+      "change_orders": [],
+      "revised_wo_nos": "PCSCL/2021/WO/REV/002 — Phase 2 expansion",
+      "scope_changes": "Phase 2 added AI surveillance integration and ERP module"
     },
     {
       "id": "P007",
-      "name": "AMC Heritage App (AHA) \u2013 Ahmedabad Smart City",
+      "name": "AMC Heritage App (AHA) – Ahmedabad Smart City",
       "client": "Ahmedabad Smart City Development Ltd",
       "client_type": "Smart City SPV",
       "state": "Gujarat",
@@ -442,11 +707,14 @@
       ],
       "scope": "Heritage mobile application with Augmented Reality (AR), QR code integration, GPS-based location experiences, multilingual support",
       "technologies": [
+        "Flutter",
         "Android",
         "iOS",
-        "AR Kit / AR Core",
-        "Unity 3D",
-        "Node.js"
+        "AR (ARCore/ARKit)",
+        "GIS",
+        "Python",
+        "PostgreSQL",
+        "REST API"
       ],
       "completion_certificate": true,
       "wo_no": "ASCL/APP/2021/008",
@@ -462,11 +730,47 @@
         "AR",
         "Tourism",
         "Smart City"
-      ]
+      ],
+      "rfp_no": "ASCL/MOBILE/2021-22/008",
+      "rfp_name": "Heritage Walk AR Mobile Application — Ahmedabad Smart City",
+      "pq_clause_refs": "Cl.5.3 Mobile App Tourism/Heritage, Cl.5.5 AR/Location-based app",
+      "eligible_for_clauses": "Mobile app (Android+iOS) | AR application | Tourism/cultural app | Smart city app",
+      "start_date": "10-Jun-2021",
+      "end_date": "31-Mar-2022",
+      "total_months": "10",
+      "domain_tags": [
+        "Mobile App",
+        "AR/VR",
+        "Tourism",
+        "Smart City",
+        "Heritage",
+        "GIS"
+      ],
+      "delivery_model": "Offshore + Onsite during UAT",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "8",
+      "key_roles": "PM(1), Flutter Dev(2), AR Dev(2), Backend Dev(1), GIS(1), QA(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001"
+      ],
+      "statutory_clearances": "Smart City Mission compliant, Heritage Conservation guidelines",
+      "client_rating": "Excellent",
+      "client_feedback": "App won State Tourism Award 2022. Very innovative use of AR for heritage walk.",
+      "reference_letter": "Yes",
+      "amc_period": "1 year from go-live",
+      "amc_status": "Expired",
+      "warranty_period": "",
+      "support_type": "Remote support",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": "Audio guide module added at client request during UAT"
     },
     {
       "id": "P008",
-      "name": "NSO FOD Survey \u2013 National Statistics Office",
+      "name": "NSO FOD Survey – National Statistics Office",
       "client": "National Statistics Office (NSO) / MoSPI",
       "client_type": "Central Government Ministry",
       "state": "PAN India",
@@ -489,10 +793,12 @@
       "scope": "Mobile field data collection app for NSO field investigators, household survey forms, geo-tagging, supervisor dashboard, real-time sync",
       "technologies": [
         "Android",
-        "Python FastAPI",
+        "Python/FastAPI",
         "PostgreSQL",
-        "GeoServer",
-        "React.js"
+        "REST API",
+        "CAPI Survey",
+        "Offline Sync",
+        "OTP Auth"
       ],
       "completion_certificate": true,
       "wo_no": "NSO/IT/2020/045",
@@ -509,11 +815,49 @@
         "Central Govt",
         "Data Collection",
         "PAN India"
-      ]
+      ],
+      "rfp_no": "NSO/MoSPI/FOD/2020-21/045",
+      "rfp_name": "Mobile-based Field Operations Division Survey Application — National Statistics Office",
+      "pq_clause_refs": "Cl.5.1 Turnover, Cl.5.3 Central Govt Mobile Survey, Cl.5.5 PAN India deployment",
+      "eligible_for_clauses": "Central Govt project | PAN India mobile deployment | CAPI/survey app | Data collection | eGov",
+      "start_date": "20-Nov-2020",
+      "end_date": "28-Feb-2022",
+      "total_months": "15",
+      "domain_tags": [
+        "Survey",
+        "Mobile",
+        "Central Govt",
+        "Data Collection",
+        "PAN India",
+        "eGov",
+        "Statistics"
+      ],
+      "delivery_model": "Offshore + Distributed field support",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "10",
+      "key_roles": "PM(1), Android Dev(3), Backend Dev(2), DB Architect(1), QA(2), BA(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001"
+      ],
+      "statutory_clearances": "GFR 2017 compliant, MoSPI security audit cleared, NIC review passed",
+      "client_rating": "Excellent",
+      "client_feedback": "Delivered on schedule under COVID constraints. NSO has since referenced this as a model for mobile survey deployment.",
+      "reference_letter": "Yes",
+      "amc_period": "1 year from acceptance",
+      "amc_status": "Expired",
+      "warranty_period": "",
+      "support_type": "Remote helpdesk + state coordinator support",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": "Added biometric authentication module after security review"
     },
     {
       "id": "P009",
-      "name": "NP Lalganj GIS \u2013 Nagar Panchayat Lalganj",
+      "name": "NP Lalganj GIS – Nagar Panchayat Lalganj",
       "client": "Nagar Panchayat Lalganj",
       "client_type": "ULB / Nagar Panchayat",
       "state": "Uttar Pradesh",
@@ -531,10 +875,13 @@
       ],
       "scope": "GIS-based property survey and mapping for Nagar Panchayat, ward boundary digitisation, property tax module integration",
       "technologies": [
-        "QGIS",
         "GeoServer",
         "PostGIS",
-        "Python"
+        "QGIS",
+        "React.js",
+        "Java",
+        "Android",
+        "PostgreSQL"
       ],
       "completion_certificate": true,
       "wo_no": "NPL/GIS/2023/002",
@@ -550,11 +897,47 @@
         "ULB",
         "Property",
         "Survey"
-      ]
+      ],
+      "rfp_no": "NPL/GIS/2023-24/002",
+      "rfp_name": "GIS-based Property Tax and Survey System — Nagar Panchayat Lalganj, UP",
+      "pq_clause_refs": "Cl.5.3 Similar GIS/Property Tax ULB",
+      "eligible_for_clauses": "GIS-based property | ULB/panchayat | Property tax digitisation | State govt",
+      "start_date": "15-Apr-2023",
+      "end_date": "30-Jun-2024",
+      "total_months": "15",
+      "domain_tags": [
+        "GIS",
+        "Property Tax",
+        "ULB",
+        "Survey",
+        "UP",
+        "Nagar Panchayat"
+      ],
+      "delivery_model": "Offshore + Onsite for survey and training",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "5",
+      "key_roles": "PM(1), GIS Dev(2), Backend Dev(1), QA(1)",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001"
+      ],
+      "statutory_clearances": "UP govt procurement compliant",
+      "client_rating": "Good",
+      "client_feedback": "Helped Nagar Panchayat digitalise property records for the first time.",
+      "reference_letter": "Yes",
+      "amc_period": "1 year from acceptance",
+      "amc_status": "Expired",
+      "warranty_period": "",
+      "support_type": "Remote support",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": ""
     },
     {
       "id": "P010",
-      "name": "SMC GIS Mobile App \u2013 Surat Municipal Corporation",
+      "name": "SMC GIS Mobile App – Surat Municipal Corporation",
       "client": "Surat Municipal Corporation",
       "client_type": "ULB / Municipal Corporation",
       "state": "Gujarat",
@@ -592,6 +975,54 @@
         "ULB",
         "Android",
         "iOS"
+      ],
+      "rfp_no": "DC/GIS CELL/04/2025-26",
+      "rfp_name": "Design, Development, Supply, Implementation and Maintenance of GIS-based Mobile Application for SMC",
+      "pq_clause_refs": "As per RFP DC/GIS CELL/04/2025-26",
+      "eligible_for_clauses": "",
+      "start_date": "",
+      "end_date": "",
+      "total_months": "",
+      "domain_tags": [
+        "GIS",
+        "Mobile App",
+        "ULB",
+        "Android",
+        "iOS",
+        "Municipal",
+        "Surat"
+      ],
+      "delivery_model": "Onsite + Offshore",
+      "jv_involvement": "No",
+      "jv_partner": "",
+      "team_size": "",
+      "key_roles": "",
+      "onsite_team": "",
+      "certs_used": [
+        "CMMI L3",
+        "ISO 9001",
+        "ISO 27001"
+      ],
+      "statutory_clearances": "",
+      "client_rating": "",
+      "client_feedback": "",
+      "reference_letter": "No — Bidding stage",
+      "amc_period": "As per RFP — 3 years O&M",
+      "amc_status": "Bidding",
+      "warranty_period": "",
+      "support_type": "",
+      "change_orders": [],
+      "revised_wo_nos": "",
+      "scope_changes": "",
+      "technologies": [
+        "GeoServer",
+        "PostGIS",
+        "Android",
+        "iOS",
+        "Flutter",
+        "React.js",
+        "Java",
+        "PostgreSQL"
       ]
     }
   ],
@@ -605,9 +1036,12 @@
     "ca_turnover_certificate_format": true
   },
   "emd_exemption": {
-    "eligible": true,
-    "basis": "MSME Service Provider \u2014 Public Procurement Policy for MSMEs Order 2012 (amended 2018)",
-    "reference": "DoE OM F.No.6/18/2019-PPD dated 16.11.2020"
+    "msme_registered": true,
+    "udyam_no": "UDYAM-GJ-01-0007420",
+    "exemption_applicable": true,
+    "policy_ref": "Public Procurement Policy for MSMEs Order 2012 (amended 2018)",
+    "doe_om_ref": "DoE OM F.No.6/18/2019-PPD dated 16.11.2020",
+    "note": "Always raise query to confirm written MSME EMD exemption from client"
   },
   "metadata": {
     "last_updated": "2026-03-19",
@@ -760,21 +1194,21 @@
       "construction and maintenance of road"
     ],
     "do_not_bid_remarks": {
-      "road construction": "Civil construction \u2014 not Nascent domain",
-      "civil work": "Civil work \u2014 not Nascent domain",
-      "construction of": "Civil construction \u2014 not Nascent domain",
-      "supply of material": "Material supply only \u2014 not IT/software",
-      "security guard": "Security manpower \u2014 not Nascent domain",
-      "housekeeping": "Facility management manpower \u2014 not IT",
-      "catering": "Catering services \u2014 not Nascent domain",
-      "printing of": "Printing services \u2014 not Nascent domain",
-      "medicine": "Pharmaceutical \u2014 not Nascent domain",
-      "insurance": "Insurance \u2014 not Nascent domain",
-      "electrical work": "Electrical installation \u2014 not IT domain",
-      "sewerage network": "Civil pipeline work \u2014 not IT/software",
-      "sewerage pipeline": "Civil pipeline work \u2014 not IT/software",
-      "procurement of security": "Security manpower supply \u2014 not Nascent domain",
-      "hiring of security": "Security manpower \u2014 not Nascent domain"
+      "road construction": "Civil construction — not Nascent domain",
+      "civil work": "Civil work — not Nascent domain",
+      "construction of": "Civil construction — not Nascent domain",
+      "supply of material": "Material supply only — not IT/software",
+      "security guard": "Security manpower — not Nascent domain",
+      "housekeeping": "Facility management manpower — not IT",
+      "catering": "Catering services — not Nascent domain",
+      "printing of": "Printing services — not Nascent domain",
+      "medicine": "Pharmaceutical — not Nascent domain",
+      "insurance": "Insurance — not Nascent domain",
+      "electrical work": "Electrical installation — not IT domain",
+      "sewerage network": "Civil pipeline work — not IT/software",
+      "sewerage pipeline": "Civil pipeline work — not IT/software",
+      "procurement of security": "Security manpower supply — not Nascent domain",
+      "hiring of security": "Security manpower — not Nascent domain"
     },
     "conditional": [
       "cert-in",
@@ -876,5 +1310,12 @@
       "CERT-In empanelment",
       "STQC"
     ]
+  },
+  "managing_director": {
+    "name": "Maulik Bhagat",
+    "designation": "Managing Director",
+    "email": "maulik@nascentinfo.com",
+    "din": "",
+    "role": "Final bid approval authority"
   }
 }
