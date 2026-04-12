@@ -341,6 +341,11 @@ textarea.fi{min-height:80px;resize:vertical}
   <div class="content">
     <!-- ═══ DASHBOARD ═══ -->
     <div class="page active" id="page-dashboard">
+      <div id="dash-summary-bar" style="display:none;padding:8px 14px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--r2);margin-bottom:12px;font-size:12px;gap:20px;align-items:center;flex-wrap:wrap">
+        <span id="dash-val-at-stake" style="font-weight:600;color:#1E40AF"></span>
+        <span id="dash-avg-days" style="color:#64748B"></span>
+        <span id="dash-msme-count" style="color:#059669"></span>
+      </div>
       <div class="stats-row" id="stats-grid">
         <div class="stat blue" onclick="showPage('tenders');setFilter('ALL',document.querySelector('.fb'))">
           <div class="bar blue"></div>
@@ -348,19 +353,19 @@ textarea.fi{min-height:80px;resize:vertical}
           <div class="val" id="stat-total">0</div>
           <div class="sub">Imported tenders</div>
         </div>
-        <div class="stat green" onclick="showPage('tenders');currentFilter='BID';renderTendersTable(allTenders)">
+        <div class="stat green" onclick="currentFilter='BID';showPage('tenders')">
           <div class="bar green"></div>
           <div class="lbl">BID</div>
           <div class="val" id="stat-bid">0</div>
           <div class="sub">Recommended</div>
         </div>
-        <div class="stat amber" onclick="showPage('tenders');currentFilter='CONDITIONAL';renderTendersTable(allTenders)">
+        <div class="stat amber" onclick="currentFilter='CONDITIONAL';showPage('tenders')">
           <div class="bar amber"></div>
           <div class="lbl">Conditional</div>
           <div class="val" id="stat-cond">0</div>
           <div class="sub">Needs check</div>
         </div>
-        <div class="stat red" onclick="showPage('tenders');currentFilter='NO-BID';renderTendersTable(allTenders)">
+        <div class="stat red" onclick="currentFilter='NO-BID';showPage('tenders')">
           <div class="bar red"></div>
           <div class="lbl">No-Bid</div>
           <div class="val" id="stat-nobid">0</div>
@@ -388,9 +393,10 @@ textarea.fi{min-height:80px;resize:vertical}
               <div style="font-size:11px;color:var(--text3);margin-top:2px">Project matching · Eligibility snapshot · Priority sorting</div>
             </div>
             <div class="filters">
-              <button class="fb active" onclick="dashFeedFilter('priority',this)">Priority</button>
-              <button class="fb" onclick="dashFeedFilter('bid',this)">BID</button>
-              <button class="fb" onclick="dashFeedFilter('urgent',this)">Urgent</button>
+              <button class="fb active" onclick="dashFeedFilter('priority',this)">⭐ Priority</button>
+              <button class="fb g" onclick="dashFeedFilter('bid',this)">BID</button>
+              <button class="fb a" onclick="dashFeedFilter('conditional',this)">Conditional</button>
+              <button class="fb r" onclick="dashFeedFilter('urgent',this)">Urgent</button>
               <button class="fb" onclick="dashFeedFilter('all',this)">All</button>
             </div>
           </div>
@@ -423,18 +429,28 @@ textarea.fi{min-height:80px;resize:vertical}
 
     <!-- ═══ ALL TENDERS ═══ -->
     <div class="page" id="page-tenders">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div class="filters">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div class="filters" style="flex-wrap:wrap">
           <button class="fb active" onclick="setFilter('ALL',this)">All <span id="fc-all" style="font-size:9px;opacity:.6"></span></button>
           <button class="fb g" onclick="setFilter('BID',this)">BID <span id="fc-bid" style="font-size:9px;opacity:.7"></span></button>
           <button class="fb a" onclick="setFilter('CONDITIONAL',this)">Conditional <span id="fc-cond" style="font-size:9px;opacity:.7"></span></button>
           <button class="fb r" onclick="setFilter('NO-BID',this)">No-Bid <span id="fc-nobid" style="font-size:9px;opacity:.7"></span></button>
           <button class="fb" onclick="setFilter('REVIEW',this)">Review</button>
-          <button class="fb r" onclick="setFilter('URGENT',this)">Urgent</button>
-          <button class="fb" onclick="setFilter('DONE',this)">Analysed</button>
+          <button class="fb r" onclick="setFilter('URGENT',this)">⚡ Urgent</button>
+          <button class="fb" onclick="setFilter('DONE',this)">⚙ Analysed</button>
+          <button class="fb" onclick="setFilter('MSME',this)">✓ MSME</button>
+          <button class="fb" onclick="setFilter('GEM',this)">GeM</button>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:7px">
           <span style="font-size:11px;color:var(--text3)" id="tenders-count"></span>
+          <select id="sort-select" class="fi fi-sm" style="width:140px;padding:5px 9px" onchange="sortCol=this.value;sortDir=1;renderTendersTable(allTenders)">
+            <option value="days_left">Sort: Deadline</option>
+            <option value="score">Sort: Match Score</option>
+            <option value="estimated_cost_cr">Sort: Value</option>
+            <option value="verdict">Sort: Verdict</option>
+            <option value="t247_id">Sort: T247 ID</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="sortDir*=-1;renderTendersTable(allTenders)" title="Reverse sort">⇅</button>
           <button class="btn btn-outline btn-sm" onclick="exportTenders()">↓ Excel</button>
         </div>
       </div>
@@ -444,12 +460,12 @@ textarea.fi{min-height:80px;resize:vertical}
             <table id="tenders-table">
               <thead><tr>
                 <th onclick="sortTable('t247_id')" style="cursor:pointer">T247 ID ↕</th>
-                <th onclick="sortTable('brief')" style="cursor:pointer">Brief ↕</th>
+                <th onclick="sortTable('brief')" style="cursor:pointer">Brief / Org ↕</th>
                 <th onclick="sortTable('estimated_cost_cr')" style="cursor:pointer">Value ↕</th>
                 <th onclick="sortTable('days_left')" style="cursor:pointer">Deadline ↕</th>
-                <th onclick="sortTable('verdict')" style="cursor:pointer">Verdict ↕</th>
-                <th>Match</th>
-                <th>Action</th>
+                <th onclick="sortTable('score')" style="cursor:pointer;color:var(--blue)">Verdict / Score ↕</th>
+                <th>Project Match</th>
+                <th>Actions</th>
               </tr></thead>
               <tbody id="tenders-tbody"></tbody>
             </table>
@@ -843,7 +859,14 @@ function showPage(name, callerEl) {
       if ((n.getAttribute('onclick')||'').includes("'"+name+"'")) n.classList.add('active');
     });
   }
-  if (name === 'tenders') renderTendersTable(allTenders);
+  if (name === 'tenders') {
+    if (allTenders.length === 0) {
+      // Load fresh if not yet loaded
+      loadDashboard().then(() => renderTendersTable(allTenders));
+    } else {
+      renderTendersTable(allTenders);
+    }
+  }
   if (name === 'reports') loadReports();
   if (name === 'settings') loadSettings();
   if (name === 'alerts') loadAlerts();
@@ -959,6 +982,9 @@ async function importExcel(input) {
     if (!r.ok) throw new Error(d.detail || 'Import failed');
     toast(`Imported ${d.total} tenders — ${d.added} new, ${d.updated||0} updated`, 'success');
     await loadDashboard();
+    // If currently on tenders page, refresh it
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-tenders') renderTendersTable(allTenders);
   } catch(e) {
     toast('Import failed: ' + e.message, 'error');
   }
@@ -995,6 +1021,23 @@ async function loadDashboard() {
 
     // Main feed
     renderDashFeed(_dashMode);
+    
+    // Summary bar — value at stake, avg deadline, MSME count
+    const bidTenders = allTenders.filter(t => t.verdict === 'BID' || t.verdict === 'CONDITIONAL');
+    const totalVal = bidTenders.reduce((s,t) => s + (parseFloat(t.estimated_cost_cr)||0), 0);
+    const msmeCount = bidTenders.filter(t => (t.msme_exemption||'').toLowerCase().includes('yes')).length;
+    const activeDeadlines = allTenders.filter(t => t.days_left >= 0 && t.days_left < 999 && t.verdict !== 'NO-BID');
+    const avgDays = activeDeadlines.length ? Math.round(activeDeadlines.reduce((s,t)=>s+t.days_left,0)/activeDeadlines.length) : 0;
+    const sumBar = document.getElementById('dash-summary-bar');
+    if (sumBar && bidTenders.length > 0) {
+      sumBar.style.display = 'flex';
+      const sv = document.getElementById('dash-val-at-stake');
+      const sd = document.getElementById('dash-avg-days');
+      const sm = document.getElementById('dash-msme-count');
+      if (sv) sv.textContent = `💰 BID+Conditional value at stake: Rs.${totalVal.toFixed(1)} Cr`;
+      if (sd) sd.textContent = `⏱ Avg deadline: ${avgDays} days`;
+      if (sm && msmeCount) sm.textContent = `✓ ${msmeCount} MSME-exempt tenders`;
+    }
 
     // Deadline watch (right panel)
     const urgent = allTenders
@@ -1064,16 +1107,24 @@ function renderDashFeed(mode) {
     tenders = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict !== 'NO-BID');
   } else if (mode === 'bid') {
     tenders = allTenders.filter(t => t.verdict === 'BID');
+  } else if (mode === 'conditional') {
+    tenders = allTenders.filter(t => t.verdict === 'CONDITIONAL');
   } else if (mode === 'priority') {
-    // Smart sort: urgent BID first, then urgent COND, then BID, then COND
-    const urgentBid = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict === 'BID');
+    // Smart sort: urgent first, then BID, then CONDITIONAL, then REVIEW
+    const urgentBid  = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict === 'BID');
     const urgentCond = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && t.verdict === 'CONDITIONAL');
-    const bid = allTenders.filter(t => t.verdict === 'BID' && !(t.days_left >= 0 && t.days_left <= 7));
-    const cond = allTenders.filter(t => t.verdict === 'CONDITIONAL' && !(t.days_left >= 0 && t.days_left <= 7));
-    tenders = [...urgentBid, ...urgentCond, ...bid, ...cond].slice(0, 15);
+    const urgentRev  = allTenders.filter(t => t.days_left >= 0 && t.days_left <= 7 && !['BID','CONDITIONAL','NO-BID'].includes(t.verdict));
+    const bid   = allTenders.filter(t => t.verdict === 'BID' && !(t.days_left >= 0 && t.days_left <= 7));
+    const cond  = allTenders.filter(t => t.verdict === 'CONDITIONAL' && !(t.days_left >= 0 && t.days_left <= 7));
+    const rev   = allTenders.filter(t => t.verdict === 'REVIEW' && !(t.days_left >= 0 && t.days_left <= 7));
+    tenders = [...urgentBid, ...urgentCond, ...urgentRev, ...bid, ...cond, ...rev].slice(0, 20);
+  } else if (mode === 'nobid') {
+    tenders = allTenders.filter(t => t.verdict === 'NO-BID').slice(0, 20);
   } else {
-    tenders = allTenders.slice(0, 20);
+    tenders = [...allTenders].slice(0, 30);
   }
+  // Sort by match score (descending) within same group
+  tenders = tenders.sort((a,b) => calcMatchScore(b) - calcMatchScore(a));
   const feed = document.getElementById('dash-feed');
   if (!feed) return;
   feed.innerHTML = tenders.length
@@ -1087,6 +1138,45 @@ function dashFeedFilter(mode, el) {
   renderDashFeed(mode);
 }
 
+// ── MATCH SCORING ─────────────────────────────────────────────
+function calcMatchScore(t) {
+  // Score 0-100 based on multiple signals
+  let score = 0;
+  const strong = (t._strong_matches || []).length;
+  const partial = (t._partial_matches || []).length;
+  const v = t.verdict || '';
+  const dl = t.days_left;
+
+  // Verdict base score
+  if (v === 'BID') score += 40;
+  else if (v === 'CONDITIONAL') score += 20;
+  else if (v === 'REVIEW') score += 10;
+
+  // Project match score (up to 40 pts)
+  score += Math.min(40, strong * 15 + partial * 7);
+
+  // Urgency bonus (deadline pressure = opportunity)
+  if (dl >= 0 && dl <= 3) score += 15;
+  else if (dl >= 0 && dl <= 7) score += 10;
+  else if (dl >= 0 && dl <= 14) score += 5;
+
+  // AI analysis done = more confident score
+  if (t.bid_no_bid_done) score += 5;
+
+  return Math.min(100, score);
+}
+
+function scoreBar(score) {
+  const color = score >= 70 ? '#059669' : score >= 45 ? '#D97706' : '#94A3B8';
+  const bg = score >= 70 ? '#ECFDF5' : score >= 45 ? '#FFFBEB' : '#F8FAFC';
+  return `<div style="display:flex;align-items:center;gap:5px">
+    <div style="width:50px;height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden">
+      <div style="width:${score}%;height:100%;background:${color};border-radius:3px"></div>
+    </div>
+    <span style="font-size:10px;font-weight:700;color:${color}">${score}</span>
+  </div>`;
+}
+
 function renderTenderCards(tenders, mode) {
   return '<div style="display:flex;flex-direction:column;gap:0">' +
     tenders.map(t => {
@@ -1094,6 +1184,7 @@ function renderTenderCards(tenders, mode) {
       const partialM = t._partial_matches || [];
       const hasMatch = strongM.length > 0 || partialM.length > 0;
       const matchCount = (t._match_count || 0);
+      const score = calcMatchScore(t);
       const dl = t.days_left;
       const dlColor = dl <= 0 ? '#DC2626' : dl <= 3 ? '#D97706' : dl <= 7 ? '#F59E0B' : '#64748B';
       const stage = t.status || 'Identified';
@@ -1114,11 +1205,12 @@ function renderTenderCards(tenders, mode) {
 
       return `<div style="padding:14px 18px;border-bottom:1px solid #F1F5F9;display:flex;gap:16px;align-items:flex-start;transition:background 0.15s;cursor:default" onmouseenter="this.style.background='#F8FAFC'" onmouseleave="this.style.background=''">
         
-        <!-- Left: verdict + ID -->
-        <div style="flex-shrink:0;text-align:center;width:60px">
+        <!-- Left: score + verdict + ID -->
+        <div style="flex-shrink:0;text-align:center;width:64px">
           <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:4px">${t.t247_id || '—'}</div>
           ${verdictBadge(t.verdict)}
           ${dl >= 0 ? `<div style="font-size:10px;font-weight:700;color:${dlColor};margin-top:5px">${dl === 0 ? 'TODAY' : dl + 'd'}</div>` : '<div style="font-size:10px;color:#94A3B8;margin-top:5px">Expired</div>'}
+          <div style="margin-top:5px">${scoreBar(score)}</div>
         </div>
 
         <!-- Middle: brief + matching + snapshot -->
@@ -1212,8 +1304,8 @@ function clearDashFilter() {
 
 function setFilter(filter, el) {
   currentFilter = filter;
-  document.querySelectorAll('#page-tenders .filter-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('#page-tenders .fb').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
   renderTendersTable(allTenders);
 }
 
@@ -1938,24 +2030,30 @@ function matchesSearch(t, q) {
 
 function applyFilter(t) {
   if (currentFilter === 'ALL') return true;
-  if (currentFilter === 'URGENT') return t.days_left >= 0 && t.days_left <= 7;
+  if (currentFilter === 'URGENT') return t.days_left >= 0 && t.days_left <= 7 && t.verdict !== 'NO-BID';
   if (currentFilter === 'DONE') return t.bid_no_bid_done === true;
+  if (currentFilter === 'MSME') return (t.msme_exemption||'').toLowerCase().includes('yes');
+  if (currentFilter === 'GEM') return t.is_gem === true;
   return t.verdict === currentFilter;
 }
 
 function sortTenders(tenders) {
   return [...tenders].sort((a, b) => {
-    let av = a[sortCol], bv = b[sortCol];
+    if (sortCol === 'score') {
+      return (calcMatchScore(b) - calcMatchScore(a)) * sortDir;
+    }
     if (sortCol === 'days_left') {
-      av = (av == null || av === 999) ? 9999 : av;
-      bv = (bv == null || bv === 999) ? 9999 : bv;
+      const av = (a.days_left == null || a.days_left === 999) ? 9999 : a.days_left;
+      const bv = (b.days_left == null || b.days_left === 999) ? 9999 : b.days_left;
       return (av - bv) * sortDir;
     }
     if (sortCol === 'estimated_cost_cr') {
-      return ((parseFloat(av) || 0) - (parseFloat(bv) || 0)) * sortDir;
+      const av = parseFloat(a.estimated_cost_cr) || 0;
+      const bv = parseFloat(b.estimated_cost_cr) || 0;
+      return (bv - av) * sortDir;
     }
-    av = String(av || '').toLowerCase();
-    bv = String(bv || '').toLowerCase();
+    const av = String(a[sortCol] || '').toLowerCase();
+    const bv = String(b[sortCol] || '').toLowerCase();
     return av < bv ? -sortDir : av > bv ? sortDir : 0;
   });
 }
@@ -1989,33 +2087,63 @@ function renderTendersTable(tenders) {
   }
 
   tbody.innerHTML = filtered.map(t => {
+    const score = calcMatchScore(t);
     const mc = t._match_count || 0;
-    const sm = t._strong_matches || [];
-    const matchCell = mc > 0
-      ? `<div style="font-size:10px;font-weight:600;color:${mc>=3?'#059669':'#2563EB'}">${mc>=3?'●':'◐'} ${mc} match${mc>1?'es':''}</div>` +
-        sm.slice(0,2).map(m=>`<div style="font-size:10px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc((m.matching_project||m.name||'').substring(0,25))}</div>`).join('')
-      : '<span style="font-size:10px;color:#CBD5E1">—</span>';
-    return `<tr>
-      <td style="font-family:monospace;font-size:11px;white-space:nowrap;color:#64748B">${esc(t.t247_id)}</td>
-      <td style="max-width:280px">
-        <div class="brief-cell" data-brief="${(t.brief||'').replace(/"/g,'&quot;')}" data-org="${(t.org_name||'').replace(/"/g,'&quot;')}" style="font-size:12px;font-weight:500;line-height:1.4;cursor:default">
-          ${esc((t.brief||t.tender_name||'—').substring(0,80))}${(t.brief||'').length>80?'<span style="color:#CBD5E1">…</span>':''}
-        </div>
-        <div style="font-size:10px;color:#94A3B8;margin-top:2px">${esc((t.org_name||'').substring(0,50))}</div>
+    const sm = (t._strong_matches || []);
+    const pm = (t._partial_matches || []);
+    const scoreColor = score>=70?'#059669':score>=45?'#D97706':'#94A3B8';
+    const scoreBg = score>=70?'#ECFDF5':score>=45?'#FFFBEB':'#F8FAFC';
+    
+    const matchCell = (mc > 0)
+      ? `<div>
+          <div style="font-size:10px;font-weight:700;color:${mc>=2?'#059669':'#2563EB'};margin-bottom:2px">
+            ${mc>=2?'●':'◐'} ${mc} match${mc>1?'es':''}
+          </div>
+          ${sm.slice(0,2).map(m=>`<div style="font-size:10px;color:#065F46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">↳ ${esc((m.matching_project||m.name||'').substring(0,22))}</div>`).join('')}
+          ${pm.slice(0,1).map(m=>`<div style="font-size:10px;color:#1E40AF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">◐ ${esc((m.matching_project||m.name||'').substring(0,22))}</div>`).join('')}
+        </div>`
+      : `<span style="font-size:10px;color:#CBD5E1">No match</span>`;
+    
+    const dlUrgent = t.days_left >= 0 && t.days_left <= 7;
+    const rowBg = dlUrgent && t.verdict==='BID' ? '#F0FDF4' : dlUrgent ? '#FFFBEB' : '';
+
+    return `<tr style="background:${rowBg}">
+      <td>
+        <div style="font-family:monospace;font-size:11px;color:#64748B">${esc(t.t247_id)}</div>
+        <div style="font-size:9px;color:#94A3B8;margin-top:1px">${esc((t.ref_no||'').substring(0,18))}</div>
       </td>
-      <td style="font-size:12px;font-weight:600;white-space:nowrap;color:#059669">${t.estimated_cost_cr ? 'Rs.' + t.estimated_cost_cr + 'Cr' : '—'}</td>
+      <td style="max-width:260px">
+        <div class="brief-cell" data-brief="${(t.brief||'').replace(/"/g,'&quot;')}" data-org="${(t.org_name||'').replace(/"/g,'&quot;')}"
+          style="font-size:12px;font-weight:500;line-height:1.4;cursor:pointer;color:#1E293B"
+          onclick="openQuickView('${t.t247_id}')">
+          ${esc((t.brief||t.tender_name||'—').substring(0,75))}${(t.brief||'').length>75?'<span style="color:#CBD5E1">…</span>':''}
+        </div>
+        <div style="font-size:10px;color:#94A3B8;margin-top:2px;display:flex;gap:8px">
+          <span>${esc((t.org_name||'').substring(0,35))}</span>
+          ${t.location?`<span>📍${esc(t.location.substring(0,15))}</span>`:''}
+        </div>
+        ${t.msme_exemption&&t.msme_exemption.toLowerCase().includes('yes')?`<span style="font-size:9px;color:#059669;font-weight:600">✓ MSME Exempt</span>`:''}
+      </td>
+      <td style="white-space:nowrap;font-size:12px;font-weight:600;color:#059669">
+        ${t.estimated_cost_cr ? 'Rs.' + t.estimated_cost_cr + ' Cr' : '—'}
+        ${t.emd?`<div style="font-size:10px;color:#64748B;font-weight:400">EMD: ${esc(String(t.emd).substring(0,15))}</div>`:''}
+      </td>
       <td style="white-space:nowrap">
-        <div class="${dlClass(t.days_left)}" style="font-size:12px;font-weight:500">${t.deadline||'—'}</div>
+        <div class="${dlClass(t.days_left)}" style="font-size:12px;font-weight:600">${t.deadline ? t.deadline.substring(0,10) : '—'}</div>
         <div style="font-size:10px;color:#94A3B8">${dlLabel(t.days_left)}</div>
       </td>
       <td>
         ${verdictBadge(t.verdict)}
-        ${t.bid_no_bid_done ? '<span style="font-size:9px;color:#059669;display:block;margin-top:3px;font-weight:600">✓ AI done</span>' : ''}
+        <div style="margin-top:3px">${scoreBar(score)}</div>
+        ${t.bid_no_bid_done?'<div style="font-size:9px;color:#6366F1;margin-top:2px;font-weight:600">⚡ AI done</div>':''}
       </td>
       <td style="max-width:130px">${matchCell}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-primary btn-sm" onclick="openQuickView('${t.t247_id}')">View</button>
-        ${t.bid_no_bid_done && t.report_file ? '<a href="/download/'+t.report_file+'" class="btn btn-outline btn-sm" style="margin-left:4px" title="Download report">↓</a>' : ''}
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <button class="btn btn-primary btn-sm" onclick="openQuickView('${t.t247_id}')" style="padding:3px 8px;font-size:11px">View</button>
+          <button class="btn btn-outline btn-sm" onclick="goAnalyse('${t.t247_id}')" style="padding:3px 8px;font-size:11px">${t.bid_no_bid_done?'Re-Analyse':'Analyse'}</button>
+          ${t.bid_no_bid_done && t.report_file ? `<a href="/download/${t.report_file}" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:11px;text-align:center">↓ Report</a>` : ''}
+        </div>
       </td>
     </tr>`;
   }).join('');
