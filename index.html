@@ -3,25 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bid/No-Bid — Nascent</title>
+<title>Bid/No-Bid — Nascent v6</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#0f1117;color:#e0e0e0;display:flex;height:100vh;overflow:hidden}
 #nav{width:210px;background:#1a1d27;padding:16px 12px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column}
-#nav-brand{margin-bottom:20px}
-#nav-brand h2{font-size:15px;font-weight:700;color:#fff}
-#nav-brand p{font-size:11px;color:#555;margin-top:2px}
-.nav-section{font-size:10px;color:#444;text-transform:uppercase;letter-spacing:1px;margin:12px 0 4px 8px}
-.nav-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;color:#888;padding:7px 10px;cursor:pointer;border-radius:6px;font-size:13px;margin-bottom:1px}
+#nav-brand h2{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px}
+#nav-brand p{font-size:10px;color:#444}
+.nav-section{font-size:10px;color:#333;text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px 8px}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;color:#666;padding:7px 10px;cursor:pointer;border-radius:6px;font-size:13px;margin-bottom:1px;transition:all .15s}
 .nav-btn:hover{background:#252830;color:#ccc}
 .nav-btn.active{background:#1e3a5f;color:#60a5fa}
 .nav-btn .icon{font-size:14px;width:18px;text-align:center}
-.nav-badge{margin-left:auto;background:#1e3a5f;color:#60a5fa;border-radius:10px;padding:1px 6px;font-size:10px;min-width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:#1e3a5f;color:#60a5fa;border-radius:10px;padding:1px 6px;font-size:10px}
 .nav-badge.red{background:#450a0a;color:#ef4444}
-.nav-badge.green{background:#14532d;color:#22c55e}
 #nav-footer{margin-top:auto;padding-top:12px;border-top:1px solid #1e2130}
 .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
-.dot-green{background:#22c55e}.dot-red{background:#ef4444}.dot-gray{background:#444}
+.dot-green{background:#22c55e}.dot-red{background:#ef4444}.dot-gray{background:#444}.dot-amber{background:#f59e0b}
 #main{flex:1;overflow-y:auto;background:#0f1117}
 .page{display:none;min-height:100%}.page.active{display:block}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #1a1d27;background:#12141e;position:sticky;top:0;z-index:10}
@@ -29,29 +27,24 @@ body{font-family:Arial,sans-serif;background:#0f1117;color:#e0e0e0;display:flex;
 .topbar-actions{display:flex;gap:8px;flex-wrap:wrap}
 .page-body{padding:20px 24px}
 .stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.stat{background:#1a1d27;border-radius:10px;padding:14px 18px;min-width:110px;cursor:pointer;border:1px solid #1e2130;transition:border-color .15s}
-.stat:hover{border-color:#3b82f6}
-.stat.active-filter{border-color:#3b82f6;background:#0f1f3d}
+.stat{background:#1a1d27;border-radius:10px;padding:14px 18px;min-width:100px;cursor:pointer;border:1px solid #1e2130;transition:border-color .15s}
+.stat:hover,.stat.active-filter{border-color:#3b82f6;background:#0f1f3d}
 .stat-num{font-size:26px;font-weight:700;line-height:1}
-.stat-lbl{font-size:11px;color:#666;margin-top:5px}
-.c-white{color:#fff}.c-green{color:#22c55e}.c-amber{color:#f59e0b}
-.c-red{color:#ef4444}.c-blue{color:#3b82f6}.c-purple{color:#a78bfa}
-.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.stat-lbl{font-size:11px;color:#666;margin-top:4px}
+.c-white{color:#fff}.c-green{color:#22c55e}.c-amber{color:#f59e0b}.c-red{color:#ef4444}.c-blue{color:#3b82f6}.c-purple{color:#a78bfa}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .fbtn{padding:5px 12px;border-radius:16px;border:1px solid #252830;background:none;color:#666;cursor:pointer;font-size:12px;transition:all .15s}
 .fbtn:hover{border-color:#3b82f6;color:#3b82f6}
 .fbtn.active{background:#1e3a5f;color:#60a5fa;border-color:#1e3a5f}
-.filter-sep{width:1px;height:20px;background:#252830;margin:0 4px}
-select.fbtn-select{padding:4px 8px;border-radius:6px;border:1px solid #252830;background:#1a1d27;color:#888;font-size:12px;cursor:pointer;outline:none}
-select.fbtn-select:focus{border-color:#3b82f6}
-.search-wrap{position:relative;margin-bottom:16px}
+select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;background:#1a1d27;color:#666;font-size:12px;cursor:pointer;outline:none}
+.search-wrap{position:relative;margin-bottom:14px}
 .search-wrap input{width:100%;padding:10px 14px 10px 38px;background:#1a1d27;border:1px solid #252830;color:#fff;border-radius:8px;font-size:13px;outline:none}
-.search-wrap input:focus{border-color:#3b82f6}
+.search-wrap input:focus,.search-wrap input:hover{border-color:#3b82f6}
 .search-wrap::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px}
 table{width:100%;border-collapse:collapse}
 .table-wrap{background:#1a1d27;border-radius:10px;overflow:hidden;border:1px solid #1e2130}
-th{background:#12141e;padding:10px 14px;text-align:left;font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;cursor:pointer;user-select:none}
-th:hover{color:#aaa}
-td{padding:10px 14px;border-top:1px solid #151820;font-size:13px;vertical-align:middle}
+th{background:#12141e;padding:10px 14px;text-align:left;font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:9px 14px;border-top:1px solid #151820;font-size:13px;vertical-align:middle}
 tr:hover td{background:#1e2130}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
 .badge-BID{background:#14532d;color:#22c55e}
@@ -59,9 +52,9 @@ tr:hover td{background:#1e2130}
 .badge-CONDITIONAL{background:#451a03;color:#f59e0b}
 .badge-REVIEW,.badge-{background:#1e3a5f;color:#3b82f6}
 .c-urgent{color:#ef4444;font-weight:600}.c-warn{color:#f59e0b}.c-muted{color:#555}
-.brief-cell .brief{font-size:13px;color:#ddd;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brief-cell .org{font-size:11px;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
-.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.brief-cell .brief{font-size:13px;color:#ddd;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brief-cell .org{font-size:11px;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
 .btn-primary{background:#3b82f6;color:#fff}.btn-primary:hover{background:#2563eb}
 .btn-success{background:#16a34a;color:#fff}.btn-success:hover{background:#15803d}
 .btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
@@ -69,17 +62,17 @@ tr:hover td{background:#1e2130}
 .btn-amber{background:#92400e;color:#fcd34d}.btn-amber:hover{background:#78350f}
 .btn-sm{padding:4px 10px;font-size:12px}
 .card{background:#1a1d27;border-radius:10px;padding:20px;margin-bottom:16px;border:1px solid #1e2130}
-.card-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
-label{font-size:11px;color:#666;display:block;margin-bottom:4px;margin-top:12px;text-transform:uppercase;letter-spacing:.3px}
+.card-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+label{font-size:11px;color:#555;display:block;margin-bottom:4px;margin-top:12px;text-transform:uppercase;letter-spacing:.3px}
 input[type=text],input[type=password],input[type=email],input[type=number],select,textarea{background:#12141e;border:1px solid #252830;color:#fff;padding:8px 12px;border-radius:6px;font-size:13px;width:100%;outline:none}
 input:focus,select:focus,textarea:focus{border-color:#3b82f6}
-.form-row{margin-bottom:4px}
 .row{display:flex;gap:12px;flex-wrap:wrap}
 .row .card{flex:1;min-width:200px}
 .alert-bar{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:8px;background:#1e3a5f;border-left:3px solid #3b82f6;color:#93c5fd}
 .alert-bar.red{background:#450a0a;border-color:#ef4444;color:#fca5a5}
 .alert-bar.amber{background:#451a03;border-color:#f59e0b;color:#fcd34d}
-#toast{position:fixed;bottom:20px;right:20px;background:#1e2130;border:1px solid #252830;padding:12px 20px;border-radius:8px;font-size:13px;display:none;z-index:9999;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.alert-bar.green{background:#14532d;border-color:#22c55e;color:#86efac}
+#toast{position:fixed;bottom:20px;right:20px;background:#1e2130;border:1px solid #252830;padding:12px 20px;border-radius:8px;font-size:13px;display:none;z-index:9999;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .empty-state{text-align:center;padding:50px 20px;color:#444;font-size:14px}
 .mono{font-family:monospace;font-size:11px;color:#666}
 .upload-zone{border:2px dashed #252830;border-radius:8px;padding:30px;text-align:center;cursor:pointer;color:#555;font-size:13px;transition:border-color .15s}
@@ -93,40 +86,41 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
 .progress-bar{background:#12141e;border-radius:4px;height:6px;overflow:hidden;margin-top:6px}
 .progress-fill{height:100%;background:#3b82f6;border-radius:4px;transition:width .3s}
 .tab-row{display:flex;gap:0;border-bottom:1px solid #1e2130;margin-bottom:20px;flex-wrap:wrap}
-.tab{padding:8px 16px;cursor:pointer;font-size:13px;color:#666;border-bottom:2px solid transparent}
-.tab:hover{color:#aaa}
-.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
+.tab{padding:8px 16px;cursor:pointer;font-size:13px;color:#666;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:#aaa}.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
 .tab-panel{display:none}.tab-panel.active{display:block}
 #loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 #loading-overlay.show{display:flex}
 .spinner{width:36px;height:36px;border:3px solid #1e2130;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .actions-cell{display:flex;gap:4px;flex-wrap:wrap}
-.action-btn{padding:3px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600}
+.action-btn{padding:3px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:all .15s}
 .action-btn.blue{background:#1e3a5f;color:#60a5fa}.action-btn.blue:hover{background:#1e40af}
 .action-btn.green{background:#14532d;color:#22c55e}.action-btn.green:hover{background:#166534}
 .action-btn.amber{background:#451a03;color:#f59e0b}.action-btn.amber:hover{background:#78350f}
 .action-btn.red{background:#450a0a;color:#ef4444}.action-btn.red:hover{background:#7f1d1d}
 .action-btn.gray{background:#1e2130;color:#888}.action-btn.gray:hover{background:#252830}
-/* BOQ specific */
-.boq-table input[type=number]{background:#0f1117;border:1px solid #252830;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;width:90px}
-.boq-table input[type=number]:focus{border-color:#3b82f6}
-.boq-table select{background:#0f1117;border:1px solid #252830;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;width:auto}
-.boq-table td{padding:6px 10px;font-size:12px}
-.boq-total-row td{font-weight:700;color:#fff;background:#12141e}
-.boq-category-row td{background:#1e2130;color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.boq-grand-total{background:#1e3a5f;border:1px solid #3b82f6;border-radius:8px;padding:16px 20px;margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
-.boq-grand-total .lbl{font-size:11px;color:#555;margin-bottom:2px}
-.boq-grand-total .val{font-size:18px;font-weight:700;color:#60a5fa}
-.boq-grand-total .val.green{color:#22c55e}
-/* Editable table cells */
-td[contenteditable=true]{outline:none;cursor:text}
-td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
-/* Analytics grid */
-.analytics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-.analytic-card{background:#1a1d27;border-radius:10px;padding:16px;border:1px solid #1e2130;text-align:center}
-.analytic-num{font-size:24px;font-weight:700;color:#60a5fa}
-.analytic-lbl{font-size:11px;color:#555;margin-top:4px}
+/* BOQ */
+.boq-table input[type=number]{background:#0f1117;border:1px solid #252830;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;width:85px}
+.boq-table select{background:#0f1117;border:1px solid #252830;color:#fff;padding:4px 6px;border-radius:4px;font-size:12px}
+.boq-table td{padding:5px 8px;font-size:12px}
+.boq-cat-row td{background:#1e2130;color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:6px 10px}
+.boq-grand{background:#1e3a5f;border:1px solid #3b82f6;border-radius:8px;padding:16px 20px;margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.boq-grand .lbl{font-size:11px;color:#555;margin-bottom:2px}
+.boq-grand .val{font-size:16px;font-weight:700;color:#60a5fa}
+.boq-grand .val.big{font-size:22px;color:#22c55e}
+/* Diagnose */
+.diag-check{display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:8px;margin-bottom:8px}
+.diag-check.OK{background:#0d1f10;border:1px solid #166534}
+.diag-check.WARN{background:#1c1400;border:1px solid #78350f}
+.diag-check.ERROR{background:#1a0000;border:1px solid #7f1d1d}
+.diag-icon{font-size:18px;flex-shrink:0;margin-top:2px}
+.diag-name{font-size:13px;font-weight:600;color:#fff}
+.diag-detail{font-size:12px;color:#888;margin-top:2px}
+.diag-fix{font-size:11px;color:#f59e0b;margin-top:4px;padding:4px 8px;background:#1c1400;border-radius:4px;border-left:2px solid #f59e0b}
+/* Profile editable */
+td[contenteditable]{outline:none;cursor:text}
+td[contenteditable]:focus{background:#1e2130;outline:1px solid #3b82f6}
 </style>
 </head>
 <body>
@@ -134,7 +128,7 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 
 <!-- SIDEBAR -->
 <div id="nav">
-  <div id="nav-brand"><h2>BID / NO-BID</h2><p>Nascent Info Technologies</p></div>
+  <div id="nav-brand" style="margin-bottom:16px"><h2>BID / NO-BID</h2><p>Nascent Info Technologies</p></div>
   <div class="nav-section">Main</div>
   <button class="nav-btn active" onclick="showPage('dashboard')"><span class="icon">📊</span>Dashboard<span class="nav-badge" id="nb-total">0</span></button>
   <button class="nav-btn" onclick="showPage('tenders')"><span class="icon">📋</span>All Tenders</button>
@@ -151,10 +145,11 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
   <button class="nav-btn" onclick="showPage('skipped')"><span class="icon">🚫</span>Skipped</button>
   <div class="nav-section">System</div>
   <button class="nav-btn" onclick="showPage('profile')"><span class="icon">🏢</span>Company Profile</button>
+  <button class="nav-btn" onclick="showPage('diagnose')"><span class="icon">🩺</span>Self-Diagnose</button>
   <button class="nav-btn" onclick="showPage('settings')"><span class="icon">⚙️</span>Settings</button>
   <div id="nav-footer">
     <div style="font-size:11px;margin-bottom:4px"><span class="status-dot dot-gray" id="drive-dot"></span><span id="drive-label">Drive: checking...</span></div>
-    <div style="font-size:11px;color:#444" id="api-quota">API: checking...</div>
+    <div style="font-size:11px;color:#333" id="api-status">AI: checking...</div>
   </div>
 </div>
 
@@ -169,18 +164,20 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Import Excel</button>
       <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
       <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
-      <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export</button>
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='/export-tenders'">⬇ Export</button>
+      <button class="btn btn-ghost btn-sm" onclick="reclassifyAll()">↺ Reclassify All</button>
     </div>
   </div>
   <div class="page-body">
     <div id="alert-container"></div>
     <div class="stats">
-      <div class="stat" id="stat-all" onclick="setFilter('')"><div class="stat-num c-white" id="s-total">—</div><div class="stat-lbl">Total</div></div>
+      <div class="stat" onclick="setFilter('')"><div class="stat-num c-white" id="s-total">—</div><div class="stat-lbl">Total</div></div>
       <div class="stat" onclick="setFilter('BID')"><div class="stat-num c-green" id="s-bid">—</div><div class="stat-lbl">BID</div></div>
       <div class="stat" onclick="setFilter('CONDITIONAL')"><div class="stat-num c-amber" id="s-cond">—</div><div class="stat-lbl">Conditional</div></div>
       <div class="stat" onclick="setFilter('NO-BID')"><div class="stat-num c-red" id="s-nobid">—</div><div class="stat-lbl">No-Bid</div></div>
       <div class="stat" onclick="setFilter('REVIEW')"><div class="stat-num c-blue" id="s-review">—</div><div class="stat-lbl">Review</div></div>
       <div class="stat" onclick="setFilter('analysed')"><div class="stat-num c-purple" id="s-analysed">—</div><div class="stat-lbl">Analysed</div></div>
+      <div class="stat" onclick="setFilter('boq')"><div class="stat-num" style="color:#f59e0b" id="s-boq">—</div><div class="stat-lbl">Has BOQ</div></div>
     </div>
     <div class="filters">
       <button class="fbtn active" onclick="setFilter('')">All</button>
@@ -188,61 +185,39 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
       <button class="fbtn" onclick="setFilter('CONDITIONAL')">△ Conditional</button>
       <button class="fbtn" onclick="setFilter('NO-BID')">✗ No-Bid</button>
       <button class="fbtn" onclick="setFilter('REVIEW')">? Review</button>
-      <button class="fbtn" onclick="setFilter('urgent')">🔴 Urgent ≤7d</button>
+      <button class="fbtn" onclick="setFilter('urgent')">🔴 ≤7 Days</button>
       <button class="fbtn" onclick="setFilter('analysed')">🔬 Analysed</button>
       <button class="fbtn" onclick="setFilter('boq')">💰 Has BOQ</button>
-      <div class="filter-sep"></div>
-      <select class="fbtn-select" id="sort-select" onchange="renderDash()">
+      <select class="fsel" id="sort-sel" onchange="renderDash()" style="margin-left:8px">
         <option value="deadline">Sort: Deadline</option>
-        <option value="value">Sort: Value</option>
+        <option value="value">Sort: Value ↓</option>
         <option value="verdict">Sort: Verdict</option>
       </select>
     </div>
-    <div class="search-wrap"><input id="dash-search" placeholder="Search — T247 ID, brief, org, location, ref no..." oninput="renderDash()"></div>
+    <div class="search-wrap"><input id="dash-search" placeholder="Search T247 ID, brief, org, location, ref no..." oninput="renderDash()"></div>
     <div id="dash-count" style="font-size:12px;color:#444;margin-bottom:8px"></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th onclick="sortBy('t247_id')">T247 ID ↕</th>
-          <th onclick="sortBy('brief')">Brief / Org ↕</th>
-          <th onclick="sortBy('deadline')">Deadline ↕</th>
-          <th onclick="sortBy('days_left')">Days Left ↕</th>
-          <th onclick="sortBy('estimated_cost_cr')">Value ↕</th>
-          <th>Verdict</th>
-          <th>Actions</th>
-        </tr></thead>
-        <tbody id="dash-table"><tr><td colspan="7" class="empty-state">Loading tenders...</td></tr></tbody>
-      </table>
-    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Deadline</th><th>Days</th><th>Value</th><th>Verdict</th><th>Actions</th></tr></thead>
+      <tbody id="dash-table"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+    </table></div>
   </div>
 </div>
 
 <!-- ═══ ALL TENDERS ═══ -->
 <div id="page-tenders" class="page">
   <div class="topbar"><h1>All Tenders</h1>
-    <div class="topbar-actions">
-      <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export Excel</button>
-    </div>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="window.location.href='/export-tenders'">⬇ Export Excel</button></div>
   </div>
   <div class="page-body">
     <div class="filters">
-      <select class="fbtn-select" id="tl-verdict" onchange="renderTenders()">
-        <option value="">All Verdicts</option>
-        <option>BID</option><option>CONDITIONAL</option><option>NO-BID</option><option>REVIEW</option>
-      </select>
-      <select class="fbtn-select" id="tl-analysed" onchange="renderTenders()">
-        <option value="">All</option>
-        <option value="yes">Analysed</option>
-        <option value="no">Not Analysed</option>
-      </select>
+      <select class="fsel" id="tl-verdict" onchange="renderTenders()"><option value="">All Verdicts</option><option>BID</option><option>CONDITIONAL</option><option>NO-BID</option><option>REVIEW</option></select>
+      <select class="fsel" id="tl-analysed" onchange="renderTenders()"><option value="">All</option><option value="yes">Analysed</option><option value="no">Not Analysed</option></select>
     </div>
     <div class="search-wrap"><input id="tl-search" placeholder="Search..." oninput="renderTenders()"></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>Deadline</th><th>Verdict</th><th>BOQ</th><th>Actions</th></tr></thead>
-        <tbody id="tenders-table"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
-      </table>
-    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>Deadline</th><th>Verdict</th><th>BOQ</th><th>Actions</th></tr></thead>
+      <tbody id="tenders-table"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+    </table></div>
   </div>
 </div>
 
@@ -251,18 +226,14 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
   <div class="topbar"><h1>Analyse Tender</h1></div>
   <div class="page-body">
     <div id="ctx-banner" style="display:none;background:#1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;justify-content:space-between;align-items:center">
-      <span>Active tender: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
+      <span>Active: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
       <button class="btn btn-ghost btn-sm" onclick="clearCtx()">✕ Clear</button>
     </div>
     <div class="card">
       <div class="card-title">Upload Tender Documents</div>
-      <label>T247 ID (links result to dashboard)</label>
-      <input type="text" id="an-tid" placeholder="e.g. 97290989">
+      <label>T247 ID</label><input type="text" id="an-tid" placeholder="e.g. 97290989">
       <label style="margin-top:12px">Documents (ZIP, PDF, DOCX — multiple allowed)</label>
-      <div class="upload-zone" onclick="document.getElementById('an-files').click()">
-        📦 Drop files here or click to browse<br>
-        <span style="font-size:11px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
-      </div>
+      <div class="upload-zone" onclick="document.getElementById('an-files').click()">📦 Drop files here or click to browse<br><span style="font-size:11px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span></div>
       <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
       <div id="an-filelist" style="font-size:12px;color:#555;margin-top:6px"></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
@@ -272,17 +243,14 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
     <div id="an-result"></div>
     <div id="prebid-section" style="display:none" class="card">
       <div class="card-title">Pre-bid Queries
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="loadPrebidQueries()">↺ Refresh</button>
-          <button class="btn btn-primary btn-sm" onclick="generatePrebidLetter()">📄 Generate Letter</button>
-        </div>
+        <div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="loadPrebidQueries()">↺ Refresh</button><button class="btn btn-primary btn-sm" onclick="toast('Pre-bid letter: coming soon','info')">📄 Generate Letter</button></div>
       </div>
-      <div id="prebid-list"><div class="empty-state">Analyse a tender to generate pre-bid queries.</div></div>
+      <div id="prebid-list"><div class="empty-state">Analyse a tender to generate queries.</div></div>
     </div>
   </div>
 </div>
 
-<!-- ═══ BOQ / COSTING ═══ -->
+<!-- ═══ BOQ ═══ -->
 <div id="page-boq" class="page">
   <div class="topbar"><h1>BOQ / Costing</h1>
     <div class="topbar-actions">
@@ -294,16 +262,14 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
     <div class="card">
       <div class="card-title">Select Tender</div>
       <select id="boq-select" onchange="loadBOQ()"><option value="">-- Select a tender --</option></select>
-      <div id="boq-tender-info" style="font-size:12px;color:#555;margin-top:8px"></div>
+      <div id="boq-info" style="font-size:12px;color:#555;margin-top:8px"></div>
     </div>
-
     <div id="boq-content" style="display:none">
       <div class="card">
-        <div class="card-title">
-          Bill of Quantities
-          <div style="display:flex;gap:8px;align-items:center">
+        <div class="card-title">Bill of Quantities
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <span style="font-size:12px;color:#555">Margin %</span>
-            <input type="number" id="boq-margin" value="15" min="0" max="100" style="width:70px" oninput="boqRecalc()">
+            <input type="number" id="boq-margin" value="15" min="0" max="100" style="width:65px" oninput="boqRecalc()">
             <span style="font-size:12px;color:#555">GST %</span>
             <input type="number" id="boq-gst" value="18" min="0" max="28" style="width:60px" oninput="boqRecalc()">
             <button class="btn btn-ghost btn-sm" onclick="boqAddRow()">+ Add Row</button>
@@ -311,28 +277,21 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
         </div>
         <div style="overflow-x:auto">
           <table class="boq-table" id="boq-table">
-            <thead>
-              <tr style="background:#12141e">
-                <th style="width:40px">#</th>
-                <th style="width:140px">Category</th>
-                <th style="min-width:200px">Description</th>
-                <th style="width:100px">Unit</th>
-                <th style="width:80px">Qty</th>
-                <th style="width:120px">Rate (₹)</th>
-                <th style="width:130px">Amount (₹)</th>
-                <th style="width:160px">Remarks</th>
-                <th style="width:40px"></th>
-              </tr>
-            </thead>
-            <tbody id="boq-tbody"></tbody>
+            <thead><tr style="background:#12141e">
+              <th>#</th><th style="min-width:130px">Category</th><th style="min-width:200px">Description</th>
+              <th style="min-width:100px">Unit</th><th style="width:80px">Qty</th>
+              <th style="width:120px">Rate (₹)</th><th style="width:130px">Amount (₹)</th>
+              <th style="min-width:140px">Remarks</th><th style="width:36px"></th>
+            </tr></thead>
+            <tbody id="boq-tbody"><tr><td colspan="9" class="empty-state">Select a tender to load BOQ</td></tr></tbody>
           </table>
         </div>
-        <div class="boq-grand-total" id="boq-totals">
+        <div class="boq-grand" id="boq-totals">
           <div><div class="lbl">Base Total</div><div class="val" id="bt-base">₹0</div></div>
           <div><div class="lbl">Margin</div><div class="val" id="bt-margin">₹0</div></div>
           <div><div class="lbl">Subtotal</div><div class="val" id="bt-sub">₹0</div></div>
           <div><div class="lbl">GST</div><div class="val" id="bt-gst">₹0</div></div>
-          <div><div class="lbl">Grand Total (Quote)</div><div class="val green" id="bt-grand">₹0</div></div>
+          <div><div class="lbl">Grand Total (Quote)</div><div class="val big" id="bt-grand">₹0</div></div>
         </div>
       </div>
     </div>
@@ -343,8 +302,7 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="page-checklist" class="page">
   <div class="topbar"><h1>Submission Checklist</h1></div>
   <div class="page-body">
-    <div class="card">
-      <div class="card-title">Select Tender</div>
+    <div class="card"><div class="card-title">Select Tender</div>
       <select id="cl-select" onchange="loadChecklist()"><option value="">-- Select a tender --</option></select>
     </div>
     <div id="cl-content"><div class="empty-state">Select a tender to view checklist.</div></div>
@@ -355,27 +313,24 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="page-documents" class="page">
   <div class="topbar"><h1>Documents</h1></div>
   <div class="page-body">
-    <div class="card">
-      <div class="card-title">Select Tender</div>
+    <div class="card"><div class="card-title">Select Tender</div>
       <select id="doc-select" onchange="loadDocs()"><option value="">-- Select a tender --</option></select>
     </div>
     <div class="tab-row">
-      <div class="tab active" onclick="switchDocTab('standard',this)">Standard Docs</div>
-      <div class="tab" onclick="switchDocTab('technical',this)">Technical Proposal</div>
+      <div class="tab active" onclick="switchTab2('docs','standard',this)">Standard Docs</div>
+      <div class="tab" onclick="switchTab2('docs','technical',this)">Technical Proposal</div>
     </div>
     <div id="docs-tab-standard" class="tab-panel active">
       <div class="card">
         <div class="card-title">Submission Documents</div>
-        <p style="font-size:13px;color:#666;margin-bottom:14px">Generate all standard documents — Cover Letter, Non-Blacklisting, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
+        <p style="font-size:13px;color:#555;margin-bottom:14px">Generate Cover Letter, Non-Blacklisting Declaration, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
         <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
       </div>
       <div id="docs-list"></div>
     </div>
     <div id="docs-tab-technical" class="tab-panel">
-      <div class="card">
-        <div class="card-title">Technical Proposal</div>
-        <button class="btn btn-primary" onclick="generateTechProposal()">📄 Generate Technical Proposal</button>
-        <div id="tech-result" style="margin-top:12px"></div>
+      <div class="card"><div class="card-title">Technical Proposal</div>
+        <button class="btn btn-primary" onclick="toast('Tech proposal: coming soon','info')">📄 Generate Technical Proposal</button>
       </div>
     </div>
   </div>
@@ -385,12 +340,10 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="page-reports" class="page">
   <div class="topbar"><h1>Reports</h1><div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadReports()">↺ Refresh</button></div></div>
   <div class="page-body">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Filename</th><th>Tender</th><th>Org</th><th>Verdict</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
-        <tbody id="reports-table"><tr><td colspan="7" class="empty-state">No reports yet.</td></tr></tbody>
-      </table>
-    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Filename</th><th>Tender</th><th>Org</th><th>Verdict</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
+      <tbody id="reports-table"><tr><td colspan="7" class="empty-state">No reports yet.</td></tr></tbody>
+    </table></div>
   </div>
 </div>
 
@@ -398,16 +351,12 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="page-analytics" class="page">
   <div class="topbar"><h1>Analytics & Win/Loss</h1><div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↺ Refresh</button></div></div>
   <div class="page-body">
-    <div id="analytics-summary" class="analytics-grid"></div>
+    <div id="analytics-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
     <div class="row">
       <div class="card">
         <div class="card-title">Record Bid Result</div>
         <label>T247 ID</label><input type="text" id="res-tid" placeholder="T247 ID">
-        <label>Outcome</label>
-        <select id="res-outcome">
-          <option value="Won">Won</option><option value="Lost">Lost</option>
-          <option value="Submitted">Submitted — Awaiting Result</option><option value="Disqualified">Disqualified</option>
-        </select>
+        <label>Outcome</label><select id="res-outcome"><option>Won</option><option>Lost</option><option>Submitted — Awaiting Result</option><option>Disqualified</option></select>
         <label>Contract Value (Rs. Cr) if Won</label><input type="number" id="res-value" placeholder="0.00" step="0.01">
         <label>Competitor (if known)</label><input type="text" id="res-competitor" placeholder="Competitor name">
         <label>Notes</label><textarea id="res-notes" rows="2" placeholder="Any notes..."></textarea>
@@ -428,37 +377,13 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="page-postaward" class="page">
   <div class="topbar"><h1>Post-Award Management</h1></div>
   <div class="page-body">
-    <div class="card">
-      <div class="card-title">Select Won Tender</div>
-      <select id="pa-select" onchange="loadMilestones()"><option value="">-- Select a tender --</option></select>
+    <div class="card"><div class="card-title">Select Won Tender</div>
+      <select id="pa-select"><option value="">-- Select a tender --</option></select>
     </div>
-    <div class="tab-row">
-      <div class="tab active" onclick="switchPATab('letters',this)">Letters</div>
-      <div class="tab" onclick="switchPATab('milestones',this)">Milestones</div>
-      <div class="tab" onclick="switchPATab('invoices',this)">Invoices</div>
-    </div>
-    <div id="pa-tab-letters" class="tab-panel active">
-      <div class="row">
-        <div class="card"><div class="card-title">LoA Acceptance</div><button class="btn btn-primary" onclick="genLetter('loa-acceptance')">Generate Letter</button></div>
-        <div class="card"><div class="card-title">Performance Security</div><button class="btn btn-primary" onclick="genLetter('perf-security-letter')">Generate Letter</button></div>
-        <div class="card"><div class="card-title">Completion Certificate</div><button class="btn btn-primary" onclick="genLetter('completion-cert-request')">Generate Letter</button></div>
-      </div>
-      <div id="pa-letter-result"></div>
-    </div>
-    <div id="pa-tab-milestones" class="tab-panel">
-      <div class="card">
-        <div class="card-title">Project Milestones <button class="btn btn-ghost btn-sm" onclick="setupMilestones()">Setup Default Milestones</button></div>
-        <div id="milestones-list"><div class="empty-state">Select a tender and click Setup to create milestones.</div></div>
-      </div>
-    </div>
-    <div id="pa-tab-invoices" class="tab-panel">
-      <div class="card">
-        <div class="card-title">Generate RA Bill / Invoice</div>
-        <label>Milestone / Invoice Description</label><input type="text" id="inv-desc" placeholder="e.g. Phase 1 completion">
-        <label>Amount (Rs.)</label><input type="number" id="inv-amount" placeholder="0">
-        <button class="btn btn-primary" onclick="generateInvoice()" style="margin-top:14px;width:auto">Generate Invoice</button>
-        <div id="inv-result" style="margin-top:12px"></div>
-      </div>
+    <div class="row">
+      <div class="card"><div class="card-title">LoA Acceptance</div><button class="btn btn-primary" onclick="toast('Coming soon','info')">Generate Letter</button></div>
+      <div class="card"><div class="card-title">Performance Security</div><button class="btn btn-primary" onclick="toast('Coming soon','info')">Generate Letter</button></div>
+      <div class="card"><div class="card-title">Invoice / RA Bill</div><button class="btn btn-primary" onclick="toast('Coming soon','info')">Generate Invoice</button></div>
     </div>
   </div>
 </div>
@@ -467,12 +392,10 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="page-skipped" class="page">
   <div class="topbar"><h1>Skipped / Not Interested</h1><div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadSkipped()">↺ Refresh</button></div></div>
   <div class="page-body">
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>T247 ID</th><th>Brief</th><th>Reason</th><th>Skipped On</th><th>Action</th></tr></thead>
-        <tbody id="skipped-table"><tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr></tbody>
-      </table>
-    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>T247 ID</th><th>Brief</th><th>Reason</th><th>Skipped On</th><th>Action</th></tr></thead>
+      <tbody id="skipped-table"><tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr></tbody>
+    </table></div>
   </div>
 </div>
 
@@ -483,36 +406,53 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
   </div>
   <div class="page-body">
     <div class="tab-row">
-      <div class="tab active" onclick="switchProfileTab('basic',this)">Basic Info</div>
-      <div class="tab" onclick="switchProfileTab('finance',this)">Financials</div>
-      <div class="tab" onclick="switchProfileTab('certs',this)">Certifications</div>
-      <div class="tab" onclick="switchProfileTab('projects',this)">Past Experience</div>
-      <div class="tab" onclick="switchProfileTab('employees',this)">Team</div>
+      <div class="tab active" onclick="switchTab2('profile','basic',this)">Basic Info</div>
+      <div class="tab" onclick="switchTab2('profile','finance',this)">Financials</div>
+      <div class="tab" onclick="switchTab2('profile','certs',this)">Certifications</div>
+      <div class="tab" onclick="switchTab2('profile','projects',this)">Past Experience</div>
+      <div class="tab" onclick="switchTab2('profile','employees',this)">Team</div>
+      <div class="tab" onclick="switchTab2('profile','bidrules',this)">Bid Rules</div>
     </div>
-    <div id="profile-tab-basic" class="tab-panel active">
-      <div class="card" id="profile-basic-form"><div class="empty-state">Loading profile...</div></div>
-    </div>
-    <div id="profile-tab-finance" class="tab-panel">
-      <div class="card" id="profile-finance-form"><div class="empty-state">Loading...</div></div>
-    </div>
-    <div id="profile-tab-certs" class="tab-panel">
-      <div class="card" id="profile-certs-form"><div class="empty-state">Loading...</div></div>
-    </div>
+    <div id="profile-tab-basic" class="tab-panel active"><div class="card" id="profile-basic-form"><div class="empty-state">Loading...</div></div></div>
+    <div id="profile-tab-finance" class="tab-panel"><div class="card" id="profile-finance-form"><div class="empty-state">Loading...</div></div></div>
+    <div id="profile-tab-certs" class="tab-panel"><div class="card" id="profile-certs-form"><div class="empty-state">Loading...</div></div></div>
     <div id="profile-tab-projects" class="tab-panel">
       <div class="card">
         <div class="card-title">Past Projects <button class="btn btn-ghost btn-sm" onclick="addProjectRow()">+ Add Project</button></div>
-        <div style="overflow-x:auto">
-          <table id="projects-table">
-            <thead><tr>
-              <th>Client</th><th>Project Name</th><th>Value (Cr)</th><th>Status</th><th>Domain</th><th>Mobile GIS</th><th>Central Server</th><th></th>
-            </tr></thead>
-            <tbody id="projects-tbody"></tbody>
-          </table>
-        </div>
+        <div style="overflow-x:auto"><table id="projects-table">
+          <thead><tr><th>Client</th><th>Project Name</th><th>Value (Cr)</th><th>Status</th><th>Domain</th><th>Mobile GIS</th><th>Central Server</th><th></th></tr></thead>
+          <tbody id="projects-tbody"></tbody>
+        </table></div>
       </div>
     </div>
-    <div id="profile-tab-employees" class="tab-panel">
-      <div class="card" id="profile-emp-form"><div class="empty-state">Loading...</div></div>
+    <div id="profile-tab-employees" class="tab-panel"><div class="card" id="profile-emp-form"><div class="empty-state">Loading...</div></div></div>
+    <div id="profile-tab-bidrules" class="tab-panel"><div class="card" id="profile-bidrules-form"><div class="empty-state">Loading...</div></div></div>
+  </div>
+</div>
+
+<!-- ═══ SELF-DIAGNOSE ═══ -->
+<div id="page-diagnose" class="page">
+  <div class="topbar"><h1>🩺 Self-Diagnose & Repair</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" onclick="runDiagnose()">▶ Run System Check</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">System Health Check</div>
+      <p style="font-size:13px;color:#555;margin-bottom:16px">Checks all modules — database, Google Drive, AI, BOQ engine, required files, company profile. Shows what's working and what needs fixing.</p>
+      <div id="diagnose-results"><div class="empty-state">Click "Run System Check" to start.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">AI Error Diagnosis</div>
+      <p style="font-size:13px;color:#555;margin-bottom:12px">Paste any error from Render logs — AI will diagnose the root cause and tell you exactly what to fix.</p>
+      <label>Paste error log here</label>
+      <textarea id="error-log-input" rows="8" placeholder="Paste Render error log or any error message here..."></textarea>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="aiDiagnose()">🤖 AI Diagnose</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('error-log-input').value=''">Clear</button>
+      </div>
+      <div id="ai-diagnose-result" style="margin-top:16px"></div>
     </div>
   </div>
 </div>
@@ -529,22 +469,23 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
         <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
         <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
         <label>Backup Key 4</label><input type="password" id="key4" placeholder="AIza...">
-        <button class="btn btn-primary" onclick="saveKeys()" style="margin-top:14px;width:auto">Save Gemini Keys</button>
-        <button class="btn btn-ghost" onclick="testAI()" style="margin-top:8px;width:auto">Test AI Connection</button>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveKeys()">Save Keys</button>
+          <button class="btn btn-ghost" onclick="testAI()">Test AI</button>
+        </div>
         <div id="ai-test-result" style="font-size:12px;margin-top:8px"></div>
       </div>
       <div class="card">
         <div class="card-title">System Info</div>
-        <div style="font-size:12px;color:#666;display:flex;gap:20px;flex-wrap:wrap">
-          <span>Version: <b style="color:#fff">5.0</b></span>
-          <span>Drive: <b id="sys-drive" style="color:#fff">checking...</b></span>
-          <span>Tenders: <b id="sys-tenders" style="color:#fff">—</b></span>
+        <div style="font-size:12px;color:#555;line-height:2">
+          Version: <b style="color:#fff">6.0</b><br>
+          Drive: <b id="sys-drive" style="color:#fff">checking...</b><br>
+          Tenders: <b id="sys-tenders" style="color:#fff">—</b>
         </div>
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
-          <button class="btn btn-ghost btn-sm" onclick="checkDriveStatus()">↺ Check Drive</button>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('diagnose');runDiagnose()">🩺 Run Diagnostics</button>
         </div>
-        <div id="settings-drive-info" style="font-size:12px;color:#555;margin-top:8px"></div>
       </div>
     </div>
   </div>
@@ -554,412 +495,265 @@ td[contenteditable=true]:focus{background:#1e2130;outline:1px solid #3b82f6}
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// GLOBALS
-// ═══════════════════════════════════════════════════════════
-var allTenders = [];
-var currentFilter = '';
-var currentTenderId = '';
-var currentTenderBrief = '';
-var sortField = 'deadline';
-var sortDir = 1;
-var boqItems = [];
-var boqConstants = {categories:[], unit_types:[], manpower_roles:[]};
-var profileData = {};
-var profileDirty = false;
+var allTenders=[],currentFilter='',currentTenderId='',boqItems=[],boqConst={categories:[],unit_types:[],manpower_roles:[]},profileData={};
 
-// ═══════════════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════════════
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
-  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active')});
-  var page = document.getElementById('page-'+name);
+// ── NAV ──────────────────────────────────────────────────────────────────
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  var page=document.getElementById('page-'+name);
   if(page) page.classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(function(b){
-    if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('active');
-  });
+  document.querySelectorAll('.nav-btn').forEach(b=>{if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('active');});
   if(name==='tenders') renderTenders();
-  if(name==='checklist') populateSelects();
-  if(name==='documents') populateSelects();
-  if(name==='boq') { loadBOQConstants(); populateBOQSelect(); }
-  if(name==='postaward') populatePASelect();
+  if(name==='checklist'||name==='documents') populateSelects();
+  if(name==='boq'){loadBOQConst();populateBOQSelect();}
   if(name==='reports') loadReports();
   if(name==='analytics') loadAnalytics();
   if(name==='skipped') loadSkipped();
   if(name==='settings') loadSettings();
   if(name==='profile') loadProfile();
+  if(name==='postaward') populatePASelect();
 }
 
-function switchDocTab(tab, el) {
-  document.querySelectorAll('#page-documents .tab').forEach(function(t){t.classList.remove('active')});
-  document.querySelectorAll('#page-documents .tab-panel').forEach(function(p){p.classList.remove('active')});
+function switchTab2(group,tab,el){
+  var prefix=group==='docs'?'docs':group==='pa'?'pa':'profile';
+  var page=document.getElementById('page-'+(group==='docs'?'documents':group==='pa'?'postaward':'profile'));
+  if(page){page.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));page.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));}
   if(el) el.classList.add('active');
-  var panel = document.getElementById('docs-tab-'+tab);
+  var panel=document.getElementById(prefix+'-tab-'+tab);
   if(panel) panel.classList.add('active');
 }
 
-function switchPATab(tab, el) {
-  document.querySelectorAll('#page-postaward .tab').forEach(function(t){t.classList.remove('active')});
-  document.querySelectorAll('#page-postaward .tab-panel').forEach(function(p){p.classList.remove('active')});
-  if(el) el.classList.add('active');
-  var panel = document.getElementById('pa-tab-'+tab);
-  if(panel) panel.classList.add('active');
-}
-
-function switchProfileTab(tab, el) {
-  document.querySelectorAll('#page-profile .tab').forEach(function(t){t.classList.remove('active')});
-  document.querySelectorAll('#page-profile .tab-panel').forEach(function(p){p.classList.remove('active')});
-  if(el) el.classList.add('active');
-  var panel = document.getElementById('profile-tab-'+tab);
-  if(panel) panel.classList.add('active');
-}
-
-// ═══════════════════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════════════════
+// ── UTILS ─────────────────────────────────────────────────────────────────
 function toast(msg,type){
-  var el=document.getElementById('toast');
-  el.textContent=msg; el.style.display='block';
+  var el=document.getElementById('toast');el.textContent=msg;el.style.display='block';
   el.style.borderLeft='3px solid '+(type==='error'?'#ef4444':type==='success'?'#22c55e':'#3b82f6');
-  clearTimeout(el._t); el._t=setTimeout(function(){el.style.display='none';},3500);
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3500);
 }
 function showLoading(msg){document.getElementById('loading-text').textContent=msg||'Processing...';document.getElementById('loading-overlay').classList.add('show');}
 function hideLoading(){document.getElementById('loading-overlay').classList.remove('show');}
-function getVerdict(t){return t.verdict||t.bid_no_bid||t.recommendation||'REVIEW';}
+function getVerdict(t){return t.verdict||t.bid_no_bid||'REVIEW';}
 function getDaysLeft(t){
-  if(t.days_left!==undefined&&t.days_left!==null&&t.days_left!==999) return t.days_left;
+  if(t.days_left!==undefined&&t.days_left!==999) return t.days_left;
   if(!t.deadline) return 999;
-  try{
-    var s=t.deadline.split(' ')[0];
-    var parts=s.split(/[-\/]/);
-    var d;
+  try{var s=t.deadline.split(' ')[0],parts=s.split(/[-\/]/),d;
     if(parts[0].length===4) d=new Date(+parts[0],+parts[1]-1,+parts[2]);
     else d=new Date(+parts[2],+parts[1]-1,+parts[0]);
-    return Math.ceil((d-new Date())/86400000);
-  }catch(e){return 999;}
+    return Math.ceil((d-new Date())/86400000);}catch(e){return 999;}
 }
 function daysDisplay(dl){
-  if(dl===999||dl===null||dl===undefined) return '<span class="c-muted">—</span>';
+  if(dl===999||dl==null) return '<span class="c-muted">—</span>';
   if(dl<0) return '<span class="c-muted">Expired</span>';
   if(dl===0) return '<span class="c-urgent">TODAY</span>';
   if(dl<=3) return '<span class="c-urgent">'+dl+'d</span>';
   if(dl<=7) return '<span class="c-warn">'+dl+'d</span>';
   return '<span>'+dl+'d</span>';
 }
-function verdictBadge(v){return '<span class="badge badge-'+v+'">'+(v||'REVIEW')+'</span>';}
-function fmtMoney(n){
-  n=parseFloat(n)||0;
-  if(n>=10000000) return '₹'+(n/10000000).toFixed(2)+' Cr';
-  if(n>=100000) return '₹'+(n/100000).toFixed(2)+'L';
-  return '₹'+n.toLocaleString('en-IN');
-}
-
+function vBadge(v){return '<span class="badge badge-'+v+'">'+(v||'REVIEW')+'</span>';}
+function fmtMoney(n){n=parseFloat(n)||0;if(n>=10000000)return '₹'+(n/10000000).toFixed(2)+' Cr';if(n>=100000)return '₹'+(n/100000).toFixed(2)+'L';return '₹'+Math.round(n).toLocaleString('en-IN');}
 function setFilter(f){
   currentFilter=f;
-  document.querySelectorAll('.fbtn').forEach(function(b){
-    b.classList.remove('active');
-    var oc=b.getAttribute('onclick')||'';
-    var match=f===''?oc.includes("('')"):oc.includes("('"+f+"')");
-    if(match) b.classList.add('active');
-  });
+  document.querySelectorAll('.fbtn').forEach(b=>{b.classList.remove('active');var oc=b.getAttribute('onclick')||'';if(f===''?oc.includes("('')"):oc.includes("('"+f+"')")) b.classList.add('active');});
   renderDash();
 }
 
-function sortBy(field){
-  if(sortField===field) sortDir*=-1; else{sortField=field;sortDir=1;}
-  renderDash();
-}
-
-// ═══════════════════════════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════════════════════════
+// ── DASHBOARD ────────────────────────────────────────────────────────────
 function renderDash(){
   var q=(document.getElementById('dash-search').value||'').toLowerCase();
-  var sortSel=(document.getElementById('sort-select')||{}).value||'deadline';
-  var arr=allTenders.filter(function(t){return t.status!=='Not Interested';});
-
-  if(currentFilter==='urgent') arr=arr.filter(function(t){var d=getDaysLeft(t);return d>=0&&d<=7;});
-  else if(currentFilter==='analysed') arr=arr.filter(function(t){return t.bid_no_bid_done;});
-  else if(currentFilter==='boq') arr=arr.filter(function(t){return t.boq;});
-  else if(currentFilter) arr=arr.filter(function(t){return getVerdict(t)===currentFilter;});
-
-  if(q) arr=arr.filter(function(t){
-    return (t.brief||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||
-           (t.t247_id||'').toLowerCase().includes(q)||(t.location||'').toLowerCase().includes(q)||
-           (t.ref_no||'').toLowerCase().includes(q)||(t.estimated_cost_cr||'').toString().includes(q);
-  });
-
-  // Sort
-  arr.sort(function(a,b){
-    var sf=sortSel==='deadline'?getDaysLeft:sortSel==='value'?function(t){return parseFloat(t.estimated_cost_cr)||0;}:function(t){return getVerdict(t);};
-    var av=sf(a), bv=sf(b);
-    if(typeof av==='string') return sortDir*(av<bv?-1:av>bv?1:0);
-    return sortDir*(av-bv);
-  });
-
+  var sortBy=(document.getElementById('sort-sel')||{}).value||'deadline';
+  var arr=allTenders.filter(t=>t.status!=='Not Interested');
+  if(currentFilter==='urgent') arr=arr.filter(t=>{var d=getDaysLeft(t);return d>=0&&d<=7;});
+  else if(currentFilter==='analysed') arr=arr.filter(t=>t.bid_no_bid_done);
+  else if(currentFilter==='boq') arr=arr.filter(t=>t.boq);
+  else if(currentFilter) arr=arr.filter(t=>getVerdict(t)===currentFilter);
+  if(q) arr=arr.filter(t=>(t.brief||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.location||'').toLowerCase().includes(q)||(t.ref_no||'').toLowerCase().includes(q));
+  if(sortBy==='value') arr.sort((a,b)=>(parseFloat(b.estimated_cost_cr)||0)-(parseFloat(a.estimated_cost_cr)||0));
+  else if(sortBy==='verdict') arr.sort((a,b)=>getVerdict(a).localeCompare(getVerdict(b)));
+  else arr.sort((a,b)=>getDaysLeft(a)-getDaysLeft(b));
   document.getElementById('dash-count').textContent=arr.length+' tender'+(arr.length!==1?'s':'')+(currentFilter?' · filtered':'');
-
   var tbody=document.getElementById('dash-table');
-  if(!arr.length){
-    tbody.innerHTML='<tr><td colspan="7" class="empty-state">'+(allTenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';
-    return;
-  }
-  tbody.innerHTML=arr.map(function(t){
-    var v=getVerdict(t); var dl=getDaysLeft(t);
-    var val=t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—';
-    return '<tr>'+
-      '<td class="mono">'+(t.t247_id||'—')+'</td>'+
-      '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div></td>'+
-      '<td style="white-space:nowrap;color:#666;font-size:12px">'+(t.deadline||'—')+'</td>'+
-      '<td>'+daysDisplay(dl)+'</td>'+
-      '<td style="color:#888;font-size:12px">'+val+'</td>'+
-      '<td>'+verdictBadge(v)+'</td>'+
-      '<td class="actions-cell">'+
-        '<button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\''+encodeURIComponent((t.brief||'').substring(0,40))+'\');showPage(\'analyse\')">Analyse</button>'+
-        '<button class="action-btn amber" onclick="openBOQForTender(\''+t.t247_id+'\')">BOQ</button>'+
-        (t.bid_no_bid_done?'<button class="action-btn green" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'checklist\')">Checklist</button>':'')+
-        '<button class="action-btn blue" onclick="viewTenderDetail(\''+t.t247_id+'\')">View</button>'+
-        '<button class="action-btn gray" onclick="skipTender(\''+t.t247_id+'\')">Skip</button>'+
-      '</td>'+
-    '</tr>';
+  if(!arr.length){tbody.innerHTML='<tr><td colspan="7" class="empty-state">'+(allTenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';return;}
+  tbody.innerHTML=arr.map(t=>{var v=getVerdict(t),dl=getDaysLeft(t),val=t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—';
+    return '<tr><td class="mono">'+(t.t247_id||'—')+'</td>'+
+    '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div></td>'+
+    '<td style="color:#555;font-size:12px">'+(t.deadline||'—')+'</td><td>'+daysDisplay(dl)+'</td>'+
+    '<td style="color:#666;font-size:12px">'+val+'</td><td>'+vBadge(v)+'</td>'+
+    '<td class="actions-cell">'+
+    '<button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\''+encodeURIComponent((t.brief||'').substring(0,40))+'\');showPage(\'analyse\')">Analyse</button>'+
+    '<button class="action-btn amber" onclick="openBOQ(\''+t.t247_id+'\')">BOQ</button>'+
+    (t.bid_no_bid_done?'<button class="action-btn green" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'checklist\')">Checklist</button>':'')+
+    '<button class="action-btn blue" onclick="viewDetail(\''+t.t247_id+'\')">View</button>'+
+    '<button class="action-btn gray" onclick="skipTender(\''+t.t247_id+'\')">Skip</button>'+
+    '</td></tr>';
   }).join('');
 }
 
 function renderTenders(){
-  var q=(document.getElementById('tl-search')?document.getElementById('tl-search').value:'').toLowerCase();
+  var q=(document.getElementById('tl-search')||{}).value?.toLowerCase()||'';
   var vf=(document.getElementById('tl-verdict')||{}).value||'';
   var af=(document.getElementById('tl-analysed')||{}).value||'';
   var arr=allTenders;
-  if(q) arr=arr.filter(function(t){return (t.brief||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q);});
-  if(vf) arr=arr.filter(function(t){return getVerdict(t)===vf;});
-  if(af==='yes') arr=arr.filter(function(t){return t.bid_no_bid_done;});
-  if(af==='no') arr=arr.filter(function(t){return !t.bid_no_bid_done;});
+  if(q) arr=arr.filter(t=>(t.brief||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q));
+  if(vf) arr=arr.filter(t=>getVerdict(t)===vf);
+  if(af==='yes') arr=arr.filter(t=>t.bid_no_bid_done);
+  if(af==='no') arr=arr.filter(t=>!t.bid_no_bid_done);
   var tbody=document.getElementById('tenders-table');
   if(!arr.length){tbody.innerHTML='<tr><td colspan="8" class="empty-state">No tenders</td></tr>';return;}
-  tbody.innerHTML=arr.map(function(t){
-    var v=getVerdict(t);
-    return '<tr>'+
-      '<td class="mono">'+(t.t247_id||'—')+'</td>'+
-      '<td class="mono" style="font-size:11px">'+(t.ref_no||'—')+'</td>'+
-      '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+'</div></td>'+
-      '<td style="color:#888">'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
-      '<td style="color:#666;font-size:12px">'+(t.deadline||'—')+'</td>'+
-      '<td>'+verdictBadge(v)+'</td>'+
-      '<td>'+(t.boq?'<span style="color:#22c55e;font-size:11px">✓ Saved</span>':'<span style="color:#444;font-size:11px">—</span>')+'</td>'+
-      '<td class="actions-cell">'+
-        '<button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'analyse\')">Analyse</button>'+
-        '<button class="action-btn amber" onclick="openBOQForTender(\''+t.t247_id+'\')">BOQ</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
+  tbody.innerHTML=arr.map(t=>'<tr><td class="mono">'+(t.t247_id||'—')+'</td><td class="mono" style="font-size:11px">'+(t.ref_no||'—')+'</td>'+
+    '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+'</div></td>'+
+    '<td style="color:#666">'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
+    '<td style="color:#555;font-size:12px">'+(t.deadline||'—')+'</td><td>'+vBadge(getVerdict(t))+'</td>'+
+    '<td>'+(t.boq?'<span style="color:#22c55e;font-size:11px">✓ Saved</span>':'<span style="color:#444;font-size:11px">—</span>')+'</td>'+
+    '<td class="actions-cell"><button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'analyse\')">Analyse</button><button class="action-btn amber" onclick="openBOQ(\''+t.t247_id+'\')">BOQ</button></td>'+
+    '</tr>').join('');
 }
 
 function populateSelects(){
-  var opts='<option value="">-- Select a tender --</option>'+allTenders.map(function(t){
-    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
-  }).join('');
-  ['cl-select','doc-select'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  var opts='<option value="">-- Select a tender --</option>'+allTenders.map(t=>'<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>').join('');
+  ['cl-select','doc-select'].forEach(id=>{var el=document.getElementById(id);if(el)el.innerHTML=opts;});
 }
-
 function populateBOQSelect(){
-  var opts='<option value="">-- Select a tender --</option>'+allTenders.map(function(t){
-    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+(t.boq?' ✓':'')+'</option>';
-  }).join('');
-  var el=document.getElementById('boq-select'); if(el) el.innerHTML=opts;
-  if(currentTenderId){if(el) el.value=currentTenderId; loadBOQ();}
+  var opts='<option value="">-- Select a tender --</option>'+allTenders.map(t=>'<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+(t.boq?' ✓':'')+'</option>').join('');
+  var el=document.getElementById('boq-select');if(el)el.innerHTML=opts;
+  if(currentTenderId){el.value=currentTenderId;loadBOQ();}
 }
-
 function populatePASelect(){
-  var opts='<option value="">-- Select a tender --</option>'+allTenders.map(function(t){
-    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
-  }).join('');
-  var el=document.getElementById('pa-select'); if(el) el.innerHTML=opts;
+  var opts='<option value="">-- Select a tender --</option>'+allTenders.map(t=>'<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>').join('');
+  var el=document.getElementById('pa-select');if(el)el.innerHTML=opts;
 }
-
 function setActive(tid,brief){
-  currentTenderId=tid;
-  currentTenderBrief=decodeURIComponent(brief||'');
-  var banner=document.getElementById('ctx-banner');
-  if(banner){banner.style.display='flex';document.getElementById('ctx-id').textContent=tid;document.getElementById('ctx-brief').textContent=currentTenderBrief;}
+  currentTenderId=tid;currentTenderBrief=decodeURIComponent(brief||'');
+  var b=document.getElementById('ctx-banner');
+  if(b){b.style.display='flex';document.getElementById('ctx-id').textContent=tid;document.getElementById('ctx-brief').textContent=currentTenderBrief;}
   document.getElementById('an-tid').value=tid;
 }
+function clearCtx(){currentTenderId='';var b=document.getElementById('ctx-banner');if(b)b.style.display='none';document.getElementById('an-tid').value='';}
+function openBOQ(tid){currentTenderId=tid;showPage('boq');}
 
-function openBOQForTender(tid){
-  currentTenderId=tid;
-  showPage('boq');
-}
-
-// ═══════════════════════════════════════════════════════════
-// VIEW DETAIL PANEL
-// ═══════════════════════════════════════════════════════════
-async function viewTenderDetail(tid){
-  var t=allTenders.find(function(x){return x.t247_id===tid;});
-  if(!t){toast('Tender not found','error');return;}
-  var v=getVerdict(t);
-  var col=v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
+// ── VIEW DETAIL ───────────────────────────────────────────────────────────
+function viewDetail(tid){
+  var t=allTenders.find(x=>x.t247_id===tid);if(!t){toast('Not found','error');return;}
+  var v=getVerdict(t),col=v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
   var panel=document.getElementById('detail-panel');
-  if(!panel){
-    panel=document.createElement('div');
-    panel.id='detail-panel';
-    panel.style.cssText='position:fixed;top:0;right:0;width:480px;height:100vh;background:#12141e;border-left:1px solid #1e2130;z-index:500;overflow-y:auto;padding:24px;transform:translateX(100%);transition:transform .25s';
-    document.body.appendChild(panel);
-  }
-  panel.innerHTML=
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
-    '<div style="font-size:16px;font-weight:700;color:#fff">Tender Details</div>'+
-    '<button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Close</button></div>'+
-    '<div style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:16px">'+v+'</div>'+
+  if(!panel){panel=document.createElement('div');panel.id='detail-panel';panel.style.cssText='position:fixed;top:0;right:0;width:460px;height:100vh;background:#12141e;border-left:1px solid #1e2130;z-index:500;overflow-y:auto;padding:24px;transform:translateX(100%);transition:transform .25s';document.body.appendChild(panel);}
+  panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:16px;font-weight:700;color:#fff">Tender Details</div><button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕</button></div>'+
+    '<span style="display:inline-block;padding:3px 12px;border-radius:12px;font-size:13px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:14px">'+v+'</span>'+
     '<div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px">'+(t.brief||'—')+'</div>'+
-    '<div style="font-size:12px;color:#555;margin-bottom:20px">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div>'+
-    '<table style="width:100%;font-size:13px"><tbody>'+
+    '<div style="font-size:12px;color:#555;margin-bottom:18px">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div>'+
+    '<table style="width:100%;font-size:12px"><tbody>'+
     [['T247 ID',t.t247_id||'—'],['Ref No',t.ref_no||'—'],['Deadline',t.deadline||'—'],
      ['Days Left',getDaysLeft(t)===999?'—':getDaysLeft(t)+'d'],
-     ['Estimated Value',t.estimated_cost_cr?'₹'+t.estimated_cost_cr+' Cr':'—'],
-     ['EMD',t.emd||'—'],['Tender Fee',t.doc_fee||'—'],['Location',t.location||'—'],
-     ['Analysed',t.bid_no_bid_done?'Yes':'No'],
-     ['BOQ',t.boq?'Saved ₹'+(t.boq.grand_total||0).toLocaleString('en-IN'):'Not created'],
-    ].map(function(r){return '<tr><td style="color:#555;padding:6px 0;width:110px">'+r[0]+'</td><td style="color:#ccc">'+r[1]+'</td></tr>';}).join('')+
+     ['Value',t.estimated_cost_cr?'₹'+t.estimated_cost_cr+' Cr':'—'],
+     ['EMD',t.emd||'—'],['Tender Fee',t.doc_fee||'—'],
+     ['Analysed',t.bid_no_bid_done?'Yes ✓':'No'],
+     ['BOQ',t.boq?'Saved — ₹'+(t.boq.grand_total||0).toLocaleString('en-IN'):'Not created']
+    ].map(r=>'<tr><td style="color:#555;padding:5px 0;width:100px">'+r[0]+'</td><td style="color:#ccc">'+r[1]+'</td></tr>').join('')+
     '</tbody></table>'+
-    '<div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap">'+
-    '<button class="btn btn-primary btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'analyse\')">🔍 Analyse</button>'+
-    '<button class="btn btn-amber btn-sm" onclick="openBOQForTender(\''+tid+'\');closeDetail()">💰 BOQ</button>'+
-    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'checklist\')">✅ Checklist</button>'+
-    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'documents\')">📄 Docs</button>'+
+    '<div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">'+
+    '<button class="btn btn-primary btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'analyse\');closeDetail()">🔍 Analyse</button>'+
+    '<button class="btn btn-amber btn-sm" onclick="openBOQ(\''+tid+'\');closeDetail()">💰 BOQ</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'checklist\');closeDetail()">✅ Checklist</button>'+
     '</div>';
   panel.style.transform='translateX(0)';
-  setTimeout(function(){document.addEventListener('click',closeDetailOutside,{once:true});},100);
+  setTimeout(()=>document.addEventListener('click',closeDetailOutside,{once:true}),100);
 }
+function closeDetailOutside(e){var p=document.getElementById('detail-panel');if(p&&!p.contains(e.target))closeDetail();}
+function closeDetail(){var p=document.getElementById('detail-panel');if(p)p.style.transform='translateX(100%)';}
 
-function closeDetailOutside(e){var panel=document.getElementById('detail-panel');if(panel&&!panel.contains(e.target))closeDetail();}
-function closeDetail(){var panel=document.getElementById('detail-panel');if(panel)panel.style.transform='translateX(100%)';}
-
-// ═══════════════════════════════════════════════════════════
-// API CALLS — DASHBOARD
-// ═══════════════════════════════════════════════════════════
+// ── API CALLS ─────────────────────────────────────────────────────────────
 async function loadDashboard(){
   try{
-    var r=await fetch('/dashboard'); var d=await r.json();
-    var s=d.stats||{};
+    var r=await fetch('/dashboard'),d=await r.json(),s=d.stats||{};
     document.getElementById('s-total').textContent=s.total||0;
     document.getElementById('s-bid').textContent=s.bid||0;
     document.getElementById('s-cond').textContent=s.conditional||0;
     document.getElementById('s-nobid').textContent=s.no_bid||0;
     document.getElementById('s-review').textContent=s.review||0;
     document.getElementById('s-analysed').textContent=s.analysed||0;
+    document.getElementById('s-boq').textContent=s.has_boq||0;
     document.getElementById('nb-total').textContent=s.total||0;
     document.getElementById('sys-tenders').textContent=s.total||0;
-    allTenders=d.tenders||[];
-    renderDash();
-    var ac=document.getElementById('alert-container'); ac.innerHTML='';
-    if((s.deadline_today||0)>0) ac.innerHTML+='<div class="alert-bar red">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
-    if((s.deadline_3days||0)>0) ac.innerHTML+='<div class="alert-bar amber">⚠ '+s.deadline_3days+' tender(s) due within 3 days</div>';
+    allTenders=d.tenders||[];renderDash();
+    var ac=document.getElementById('alert-container');ac.innerHTML='';
+    if(s.deadline_today>0) ac.innerHTML+='<div class="alert-bar red">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
+    if(s.deadline_3days>0) ac.innerHTML+='<div class="alert-bar amber">⚠ '+s.deadline_3days+' tender(s) due within 3 days</div>';
   }catch(e){document.getElementById('dash-table').innerHTML='<tr><td colspan="7" class="empty-state" style="color:#ef4444">Error: '+e.message+'</td></tr>';}
 }
 
 async function checkDriveStatus(){
   try{
-    var r=await fetch('/drive-status'); var d=await r.json();
-    var dot=document.getElementById('drive-dot'); var lbl=document.getElementById('drive-label');
-    var sys=document.getElementById('sys-drive');
+    var r=await fetch('/drive-status'),d=await r.json();
+    var dot=document.getElementById('drive-dot'),lbl=document.getElementById('drive-label'),sys=document.getElementById('sys-drive');
     if(d.drive_connected){dot.className='status-dot dot-green';lbl.textContent='Drive connected';if(sys)sys.textContent='Connected';}
     else{dot.className='status-dot dot-red';lbl.textContent='Drive offline';if(sys)sys.textContent='Not connected';}
-    var info=document.getElementById('settings-drive-info');
-    if(info) info.textContent='Tenders in memory: '+d.tenders_in_memory+' | DB size: '+(d.db_size_kb||0)+'KB';
-  }catch(e){document.getElementById('drive-label').textContent='Drive: error';}
+  }catch(e){}
 }
 
 async function importExcel(input){
-  var file=input.files[0]; if(!file) return;
-  showLoading('Importing Excel and classifying tenders...');
-  var fd=new FormData(); fd.append('file',file);
-  try{
-    var r=await fetch('/import-excel',{method:'POST',body:fd}); var d=await r.json();
-    hideLoading();
-    toast('Imported '+(d.total||0)+' tenders · BID: '+(d.bid||0)+' · NO-BID: '+(d.no_bid||0),'success');
-    loadDashboard();
-  }catch(e){hideLoading();toast('Import failed: '+e.message,'error');}
+  var file=input.files[0];if(!file)return;
+  showLoading('Importing Excel...');
+  var fd=new FormData();fd.append('file',file);
+  try{var r=await fetch('/import-excel',{method:'POST',body:fd}),d=await r.json();hideLoading();toast('Imported '+(d.total||0)+' tenders · BID: '+(d.bid||0)+' · NO-BID: '+(d.no_bid||0),'success');loadDashboard();}
+  catch(e){hideLoading();toast('Import failed: '+e.message,'error');}
   input.value='';
 }
 
 async function syncDrive(){
-  showLoading('Syncing with Google Drive...');
-  try{var r=await fetch('/sync-drive',{method:'POST'}); var d=await r.json(); hideLoading(); toast(d.message||'Synced','success'); loadDashboard();}
-  catch(e){hideLoading();toast('Sync failed: '+e.message,'error');}
+  showLoading('Syncing with Drive...');
+  try{var r=await fetch('/sync-drive',{method:'POST'}),d=await r.json();hideLoading();toast(d.message||'Synced','success');loadDashboard();}
+  catch(e){hideLoading();toast('Sync failed','error');}
 }
 
-async function exportTenders(){
-  toast('Preparing export...','info');
-  try{window.location.href='/export-tenders';}catch(e){toast('Export failed','error');}
+async function reclassifyAll(){
+  showLoading('Reclassifying all tenders...');
+  try{var r=await fetch('/reclassify-all',{method:'POST'}),d=await r.json();hideLoading();toast('Reclassified '+d.reclassified+' tenders','success');loadDashboard();}
+  catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
 
 async function skipTender(tid){
   var reason=prompt('Skip reason (optional):')||'Not interested';
-  try{await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason})});toast('Tender skipped','success');loadDashboard();}
+  try{await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});toast('Skipped','success');loadDashboard();}
   catch(e){toast('Error','error');}
 }
 
-// ═══════════════════════════════════════════════════════════
-// ANALYSE
-// ═══════════════════════════════════════════════════════════
-function updateFileList(input){
-  var el=document.getElementById('an-filelist');
-  if(el) el.textContent=Array.from(input.files).map(function(f){return f.name;}).join(', ');
-}
-
-function clearCtx(){
-  currentTenderId=''; currentTenderBrief='';
-  var b=document.getElementById('ctx-banner'); if(b) b.style.display='none';
-  document.getElementById('an-tid').value='';
-}
+// ── ANALYSE ───────────────────────────────────────────────────────────────
+function updateFileList(input){var el=document.getElementById('an-filelist');if(el)el.textContent=Array.from(input.files).map(f=>f.name).join(', ');}
 
 async function analyseTender(){
   var tid=document.getElementById('an-tid').value.trim();
   var files=document.getElementById('an-files').files;
   if(!files.length){toast('Upload files first','info');return;}
-  showLoading('Analysing tender with AI...');
-  var fd=new FormData();
-  if(tid) fd.append('t247_id',tid);
-  for(var i=0;i<files.length;i++) fd.append('files',files[i]);
+  showLoading('Analysing with AI...');
+  var fd=new FormData();if(tid)fd.append('t247_id',tid);
+  for(var i=0;i<files.length;i++)fd.append('files',files[i]);
   try{
-    var r=await fetch('/process-files',{method:'POST',body:fd}); var d=await r.json();
-    hideLoading();
-    var td=d.tender_data||d;
-    var ov=td.overall_verdict||{};
-    var v=ov.verdict||d.verdict||'REVIEW';
+    var r=await fetch('/process-files',{method:'POST',body:fd}),d=await r.json();hideLoading();
+    var td=d.tender_data||d,ov=td.overall_verdict||{},v=ov.verdict||'REVIEW';
     var col=ov.color==='GREEN'?'#22c55e':ov.color==='RED'?'#ef4444':ov.color==='AMBER'?'#f59e0b':'#3b82f6';
-
     var pqHtml='';
     if(td.pq_criteria&&td.pq_criteria.length){
-      pqHtml='<div style="margin-top:16px"><div style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">PQ Criteria ('+td.pq_criteria.length+')</div>'+
-      '<table style="width:100%;font-size:12px"><thead><tr style="background:#12141e"><th style="padding:6px">Sr</th><th>Criteria</th><th>Status</th><th>Remarks</th></tr></thead><tbody>'+
-      td.pq_criteria.map(function(p,i){
-        var sc=p.nascent_color||'BLUE';
-        var cc=sc==='GREEN'?'#22c55e':sc==='RED'?'#ef4444':sc==='AMBER'?'#f59e0b':'#3b82f6';
-        return '<tr><td style="padding:4px 8px;color:#555">'+(p.sl_no||i+1)+'</td><td style="padding:4px 8px">'+(p.criteria||'').substring(0,80)+'...</td><td style="padding:4px 8px;color:'+cc+';white-space:nowrap">'+p.nascent_status+'</td><td style="padding:4px 8px;font-size:11px;color:#888">'+(p.nascent_remark||'').substring(0,100)+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
+      pqHtml='<div style="margin-top:14px"><div style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">PQ Criteria ('+td.pq_criteria.length+')</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr style="background:#12141e"><th style="padding:6px 10px">Sr</th><th>Criteria</th><th>Status</th><th>Remark</th></tr></thead><tbody>'+
+      td.pq_criteria.map((p,i)=>{var sc=p.nascent_color||'BLUE',cc=sc==='GREEN'?'#22c55e':sc==='RED'?'#ef4444':sc==='AMBER'?'#f59e0b':'#3b82f6';
+        return '<tr><td style="padding:4px 8px;color:#555">'+(p.sl_no||i+1)+'</td><td style="padding:4px 8px">'+(p.criteria||'').substring(0,80)+'</td><td style="padding:4px 8px;color:'+cc+';white-space:nowrap">'+p.nascent_status+'</td><td style="padding:4px 8px;font-size:11px;color:#666">'+(p.nascent_remark||'').substring(0,100)+'</td></tr>';
+      }).join('')+'</tbody></table></div></div>';
     }
-
-    document.getElementById('an-result').innerHTML=
-      '<div class="card" style="border-color:'+col+'">'+
-      '<div style="font-size:20px;font-weight:700;color:'+col+';margin-bottom:8px">'+v+'</div>'+
-      '<div style="font-size:13px;color:#888;margin-bottom:8px">'+(ov.reason||'')+'</div>'+
-      '<div style="font-size:12px;color:#555;margin-bottom:4px">PQ: Green '+(ov.green||0)+' · Amber '+(ov.amber||0)+' · Red '+(ov.red||0)+'</div>'+
-      (d.ai_used?'<div style="font-size:11px;color:#22c55e">✓ AI Analysis complete</div>':'')+
-      (td.ai_warning?'<div style="font-size:11px;color:#f59e0b">⚠ '+td.ai_warning+'</div>':'')+
+    document.getElementById('an-result').innerHTML='<div class="card" style="border-color:'+col+'">'+
+      '<div style="font-size:20px;font-weight:700;color:'+col+';margin-bottom:6px">'+v+'</div>'+
+      '<div style="font-size:13px;color:#888;margin-bottom:6px">'+(ov.reason||'')+'</div>'+
+      '<div style="font-size:12px;color:#555">PQ: ✓ '+(ov.green||0)+' · △ '+(ov.amber||0)+' · ✗ '+(ov.red||0)+'</div>'+
+      (d.ai_used?'<div style="font-size:11px;color:#22c55e;margin-top:4px">✓ AI Analysis complete</div>':'')+
+      (td.ai_warning?'<div style="font-size:11px;color:#f59e0b;margin-top:4px">⚠ '+td.ai_warning+'</div>':'')+
       pqHtml+
-      '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">'+
+      '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+
       (d.download_file?'<a href="/download/'+d.download_file+'" class="btn btn-success btn-sm">⬇ Download Report</a>':'')+
-      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'checklist\')">→ Checklist</button>'+
-      '<button class="btn btn-amber btn-sm" onclick="openBOQForTender(\''+(tid||'')+'\')">💰 BOQ</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'documents\')">→ Documents</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'checklist\')">✅ Checklist</button>'+
+      '<button class="btn btn-amber btn-sm" onclick="openBOQ(\''+(tid||'')+'\')">💰 BOQ</button>'+
       '<button class="btn btn-primary btn-sm" onclick="loadPrebidQueries()">Pre-bid Queries</button>'+
       '</div></div>';
-
     if(tid){setActive(tid,'');}
     document.getElementById('prebid-section').style.display='block';
-    loadPrebidQueries();
-    loadDashboard();
+    loadPrebidQueries();loadDashboard();
     toast('Analysis complete: '+v,'success');
   }catch(e){hideLoading();toast('Analysis failed: '+e.message,'error');
     document.getElementById('an-result').innerHTML='<div class="card" style="border-color:#ef4444"><div style="color:#ef4444">Error: '+e.message+'</div></div>';
@@ -968,71 +762,41 @@ async function analyseTender(){
 
 async function loadPrebidQueries(){
   var tid=currentTenderId||document.getElementById('an-tid').value.trim();
-  var el=document.getElementById('prebid-list'); if(!el) return;
+  var el=document.getElementById('prebid-list');if(!el)return;
   if(!tid){el.innerHTML='<div class="empty-state">Select a tender first.</div>';return;}
-  try{
-    var r=await fetch('/prebid-queries/'+tid); var d=await r.json();
-    var qs=d.queries||[];
-    if(!qs.length){el.innerHTML='<div class="empty-state">No queries yet. Analyse tender first.</div>';return;}
-    el.innerHTML=qs.map(function(q,i){
-      return '<div style="padding:10px 0;border-bottom:1px solid #151820"><div style="font-size:12px;font-weight:600;color:#60a5fa">Q'+(i+1)+(q.clause?' — '+q.clause:'')+'</div><div style="font-size:13px;color:#ccc;margin-top:4px">'+(q.query||q)+'</div></div>';
-    }).join('');
-  }catch(e){el.innerHTML='<div style="color:#ef4444;font-size:12px">Error loading queries</div>';}
+  try{var r=await fetch('/prebid-queries/'+tid),d=await r.json(),qs=d.queries||[];
+    if(!qs.length){el.innerHTML='<div class="empty-state">No queries. Analyse tender first.</div>';return;}
+    el.innerHTML=qs.map((q,i)=>'<div style="padding:10px 0;border-bottom:1px solid #151820"><div style="font-size:12px;font-weight:600;color:#60a5fa">Q'+(i+1)+(q.clause?' — '+q.clause:'')+'</div><div style="font-size:13px;color:#ccc;margin-top:4px">'+(q.query||q)+'</div></div>').join('');
+  }catch(e){el.innerHTML='<div style="color:#ef4444;font-size:12px">Error loading</div>';}
 }
 
-async function generatePrebidLetter(){
-  var tid=currentTenderId||document.getElementById('an-tid').value.trim();
-  if(!tid){toast('Select a tender first','info');return;}
-  showLoading('Generating pre-bid letter...');
-  try{
-    var r=await fetch('/tender/'+tid+'/generate-prebid-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d=await r.json();
-    hideLoading();
-    if(d.download_url) window.open(d.download_url);
-    toast('Pre-bid letter ready','success');
-  }catch(e){hideLoading();toast('Failed: '+e.message,'error');}
-}
-
-// ═══════════════════════════════════════════════════════════
-// BOQ MODULE
-// ═══════════════════════════════════════════════════════════
-async function loadBOQConstants(){
-  try{var r=await fetch('/boq/constants'); boqConstants=await r.json();}catch(e){}
-}
+// ── BOQ ───────────────────────────────────────────────────────────────────
+async function loadBOQConst(){try{var r=await fetch('/boq/constants');boqConst=await r.json();}catch(e){}}
 
 async function loadBOQ(){
   var tid=document.getElementById('boq-select').value;
   if(!tid){document.getElementById('boq-content').style.display='none';return;}
-  currentTenderId=tid;
-  showLoading('Loading BOQ...');
-  try{
-    var r=await fetch('/boq/'+tid); var d=await r.json();
-    hideLoading();
-    var info=document.getElementById('boq-tender-info');
-    if(info) info.textContent=(d.source==='auto'?'⚡ Auto-generated from RFP scope':'✓ Saved BOQ')+(d.tender_name?' — '+d.tender_name:'');
+  currentTenderId=tid;showLoading('Loading BOQ...');
+  try{var r=await fetch('/boq/'+tid),d=await r.json();hideLoading();
+    var info=document.getElementById('boq-info');
+    if(info)info.textContent=(d.source==='auto'?'⚡ Auto-generated from RFP scope':'✓ Saved BOQ')+(d.tender_name?' — '+d.tender_name:'');
     var boq=d.boq||{};
-    boqItems=(boq.items||[]).map(function(item,i){return Object.assign({},item,{_id:i});});
+    boqItems=(boq.items||[]).map((item,i)=>({...item,_id:item._id||i}));
     document.getElementById('boq-margin').value=boq.margin_pct||15;
     document.getElementById('boq-gst').value=boq.gst_pct||18;
     document.getElementById('boq-content').style.display='block';
-    renderBOQTable();
-    boqRecalc();
+    renderBOQTable();boqRecalc();
   }catch(e){hideLoading();toast('Failed to load BOQ: '+e.message,'error');}
 }
 
 async function boqRegenerate(){
   var tid=document.getElementById('boq-select').value;
   if(!tid){toast('Select a tender first','info');return;}
-  showLoading('Regenerating BOQ from RFP...');
-  try{
-    var r=await fetch('/boq/'+tid+'/regenerate',{method:'POST'}); var d=await r.json();
-    hideLoading();
-    var boq=d.boq||{};
-    boqItems=(boq.items||[]).map(function(item,i){return Object.assign({},item,{_id:i});});
-    document.getElementById('boq-margin').value=15;
-    document.getElementById('boq-gst').value=18;
-    document.getElementById('boq-content').style.display='block';
-    renderBOQTable();
-    boqRecalc();
+  showLoading('Regenerating from RFP...');
+  try{var r=await fetch('/boq/'+tid+'/regenerate',{method:'POST'}),d=await r.json();hideLoading();
+    var boq=d.boq||{};boqItems=(boq.items||[]).map((item,i)=>({...item,_id:i}));
+    document.getElementById('boq-margin').value=15;document.getElementById('boq-gst').value=18;
+    document.getElementById('boq-content').style.display='block';renderBOQTable();boqRecalc();
     toast('BOQ regenerated from RFP scope','success');
   }catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
@@ -1040,43 +804,29 @@ async function boqRegenerate(){
 async function boqSave(){
   var tid=document.getElementById('boq-select').value;
   if(!tid){toast('Select a tender first','info');return;}
-  boqReadTable();
-  showLoading('Saving BOQ...');
-  try{
-    var r=await fetch('/boq/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      items:boqItems,
-      margin_pct:parseFloat(document.getElementById('boq-margin').value)||15,
-      gst_pct:parseFloat(document.getElementById('boq-gst').value)||18,
-    })}); var d=await r.json();
-    hideLoading(); toast('BOQ saved','success'); loadDashboard();
+  boqReadTable();showLoading('Saving BOQ...');
+  try{var r=await fetch('/boq/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:boqItems,margin_pct:parseFloat(document.getElementById('boq-margin').value)||15,gst_pct:parseFloat(document.getElementById('boq-gst').value)||18})});var d=await r.json();
+    hideLoading();toast('BOQ saved','success');loadDashboard();
   }catch(e){hideLoading();toast('Save failed: '+e.message,'error');}
 }
 
 function boqAddRow(){
-  var cats=boqConstants.categories||['Manpower','Software / Licenses','Hardware','Miscellaneous'];
+  var cats=boqConst.categories||['Manpower','Software / Licenses','Hardware','Miscellaneous'];
   boqItems.push({_id:Date.now(),category:cats[0],description:'New Item',unit:'Lumpsum',qty:1,rate:0,amount:0,remarks:'',source:'manual'});
-  renderBOQTable();
-  boqRecalc();
+  renderBOQTable();boqRecalc();
 }
 
-function boqDeleteRow(id){
-  boqItems=boqItems.filter(function(x){return x._id!=id;});
-  renderBOQTable(); boqRecalc();
-}
+function boqDeleteRow(id){boqItems=boqItems.filter(x=>x._id!=id);renderBOQTable();boqRecalc();}
 
 function boqReadTable(){
-  var rows=document.querySelectorAll('#boq-tbody tr[data-id]');
-  rows.forEach(function(row){
-    var id=row.getAttribute('data-id');
-    var item=boqItems.find(function(x){return x._id==id;});
-    if(!item) return;
-    var cat=row.querySelector('.boq-cat'); if(cat) item.category=cat.value;
-    var desc=row.querySelector('.boq-desc'); if(desc) item.description=desc.textContent.trim();
-    var unit=row.querySelector('.boq-unit'); if(unit) item.unit=unit.value;
-    var qty=row.querySelector('.boq-qty'); if(qty) item.qty=parseFloat(qty.value)||0;
-    var rate=row.querySelector('.boq-rate'); if(rate) item.rate=parseFloat(rate.value)||0;
-    var rem=row.querySelector('.boq-remarks'); if(rem) item.remarks=rem.textContent.trim();
-    item.amount=item.qty*item.rate;
+  document.querySelectorAll('#boq-tbody tr[data-id]').forEach(row=>{
+    var id=row.getAttribute('data-id'),item=boqItems.find(x=>x._id==id);if(!item)return;
+    var cat=row.querySelector('.boq-cat'),desc=row.querySelector('.boq-desc'),unit=row.querySelector('.boq-unit'),
+        qty=row.querySelector('.boq-qty'),rate=row.querySelector('.boq-rate'),rem=row.querySelector('.boq-rem');
+    if(cat)item.category=cat.value;if(desc)item.description=desc.textContent.trim();
+    if(unit)item.unit=unit.value;if(qty)item.qty=parseFloat(qty.value)||0;
+    if(rate)item.rate=parseFloat(rate.value)||0;if(rem)item.remarks=rem.textContent.trim();
+    item.amount=(item.qty||0)*(item.rate||0);
   });
 }
 
@@ -1084,57 +834,38 @@ function boqRecalc(){
   boqReadTable();
   var margin=parseFloat(document.getElementById('boq-margin').value)||0;
   var gst=parseFloat(document.getElementById('boq-gst').value)||0;
-  var base=boqItems.reduce(function(s,i){return s+(parseFloat(i.rate)||0)*(parseFloat(i.qty)||0);},0);
-  var marginAmt=base*margin/100;
-  var sub=base+marginAmt;
-  var gstAmt=sub*gst/100;
-  var grand=sub+gstAmt;
+  var base=boqItems.reduce((s,i)=>s+(parseFloat(i.rate)||0)*(parseFloat(i.qty)||0),0);
+  var mAmt=base*margin/100,sub=base+mAmt,gAmt=sub*gst/100,grand=sub+gAmt;
   document.getElementById('bt-base').textContent=fmtMoney(base);
-  document.getElementById('bt-margin').textContent=fmtMoney(marginAmt)+' ('+margin+'%)';
+  document.getElementById('bt-margin').textContent=fmtMoney(mAmt)+' ('+margin+'%)';
   document.getElementById('bt-sub').textContent=fmtMoney(sub);
-  document.getElementById('bt-gst').textContent=fmtMoney(gstAmt)+' ('+gst+'%)';
+  document.getElementById('bt-gst').textContent=fmtMoney(gAmt)+' ('+gst+'%)';
   document.getElementById('bt-grand').textContent=fmtMoney(grand);
-  // Update amount cells
-  document.querySelectorAll('#boq-tbody tr[data-id]').forEach(function(row){
-    var id=row.getAttribute('data-id');
-    var item=boqItems.find(function(x){return x._id==id;});
-    if(!item) return;
-    var qel=row.querySelector('.boq-qty'); var rel=row.querySelector('.boq-rate');
-    var ael=row.querySelector('.boq-amount');
-    if(qel&&rel&&ael){
-      var amt=(parseFloat(qel.value)||0)*(parseFloat(rel.value)||0);
-      ael.textContent=fmtMoney(amt);
-      item.amount=amt;
-    }
+  document.querySelectorAll('#boq-tbody tr[data-id]').forEach(row=>{
+    var id=row.getAttribute('data-id'),item=boqItems.find(x=>x._id==id);if(!item)return;
+    var qel=row.querySelector('.boq-qty'),rel=row.querySelector('.boq-rate'),ael=row.querySelector('.boq-amt');
+    if(qel&&rel&&ael){var amt=(parseFloat(qel.value)||0)*(parseFloat(rel.value)||0);ael.textContent=fmtMoney(amt);item.amount=amt;}
   });
 }
 
 function renderBOQTable(){
-  var cats=boqConstants.categories||['Manpower','Software / Licenses','Hardware','Cloud / Hosting','Training','AMC / Support','Survey / Field Work','Data / GIS','Travel & Logistics','Miscellaneous'];
-  var units=boqConstants.unit_types||['Months','Nos','Lumpsum','Sq.Km','Per Year','Per Day','Per User'];
-  var catOpts=cats.map(function(c){return '<option>'+c+'</option>';}).join('');
-  var unitOpts=units.map(function(u){return '<option>'+u+'</option>';}).join('');
-
-  // Group by category
-  var grouped={};
-  boqItems.forEach(function(item){
-    if(!grouped[item.category]) grouped[item.category]=[];
-    grouped[item.category].push(item);
-  });
-
+  var cats=boqConst.categories||['Manpower','Software / Licenses','Hardware','Cloud / Hosting','Training','AMC / Support','Survey / Field Work','Data / GIS','Travel & Logistics','Miscellaneous'];
+  var units=boqConst.unit_types||['Months','Nos','Lumpsum','Per Year','Sq.Km','Per Day','Per User'];
+  var catOpts=cats.map(c=>'<option>'+c+'</option>').join('');
+  var unitOpts=units.map(u=>'<option>'+u+'</option>').join('');
+  var grouped={};boqItems.forEach(item=>{if(!grouped[item.category])grouped[item.category]=[];grouped[item.category].push(item);});
   var html='';
-  Object.keys(grouped).forEach(function(cat){
-    html+='<tr class="boq-category-row"><td colspan="9">'+cat+'</td></tr>';
-    grouped[cat].forEach(function(item){
-      html+='<tr data-id="'+item._id+'">'+
-        '<td style="color:#555;font-size:11px">'+item.sl_no+'</td>'+
-        '<td><select class="boq-cat" onchange="boqRecalc()">'+cats.map(function(c){return '<option'+(c===item.category?' selected':'')+'>'+c+'</option>';}).join('')+'</select></td>'+
-        '<td contenteditable="true" class="boq-desc" onblur="boqRecalc()" style="min-width:160px;color:#ddd">'+item.description+'</td>'+
-        '<td><select class="boq-unit" onchange="boqRecalc()">'+units.map(function(u){return '<option'+(u===item.unit?' selected':'')+'>'+u+'</option>';}).join('')+'</select></td>'+
+  Object.keys(grouped).forEach(cat=>{
+    html+='<tr class="boq-cat-row"><td colspan="9">'+cat+'</td></tr>';
+    grouped[cat].forEach(item=>{
+      html+='<tr data-id="'+item._id+'"><td style="color:#444;font-size:11px">'+item.sl_no+'</td>'+
+        '<td><select class="boq-cat" onchange="boqRecalc()">'+cats.map(c=>'<option'+(c===item.category?' selected':'')+'>'+c+'</option>').join('')+'</select></td>'+
+        '<td contenteditable="true" class="boq-desc" onblur="boqRecalc()" style="color:#ddd;min-width:160px">'+item.description+'</td>'+
+        '<td><select class="boq-unit" onchange="boqRecalc()">'+units.map(u=>'<option'+(u===item.unit?' selected':'')+'>'+u+'</option>').join('')+'</select></td>'+
         '<td><input type="number" class="boq-qty" value="'+(item.qty||1)+'" min="0" step="0.5" oninput="boqRecalc()"></td>'+
         '<td><input type="number" class="boq-rate" value="'+(item.rate||'')+'" min="0" placeholder="0" oninput="boqRecalc()"></td>'+
-        '<td class="boq-amount" style="color:#60a5fa;font-weight:600">'+fmtMoney(item.amount||0)+'</td>'+
-        '<td contenteditable="true" class="boq-remarks" onblur="boqRecalc()" style="color:#555">'+item.remarks+'</td>'+
+        '<td class="boq-amt" style="color:#60a5fa;font-weight:600">'+fmtMoney(item.amount||0)+'</td>'+
+        '<td contenteditable="true" class="boq-rem" onblur="boqRecalc()" style="color:#555">'+item.remarks+'</td>'+
         '<td><button class="action-btn red" onclick="boqDeleteRow('+item._id+')">✕</button></td>'+
       '</tr>';
     });
@@ -1142,324 +873,232 @@ function renderBOQTable(){
   document.getElementById('boq-tbody').innerHTML=html||'<tr><td colspan="9" class="empty-state">No items. Click + Add Row or Regenerate from RFP.</td></tr>';
 }
 
-// ═══════════════════════════════════════════════════════════
-// CHECKLIST
-// ═══════════════════════════════════════════════════════════
+// ── CHECKLIST ─────────────────────────────────────────────────────────────
 async function loadChecklist(){
-  var tid=document.getElementById('cl-select').value; if(!tid) return;
-  var el=document.getElementById('cl-content');
-  el.innerHTML='<div class="empty-state">Loading...</div>';
-  try{
-    var r=await fetch('/checklist/'+tid); var d=await r.json();
-    var items=d.checklist||[];
+  var tid=document.getElementById('cl-select').value;if(!tid)return;
+  var el=document.getElementById('cl-content');el.innerHTML='<div class="empty-state">Loading...</div>';
+  try{var r=await fetch('/checklist/'+tid),d=await r.json(),items=d.checklist||[];
     if(!items.length){el.innerHTML='<div class="empty-state">No checklist yet. Analyse the tender first.</div>';return;}
-    var done=items.filter(function(i){return i.done;}).length;
-    el.innerHTML='<div class="card">'+
-      '<div class="card-title">Checklist ('+done+'/'+items.length+')<div><button class="btn btn-ghost btn-sm" onclick="loadChecklist()">↺</button></div></div>'+
+    var done=items.filter(i=>i.done).length;
+    el.innerHTML='<div class="card"><div class="card-title">Checklist ('+done+'/'+items.length+')<button class="btn btn-ghost btn-sm" onclick="loadChecklist()">↺</button></div>'+
       '<div class="progress-bar"><div class="progress-fill" style="width:'+(100*done/Math.max(items.length,1))+'%"></div></div>'+
-      '<div style="margin-top:14px">'+
-      items.map(function(item){
-        return '<div class="checklist-item'+(item.done?' done':'')+'">'+
-          '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleChecklistItem(\''+tid+'\',\''+item.id+'\',this.checked)">'+
-          '<span class="cl-label">'+(item.label||item.title||item.description||'')+'</span>'+
-          '<span class="cl-cat">'+(item.category||'')+'</span>'+
-        '</div>';
-      }).join('')+'</div></div>';
+      '<div style="margin-top:14px">'+items.map(item=>'<div class="checklist-item'+(item.done?' done':'')+'">'+
+        '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCL(\''+tid+'\',\''+item.id+'\',this.checked)">'+
+        '<span class="cl-label">'+(item.label||item.title||item.description||'')+'</span>'+
+        '<span class="cl-cat">'+(item.category||'')+'</span></div>').join('')+'</div></div>';
   }catch(e){el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>';}
 }
 
-async function toggleChecklistItem(tid,itemId,done){
-  try{await fetch('/checklist/'+tid+'/item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:itemId,done:done})});}catch(e){}
-  setTimeout(function(){loadChecklist();},300);
+async function toggleCL(tid,id,done){
+  try{await fetch('/checklist/'+tid+'/item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,done})});}catch(e){}
+  setTimeout(()=>loadChecklist(),300);
 }
 
-// ═══════════════════════════════════════════════════════════
-// DOCUMENTS
-// ═══════════════════════════════════════════════════════════
-async function loadDocs(){var tid=document.getElementById('doc-select').value; if(!tid) return; setActive(tid,'');}
+// ── DOCUMENTS ─────────────────────────────────────────────────────────────
+function loadDocs(){var tid=document.getElementById('doc-select').value;if(!tid)return;setActive(tid,'');}
 
 async function generateDocs(){
-  var tid=document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
-  showLoading('Generating submission documents...');
-  try{
-    var r=await fetch('/generate-docs/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d=await r.json();
-    hideLoading();
+  var tid=document.getElementById('doc-select').value;if(!tid){toast('Select a tender','info');return;}
+  showLoading('Generating documents...');
+  try{var r=await fetch('/generate-docs/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),d=await r.json();hideLoading();
     var el=document.getElementById('docs-list');
-    if(d.files&&d.files.length){
-      el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Document</th><th>Action</th></tr></thead><tbody>'+
-        d.files.map(function(f){return '<tr><td>'+f+'</td><td><a href="/download/'+f+'" class="btn btn-ghost btn-sm">⬇ Download</a></td></tr>';}).join('')+
-      '</tbody></table></div>';
-    } else {toast('Docs generated','success');}
+    if(d.files&&d.files.length){el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Document</th><th>Action</th></tr></thead><tbody>'+d.files.map(f=>'<tr><td>'+f+'</td><td><a href="/download/'+f+'" class="btn btn-ghost btn-sm">⬇ Download</a></td></tr>').join('')+'</tbody></table></div>';}
+    else toast('Documents generated','success');
   }catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
 
-async function generateTechProposal(){
-  var tid=document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
-  toast('Tech proposal generation not yet implemented','info');
-}
-
-// ═══════════════════════════════════════════════════════════
-// REPORTS
-// ═══════════════════════════════════════════════════════════
+// ── REPORTS ───────────────────────────────────────────────────────────────
 async function loadReports(){
-  var r=await fetch('/reports-list'); var d=await r.json();
-  var reports=d.reports||[];
+  var r=await fetch('/reports-list'),d=await r.json(),reports=d.reports||[];
   var tbody=document.getElementById('reports-table');
   if(!reports.length){tbody.innerHTML='<tr><td colspan="7" class="empty-state">No reports yet.</td></tr>';return;}
-  tbody.innerHTML=reports.map(function(f){
-    return '<tr><td class="mono" style="font-size:11px">'+f.filename+'</td>'+
-      '<td style="color:#888;font-size:12px">'+(f.tender_name||'—')+'</td>'+
-      '<td style="color:#555;font-size:11px">'+(f.org||'—')+'</td>'+
-      '<td>'+verdictBadge(f.verdict||'')+'</td>'+
-      '<td style="color:#555;font-size:12px">'+f.created+'</td>'+
-      '<td style="color:#555;font-size:12px">'+f.size_kb+'KB</td>'+
-      '<td><a href="/download/'+f.filename+'" class="btn btn-ghost btn-sm">⬇ Download</a></td>'+
-    '</tr>';
-  }).join('');
+  tbody.innerHTML=reports.map(f=>'<tr><td class="mono" style="font-size:11px">'+f.filename+'</td><td style="color:#888;font-size:12px">'+(f.tender_name||'—')+'</td><td style="color:#555;font-size:11px">'+(f.org||'—')+'</td><td>'+vBadge(f.verdict||'')+'</td><td style="color:#555;font-size:12px">'+f.created+'</td><td style="color:#555;font-size:12px">'+f.size_kb+'KB</td><td><a href="/download/'+f.filename+'" class="btn btn-ghost btn-sm">⬇</a></td></tr>').join('');
 }
 
-// ═══════════════════════════════════════════════════════════
-// ANALYTICS / WIN-LOSS
-// ═══════════════════════════════════════════════════════════
+// ── ANALYTICS ─────────────────────────────────────────────────────────────
 async function loadAnalytics(){
-  try{
-    var r=await fetch('/win-loss'); var d=await r.json();
-    var stats=d.stats||d||{};
-    var grid=document.getElementById('analytics-summary');
-    grid.innerHTML=[
-      ['Total Bids',stats.total||0],
-      ['Won',stats.won||0],
-      ['Lost',stats.lost||0],
-      ['Win Rate',((stats.win_rate||0)*100).toFixed(0)+'%'],
-      ['Total Won Value','₹'+(stats.total_won_value||0)+' Cr'],
-    ].map(function(x){return '<div class="analytic-card"><div class="analytic-num">'+x[1]+'</div><div class="analytic-lbl">'+x[0]+'</div></div>';}).join('');
-
-    var wl=d.history||d.results||[];
-    var tbody=document.getElementById('winloss-table');
+  try{var r=await fetch('/win-loss'),d=await r.json(),stats=d.stats||d||{};
+    document.getElementById('analytics-grid').innerHTML=[['Total Bids',stats.total||0],['Won',stats.won||0],['Lost',stats.lost||0],['Win Rate',((stats.win_rate||0)*100).toFixed(0)+'%'],['Won Value','₹'+(stats.total_won_value||0)+' Cr']].map(x=>'<div style="background:#1a1d27;border-radius:10px;padding:16px;border:1px solid #1e2130;text-align:center"><div style="font-size:22px;font-weight:700;color:#60a5fa">'+x[1]+'</div><div style="font-size:11px;color:#555;margin-top:4px">'+x[0]+'</div></div>').join('');
+    var wl=d.history||d.results||[];var tbody=document.getElementById('winloss-table');
     if(!wl.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No results yet.</td></tr>';return;}
-    tbody.innerHTML=wl.map(function(t){
-      var oc=t.outcome||'';
-      var col=oc==='Won'?'#22c55e':oc==='Lost'?'#ef4444':'#f59e0b';
-      return '<tr><td class="mono">'+(t.t247_id||'—')+'</td><td style="font-size:12px;color:#888">'+(t.brief||'—')+'</td>'+
-        '<td style="color:'+col+'">'+oc+'</td><td style="color:#888">'+(t.outcome_value?'₹'+t.outcome_value+' Cr':'—')+'</td>'+
-        '<td style="color:#555;font-size:12px">'+(t.outcome_competitor||'—')+'</td></tr>';
+    tbody.innerHTML=wl.map(t=>{var col=t.outcome==='Won'?'#22c55e':t.outcome==='Lost'?'#ef4444':'#f59e0b';
+      return '<tr><td class="mono">'+(t.t247_id||'—')+'</td><td style="font-size:12px;color:#888">'+(t.brief||'—')+'</td><td style="color:'+col+'">'+(t.outcome||'')+'</td><td style="color:#666">'+(t.outcome_value?'₹'+t.outcome_value+'Cr':'—')+'</td><td style="color:#555;font-size:12px">'+(t.outcome_competitor||'—')+'</td></tr>';
     }).join('');
   }catch(e){}
 }
 
 async function saveBidResult(){
-  var tid=document.getElementById('res-tid').value.trim();
-  if(!tid){toast('Enter T247 ID','info');return;}
-  var data={outcome:document.getElementById('res-outcome').value,value:document.getElementById('res-value').value,competitor:document.getElementById('res-competitor').value,notes:document.getElementById('res-notes').value};
-  try{await fetch('/bid-result/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});toast('Result saved','success');loadAnalytics();}
+  var tid=document.getElementById('res-tid').value.trim();if(!tid){toast('Enter T247 ID','info');return;}
+  try{await fetch('/bid-result/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({outcome:document.getElementById('res-outcome').value,value:document.getElementById('res-value').value,competitor:document.getElementById('res-competitor').value,notes:document.getElementById('res-notes').value})});toast('Saved','success');loadAnalytics();}
   catch(e){toast('Failed','error');}
 }
 
-// ═══════════════════════════════════════════════════════════
-// SKIPPED
-// ═══════════════════════════════════════════════════════════
+// ── SKIPPED ───────────────────────────────────────────────────────────────
 async function loadSkipped(){
-  try{
-    var r=await fetch('/skipped'); var d=await r.json();
-    var arr=d.skipped||[];
+  try{var r=await fetch('/skipped'),d=await r.json(),arr=d.skipped||[];
     var tbody=document.getElementById('skipped-table');
     if(!arr.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr>';return;}
-    tbody.innerHTML=arr.map(function(t){
-      return '<tr><td class="mono">'+(t.t247_id||'—')+'</td><td style="font-size:12px;color:#888">'+(t.brief||'—')+'</td>'+
-        '<td style="color:#555;font-size:12px">'+(t.skip_reason||'—')+'</td>'+
-        '<td style="color:#555;font-size:12px">'+(t.skipped_at?t.skipped_at.substring(0,10):'—')+'</td>'+
-        '<td><button class="action-btn blue" onclick="restoreTender(\''+t.t247_id+'\')">Restore</button></td></tr>';
-    }).join('');
+    tbody.innerHTML=arr.map(t=>'<tr><td class="mono">'+(t.t247_id||'—')+'</td><td style="font-size:12px;color:#888">'+(t.brief||'—')+'</td><td style="color:#555;font-size:12px">'+(t.skip_reason||'—')+'</td><td style="color:#555;font-size:12px">'+(t.skipped_at?t.skipped_at.substring(0,10):'—')+'</td><td><button class="action-btn blue" onclick="restoreTender(\''+t.t247_id+'\')">Restore</button></td></tr>').join('');
   }catch(e){}
 }
 
 async function restoreTender(tid){
-  try{await fetch('/tender/'+tid+'/restore',{method:'POST'});toast('Tender restored','success');loadSkipped();loadDashboard();}
+  try{await fetch('/tender/'+tid+'/restore',{method:'POST'});toast('Restored','success');loadSkipped();loadDashboard();}
   catch(e){toast('Failed','error');}
 }
 
-// ═══════════════════════════════════════════════════════════
-// COMPANY PROFILE
-// ═══════════════════════════════════════════════════════════
+// ── SELF-DIAGNOSE ─────────────────────────────────────────────────────────
+async function runDiagnose(){
+  showLoading('Running system checks...');
+  try{var r=await fetch('/diagnose'),d=await r.json();hideLoading();
+    var overall=d.overall,checks=d.checks||[],summary=d.summary||{};
+    var overallColor=overall==='OK'?'#22c55e':overall==='WARN'?'#f59e0b':'#ef4444';
+    var html='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px;background:#12141e;border-radius:8px">'+
+      '<div style="font-size:24px;font-weight:700;color:'+overallColor+'">'+overall+'</div>'+
+      '<div style="font-size:13px;color:#888">✓ '+summary.ok+' OK · △ '+summary.warn+' Warnings · ✗ '+summary.error+' Errors</div>'+
+      '<div style="font-size:11px;color:#444;margin-left:auto">'+new Date(d.timestamp).toLocaleTimeString()+'</div></div>';
+    html+=checks.map(c=>'<div class="diag-check '+c.status+'">'+
+      '<div class="diag-icon">'+(c.status==='OK'?'✅':c.status==='WARN'?'⚠️':'❌')+'</div>'+
+      '<div style="flex:1"><div class="diag-name">'+c.name+'</div>'+
+      '<div class="diag-detail">'+c.detail+'</div>'+
+      (c.fix?'<div class="diag-fix">Fix: '+c.fix+'</div>':'')+'</div></div>').join('');
+    document.getElementById('diagnose-results').innerHTML=html;
+    toast(overall==='OK'?'All systems healthy':overall==='WARN'?'Some warnings found':'Errors found — see details',overall==='OK'?'success':overall==='WARN'?'info':'error');
+  }catch(e){hideLoading();toast('Diagnose failed: '+e.message,'error');document.getElementById('diagnose-results').innerHTML='<div style="color:#ef4444">Diagnose error: '+e.message+'</div>';}
+}
+
+async function aiDiagnose(){
+  var errorText=document.getElementById('error-log-input').value.trim();
+  if(!errorText){toast('Paste an error log first','info');return;}
+  showLoading('AI is diagnosing...');
+  try{var r=await fetch('/diagnose/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({error:errorText})}),d=await r.json();hideLoading();
+    var sev=d.severity||'WARN',sevColor=sev==='CRASH'?'#ef4444':sev==='WARN'?'#f59e0b':'#888';
+    var html='<div style="background:#12141e;border-radius:8px;padding:16px;border-left:3px solid '+sevColor+'">'+
+      '<div style="font-size:13px;font-weight:600;color:'+sevColor+';margin-bottom:8px">'+sev+' — '+d.root_cause+'</div>'+
+      '<div style="font-size:12px;color:#555;margin-bottom:12px">Affected: <b style="color:#aaa">'+d.affected_file+'</b></div>'+
+      '<div style="font-size:12px;color:#888;margin-bottom:8px;font-weight:600">Fix Steps:</div>'+
+      (d.fixes||[]).map(f=>'<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #1e2130">'+
+        '<span style="color:#3b82f6;font-weight:700;white-space:nowrap">Step '+f.step+'</span>'+
+        '<span style="flex:1;color:#ccc">'+f.action+'</span>'+
+        '<span style="color:#555;font-size:11px;white-space:nowrap">'+f.where+'</span></div>').join('')+
+      '</div>';
+    document.getElementById('ai-diagnose-result').innerHTML=html;
+  }catch(e){hideLoading();toast('AI diagnosis failed: '+e.message,'error');}
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────
 async function loadProfile(){
-  try{
-    var r=await fetch('/profile'); profileData=await r.json();
-    renderProfileBasic();
-    renderProfileFinance();
-    renderProfileCerts();
-    renderProfileProjects();
-    renderProfileEmployees();
-  }catch(e){toast('Profile load failed: '+e.message,'error');}
+  try{var r=await fetch('/profile');profileData=await r.json();renderProfileAll();}
+  catch(e){toast('Profile load failed','error');}
 }
 
-function profileField(label,path,val){
-  return '<div><label>'+label+'</label><input type="text" value="'+(val||'')+'" data-path="'+path+'" onchange="profileChange(this)"></div>';
+function pField(label,path,val,type='text'){
+  return '<div><label>'+label+'</label><input type="'+type+'" value="'+(val||'')+'" data-path="'+path+'" onchange="pChange(this)"></div>';
 }
-
-function profileChange(el){
-  var path=el.getAttribute('data-path').split('.');
-  var obj=profileData;
+function pChange(el){
+  var path=el.getAttribute('data-path').split('.'),obj=profileData;
   for(var i=0;i<path.length-1;i++){if(!obj[path[i]])obj[path[i]]={};obj=obj[path[i]];}
-  obj[path[path.length-1]]=el.value;
-  profileDirty=true;
+  obj[path[path.length-1]]=el.type==='number'?parseFloat(el.value)||0:el.value;
 }
 
-function renderProfileBasic(){
+function renderProfileAll(){
   var c=profileData.company||{};
-  document.getElementById('profile-basic-form').innerHTML=
-    '<div class="card-title">Basic Information</div>'+
-    profileField('Company Name','company.name',c.name)+
-    profileField('CIN','company.cin',c.cin)+
-    profileField('PAN','company.pan',c.pan)+
-    profileField('GSTIN','company.gstin',c.gstin)+
-    profileField('MSME Udyam No.','company.msme_udyam',c.msme_udyam)+
-    profileField('MD / Director','company.md',c.md)+
-    profileField('Authorised Signatory','company.signatory',c.signatory)+
-    profileField('Years in Operation','company.years_in_operation',c.years_in_operation)+
-    profileField('Address','company.address',c.address)+
-    profileField('Website','company.website',c.website)+
-    profileField('Email','company.email',c.email);
-}
+  document.getElementById('profile-basic-form').innerHTML='<div class="card-title">Basic Information</div>'+
+    pField('Company Name','company.name',c.name)+pField('CIN','company.cin',c.cin)+pField('PAN','company.pan',c.pan)+
+    pField('GSTIN','company.gstin',c.gstin)+pField('MSME Udyam No.','company.msme_udyam',c.msme_udyam)+
+    pField('MD / Director','company.md',c.md)+pField('Authorised Signatory','company.signatory',c.signatory)+
+    pField('Years in Operation','company.years_in_operation',c.years_in_operation,'number')+
+    pField('Address','company.address',c.address)+pField('Email','company.email',c.email);
 
-function renderProfileFinance(){
   var f=profileData.finance||{};
-  document.getElementById('profile-finance-form').innerHTML=
-    '<div class="card-title">Financial Details</div>'+
-    profileField('Turnover FY 2022-23 (Cr)','finance.turnover_fy2223',f.turnover_fy2223)+
-    profileField('Turnover FY 2023-24 (Cr)','finance.turnover_fy2324',f.turnover_fy2324)+
-    profileField('Turnover FY 2024-25 (Cr)','finance.turnover_fy2425',f.turnover_fy2425)+
-    profileField('Avg Turnover Last 3 FY (Cr)','finance.avg_turnover_last_3_fy',f.avg_turnover_last_3_fy)+
-    profileField('Avg Turnover Last 2 FY (Cr)','finance.avg_turnover_last_2_fy',f.avg_turnover_last_2_fy)+
-    profileField('Net Worth (Cr)','finance.net_worth_cr',f.net_worth_cr);
-}
+  document.getElementById('profile-finance-form').innerHTML='<div class="card-title">Financial Details</div>'+
+    pField('Turnover FY 2022-23 (Cr)','finance.turnover_fy2223',f.turnover_fy2223,'number')+
+    pField('Turnover FY 2023-24 (Cr)','finance.turnover_fy2324',f.turnover_fy2324,'number')+
+    pField('Turnover FY 2024-25 (Cr)','finance.turnover_fy2425',f.turnover_fy2425,'number')+
+    pField('Avg Last 3 FY (Cr)','finance.avg_turnover_last_3_fy',f.avg_turnover_last_3_fy,'number')+
+    pField('Net Worth (Cr)','finance.net_worth_cr',f.net_worth_cr,'number');
 
-function renderProfileCerts(){
-  var c=profileData.certifications||{};
-  var cmmi=c.cmmi||{}; var iso9=c.iso_9001||{}; var iso27=c.iso_27001||{}; var iso20=c.iso_20000||{};
-  document.getElementById('profile-certs-form').innerHTML=
-    '<div class="card-title">Certifications</div>'+
-    '<div style="font-size:12px;color:#555;margin-bottom:12px;font-weight:600">CMMI</div>'+
-    profileField('CMMI Level','certifications.cmmi.level',cmmi.level)+
-    profileField('CMMI Version','certifications.cmmi.version',cmmi.version)+
-    profileField('CMMI Valid Till','certifications.cmmi.valid_to',cmmi.valid_to)+
-    '<div style="font-size:12px;color:#555;margin:16px 0 8px;font-weight:600">ISO 9001</div>'+
-    profileField('Cert No.','certifications.iso_9001.cert_no',iso9.cert_no)+
-    profileField('Valid Till','certifications.iso_9001.valid_to',iso9.valid_to)+
-    '<div style="font-size:12px;color:#555;margin:16px 0 8px;font-weight:600">ISO 27001</div>'+
-    profileField('Cert No.','certifications.iso_27001.cert_no',iso27.cert_no)+
-    profileField('Valid Till','certifications.iso_27001.valid_to',iso27.valid_to)+
-    '<div style="font-size:12px;color:#555;margin:16px 0 8px;font-weight:600">ISO 20000</div>'+
-    profileField('Cert No.','certifications.iso_20000.cert_no',iso20.cert_no)+
-    profileField('Valid Till','certifications.iso_20000.valid_to',iso20.valid_to);
-}
+  var c2=profileData.certifications||{},cmmi=c2.cmmi||{},iso9=c2.iso_9001||{},iso27=c2.iso_27001||{},iso20=c2.iso_20000||{};
+  document.getElementById('profile-certs-form').innerHTML='<div class="card-title">Certifications</div>'+
+    '<div style="font-size:12px;color:#555;margin:8px 0;font-weight:600">CMMI</div>'+
+    pField('Level','certifications.cmmi.level',cmmi.level,'number')+pField('Version','certifications.cmmi.version',cmmi.version)+pField('Valid Till','certifications.cmmi.valid_to',cmmi.valid_to)+
+    '<div style="font-size:12px;color:#555;margin:12px 0 8px;font-weight:600">ISO 9001</div>'+
+    pField('Cert No','certifications.iso_9001.cert_no',iso9.cert_no)+pField('Valid Till','certifications.iso_9001.valid_to',iso9.valid_to)+
+    '<div style="font-size:12px;color:#555;margin:12px 0 8px;font-weight:600">ISO 27001</div>'+
+    pField('Cert No','certifications.iso_27001.cert_no',iso27.cert_no)+pField('Valid Till','certifications.iso_27001.valid_to',iso27.valid_to)+
+    '<div style="font-size:12px;color:#555;margin:12px 0 8px;font-weight:600">ISO 20000</div>'+
+    pField('Cert No','certifications.iso_20000.cert_no',iso20.cert_no)+pField('Valid Till','certifications.iso_20000.valid_to',iso20.valid_to);
 
-function renderProfileProjects(){
-  var projects=(profileData.projects||[]);
-  var tbody=document.getElementById('projects-tbody');
-  if(!tbody) return;
-  tbody.innerHTML=projects.map(function(p,i){
-    return '<tr>'+
-      '<td><input type="text" value="'+(p.client||'')+'" data-pidx="'+i+'" data-pkey="client" onchange="projectChange(this)" style="width:100%"></td>'+
-      '<td><input type="text" value="'+(p.name||'')+'" data-pidx="'+i+'" data-pkey="name" onchange="projectChange(this)" style="width:100%"></td>'+
-      '<td><input type="number" value="'+(p.value_cr||'')+'" data-pidx="'+i+'" data-pkey="value_cr" onchange="projectChange(this)" style="width:80px"></td>'+
-      '<td><select data-pidx="'+i+'" data-pkey="status" onchange="projectChange(this)">'+
-        ['Completed','Ongoing','Under Implementation'].map(function(s){return '<option'+(p.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
-      '</select></td>'+
-      '<td><input type="text" value="'+(p.domain||'')+'" data-pidx="'+i+'" data-pkey="domain" onchange="projectChange(this)" style="width:100%"></td>'+
-      '<td style="text-align:center"><input type="checkbox" '+(p.mobile_gis?'checked':'')+' data-pidx="'+i+'" data-pkey="mobile_gis" onchange="projectCheckChange(this)"></td>'+
-      '<td style="text-align:center"><input type="checkbox" '+(p.central_server?'checked':'')+' data-pidx="'+i+'" data-pkey="central_server" onchange="projectCheckChange(this)"></td>'+
-      '<td><button class="action-btn red" onclick="deleteProjectRow('+i+')">✕</button></td>'+
-    '</tr>';
-  }).join('');
-}
-
-function projectChange(el){
-  var idx=parseInt(el.getAttribute('data-pidx')); var key=el.getAttribute('data-pkey');
-  if(!profileData.projects) profileData.projects=[];
-  if(!profileData.projects[idx]) profileData.projects[idx]={};
-  profileData.projects[idx][key]=el.value; profileDirty=true;
-}
-
-function projectCheckChange(el){
-  var idx=parseInt(el.getAttribute('data-pidx')); var key=el.getAttribute('data-pkey');
-  if(!profileData.projects[idx]) profileData.projects[idx]={};
-  profileData.projects[idx][key]=el.checked; profileDirty=true;
-}
-
-function addProjectRow(){
-  if(!profileData.projects) profileData.projects=[];
-  profileData.projects.push({client:'New Client',name:'Project Name',value_cr:0,status:'Completed',domain:'',mobile_gis:false,central_server:false,tags:[]});
-  renderProfileProjects(); profileDirty=true;
-}
-
-function deleteProjectRow(i){
-  if(!confirm('Delete this project?')) return;
-  profileData.projects.splice(i,1); renderProfileProjects(); profileDirty=true;
-}
-
-function renderProfileEmployees(){
   var e=profileData.employees||{};
-  document.getElementById('profile-emp-form').innerHTML=
-    '<div class="card-title">Team Strength</div>'+
-    profileField('Total Employees','employees.total_confirmed',e.total_confirmed)+
-    profileField('GIS Staff','employees.gis_staff',e.gis_staff)+
-    profileField('IT / Dev Staff','employees.it_dev_staff',e.it_dev_staff);
+  document.getElementById('profile-emp-form').innerHTML='<div class="card-title">Team Strength</div>'+
+    pField('Total Employees','employees.total_confirmed',e.total_confirmed,'number')+
+    pField('GIS Staff','employees.gis_staff',e.gis_staff,'number')+
+    pField('IT / Dev Staff','employees.it_dev_staff',e.it_dev_staff,'number');
+
+  var br=profileData.bid_rules||{};
+  document.getElementById('profile-bidrules-form').innerHTML='<div class="card-title">Bid Rules</div>'+
+    '<label>Min Project Value (Cr)</label><input type="number" value="'+(br.min_project_value_cr||0.25)+'" data-path="bid_rules.min_project_value_cr" onchange="pChange(this)">'+
+    '<label>Max Project Value (Cr)</label><input type="number" value="'+(br.max_project_value_cr||100)+'" data-path="bid_rules.max_project_value_cr" onchange="pChange(this)">'+
+    '<label>Preferred Sectors (comma separated)</label><input type="text" value="'+(br.preferred_sectors||[]).join(', ')+'" onchange="profileData.bid_rules.preferred_sectors=this.value.split(\',\').map(s=>s.trim())">'+
+    '<label>DO NOT BID Keywords (comma separated)</label><input type="text" value="'+(br.do_not_bid||[]).join(', ')+'" onchange="profileData.bid_rules.do_not_bid=this.value.split(\',\').map(s=>s.trim())">'+
+    '<label>Conditional Keywords (comma separated)</label><input type="text" value="'+(br.conditional||[]).join(', ')+'" onchange="profileData.bid_rules.conditional=this.value.split(\',\').map(s=>s.trim())">';
+
+  renderProjectsTable();
 }
+
+function renderProjectsTable(){
+  var projects=profileData.projects||[];
+  document.getElementById('projects-tbody').innerHTML=projects.map((p,i)=>
+    '<tr><td><input type="text" value="'+(p.client||'')+'" data-pidx="'+i+'" data-pkey="client" onchange="pProject(this)" style="width:100%"></td>'+
+    '<td><input type="text" value="'+(p.name||'')+'" data-pidx="'+i+'" data-pkey="name" onchange="pProject(this)" style="width:100%"></td>'+
+    '<td><input type="number" value="'+(p.value_cr||'')+'" data-pidx="'+i+'" data-pkey="value_cr" onchange="pProject(this)" style="width:80px"></td>'+
+    '<td><select data-pidx="'+i+'" data-pkey="status" onchange="pProject(this)">'+['Completed','Ongoing','Under Implementation'].map(s=>'<option'+(p.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></td>'+
+    '<td><input type="text" value="'+(p.domain||'')+'" data-pidx="'+i+'" data-pkey="domain" onchange="pProject(this)" style="width:100%"></td>'+
+    '<td style="text-align:center"><input type="checkbox" '+(p.mobile_gis?'checked':'')+' data-pidx="'+i+'" data-pkey="mobile_gis" onchange="pProjectBool(this)"></td>'+
+    '<td style="text-align:center"><input type="checkbox" '+(p.central_server?'checked':'')+' data-pidx="'+i+'" data-pkey="central_server" onchange="pProjectBool(this)"></td>'+
+    '<td><button class="action-btn red" onclick="delProject('+i+')">✕</button></td></tr>'
+  ).join('');
+}
+
+function pProject(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getAttribute('data-pkey');if(!profileData.projects[i])profileData.projects[i]={};profileData.projects[i][k]=el.value;}
+function pProjectBool(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getAttribute('data-pkey');if(!profileData.projects[i])profileData.projects[i]={};profileData.projects[i][k]=el.checked;}
+function addProjectRow(){if(!profileData.projects)profileData.projects=[];profileData.projects.push({client:'New Client',name:'Project Name',value_cr:0,status:'Completed',domain:'',mobile_gis:false,central_server:false,tags:[]});renderProjectsTable();}
+function delProject(i){if(!confirm('Delete this project?'))return;profileData.projects.splice(i,1);renderProjectsTable();}
 
 async function saveProfile(){
-  try{
-    var r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileData)});
-    var d=await r.json();
-    profileDirty=false;
-    toast('Profile saved','success');
-  }catch(e){toast('Save failed: '+e.message,'error');}
+  try{var r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileData)});var d=await r.json();toast('Profile saved','success');}
+  catch(e){toast('Save failed: '+e.message,'error');}
 }
 
-// ═══════════════════════════════════════════════════════════
-// SETTINGS
-// ═══════════════════════════════════════════════════════════
+// ── SETTINGS ──────────────────────────────────────────────────────────────
 async function loadSettings(){
-  try{var r=await fetch('/config'); var d=await r.json();
-    if(d.gemini_api_key) document.getElementById('key1').value=d.gemini_api_key;
-  }catch(e){}
+  try{var r=await fetch('/config'),d=await r.json();if(d.gemini_api_key)document.getElementById('key1').value=d.gemini_api_key;}
+  catch(e){}
 }
 
 async function saveKeys(){
   var keys=[document.getElementById('key1').value,document.getElementById('key2').value,document.getElementById('key3').value,document.getElementById('key4').value].filter(Boolean);
-  var body={gemini_api_key:keys[0]||'',gemini_api_keys:keys};
-  try{await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});toast('Keys saved','success');}
+  try{await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gemini_api_key:keys[0]||'',gemini_api_keys:keys})});toast('Keys saved','success');}
   catch(e){toast('Failed','error');}
 }
 
 async function testAI(){
-  var el=document.getElementById('ai-test-result');
-  if(el) el.textContent='Testing...';
-  showLoading('Testing AI connection...');
-  try{var r=await fetch('/test-ai'); var d=await r.json(); hideLoading();
-    if(el) el.textContent=d.status==='success'?'✅ AI working':'❌ '+(d.error||d.message||'Failed');
-    if(el) el.style.color=d.status==='success'?'#22c55e':'#ef4444';
-    toast(d.status==='success'?'AI working':'AI error: '+(d.error||''),d.status==='success'?'success':'error');
+  var el=document.getElementById('ai-test-result');if(el)el.textContent='Testing...';
+  showLoading('Testing AI...');
+  try{var r=await fetch('/test-ai'),d=await r.json();hideLoading();
+    var ok=d.status==='success';if(el){el.textContent=ok?'✅ AI working':'❌ '+(d.error||d.message||'Failed');el.style.color=ok?'#22c55e':'#ef4444';}
+    toast(ok?'AI working':'AI error','success');
   }catch(e){hideLoading();if(el){el.textContent='Error: '+e.message;el.style.color='#ef4444';}}
 }
 
-// ═══════════════════════════════════════════════════════════
-// POST-AWARD (stubs)
-// ═══════════════════════════════════════════════════════════
-function loadMilestones(){toast('Select a tender to view milestones','info');}
-function setupMilestones(){toast('Milestones feature coming soon','info');}
-function genLetter(type){toast('Letter generation: coming soon','info');}
-function generateInvoice(){toast('Invoice generation: coming soon','info');}
-
-// ═══════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', function(){
-  loadDashboard();
-  checkDriveStatus();
-  loadBOQConstants();
-  // Restore last active tender
-  var saved=localStorage.getItem('activeTenderId');
-  if(saved) currentTenderId=saved;
+// ── INIT ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  loadDashboard();checkDriveStatus();loadBOQConst();
+  var saved=localStorage.getItem('activeTenderId');if(saved)currentTenderId=saved;
+  // Check API status
+  fetch('/health').then(r=>r.json()).then(d=>{
+    document.getElementById('api-status').textContent='AI: '+(d.ai_configured?'✓ Configured':'✗ Not set');
+  }).catch(()=>{});
 });
 </script>
 </body>
