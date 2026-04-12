@@ -82,8 +82,17 @@ def _reconnect():
 
 
 def _get_folder_id():
-    """Get folder ID from env. This MUST be a user-owned folder shared with the SA."""
-    return os.environ.get("GDRIVE_FOLDER_ID", "").strip() or None
+    """Get folder ID from env. Strips full URLs to just the ID."""
+    raw = os.environ.get("GDRIVE_FOLDER_ID", "").strip()
+    if not raw:
+        return None
+    # Strip full URL if user pasted URL instead of just ID
+    # e.g. https://drive.google.com/drive/folders/1QQhYIl...?usp=sharing -> 1QQhYIl...
+    if "folders/" in raw:
+        raw = raw.split("folders/")[-1].split("?")[0].split("/")[0].strip()
+    if "?usp=" in raw:
+        raw = raw.split("?usp=")[0].strip()
+    return raw or None
 
 
 def _get_or_create_file(filename, folder_id=None):

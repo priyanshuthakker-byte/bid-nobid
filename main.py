@@ -376,11 +376,13 @@ async def dashboard():
                     cat_map[c] = []
                 cat_map[c].append({
                     "name": proj.get("name", ""),
-                    "value": proj.get("value_lakhs", 0) / 100,
-                    "status": proj.get("status", ""),
+                    "value": (float(proj.get("value_lakhs") or proj.get("wo_value_lakhs") or 0)) / 100,
+                    "status": proj.get("status", proj.get("outcome", "")),
                     "wo_no": proj.get("wo_no", ""),
                     "loi": proj.get("loi_received", ""),
                     "cc": proj.get("completion_cert", ""),
+                    "client": proj.get("client", ""),
+                    "state": proj.get("state", ""),
                 })
 
     stats = {
