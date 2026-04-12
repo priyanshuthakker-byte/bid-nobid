@@ -1,21 +1,25 @@
-import json
+"""
+Excel Processor v3 - Reads T247 Excel and classifies tenders
+FIXED: Added invalidate_rules_cache() so profile saves take effect immediately
+FIXED: Added 'bid' key handling in classify_tender
+"""
+
+import re, json
 from pathlib import Path
 from typing import List, Dict
 from datetime import datetime, date
 
 PROFILE_PATH = Path(__file__).parent / "nascent_profile.json"
 
-# ── Rules cache — loaded ONCE per process, not per tender row ──
+# Cache for bid rules — invalidated when profile is saved
 _rules_cache = None
 
-def load_rules() -> dict:
-    """
-    Load bid rules from nascent_profile.json ONLY.
-    Google Sheets fetch removed — was causing 429 quota errors
-    (called once per tender row = 800+ API calls per import).
-    Rules are managed via Settings → Bid Rules in the app UI,
-    which saves to nascent_profile.json and syncs to Drive.
-    """
+def invalidate_rules_cache():
+    """Call this after saving nascent_profile.json to force fresh rule load."""
+    global _rules_cache
+    _rules_cache = None
+
+def load_rules() -> Dict:
     global _rules_cache
     if _rules_cache is not None:
         return _rules_cache
@@ -24,237 +28,221 @@ def load_rules() -> dict:
         _rules_cache = p.get("bid_rules", {})
         return _rules_cache
     except Exception:
-        _rules_cache = {}
-        return _rules_cache
-
-
-def invalidate_rules_cache():
-    """Call this after saving new rules so classify_tender picks them up."""
-    global _rules_cache
-    _rules_cache = None
-
+        return {}
 
 def classify_tender(brief: str, estimated_cost: float,
-                    eligibility: str = "", checklist: str = "") -> Dict:
-    """
-    Classify tender as BID / NO-BID / CONDITIONAL / REVIEW.
-    DO NOT BID rules always win — cannot be overridden by preferred sectors.
-    """
+                    eligibility: str, checklist: str) -> Dict:
     rules = load_rules()
 
     dnb_keywords = [k.lower().strip() for k in rules.get("do_not_bid", [])]
-    dnb_remarks  = {k.lower(): v for k, v in rules.get("do_not_bid_remarks", {}).items()}
-    cond_kw      = [k.lower().strip() for k in rules.get("conditional", [])]
-    bid_kw       = [k.lower().strip() for k in rules.get("bid", [])]
-    pref_kw      = [k.lower().strip() for k in rules.get("preferred_sectors", [])]
-    min_val_cr   = float(rules.get("min_project_value_cr", 0.5))
-    max_val_cr   = float(rules.get("max_project_value_cr", 150))
+    dnb_remarks = {k.lower(): v for k, v in rules.get("do_not_bid_remarks", {}).items()}
+    cond_keywords = [k.lower().strip() for k in rules.get("conditional", [])]
+    pref_keywords = [k.lower().strip() for k in rules.get("preferred_sectors", [])]
+    bid_keywords = [k.lower().strip() for k in rules.get("bid", [])]  # FIXED: explicit BID list
+    min_val = rules.get("min_project_value_cr", 0.25)
+    max_val = rules.get("max_project_value_cr", 100)
 
-    brief_lower  = str(brief or "").lower().strip()
-    full_text    = " ".join([str(brief or ""), str(eligibility or ""), str(checklist or "")]).lower()
+    brief_lower = str(brief or "").lower().strip()
+    full_text = " ".join([str(brief or ""), str(eligibility or ""), str(checklist or "")]).lower()
 
-    # Step 1: Value too low
-    cost_cr = estimated_cost / 1_00_00_000 if estimated_cost and estimated_cost > 1000 else (estimated_cost or 0)
-    if cost_cr and 0 < cost_cr < min_val_cr:
-        return {"verdict": "NO-BID", "verdict_color": "RED",
-                "reason": f"Value ₹{cost_cr:.2f} Cr — below Nascent minimum ₹{min_val_cr} Cr."}
-
-    # Step 2: Value too high
-    if cost_cr and cost_cr > max_val_cr:
-        return {"verdict": "CONDITIONAL", "verdict_color": "AMBER",
-                "reason": f"Value ₹{cost_cr:.1f} Cr — exceeds ₹{max_val_cr} Cr. Verify turnover PQ and consider consortium."}
-
-    # Step 3: NO-BID rules — HARD BLOCK, checked before preferred sectors
+    # Rule 1: DO NOT BID
     for kw in dnb_keywords:
-        if kw and kw in brief_lower:
-            remark = dnb_remarks.get(kw, f"Matches NO-BID rule: '{kw}'.")
+        if kw in brief_lower:
+            if any(pk in brief_lower for pk in pref_keywords):
+                continue
+            remark = dnb_remarks.get(kw, "")
+            for dk, dr in dnb_remarks.items():
+                if dk in brief_lower:
+                    remark = dr
+                    break
+            if not remark:
+                remark = f"Matches NO-BID rule: '{kw}' — not Nascent's service domain."
             return {"verdict": "NO-BID", "verdict_color": "RED", "reason": remark}
 
-    # Step 4: CONDITIONAL rules
-    for kw in cond_kw:
-        if kw and kw in full_text:
+    # Rule 2: Value too low
+    if estimated_cost and 0 < estimated_cost < (min_val * 1_00_00_000):
+        return {"verdict": "NO-BID", "verdict_color": "RED",
+                "reason": f"Project value below Nascent minimum threshold of Rs. {min_val} Cr."}
+
+    # Rule 3: Value too high
+    if estimated_cost and estimated_cost > (max_val * 1_00_00_000):
+        return {"verdict": "CONDITIONAL", "verdict_color": "AMBER",
+                "reason": f"Project value exceeds Rs. {max_val} Cr. Verify turnover eligibility. Raise pre-bid query for MSME relaxation."}
+
+    # Rule 4: CONDITIONAL triggers
+    for kw in cond_keywords:
+        if kw in full_text:
             return {"verdict": "CONDITIONAL", "verdict_color": "AMBER",
-                    "reason": f"Conditional trigger: '{kw}' — verify eligibility before deciding."}
+                    "reason": f"Conditional trigger: '{kw}' — verify eligibility and raise pre-bid query."}
 
-    # Step 5: BID rules (explicit capability match)
-    for kw in bid_kw:
-        if kw and kw in full_text:
+    # Rule 5: Explicit BID keywords (FIXED — was dead because 'bid' key missing)
+    if bid_keywords:
+        matched_bid = [kw for kw in bid_keywords if kw in full_text]
+        if matched_bid:
             return {"verdict": "BID", "verdict_color": "GREEN",
-                    "reason": f"Matches Nascent core capability: '{kw}'."}
+                    "reason": f"Explicit BID match: {', '.join(matched_bid[:3])}."}
 
-    # Step 6: Preferred sectors
-    matched = [kw for kw in pref_kw if kw and kw in full_text]
+    # Rule 6: Preferred sectors → BID
+    matched = [kw for kw in pref_keywords if kw in full_text]
     if matched:
         return {"verdict": "BID", "verdict_color": "GREEN",
                 "reason": f"Matches Nascent preferred sector: {', '.join(matched[:3])}."}
 
-    # Step 7: Default → REVIEW
-    return {"verdict": "REVIEW", "verdict_color": "BLUE",
-            "reason": "Needs manual review — no strong match found."}
+    # Rule 7: Corrigendum → REVIEW
+    if "corrigendum" in brief_lower or "addendum" in brief_lower:
+        return {"verdict": "REVIEW", "verdict_color": "BLUE",
+                "reason": "Corrigendum/Addendum — check original tender first."}
 
+    # Rule 8: Default
+    return {"verdict": "REVIEW", "verdict_color": "BLUE",
+            "reason": "Requires manual review — insufficient data to auto-classify."}
 
 def days_left(deadline_str: str) -> int:
     if not deadline_str:
         return 999
-    s = str(deadline_str).strip()
-    for fmt in ["%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d", "%d %b %Y",
-                "%d-%m-%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S"]:
+    for fmt in ["%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d", "%d %b %Y"]:
         try:
-            d = datetime.strptime(s[:10], fmt[:8]).date()
+            d = datetime.strptime(str(deadline_str).split()[0], fmt).date()
             return (d - date.today()).days
         except Exception:
             continue
     return 999
 
-
 def deadline_status(dl: int) -> str:
-    if dl < 0:   return "EXPIRED"
-    if dl == 0:  return "TODAY"
-    if dl <= 3:  return "URGENT"
-    if dl <= 7:  return "THIS_WEEK"
+    if dl < 0: return "EXPIRED"
+    if dl == 0: return "TODAY"
+    if dl <= 3: return "URGENT"
+    if dl <= 7: return "THIS_WEEK"
     if dl <= 14: return "SOON"
     return "OK"
 
-
 def process_excel(filepath: str) -> List[Dict]:
-    """
-    Read T247 Excel export (Non-GeM and GeM sheets) and return
-    list of classified tenders with ALL required fields.
-    """
     import openpyxl
     wb = openpyxl.load_workbook(filepath, data_only=True)
     all_tenders = []
 
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
-        is_gem = "gem" in sheet_name.lower()
+        is_gem = sheet_name.lower().strip() == "gem tenders" or sheet_name.lower().startswith("gem")
 
-        # Read headers from row 1
-        raw_headers = [str(cell.value or "").strip() for cell in ws[1]]
-        headers = [h.lower() for h in raw_headers]
+        headers = [str(cell.value or "").strip().lower() for cell in ws[1]]
 
         def col(*names):
-            """Find column index by partial name match."""
             for name in names:
-                nl = name.lower()
                 for i, h in enumerate(headers):
-                    if nl in h:
+                    if name in h:
                         return i
             return None
 
-        # Map all T247 columns
         idx = {
-            "t247_id":        col("t247 id", "t247id"),
-            "ref_no":         col("reference no", "ref no", "reference number"),
-            "brief":          col("tender brief", "description", "title"),
-            "value":          col("estimated cost", "value"),
-            "deadline":       col("deadline", "bid submission", "closing date", "last date"),
-            "location":       col("location"),
-            "org_name":       col("organization", "organisation", "dept", "department"),
-            "doc_fee":        col("document fees", "doc fee", "tender fee"),
-            "emd":            col("emd"),
-            "msme":           col("msme exemption", "msme"),
-            "startup":        col("startup exemption", "startup"),
-            "quantity":       col("quantity"),
-            "checklist":      col("checklist"),
-            "eligibility":    col("eligibility", "qualification"),
-            # GeM-specific
-            "ministry":       col("ministry", "state name"),
-            "dept_name":      col("department name"),
-            "turnover_req":   col("minimum average annual", "turnover of the bidder"),
-            "exp_req":        col("years of past experience"),
-            "eval_method":    col("evaluation method"),
-            "contract_period":col("contract period"),
-            "bid_type":       col("type of bid"),
-            "similar_cat":    col("similar category"),
+            "t247_id": col("t247 id", "t247id"),
+            "ref_no": col("reference no", "ref no", "reference"),
+            "brief": col("tender brief", "brief", "description", "title"),
+            "cost": col("estimated cost", "cost", "value"),
+            "deadline": col("deadline", "last date", "submission date"),
+            "location": col("location", "state", "city"),
+            "org": col("organization", "organisation", "dept", "department"),
+            "doc_fee": col("document fee", "doc fee", "tender fee", "processing fee"),
+            "emd": col("emd", "earnest"),
+            "msme": col("msme exemption", "msme"),
+            "startup": col("startup exemption", "startup"),
+            "quantity": col("quantity"),
+            "eligibility": col("eligibility criteria", "eligibility"),
+            "checklist": col("checklist"),
+            "bid_opening": col("bid opening date", "opening date"),
+            "bid_validity": col("bid offer validity", "validity"),
+            "ministry": col("ministry", "ministry/state"),
+            "department": col("department name"),
+            "office": col("office name"),
+            "turnover_req": col("minimum average annual turnover", "turnover of the bidder"),
+            "exp_years": col("years of past experience", "past experience required"),
+            "contract_period": col("contract period"),
+            "similar_cat": col("similar category"),
+            "eval_method": col("evaluation method"),
+            "pbg_pct": col("epbg percentage", "pbg percentage"),
+            "mse_pref": col("mse purchase preference"),
+            "type_of_bid": col("type of bid"),
         }
 
-        def cell(row, key):
-            """Safely get cell value by column key."""
-            i = idx.get(key)
-            if i is None or i >= len(row):
-                return ""
-            v = row[i]
-            return "" if v is None else str(v).strip()
-
         for row in ws.iter_rows(min_row=2, values_only=True):
-            # Skip completely empty rows
-            if not any(row):
+            t247_id = row[idx["t247_id"]] if idx["t247_id"] is not None else None
+            if not t247_id:
                 continue
 
-            t247_id  = cell(row, "t247_id")
-            brief    = cell(row, "brief")
+            def cell(key):
+                i = idx.get(key)
+                return row[i] if i is not None and i < len(row) else ""
 
-            # Must have either T247 ID or brief to be useful
-            if not t247_id and not brief:
-                continue
+            def cs(key): return str(cell(key) or "").strip()
 
-            # Parse numeric values
+            brief = cs("brief")
+            cost_raw = cell("cost")
+            deadline = cs("deadline")
+            org = cs("org")
+            location = cs("location")
+            emd = cs("emd")
+            doc_fee = cs("doc_fee")
+            msme = cs("msme")
+            ref_no = cs("ref_no")
+            elig = cs("eligibility")
+            chklist = cs("checklist")
+
             try:
-                value = float(cell(row, "value") or 0)
-            except (ValueError, TypeError):
-                value = 0.0
-            try:
-                emd = float(cell(row, "emd") or 0)
-            except (ValueError, TypeError):
-                emd = 0.0
-            try:
-                doc_fee = float(cell(row, "doc_fee") or 0)
-            except (ValueError, TypeError):
-                doc_fee = 0.0
+                cost = float(str(cost_raw).replace(",", "")) if cost_raw else 0
+            except Exception:
+                cost = 0
 
-            deadline = cell(row, "deadline")
-            dl_days  = days_left(deadline)
-            dl_status = deadline_status(dl_days)
+            classification = classify_tender(brief, cost, elig, chklist)
+            dl = days_left(deadline)
+            cost_cr = round(cost / 1_00_00_000, 2) if cost else 0
 
-            eligibility = cell(row, "eligibility")
-            checklist   = cell(row, "checklist")
+            tender = {
+                "t247_id": str(t247_id),
+                "ref_no": ref_no,
+                "brief": brief[:200],
+                "org_name": org,
+                "location": location,
+                "estimated_cost_raw": cost,
+                "estimated_cost_cr": cost_cr,
+                "deadline": deadline,
+                "days_left": dl,
+                "deadline_status": deadline_status(dl),
+                "doc_fee": doc_fee,
+                "emd": emd,
+                "msme_exemption": msme,
+                "startup_exemption": cs("startup"),
+                "quantity": cs("quantity"),
+                "eligibility": elig[:1000],
+                "checklist": chklist[:1000],
+                "is_gem": is_gem,
+                "verdict": classification["verdict"],
+                "verdict_color": classification["verdict_color"],
+                "reason": classification["reason"],
+                "bid_no_bid_done": False,
+                "status": "Identified",
+                "imported_at": datetime.now().isoformat(),
+            }
 
-            # Auto-classify
-            verdict = classify_tender(brief, value, eligibility, checklist)
+            if is_gem:
+                tender.update({
+                    "bid_opening_date": cs("bid_opening"),
+                    "bid_validity": cs("bid_validity"),
+                    "ministry": cs("ministry"),
+                    "department": cs("department"),
+                    "office": cs("office"),
+                    "turnover_required": cs("turnover_req"),
+                    "experience_years": cs("exp_years"),
+                    "contract_period": cs("contract_period"),
+                    "similar_category": cs("similar_cat"),
+                    "evaluation_method": cs("eval_method"),
+                    "pbg_percentage": cs("pbg_pct"),
+                    "mse_preference": cs("mse_pref"),
+                    "type_of_bid": cs("type_of_bid"),
+                })
 
-            # Cost in Cr for display
-            cost_cr = ""
-            if value > 0:
-                if value >= 1e7:
-                    cost_cr = f"{value/1e7:.2f}"
-                elif value >= 1e5:
-                    cost_cr = f"{value/1e5:.1f}L"
-                else:
-                    cost_cr = str(round(value))
-
-            all_tenders.append({
-                "t247_id":              t247_id,
-                "ref_no":               cell(row, "ref_no"),
-                "brief":                brief[:400] if brief else "",
-                "org_name":             cell(row, "org_name")[:120],
-                "location":             cell(row, "location")[:80],
-                "estimated_cost_raw":   value,
-                "estimated_cost_cr":    cost_cr,
-                "deadline":             deadline,
-                "days_left":            dl_days,
-                "deadline_status":      dl_status,
-                "doc_fee":              doc_fee,
-                "emd":                  emd,
-                "msme_exemption":       cell(row, "msme"),
-                "eligibility":          eligibility[:500],
-                "checklist":            checklist[:1000],
-                "is_gem":               is_gem,
-                "quantity":             cell(row, "quantity"),
-                # GeM fields
-                "ministry":             cell(row, "ministry"),
-                "dept_name":            cell(row, "dept_name"),
-                "turnover_req":         cell(row, "turnover_req"),
-                "exp_req":              cell(row, "exp_req"),
-                "eval_method":          cell(row, "eval_method"),
-                "contract_period":      cell(row, "contract_period"),
-                "bid_type":             cell(row, "bid_type"),
-                "similar_cat":          cell(row, "similar_cat"),
-                # Classification
-                "verdict":              verdict["verdict"],
-                "verdict_color":        verdict.get("verdict_color", ""),
-                "reason":               verdict.get("reason", ""),
-                "tags":                 [],
-            })
+            all_tenders.append(tender)
 
     return all_tenders
+
+def quick_classify(brief: str, cost: float = 0, eligibility: str = "") -> Dict:
+    return classify_tender(brief, cost, eligibility, "")
