@@ -59,6 +59,7 @@ _db_lock = threading.Lock()
 
 # ── FIX 3: Admin token for sensitive endpoints ───────────────────────────────
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
+BUILD_VERSION = "6.2-go-live-20260414-3"
 
 def check_admin(request: Request):
     """Raises 403 if ADMIN_TOKEN env var is set and request doesn't provide it."""
@@ -134,7 +135,21 @@ def load_db() -> dict:
                 pass
         return {"tenders": {}}
 
+def _field_value(v):
+    """Normalize structured AI field {value, clause_ref, page_no} to plain string."""
+    if isinstance(v, dict):
+        return str(v.get("value", "—") or "—")
+    if v is None:
+        return "—"
+    return str(v)
+
+def ensure_db_file():
+    OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
+    if not DB_FILE.exists():
+        DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
+
 def save_db(db: dict):
+    ensure_db_file()
     with _db_lock:
         DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
@@ -198,6 +213,7 @@ async def health():
     return {
         "status": "ok",
         "version": "6.2",
+        "build_version": BUILD_VERSION,
         "ai_configured": bool(ai_keys),
         "ai_keys_count": len(ai_keys),
         "drive_sync": drive_available(),
@@ -205,6 +221,10 @@ async def health():
         "boq_available": BOQ_AVAILABLE,
         "drive_warning": not drive_available(),
     }
+
+@app.get("/build-info")
+async def build_info():
+    return {"build_version": BUILD_VERSION, "service": "bid-nobid", "version": "6.2"}
 
 @app.get("/api-quota-status")
 async def api_quota_status():
@@ -615,7 +635,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
         generator = BidDocGenerator()
-        safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
+        safe_no = re.sub(r'[^\w\-]', '_', _field_value(tender_data.get("tender_no", "Report")))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
         generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
 
@@ -623,12 +643,12 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             db_record = get_tender(t247_id)
             db_record.update({
                 "t247_id": t247_id,
-                "tender_no": tender_data.get("tender_no"),
-                "org_name": tender_data.get("org_name"),
-                "tender_name": tender_data.get("tender_name"),
-                "bid_submission_date": tender_data.get("bid_submission_date"),
-                "emd": tender_data.get("emd"),
-                "estimated_cost": tender_data.get("estimated_cost"),
+                "tender_no": _field_value(tender_data.get("tender_no")),
+                "org_name": _field_value(tender_data.get("org_name")),
+                "tender_name": _field_value(tender_data.get("tender_name")),
+                "bid_submission_date": _field_value(tender_data.get("bid_submission_date")),
+                "emd": _field_value(tender_data.get("emd")),
+                "estimated_cost": _field_value(tender_data.get("estimated_cost")),
                 "verdict": tender_data.get("overall_verdict", {}).get("verdict", ""),
                 "verdict_color": tender_data.get("overall_verdict", {}).get("color", ""),
                 "bid_no_bid_done": True,
@@ -869,6 +889,10 @@ async def get_pipeline():
 async def get_win_loss():
     return get_win_loss_stats()
 
+@app.get("/analytics/win-loss")
+async def get_win_loss_alias():
+    return await get_win_loss()
+
 @app.post("/tender/{t247_id}/stage")
 async def update_stage(t247_id: str, data: dict = Body(...)):
     db = load_db()
@@ -932,6 +956,11 @@ async def get_skipped():
     db = load_db()
     return {"skipped": [t for t in db["tenders"].values() if t.get("status") == "Not Interested"]}
 
+@app.get("/skipped-tenders")
+async def get_skipped_alias():
+    db = load_db()
+    return {"tenders": [t for t in db["tenders"].values() if t.get("status") == "Not Interested"]}
+
 # ══ DRIVE (admin-guarded) ════════════════════════════════════════════════════
 @app.post("/sync-drive")
 async def sync_drive(request: Request):
@@ -939,7 +968,9 @@ async def sync_drive(request: Request):
     if not drive_available():
         return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
     try:
+        ensure_db_file()
         db = load_db()
+        DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
         ok = save_to_drive(DB_FILE)
         if ok:
             return {"status": "ok", "message": f"Synced {len(db.get('tenders', {}))} tenders to Drive"}
@@ -953,11 +984,16 @@ async def sync_sheets(request: Request):
 
 @app.get("/drive-status")
 async def drive_status():
+    ensure_db_file()
     db = load_db()
     return {"drive_connected": drive_available(),
             "tenders_in_memory": len(db.get("tenders", {})),
             "db_file_exists": DB_FILE.exists(),
             "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0}
+
+@app.get("/letterhead/status")
+async def letterhead_status():
+    return {"status": "not_configured", "message": "Letterhead template upload not configured in this build"}
 
 @app.post("/upload-db")
 async def upload_db(request: Request, file: UploadFile = File(...)):

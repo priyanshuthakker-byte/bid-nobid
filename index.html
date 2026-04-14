@@ -494,6 +494,15 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
       </div>
     </div>
     <div class="card">
+      <div class="card-title">Admin Security Token</div>
+      <p style="font-size:12px;color:#555;margin-bottom:8px">
+        Required only if server has <code>ADMIN_TOKEN</code> set on Render.
+      </p>
+      <label>Admin Token</label><input type="password" id="admin-token" placeholder="Enter X-Admin-Token value">
+      <button class="btn btn-primary" onclick="saveAdminToken()" style="margin-top:10px;width:auto">Save Token in Browser</button>
+      <button class="btn btn-ghost" onclick="clearAdminToken()" style="margin-top:10px;width:auto">Clear Token</button>
+    </div>
+    <div class="card">
       <div class="card-title">System Info</div>
       <div style="font-size:12px;color:#666;display:flex;gap:20px;flex-wrap:wrap">
         <span>Version: <b style="color:#fff">7.0</b></span>
@@ -687,6 +696,37 @@ function showLoading(msg) {
 
 function hideLoading() {
   document.getElementById('loading-overlay').classList.remove('show');
+}
+
+function getAdminToken() {
+  var v = localStorage.getItem('adminToken') || '';
+  if (!v) {
+    var el = document.getElementById('admin-token');
+    if (el && el.value) v = el.value.trim();
+  }
+  return v;
+}
+
+function withAdminHeaders(base) {
+  var h = base || {};
+  var tok = getAdminToken();
+  if (tok) h['X-Admin-Token'] = tok;
+  return h;
+}
+
+function saveAdminToken() {
+  var el = document.getElementById('admin-token');
+  var v = (el && el.value || '').trim();
+  if (!v) { toast('Enter token first', 'info'); return; }
+  localStorage.setItem('adminToken', v);
+  toast('Admin token saved in browser', 'success');
+}
+
+function clearAdminToken() {
+  localStorage.removeItem('adminToken');
+  var el = document.getElementById('admin-token');
+  if (el) el.value = '';
+  toast('Admin token cleared', 'info');
 }
 
 function getVerdict(t) {
@@ -947,12 +987,15 @@ async function checkDriveStatus() {
 
 async function loadSettings() {
   try {
-    var r = await fetch('/config'); var d = await r.json();
+    var r = await fetch('/config', {headers: withAdminHeaders()}); var d = await r.json();
     if(d.gemini_api_key)   document.getElementById('key1').value=d.gemini_api_key;
     if(d.gemini_api_key_2) document.getElementById('key2').value=d.gemini_api_key_2;
     if(d.gemini_api_key_3) document.getElementById('key3').value=d.gemini_api_key_3;
     if(d.gemini_api_key_4) document.getElementById('key4').value=d.gemini_api_key_4;
     if(d.t247_username)    document.getElementById('t247u').value=d.t247_username;
+    var at = localStorage.getItem('adminToken') || '';
+    var el = document.getElementById('admin-token');
+    if (el && at) el.value = at;
   } catch(e) {}
 }
 
@@ -987,7 +1030,7 @@ async function importExcel(input) {
 async function syncDrive() {
   showLoading('Syncing with Google Drive...');
   try {
-    var r = await fetch('/sync-drive', {method:'POST'}); var d = await r.json();
+    var r = await fetch('/sync-drive', {method:'POST', headers: withAdminHeaders()}); var d = await r.json();
     hideLoading(); toast(d.message||'Synced successfully', 'success'); loadDashboard();
   } catch(e) { hideLoading(); toast('Sync failed: '+e.message, 'error'); }
 }
@@ -1002,12 +1045,12 @@ async function saveKeys() {
     gemini_api_key_2:document.getElementById('key2').value,
     gemini_api_key_3:document.getElementById('key3').value,
     gemini_api_key_4:document.getElementById('key4').value};
-  try { await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Keys saved','success'); } catch(e){toast('Failed','error');}
+  try { await fetch('/config',{method:'POST',headers:withAdminHeaders({'Content-Type':'application/json'}),body:JSON.stringify(body)}); toast('Keys saved','success'); } catch(e){toast('Failed','error');}
 }
 
 async function saveT247() {
   var body = {t247_username:document.getElementById('t247u').value, t247_password:document.getElementById('t247p').value};
-  try { await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('T247 credentials saved','success'); } catch(e){toast('Failed','error');}
+  try { await fetch('/config',{method:'POST',headers:withAdminHeaders({'Content-Type':'application/json'}),body:JSON.stringify(body)}); toast('T247 credentials saved','success'); } catch(e){toast('Failed','error');}
 }
 
 async function testAI() {
