@@ -215,6 +215,7 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
     <div class="topbar-actions">
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Import Excel</button>
       <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+      <button class="btn btn-ghost btn-sm" onclick="syncExcelLatest()">🔄 Sync Latest Excel</button>
       <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export</button>
       <button class="btn btn-ghost btn-sm" onclick="reclassifyAll()">↺ Reclassify All</button>
@@ -339,6 +340,26 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
         </div>
       </div>
       <div id="docs-list"></div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">AI Draft Preview / Edit / Chat Assist</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <select id="draft-doc-type" style="max-width:220px">
+            <option value="analysis">Tender Analysis</option>
+            <option value="prebid_letter">Pre-Bid Letter</option>
+            <option value="technical_proposal">Technical Proposal</option>
+            <option value="submission_note">Submission Note</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadDraft()">Preview</button>
+          <button class="btn btn-primary btn-sm" onclick="generateDraft()">Generate Fresh</button>
+          <button class="btn btn-success btn-sm" onclick="saveDraft()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadDraft()">⬇ Download Local</button>
+        </div>
+        <textarea id="draft-editor" placeholder="Select tender and click Generate/Preview..." style="width:100%;min-height:240px;background:#0f1117;color:#ddd;border:1px solid #252830;border-radius:8px;padding:10px;font-size:12px;line-height:1.5"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <input id="draft-chat-instruction" type="text" placeholder="Ask AI to edit this draft, e.g. make this more formal and concise..." style="flex:1;background:#0f1117;color:#ddd;border:1px solid #252830;border-radius:8px;padding:8px 10px;font-size:12px">
+          <button class="btn btn-primary btn-sm" onclick="chatEditDraft()">🤖 Chat Edit</button>
+        </div>
+      </div>
     </div>
     <div id="docs-tab-technical" class="tab-panel">
       <div class="card">
@@ -573,7 +594,13 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
     <div id="profile-tab-certs" class="tab-panel"><div class="card" id="profile-certs-form"><div class="empty-state">Loading...</div></div></div>
     <div id="profile-tab-projects" class="tab-panel">
       <div class="card">
-        <div class="card-title">Past Projects <button class="btn btn-ghost btn-sm" onclick="addProjectRow()">+ Add Project</button></div>
+        <div class="card-title">Past Projects 
+          <button class="btn btn-ghost btn-sm" onclick="addProjectTab()">+ Add Tab</button>
+          <button class="btn btn-ghost btn-sm" onclick="renameProjectTab()">✎ Rename Tab</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteProjectTab()">🗑 Delete Tab</button>
+          <button class="btn btn-ghost btn-sm" onclick="addProjectRow()">+ Add Project</button>
+        </div>
+        <div id="projects-tab-row" class="tab-row" style="margin-bottom:10px"></div>
         <div style="overflow-x:auto"><table id="projects-table">
           <thead><tr><th>Client</th><th>Project Name</th><th>Value (Cr)</th><th>Status</th><th>Domain</th><th>Mobile GIS</th><th>Central Server</th><th></th></tr></thead>
           <tbody id="projects-tbody"></tbody>
@@ -995,6 +1022,22 @@ async function importExcel(input) {
   input.value = '';
 }
 
+async function syncExcelLatest() {
+  showLoading('Syncing latest imported Excel...');
+  try {
+    var r = await fetch('/sync-excel-latest', {method:'POST'});
+    var d = await r.json();
+    hideLoading();
+    if (!r.ok) { throw new Error(d.detail || d.message || 'Sync failed'); }
+    toast('Excel sync updated · '+(d.added||0)+' new · '+(d.updated||0)+' updated', 'success');
+    await loadDashboard();
+    renderTenders();
+  } catch(e) {
+    hideLoading();
+    toast('Excel sync failed: '+e.message, 'error');
+  }
+}
+
 async function syncDrive() {
   showLoading('Syncing with Google Drive...');
   try {
@@ -1229,6 +1272,7 @@ async function loadChecklist() {
     }
     html2 += '</div>';
     el.innerHTML = html2;
+    loadDraft();
   } catch(e) { el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>'; }
 }
 
@@ -1329,6 +1373,65 @@ async function mergePDF() {
     document.getElementById('merge-result').innerHTML = d.download_url?'<a href="'+d.download_url+'" download><button class="btn btn-success">⬇ Download Merged PDF</button></a>':'<span style="color:#22c55e">✅ Merged: '+d.filename+'</span>';
     toast('PDF merged successfully','success');
   } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+function currentDocType(){var el=document.getElementById('draft-doc-type');return el?el.value:'analysis';}
+function currentDraftText(){var el=document.getElementById('draft-editor');return el?el.value:'';}
+function setDraftText(v){var el=document.getElementById('draft-editor');if(el)el.value=v||'';}
+
+async function loadDraft() {
+  var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  try {
+    var r = await fetch('/tender/'+tid+'/draft?doc_type='+encodeURIComponent(currentDocType()));
+    var d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'Load failed');
+    setDraftText(d.content||'');
+    toast('Draft loaded','success');
+  } catch(e){toast('Load failed: '+e.message,'error');}
+}
+
+async function generateDraft() {
+  var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  showLoading('Generating draft...');
+  try {
+    var r = await fetch('/tender/'+tid+'/draft/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doc_type:currentDocType()})});
+    var d = await r.json();
+    hideLoading();
+    if(!r.ok) throw new Error(d.detail||'Generate failed');
+    setDraftText(d.content||'');
+    toast('Draft generated','success');
+  } catch(e){hideLoading();toast('Generate failed: '+e.message,'error');}
+}
+
+async function saveDraft() {
+  var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  try {
+    var r = await fetch('/tender/'+tid+'/draft/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doc_type:currentDocType(),content:currentDraftText()})});
+    var d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'Save failed');
+    toast('Draft saved','success');
+  } catch(e){toast('Save failed: '+e.message,'error');}
+}
+
+async function chatEditDraft() {
+  var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  var instruction = (document.getElementById('draft-chat-instruction').value||'').trim();
+  if(!instruction){toast('Enter edit instruction','info');return;}
+  showLoading('AI editing draft...');
+  try {
+    var r = await fetch('/tender/'+tid+'/draft/chat-edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doc_type:currentDocType(),content:currentDraftText(),instruction:instruction})});
+    var d = await r.json();
+    hideLoading();
+    if(!r.ok) throw new Error(d.detail||'AI edit failed');
+    setDraftText(d.content||'');
+    document.getElementById('draft-chat-instruction').value = '';
+    toast('Draft updated by AI','success');
+  } catch(e){hideLoading();toast('Chat edit failed: '+e.message,'error');}
+}
+
+function downloadDraft() {
+  var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  window.open('/tender/'+tid+'/draft/download?doc_type='+encodeURIComponent(currentDocType()), '_blank');
 }
 
 // LETTERHEAD
@@ -1509,7 +1612,7 @@ async function init() {
 
 
 // ═══ NEW FEATURES: BOQ, PROFILE, DIAGNOSE ═══
-var boqItems=[],boqConst={categories:[],unit_types:[],manpower_roles:[]},profileData={};
+var boqItems=[],boqConst={categories:[],unit_types:[],manpower_roles:[]},profileData={},currentProjectTabIdx=0;
 
 
 async function loadBOQConst(){try{var r=await fetch('/boq/constants');boqConst=await r.json();}catch(e){}}
@@ -1675,7 +1778,17 @@ function renderProfileAll(){
 }
 
 function renderProjectsTable(){
-  var projects=profileData.projects||[];
+  var tabs=profileData.project_tabs||[{name:'General',projects:(profileData.projects||[])}];
+  if(!tabs.length) tabs=[{name:'General',projects:[]}];
+  if(currentProjectTabIdx>=tabs.length) currentProjectTabIdx=0;
+  profileData.project_tabs=tabs;
+  var tabRow=document.getElementById('projects-tab-row');
+  if(tabRow){
+    tabRow.innerHTML=tabs.map(function(t,i){
+      return '<div class="tab'+(i===currentProjectTabIdx?' active':'')+'" onclick="switchProjectTab('+i+')">'+(t.name||('Tab '+(i+1)))+'</div>';
+    }).join('');
+  }
+  var projects=tabs[currentProjectTabIdx].projects||[];
   document.getElementById('projects-tbody').innerHTML=projects.map((p,i)=>
     '<tr><td><input type="text" value="'+(p.client||'')+'" data-pidx="'+i+'" data-pkey="client" onchange="pProject(this)" style="width:100%"></td>'+
     '<td><input type="text" value="'+(p.name||'')+'" data-pidx="'+i+'" data-pkey="name" onchange="pProject(this)" style="width:100%"></td>'+
@@ -1688,13 +1801,19 @@ function renderProjectsTable(){
   ).join('');
 }
 
-function pProject(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getAttribute('data-pkey');if(!profileData.projects[i])profileData.projects[i]={};profileData.projects[i][k]=el.value;}
+function activeProjects(){if(!profileData.project_tabs||!profileData.project_tabs.length)profileData.project_tabs=[{name:'General',projects:[]}];if(!profileData.project_tabs[currentProjectTabIdx])currentProjectTabIdx=0;return profileData.project_tabs[currentProjectTabIdx].projects;}
+function switchProjectTab(i){currentProjectTabIdx=i;renderProjectsTable();}
+function addProjectTab(){if(!profileData.project_tabs)profileData.project_tabs=[{name:'General',projects:[]}];var name=prompt('New tab name?','New Tab');if(!name)return;profileData.project_tabs.push({name:name,projects:[]});currentProjectTabIdx=profileData.project_tabs.length-1;renderProjectsTable();}
+function renameProjectTab(){if(!profileData.project_tabs||!profileData.project_tabs.length)return;var t=profileData.project_tabs[currentProjectTabIdx]||{};var name=prompt('Rename tab',t.name||'General');if(!name)return;t.name=name;renderProjectsTable();}
+function deleteProjectTab(){if(!profileData.project_tabs||profileData.project_tabs.length<=1){toast('Keep at least one tab','info');return;}if(!confirm('Delete this tab and all its projects?'))return;profileData.project_tabs.splice(currentProjectTabIdx,1);if(currentProjectTabIdx>=profileData.project_tabs.length)currentProjectTabIdx=profileData.project_tabs.length-1;renderProjectsTable();}
 
-function pProjectBool(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getAttribute('data-pkey');if(!profileData.projects[i])profileData.projects[i]={};profileData.projects[i][k]=el.checked;}
+function pProject(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getAttribute('data-pkey');var arr=activeProjects();if(!arr[i])arr[i]={};arr[i][k]=el.value;}
 
-function addProjectRow(){if(!profileData.projects)profileData.projects=[];profileData.projects.push({client:'New Client',name:'Project Name',value_cr:0,status:'Completed',domain:'',mobile_gis:false,central_server:false,tags:[]});renderProjectsTable();}
+function pProjectBool(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getAttribute('data-pkey');var arr=activeProjects();if(!arr[i])arr[i]={};arr[i][k]=el.checked;}
 
-function delProject(i){if(!confirm('Delete this project?'))return;profileData.projects.splice(i,1);renderProjectsTable();}
+function addProjectRow(){var arr=activeProjects();arr.push({client:'New Client',name:'Project Name',value_cr:0,status:'Completed',domain:'',mobile_gis:false,central_server:false,tags:[]});renderProjectsTable();}
+
+function delProject(i){if(!confirm('Delete this project?'))return;activeProjects().splice(i,1);renderProjectsTable();}
 
 async function saveProfile(){
   try{var r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileData)});var d=await r.json();toast('Profile saved','success');}

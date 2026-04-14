@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
-from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys
+from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
@@ -69,6 +69,9 @@ TEMP_DIR = BASE_DIR / "temp"
 OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 TEMP_DIR.mkdir(exist_ok=True, parents=True)
 DB_FILE = OUTPUT_DIR / "tenders_db.json"
+DRAFTS_DIR = OUTPUT_DIR / "drafts"
+LATEST_EXCEL_FILE = OUTPUT_DIR / "latest_tenders_import.xlsx"
+DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 
 # ── FIX 2: Threading lock for safe concurrent DB access ─────────────────────
 _db_lock = threading.Lock()
@@ -165,6 +168,48 @@ def save_tender(t247_id: str, data: dict):
     db = load_db()
     db["tenders"][str(t247_id)] = data
     save_db(db)
+
+def _safe_doc_type(doc_type: str) -> str:
+    return re.sub(r"[^\w\-]", "_", (doc_type or "analysis").strip().lower())[:40] or "analysis"
+
+def _draft_path(t247_id: str, doc_type: str = "analysis") -> Path:
+    safe_tid = re.sub(r"[^\w\-]", "_", str(t247_id))[:40] or "unknown"
+    return DRAFTS_DIR / f"{safe_tid}_{_safe_doc_type(doc_type)}.md"
+
+def _build_tender_draft(tender: dict, doc_type: str = "analysis") -> str:
+    title = tender.get("tender_name") or tender.get("brief") or f"Tender {tender.get('t247_id', '')}"
+    verdict = tender.get("verdict", "REVIEW")
+    sections = [
+        f"# {doc_type.replace('_', ' ').title()} Draft",
+        "",
+        "## Tender",
+        f"- T247 ID: {tender.get('t247_id','')}",
+        f"- Reference: {tender.get('ref_no','')}",
+        f"- Name: {title}",
+        f"- Organization: {tender.get('org_name','')}",
+        f"- Deadline: {tender.get('deadline','')}",
+        f"- Verdict: {verdict}",
+        "",
+        "## Executive Summary",
+        str(tender.get("reason", "Summary pending.")),
+        "",
+        "## Key Eligibility",
+        str(tender.get("eligibility", "Not available")),
+        "",
+        "## Compliance & Risk Notes",
+        str(tender.get("compliance_notes", tender.get("risk_flags", "Add compliance comments here."))),
+        "",
+        "## Pre-Bid Queries",
+    ]
+    queries = tender.get("prebid_queries", []) or []
+    if queries:
+        for i, q in enumerate(queries, 1):
+            qtxt = q.get("query") if isinstance(q, dict) else str(q)
+            sections.append(f"{i}. {qtxt}")
+    else:
+        sections.append("1. No pending pre-bid queries.")
+    sections.extend(["", "## Draft Document Body", "Write or edit final content here before download."])
+    return "\n".join(sections)
 
 def extract_all_zips(folder: Path):
     for nested in list(folder.rglob("*.zip")):
@@ -308,6 +353,7 @@ async def import_excel(file: UploadFile = File(...)):
         if len(content) > MAX_UPLOAD_BYTES:
             raise HTTPException(413, "File too large (max 50MB)")
         tmp.write_bytes(content)
+        LATEST_EXCEL_FILE.write_bytes(content)
         tenders = process_excel(str(tmp))
         db = load_db()
         added = updated = 0
@@ -337,6 +383,26 @@ async def import_excel(file: UploadFile = File(...)):
                 "tenders": tenders}
     finally:
         tmp.unlink(missing_ok=True)
+
+@app.post("/sync-excel-latest")
+async def sync_excel_latest():
+    if not LATEST_EXCEL_FILE.exists():
+        raise HTTPException(404, "No previously imported Excel found. Import once first.")
+    tenders = process_excel(str(LATEST_EXCEL_FILE))
+    db = load_db()
+    added = updated = 0
+    for t in tenders:
+        tid = str(t.get("t247_id", ""))
+        if not tid:
+            continue
+        if tid in db["tenders"]:
+            db["tenders"][tid].update(t)
+            updated += 1
+        else:
+            db["tenders"][tid] = t
+            added += 1
+    save_db(db)
+    return {"status": "success", "source": str(LATEST_EXCEL_FILE), "total": len(tenders), "added": added, "updated": updated}
 
 # ══ DASHBOARD ═══════════════════════════════════════════════════════════════
 @app.get("/dashboard")
@@ -765,6 +831,88 @@ async def merge_submission_pdf(t247_id: str):
         "file_count": merged.get("file_count", 0),
     }
 
+@app.post("/tender/{t247_id}/draft/generate")
+async def generate_tender_draft(t247_id: str, data: dict = Body(default={})):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    doc_type = _safe_doc_type(data.get("doc_type", "analysis"))
+    content = _build_tender_draft(tender, doc_type)
+    path = _draft_path(t247_id, doc_type)
+    path.write_text(content, encoding="utf-8")
+    return {"status": "success", "t247_id": t247_id, "doc_type": doc_type, "filename": path.name, "content": content}
+
+@app.get("/tender/{t247_id}/draft")
+async def get_tender_draft(t247_id: str, doc_type: str = "analysis"):
+    doc_type = _safe_doc_type(doc_type)
+    path = _draft_path(t247_id, doc_type)
+    if not path.exists():
+        tender = get_tender(t247_id)
+        if not tender:
+            raise HTTPException(404, "Tender not found")
+        content = _build_tender_draft(tender, doc_type)
+        path.write_text(content, encoding="utf-8")
+    return {"status": "success", "t247_id": t247_id, "doc_type": doc_type, "filename": path.name, "content": path.read_text(encoding="utf-8")}
+
+@app.post("/tender/{t247_id}/draft/save")
+async def save_tender_draft(t247_id: str, data: dict = Body(...)):
+    content = str(data.get("content", ""))
+    doc_type = _safe_doc_type(data.get("doc_type", "analysis"))
+    if not content.strip():
+        raise HTTPException(400, "Draft content is empty")
+    path = _draft_path(t247_id, doc_type)
+    path.write_text(content, encoding="utf-8")
+    return {"status": "saved", "filename": path.name, "size_kb": round(path.stat().st_size / 1024, 1)}
+
+@app.post("/tender/{t247_id}/draft/chat-edit")
+async def chat_edit_tender_draft(t247_id: str, data: dict = Body(...)):
+    instruction = str(data.get("instruction", "")).strip()
+    doc_type = _safe_doc_type(data.get("doc_type", "analysis"))
+    content = str(data.get("content", "")).strip()
+    if not instruction:
+        raise HTTPException(400, "Edit instruction is required")
+    if not content:
+        draft = await get_tender_draft(t247_id, doc_type)
+        content = draft.get("content", "")
+
+    cfg = load_config()
+    keys = get_all_api_keys(cfg)
+    if not keys:
+        raise HTTPException(400, "No AI API key configured in Settings")
+
+    prompt = (
+        "You are an expert tender document editor.\n"
+        "Rewrite the draft as per the user's instruction.\n"
+        "Keep factual details intact unless user asks to change.\n"
+        "Return only updated draft text.\n\n"
+        f"USER INSTRUCTION:\n{instruction}\n\n"
+        f"CURRENT DRAFT:\n{content}"
+    )
+
+    edited = None
+    for key in keys:
+        try:
+            out = call_gemini(prompt, key)
+            if out and len(out.strip()) > 10:
+                edited = out.strip()
+                break
+        except Exception:
+            continue
+    if not edited:
+        raise HTTPException(503, "AI edit unavailable right now (quota or API issue)")
+
+    path = _draft_path(t247_id, doc_type)
+    path.write_text(edited, encoding="utf-8")
+    return {"status": "success", "t247_id": t247_id, "doc_type": doc_type, "filename": path.name, "content": edited}
+
+@app.get("/tender/{t247_id}/draft/download")
+async def download_tender_draft(t247_id: str, doc_type: str = "analysis"):
+    doc_type = _safe_doc_type(doc_type)
+    path = _draft_path(t247_id, doc_type)
+    if not path.exists():
+        raise HTTPException(404, "Draft not found")
+    return FileResponse(str(path), filename=path.name, media_type="text/markdown")
+
 # ══ DOWNLOAD ─────────────────────────────────────────────────────────────────
 @app.get("/download/{filename}")
 async def download_file(filename: str):
@@ -840,10 +988,30 @@ async def update_config_route(request: Request, data: dict = Body(...)):
 @app.get("/profile")
 async def get_profile():
     from nascent_checker import load_profile
-    return load_profile()
+    profile = load_profile()
+    projects = profile.get("projects", []) or []
+    if not profile.get("project_tabs"):
+        grouped = {}
+        for p in projects:
+            tab = str((p or {}).get("tab", "General") or "General").strip() or "General"
+            grouped.setdefault(tab, []).append(p)
+        profile["project_tabs"] = [{"name": name, "projects": items} for name, items in grouped.items()] or [{"name": "General", "projects": []}]
+    return profile
 
 @app.post("/profile")
 async def update_profile(data: dict = Body(...)):
+    project_tabs = data.get("project_tabs", []) or []
+    if project_tabs:
+        flat_projects = []
+        for tab in project_tabs:
+            tab_name = str((tab or {}).get("name", "General")).strip() or "General"
+            for p in (tab or {}).get("projects", []) or []:
+                if isinstance(p, dict):
+                    item = dict(p)
+                    item["tab"] = tab_name
+                    flat_projects.append(item)
+        data["projects"] = flat_projects
+
     # Write profile to runtime path (used first by checker) and repo path (fallback)
     runtime_dir = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
     runtime_dir.mkdir(parents=True, exist_ok=True)
