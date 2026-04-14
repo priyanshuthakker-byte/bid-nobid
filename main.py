@@ -32,6 +32,22 @@ from gdrive_sync import init_drive, save_to_drive, load_from_drive, is_available
 from tracker import (get_deadline_alerts, get_pipeline_stats,
                      get_win_loss_stats, generate_doc_checklist,
                      PIPELINE_STAGES, STAGE_COLORS)
+try:
+    from submission_generator import generate_submission_package
+    SUBMISSION_GEN_AVAILABLE = True
+except Exception:
+    SUBMISSION_GEN_AVAILABLE = False
+    def generate_submission_package(tender, output_dir):
+        return {"error": "submission_generator not available"}
+try:
+    from pdf_merger import merge_submission_package, get_doc_order_preview
+    PDF_MERGE_AVAILABLE = True
+except Exception:
+    PDF_MERGE_AVAILABLE = False
+    def merge_submission_package(*a, **k):
+        return {"status": "error", "errors": ["pdf_merger not available"]}
+    def get_doc_order_preview(*a, **k):
+        return []
 
 try:
     from boq_engine import extract_boq_from_scope, calculate_boq_totals, get_boq_constants
@@ -59,7 +75,6 @@ _db_lock = threading.Lock()
 
 # ── FIX 3: Admin token for sensitive endpoints ───────────────────────────────
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
-BUILD_VERSION = "6.2-go-live-20260414-3"
 
 def check_admin(request: Request):
     """Raises 403 if ADMIN_TOKEN env var is set and request doesn't provide it."""
@@ -135,21 +150,7 @@ def load_db() -> dict:
                 pass
         return {"tenders": {}}
 
-def _field_value(v):
-    """Normalize structured AI field {value, clause_ref, page_no} to plain string."""
-    if isinstance(v, dict):
-        return str(v.get("value", "—") or "—")
-    if v is None:
-        return "—"
-    return str(v)
-
-def ensure_db_file():
-    OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
-    if not DB_FILE.exists():
-        DB_FILE.write_text(json.dumps({"tenders": {}}, indent=2), encoding="utf-8")
-
 def save_db(db: dict):
-    ensure_db_file()
     with _db_lock:
         DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
@@ -213,7 +214,6 @@ async def health():
     return {
         "status": "ok",
         "version": "6.2",
-        "build_version": BUILD_VERSION,
         "ai_configured": bool(ai_keys),
         "ai_keys_count": len(ai_keys),
         "drive_sync": drive_available(),
@@ -221,10 +221,6 @@ async def health():
         "boq_available": BOQ_AVAILABLE,
         "drive_warning": not drive_available(),
     }
-
-@app.get("/build-info")
-async def build_info():
-    return {"build_version": BUILD_VERSION, "service": "bid-nobid", "version": "6.2"}
 
 @app.get("/api-quota-status")
 async def api_quota_status():
@@ -635,7 +631,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
         generator = BidDocGenerator()
-        safe_no = re.sub(r'[^\w\-]', '_', _field_value(tender_data.get("tender_no", "Report")))[:50]
+        safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
         generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
 
@@ -643,12 +639,12 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             db_record = get_tender(t247_id)
             db_record.update({
                 "t247_id": t247_id,
-                "tender_no": _field_value(tender_data.get("tender_no")),
-                "org_name": _field_value(tender_data.get("org_name")),
-                "tender_name": _field_value(tender_data.get("tender_name")),
-                "bid_submission_date": _field_value(tender_data.get("bid_submission_date")),
-                "emd": _field_value(tender_data.get("emd")),
-                "estimated_cost": _field_value(tender_data.get("estimated_cost")),
+                "tender_no": tender_data.get("tender_no"),
+                "org_name": tender_data.get("org_name"),
+                "tender_name": tender_data.get("tender_name"),
+                "bid_submission_date": tender_data.get("bid_submission_date"),
+                "emd": tender_data.get("emd"),
+                "estimated_cost": tender_data.get("estimated_cost"),
                 "verdict": tender_data.get("overall_verdict", {}).get("verdict", ""),
                 "verdict_color": tender_data.get("overall_verdict", {}).get("color", ""),
                 "bid_no_bid_done": True,
@@ -694,6 +690,19 @@ async def generate_docs(t247_id: str):
     if not tender:
         raise HTTPException(404, "Tender not found. Analyse the tender first.")
     try:
+        # Prefer full submission package when available
+        if SUBMISSION_GEN_AVAILABLE:
+            pkg = generate_submission_package(tender, OUTPUT_DIR)
+            if "error" not in pkg:
+                files = []
+                pkg_dir = Path(pkg.get("pkg_dir", "")) if pkg.get("pkg_dir") else None
+                if pkg_dir and pkg_dir.exists():
+                    for f in sorted(pkg_dir.glob("*.docx")):
+                        files.append({"name": f.stem.replace("_", " "), "filename": f.name})
+                if pkg.get("zip_file"):
+                    files.append({"name": "Submission Package ZIP", "filename": pkg["zip_file"]})
+                return {"status": "success", "files": files, "download_file": pkg.get("zip_file")}
+
         generator = BidDocGenerator()
         safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no") or tender.get("brief", "Report"))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
@@ -711,6 +720,50 @@ async def generate_docs(t247_id: str):
         return {"status": "success", "files": [output_filename], "download_file": output_filename}
     except Exception as e:
         raise HTTPException(500, f"Document generation failed: {str(e)}")
+
+@app.post("/generate-technical-proposal/{t247_id}")
+async def generate_technical_proposal(t247_id: str):
+    """
+    UI compatibility endpoint. For now maps to generate-docs package output.
+    """
+    result = await generate_docs(t247_id)
+    files = result.get("files", [])
+    first = files[0]["filename"] if files else result.get("download_file")
+    return {"status": "success", "filename": first}
+
+@app.post("/merge-submission-pdf/{t247_id}")
+async def merge_submission_pdf(t247_id: str):
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    if not PDF_MERGE_AVAILABLE:
+        raise HTTPException(500, "pdf_merger not available")
+
+    safe_no = re.sub(r'[^\w\-]', '_', str(tender.get("tender_no", t247_id)))[:30]
+    pkg_dir = OUTPUT_DIR / f"SubmissionPackage_{safe_no}"
+    source_dirs = [pkg_dir, OUTPUT_DIR]
+    source_dirs = [d for d in source_dirs if d.exists()]
+    if not source_dirs:
+        raise HTTPException(400, "No generated documents found. Generate docs first.")
+
+    merged = merge_submission_package(
+        t247_id=t247_id,
+        tender_data=tender,
+        source_dirs=source_dirs,
+        output_dir=OUTPUT_DIR,
+        include_cover=True,
+    )
+    if merged.get("status") != "success":
+        raise HTTPException(500, "; ".join(merged.get("errors", ["Merge failed"])))
+
+    fname = merged.get("filename")
+    return {
+        "status": "success",
+        "filename": fname,
+        "download_url": f"/download/{fname}" if fname else "",
+        "page_count": merged.get("page_count", 0),
+        "file_count": merged.get("file_count", 0),
+    }
 
 # ══ DOWNLOAD ─────────────────────────────────────────────────────────────────
 @app.get("/download/{filename}")
@@ -891,7 +944,7 @@ async def get_win_loss():
 
 @app.get("/analytics/win-loss")
 async def get_win_loss_alias():
-    return await get_win_loss()
+    return get_win_loss_stats()
 
 @app.post("/tender/{t247_id}/stage")
 async def update_stage(t247_id: str, data: dict = Body(...)):
@@ -968,9 +1021,7 @@ async def sync_drive(request: Request):
     if not drive_available():
         return JSONResponse({"status": "error", "message": "Google Drive not connected"}, status_code=400)
     try:
-        ensure_db_file()
         db = load_db()
-        DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
         ok = save_to_drive(DB_FILE)
         if ok:
             return {"status": "ok", "message": f"Synced {len(db.get('tenders', {}))} tenders to Drive"}
@@ -984,7 +1035,6 @@ async def sync_sheets(request: Request):
 
 @app.get("/drive-status")
 async def drive_status():
-    ensure_db_file()
     db = load_db()
     return {"drive_connected": drive_available(),
             "tenders_in_memory": len(db.get("tenders", {})),
@@ -993,7 +1043,34 @@ async def drive_status():
 
 @app.get("/letterhead/status")
 async def letterhead_status():
-    return {"status": "not_configured", "message": "Letterhead template upload not configured in this build"}
+    lh_docx = OUTPUT_DIR / "letterhead.docx"
+    return {
+        "has_letterhead": lh_docx.exists(),
+        "filename": lh_docx.name if lh_docx.exists() else "",
+        "size_kb": round(lh_docx.stat().st_size / 1024, 1) if lh_docx.exists() else 0,
+    }
+
+@app.get("/letterhead-status")
+async def letterhead_status_alias():
+    return await letterhead_status()
+
+@app.post("/letterhead/upload")
+async def upload_letterhead(file: UploadFile = File(...)):
+    if not (file.filename or "").lower().endswith(".docx"):
+        raise HTTPException(400, "Upload a .docx file for letterhead template")
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Empty file")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "File too large (max 50MB)")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    dest = OUTPUT_DIR / "letterhead.docx"
+    dest.write_bytes(content)
+    return {"status": "ok", "filename": dest.name, "size_kb": round(dest.stat().st_size / 1024, 1)}
+
+@app.post("/upload-letterhead")
+async def upload_letterhead_alias(file: UploadFile = File(...)):
+    return await upload_letterhead(file)
 
 @app.post("/upload-db")
 async def upload_db(request: Request, file: UploadFile = File(...)):
