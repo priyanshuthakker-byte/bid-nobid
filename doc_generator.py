@@ -410,9 +410,9 @@ class BidDocGenerator:
         items = data.get("payment_terms", [])
         if not items:
             items = [
-                "Period of work: " + data.get("contract_period", "As per tender"),
-                "EMD: " + data.get("emd", "As per tender"),
-                "Performance Bank Guarantee: " + data.get("performance_security", "As per tender"),
+                "Period of work: " + field_value(data.get("contract_period", "As per tender")),
+                "EMD: " + field_value(data.get("emd", "As per tender")),
+                "Performance Bank Guarantee: " + field_value(data.get("performance_security", "As per tender")),
                 "Payment schedule: Not explicitly defined — refer tender document.",
                 "Penalty / LD clause: Refer tender document for applicable clauses.",
             ]
