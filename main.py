@@ -240,7 +240,16 @@ async def diagnose():
     chk("BOQ Engine", lambda: ("OK","BOQ engine loaded","") if BOQ_AVAILABLE else ("ERROR","boq_engine.py missing","Add boq_engine.py to GitHub repo"))
     chk("Required Files", lambda: (("OK","All required files present","") if not [f for f in ["extractor.py","doc_generator.py","nascent_checker.py","ai_analyzer.py","excel_processor.py","prebid_generator.py","chatbot.py","gdrive_sync.py","tracker.py","nascent_profile.json"] if not (BASE_DIR/f).exists()] else ("ERROR",f"Missing: {', '.join([f for f in ['extractor.py','doc_generator.py','nascent_checker.py','ai_analyzer.py','excel_processor.py','prebid_generator.py','chatbot.py','gdrive_sync.py','tracker.py','nascent_profile.json'] if not (BASE_DIR/f).exists()])}", "Add to GitHub")))
     chk("Company Profile", lambda: ("OK","Profile complete","") if (BASE_DIR/"nascent_profile.json").exists() and all(k in json.loads((BASE_DIR/"nascent_profile.json").read_text()) for k in ["company","finance","certifications","employees","projects","bid_rules"]) else ("WARN","Profile incomplete or missing","Company Profile → fill all sections"))
-    chk("Data Directory", lambda: ("OK","Data directory writable","") if not (OUTPUT_DIR.mkdir(exist_ok=True,parents=True) or (OUTPUT_DIR/"_test.tmp").write_text("ok") or (OUTPUT_DIR/"_test.tmp").unlink()) else ("ERROR","Cannot write data","Check Render disk"))
+    def _check_data_dir():
+        try:
+            OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
+            probe = OUTPUT_DIR / "_test.tmp"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+            return ("OK", "Data directory writable", "")
+        except Exception:
+            return ("ERROR", "Cannot write data", "Check Render disk")
+    chk("Data Directory", _check_data_dir)
     chk("Admin Security", lambda: ("OK","Admin token configured","") if ADMIN_TOKEN else ("WARN","ADMIN_TOKEN env var not set — config endpoints are open","Set ADMIN_TOKEN in Render environment"))
 
     return {"overall": overall, "timestamp": datetime.now().isoformat(), "checks": results,
@@ -762,14 +771,20 @@ async def get_profile():
 
 @app.post("/profile")
 async def update_profile(data: dict = Body(...)):
-    profile_path = BASE_DIR / "nascent_profile.json"
-    profile_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    # Write profile to runtime path (used first by checker) and repo path (fallback)
+    runtime_dir = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    runtime_path = runtime_dir / "nascent_profile.json"
+    repo_path = BASE_DIR / "nascent_profile.json"
+    payload = json.dumps(data, indent=2)
+    runtime_path.write_text(payload, encoding="utf-8")
+    repo_path.write_text(payload, encoding="utf-8")
     try:
         from excel_processor import invalidate_rules_cache
         invalidate_rules_cache()
     except (ImportError, AttributeError):
         pass
-    return {"status": "saved"}
+    return {"status": "saved", "runtime_profile": str(runtime_path), "repo_profile": str(repo_path)}
 
 # ══ BOQ ══════════════════════════════════════════════════════════════════════
 @app.get("/boq/constants")

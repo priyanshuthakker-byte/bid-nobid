@@ -142,6 +142,19 @@ def status_color(status_text):
     return "BLUE"
 
 
+def field_value(v):
+    """
+    AI v7 may return snapshot fields as dict:
+    {"value": "...", "clause_ref": "...", "page_no": "..."}.
+    This helper normalizes to plain display text for doc generation.
+    """
+    if isinstance(v, dict):
+        return str(v.get("value", "—") or "—")
+    if v is None:
+        return "—"
+    return str(v)
+
+
 class BidDocGenerator:
 
     def generate(self, data: Dict[str, Any], output_path: str):
@@ -216,7 +229,7 @@ class BidDocGenerator:
         p.paragraph_format.space_before = Pt(6)
         add_run(p, "BID / NO-BID FORM", bold=True, size=16, color="FFFFFF")
 
-        tender_title = strip_emojis(data.get("tender_name", data.get("org_name", "")))[:80]
+        tender_title = strip_emojis(field_value(data.get("tender_name", data.get("org_name", ""))))[:80]
         p2 = c1.add_paragraph()
         p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
         add_run(p2, tender_title, bold=False, size=10, color="DEEAF1")
@@ -244,29 +257,29 @@ class BidDocGenerator:
     def _section_snapshot(self, data):
         self._sec_heading("1", "Tender Overview")
         fields = [
-            ("Tender No.",               data.get("tender_no", "—")),
-            ("Tender ID",                data.get("tender_id", "—")),
-            ("T247 ID",                  data.get("t247_id", "—")),
-            ("Portal / Website",         data.get("portal", "—")),
-            ("Organization / Department",data.get("org_name", "—")),
-            ("Tender Name",              data.get("tender_name", "—")),
-            ("Form of Contract",         data.get("tender_type", "—")),
-            ("Bid Submission Start Date",data.get("bid_start_date", "—")),
-            ("Bid Submission End Date",  data.get("bid_submission_date", "—")),
-            ("Bid Opening Date",         data.get("bid_opening_date", "—")),
-            ("Mode of Selection",        data.get("mode_of_selection", "—")),
-            ("Pre-Bid Meeting",          data.get("prebid_meeting", "Not specified")),
-            ("Pre-Bid Query Deadline",   data.get("prebid_query_date", "Not specified")),
-            ("Estimated Cost",           data.get("estimated_cost", "Not specified")),
-            ("Tender Fee",               data.get("tender_fee", "Not specified")),
-            ("EMD",                      data.get("emd", "Not specified")),
-            ("EMD Exemption",            data.get("emd_exemption", "—")),
-            ("Performance Bank Guarantee",data.get("performance_security", "As per tender")),
-            ("Period of Work",           data.get("contract_period", "—")),
-            ("Post-Implementation Support", data.get("post_implementation", "—")),
-            ("Project Location",         data.get("location", "—")),
-            ("Contact",                  data.get("contact", "—")),
-            ("JV / Consortium Allowed",  data.get("jv_allowed", "Not specified")),
+            ("Tender No.",               field_value(data.get("tender_no", "—"))),
+            ("Tender ID",                field_value(data.get("tender_id", "—"))),
+            ("T247 ID",                  field_value(data.get("t247_id", "—"))),
+            ("Portal / Website",         field_value(data.get("portal", "—"))),
+            ("Organization / Department",field_value(data.get("org_name", "—"))),
+            ("Tender Name",              field_value(data.get("tender_name", "—"))),
+            ("Form of Contract",         field_value(data.get("tender_type", "—"))),
+            ("Bid Submission Start Date",field_value(data.get("bid_start_date", "—"))),
+            ("Bid Submission End Date",  field_value(data.get("bid_submission_date", "—"))),
+            ("Bid Opening Date",         field_value(data.get("bid_opening_date", "—"))),
+            ("Mode of Selection",        field_value(data.get("mode_of_selection", "—"))),
+            ("Pre-Bid Meeting",          field_value(data.get("prebid_meeting", "Not specified"))),
+            ("Pre-Bid Query Deadline",   field_value(data.get("prebid_query_date", "Not specified"))),
+            ("Estimated Cost",           field_value(data.get("estimated_cost", "Not specified"))),
+            ("Tender Fee",               field_value(data.get("tender_fee", "Not specified"))),
+            ("EMD",                      field_value(data.get("emd", "Not specified"))),
+            ("EMD Exemption",            field_value(data.get("emd_exemption", "—"))),
+            ("Performance Bank Guarantee",field_value(data.get("performance_security", "As per tender"))),
+            ("Period of Work",           field_value(data.get("contract_period", "—"))),
+            ("Post-Implementation Support", field_value(data.get("post_implementation", "—"))),
+            ("Project Location",         field_value(data.get("location", "—"))),
+            ("Contact",                  field_value(data.get("contact", "—"))),
+            ("JV / Consortium Allowed",  field_value(data.get("jv_allowed", "Not specified"))),
         ]
 
         table = self.doc.add_table(rows=0, cols=2)
@@ -591,8 +604,8 @@ class BidDocGenerator:
         fp = footer.paragraphs[0]
         fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r = fp.add_run(
-            "CONFIDENTIAL — Bid/No-Bid Form | " +
-            data.get("tender_no", "—") + " | " +
+                "CONFIDENTIAL — Bid/No-Bid Form | " +
+            field_value(data.get("tender_no", "—")) + " | " +
             "Nascent Info Technologies Pvt. Ltd. | " +
             datetime.now().strftime("%d %b %Y") +
             " | For Internal Use Only"
