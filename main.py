@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
-from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config
+from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
@@ -194,10 +194,12 @@ async def healthz():
 async def health():
     config = load_config()
     db = load_db()
+    ai_keys = get_all_api_keys()
     return {
         "status": "ok",
         "version": "6.2",
-        "ai_configured": bool(config.get("gemini_api_key")),
+        "ai_configured": bool(ai_keys),
+        "ai_keys_count": len(ai_keys),
         "drive_sync": drive_available(),
         "tenders_loaded": len(db.get("tenders", {})),
         "boq_available": BOQ_AVAILABLE,
@@ -341,6 +343,40 @@ async def update_status(t247_id: str, data: dict = Body(...)):
 async def get_tender_detail(t247_id: str):
     return get_tender(t247_id)
 
+@app.post("/tender/{t247_id}/reanalyse")
+async def reanalyse_tender(t247_id: str):
+    """Re-run AI analysis using saved raw text from DB."""
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+
+    saved_text = tender.get("raw_text", "")
+    if not saved_text or len(str(saved_text).strip()) < 100:
+        raise HTTPException(400, "No saved document text found. Upload and analyse again.")
+
+    cfg = load_config()
+    api_key = cfg.get("gemini_api_key", "")
+    if not api_key:
+        raise HTTPException(400, "Gemini API key not configured. Go to Settings.")
+
+    prebid_flag = bool(tender.get("prebid_passed", False))
+    ai_result = analyze_with_gemini(saved_text, prebid_flag)
+    if "error" in ai_result:
+        raise HTTPException(502, ai_result.get("error", "AI reanalysis failed"))
+
+    merged = merge_results(tender, ai_result, prebid_flag)
+    merged["bid_no_bid_done"] = True
+    merged["analysed_at"] = datetime.now().isoformat()
+    merged["raw_text"] = saved_text
+    save_tender(t247_id, merged)
+
+    return {
+        "status": "success",
+        "t247_id": t247_id,
+        "verdict": merged.get("verdict", merged.get("overall_verdict", {}).get("verdict", "REVIEW")),
+        "tender_data": merged,
+    }
+
 @app.get("/tender-quickview/{t247_id}")
 async def tender_quickview(t247_id: str):
     t = get_tender(t247_id)
@@ -425,7 +461,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 shutil.copy2(dest, extract_dir / fname)
 
         doc_files = []
-        for ext in ["*.pdf", "*.docx", "*.doc", "*.txt", "*.html", "*.htm"]:
+        for ext in ["*.pdf", "*.docx", "*.doc", "*.txt", "*.html", "*.htm", "*.xlsx", "*.xls"]:
             doc_files.extend(extract_dir.rglob(ext))
         seen, unique = set(), []
         for f in doc_files:
@@ -508,6 +544,9 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 "payment_terms": tender_data.get("payment_terms", []),
                 "notes": tender_data.get("notes", []),
                 "overall_verdict": tender_data.get("overall_verdict", {}),
+                "prebid_queries": tender_data.get("prebid_queries", []),
+                "raw_text": all_text,
+                "prebid_passed": passed if 'passed' in locals() else False,
             })
             save_tender(t247_id, db_record)
 

@@ -68,6 +68,69 @@ Signatory: Hitesh Patel (CAO) | POA: EXPIRED 31-Mar-2026 — MUST RENEW BEFORE A
 MD: Maulik Bhagat | Email: nascent.tender@nascentinfo.com | Ph: +91-79-40200400"""
 
 
+def _load_nascent_profile_text() -> str:
+    """
+    Prefer profile from nascent_profile.json so AI prompts stay aligned with current company data.
+    Falls back to bundled NASCENT constant if file is missing/invalid.
+    """
+    p = Path(__file__).parent / "nascent_profile.json"
+    if not p.exists():
+        return NASCENT
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return NASCENT
+
+    parts = []
+    company = data.get("company", {})
+    finance = data.get("finance", {})
+    certs = data.get("certifications", {})
+    employees = data.get("employees", {})
+    projects = data.get("projects", [])
+
+    name = company.get("name", "Company")
+    parts.append(f"{name} — PROFILE FOR INTERNAL USE ONLY")
+    parts.append("Do NOT mention company name in pre-bid query text.")
+    parts.append("")
+    parts.append(
+        f"Identity: CIN {company.get('cin','—')} | MSME {company.get('udyam','—')} | "
+        f"PAN {company.get('pan','—')} | GSTIN {company.get('gstin','—')}"
+    )
+    parts.append(
+        f"Founded: {company.get('year_of_incorporation','—')} | "
+        f"Years in operation: {company.get('years_in_operation','—')}"
+    )
+    parts.append(
+        f"Employees: total {employees.get('total_confirmed','—')} | "
+        f"IT/Dev {employees.get('it_dev_staff','—')} | GIS {employees.get('gis_staff','—')}"
+    )
+    parts.append(
+        f"Turnover avg 2yr: Rs.{finance.get('avg_turnover_last_2_fy','—')} Cr | "
+        f"avg 3yr: Rs.{finance.get('avg_turnover_last_3_fy','—')} Cr | "
+        f"net worth: Rs.{finance.get('net_worth_cr','—')} Cr"
+    )
+
+    cmmi = certs.get("cmmi", {})
+    parts.append(
+        f"CMMI: Level {cmmi.get('level','—')} {cmmi.get('version','')} valid till {cmmi.get('valid_to','—')}"
+    )
+    for k in ["iso_9001", "iso_27001", "iso_20000"]:
+        c = certs.get(k, {})
+        if c:
+            parts.append(f"{c.get('standard',k)} valid till {c.get('valid_to','—')}")
+
+    if projects:
+        parts.append("Projects:")
+        for i, pr in enumerate(projects[:12], 1):
+            parts.append(
+                f"  P{i}: {pr.get('client','Project')} | Rs.{pr.get('val','—')} Cr | "
+                f"{pr.get('status','—')} | {', '.join(pr.get('tags', [])[:5])}"
+            )
+
+    rendered = "\n".join(parts).strip()
+    return rendered if len(rendered) > 200 else NASCENT
+
+
 # ═══════════════════════════════════════════════════════
 # CONFIG + API
 # ═══════════════════════════════════════════════════════
@@ -1240,6 +1303,10 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
     10-Segment pipeline. Returns complete analysis dict.
     Falls back to regex if all API keys exhausted.
     """
+    # Refresh profile text at runtime from nascent_profile.json if available
+    global NASCENT
+    NASCENT = _load_nascent_profile_text()
+
     all_keys = get_all_api_keys()
     if not all_keys:
         return {"error": "No Gemini API key configured. Go to Settings → Gemini AI Keys."}
