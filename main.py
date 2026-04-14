@@ -206,6 +206,17 @@ async def health():
         "drive_warning": not drive_available(),
     }
 
+@app.get("/api-quota-status")
+async def api_quota_status():
+    """Lightweight status endpoint used by dashboard UI."""
+    keys = get_all_api_keys()
+    return {
+        "status": "ok" if keys else "no_key",
+        "daily_limit": "unknown",
+        "today_used": "unknown",
+        "keys_count": len(keys),
+    }
+
 # ══ SELF-DIAGNOSE ════════════════════════════════════════════════════════════
 @app.get("/diagnose")
 async def diagnose():
@@ -331,6 +342,86 @@ async def get_prebid_queries_post(data: dict = Body(...)):
 @app.get("/prebid-queries/{t247_id}")
 async def get_saved_prebid_queries(t247_id: str):
     return {"queries": get_tender(t247_id).get("prebid_queries", [])}
+
+@app.post("/tender/{t247_id}/generate-prebid-letter")
+async def generate_prebid_letter(t247_id: str):
+    """
+    Generate a simple pre-bid query letter from stored prebid_queries.
+    Returns a downloadable .txt file path under /download/.
+    """
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+
+    queries = tender.get("prebid_queries", [])
+    if not queries:
+        raise HTTPException(400, "No pre-bid queries found. Analyse tender first.")
+
+    lines = [
+        f"Date: {datetime.now().strftime('%d-%m-%Y')}",
+        "",
+        "To,",
+        f"The Tender Inviting Authority, {tender.get('org_name', 'Authority')}",
+        "",
+        f"Subject: Pre-bid Queries — {tender.get('tender_no', t247_id)}",
+        "",
+        f"Tender: {tender.get('tender_name', tender.get('brief', 'N/A'))}",
+        "",
+        "Respected Sir/Madam,",
+        "Please find below the pre-bid clarifications requested by the bidder:",
+        "",
+    ]
+    for i, q in enumerate(queries, 1):
+        if isinstance(q, dict):
+            clause = q.get("clause_ref") or q.get("clause") or "—"
+            qtxt = q.get("query") or q.get("text") or str(q)
+            lines.append(f"{i}. Clause {clause}: {qtxt}")
+        else:
+            lines.append(f"{i}. {q}")
+        lines.append("")
+    lines.extend(["Regards,", "Authorized Signatory"])
+
+    fname = f"PreBid_{re.sub(r'[^\\w\\-]', '_', str(tender.get('tender_no', t247_id)))[:40]}.txt"
+    fpath = OUTPUT_DIR / fname
+    fpath.write_text("\n".join(lines), encoding="utf-8")
+    return {"status": "success", "filename": fname, "query_count": len(queries), "download_url": f"/download/{fname}"}
+
+@app.post("/tender/{t247_id}/analyze-compliance")
+async def analyze_compliance(t247_id: str):
+    """
+    Basic compliance scanner (rule-based) to avoid UI failures.
+    """
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+
+    text = " ".join([
+        str(tender.get("tender_name", "")),
+        str(tender.get("reason", "")),
+        str(tender.get("emd_exemption", "")),
+        str(tender.get("jv_allowed", "")),
+    ]).lower()
+    issues = []
+    if "not allowed" in text and ("consortium" in text or "joint venture" in text):
+        issues.append({
+            "clause_no": "JV/Consortium",
+            "issue_type": "Restriction",
+            "severity": "MEDIUM",
+            "what_law_says": "Verify consortium restrictions and bid as single entity if required.",
+        })
+    if "emd" in text and "exempt" not in text and "msme" in text:
+        issues.append({
+            "clause_no": "EMD",
+            "issue_type": "MSME exemption unclear",
+            "severity": "LOW",
+            "what_law_says": "Seek written clarification on MSME EMD exemption applicability.",
+        })
+
+    return {
+        "status": "success",
+        "violations_found": len(issues),
+        "analysis": {"clause_violations": issues},
+    }
 
 @app.post("/tender/{t247_id}/status")
 async def update_status(t247_id: str, data: dict = Body(...)):
@@ -942,6 +1033,15 @@ async def test_ai():
         return {"status": "success", "api_key_present": True, "gemini_response": result[:100]}
     except Exception as e:
         return {"status": "error", "api_key_present": True, "error": str(e)}
+
+@app.get("/test-t247")
+async def test_t247():
+    cfg = load_config()
+    u = str(cfg.get("t247_username", "") or "").strip()
+    p = str(cfg.get("t247_password", "") or "").strip()
+    if u and p:
+        return {"status": "ok", "username": u}
+    return {"status": "error", "message": "T247 credentials not configured"}
 
 @app.post("/auto-download/{t247_id}")
 async def auto_download_tender(t247_id: str):

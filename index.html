@@ -866,10 +866,10 @@ async function viewTenderDetail(tid) {
     (t.pq_criteria&&t.pq_criteria.length?'<div style="margin-top:16px"><div style="font-size:11px;color:#444;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">PQ Criteria</div><div style="font-size:13px;color:#aaa">'+(Array.isArray(t.pq_criteria)?t.pq_criteria.join('<br>'):t.pq_criteria)+'</div></div>':'')+
     (t.concerns&&t.concerns.length?'<div style="margin-top:16px"><div style="font-size:11px;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠ Concerns</div><div style="font-size:13px;color:#f59e0b">'+(Array.isArray(t.concerns)?t.concerns.join('<br>'):t.concerns)+'</div></div>':'')+
     '<div style="margin-top:24px;display:flex;gap:8px;flex-wrap:wrap">'+
-    '<button class="btn btn-primary btn-sm" onclick="setActive(''+tid+'','');showPage('analyse')">🔍 Analyse</button>'+
-    '<button class="btn btn-ghost btn-sm" onclick="setActive(''+tid+'','');showPage('checklist')">✅ Checklist</button>'+
-    '<button class="btn btn-ghost btn-sm" onclick="setActive(''+tid+'','');showPage('documents')">📄 Documents</button>'+
-    '<button class="btn btn-ghost btn-sm" onclick="autoDownload(''+tid+'')">⬇ Auto-download</button>'+
+    '<button class="btn btn-primary btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'analyse\')">🔍 Analyse</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'checklist\')">✅ Checklist</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'documents\')">📄 Documents</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="autoDownload(\''+tid+'\')">⬇ Auto-download</button>'+
     '<button class="btn btn-ghost btn-sm" onclick="copyTenderInfo(\''+tid+'\')">📋 Copy Info</button>'+
     '</div>';
   panel.style.transform = 'translateX(0)';
@@ -891,7 +891,7 @@ async function autoDownload(tid) {
   if(!tid) { toast('Select a tender first','info'); return; }
   showLoading('Auto-downloading from T247...');
   try {
-    var r = await fetch('/tender/'+tid+'/auto-download',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d = await r.json();
+    var r = await fetch('/auto-download/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d = await r.json();
     hideLoading();
     if(d.status==='success') { toast('Downloaded: '+d.filename+' ('+Math.round((d.file_size||0)/1024)+'KB)','success'); }
     else toast('Download failed: '+(d.message||d.reason||''),'error');
@@ -965,7 +965,7 @@ async function loadQuota() {
   } catch(e) {}
 }
 
-async async function importExcel(input) {
+async function importExcel(input) {
   var file = input.files[0]; if(!file) return;
   showLoading('Importing Excel and classifying tenders...');
   var fd = new FormData(); fd.append('file', file);
@@ -1073,8 +1073,8 @@ async function analyseTender() {
       (concerns.length?'<div style="background:#2d1a00;border-radius:6px;padding:10px 12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:600;margin-bottom:6px">⚠ CONCERNS</div>'+(Array.isArray(concerns)?concerns:concerns.split(',')).map(function(c){return '<div style="font-size:12px;color:#f59e0b;margin-bottom:3px">• '+c.trim()+'</div>';}).join('')+'</div>':'')+
       pqHtml+
       '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">'+
-      '<button class="btn btn-ghost btn-sm" onclick="showPage('checklist')">✅ Checklist</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="showPage('documents')">📄 Documents</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'checklist\')">✅ Checklist</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'documents\')">📄 Documents</button>'+
       '<button class="btn btn-primary btn-sm" onclick="loadPrebidQueries()">Pre-bid Queries</button>'+
       '<button class="btn btn-ghost btn-sm" onclick="runCompliance()">📋 Compliance Check</button>'+
       '</div></div>';
@@ -1189,7 +1189,7 @@ async function loadChecklist() {
       var srcColor = src.toLowerCase().includes('rfp')?'#1e3a5f':'#1a2e1a';
       var srcText = src.toLowerCase().includes('rfp')?'From RFP':'Standard';
       return '<div class="checklist-item'+(item.done?' done':'')+'" style="padding:10px 0;border-bottom:1px solid #1e2130;display:flex;align-items:flex-start;gap:10px">'+
-        '<input type="checkbox" style="margin-top:3px;accent-color:#22c55e" '+(item.done?'checked':'')+' onchange="toggleChecklistItem(''+tid+'',''+item.id+'',this.checked)">'+
+        '<input type="checkbox" style="margin-top:3px;accent-color:#22c55e" '+(item.done?'checked':'')+' onchange="toggleChecklistItem(\''+tid+'\',\''+item.id+'\',this.checked)">'+
         '<div style="flex:1">'+
           '<div style="font-size:13px;color:#ccc;margin-bottom:3px">'+(item.label||item.title||item.description||'')+'</div>'+
           (item.description&&item.description!==(item.label||item.title)?'<div style="font-size:11px;color:#555;margin-bottom:3px">'+item.description+'</div>':'')+
@@ -1242,7 +1242,7 @@ async function loadDocs() {
       rfp.forEach(function(item){
         html2 += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1e2130">'+
           '<span style="font-size:12px;color:#ccc">'+(item.label||item.title||'')+'</span>'+
-          (item.generated_by_app?'<button class="action-btn green" onclick="generateSingleDoc(''+tid+'',''+encodeURIComponent(item.label||'')+'')">Generate</button>':
+          (item.generated_by_app?'<button class="action-btn green" onclick="generateSingleDoc(\''+tid+'\',\''+encodeURIComponent(item.label||'')+'\')">Generate</button>':
            '<span style="font-size:11px;color:#555">Get from office</span>')+
         '</div>';
       });
@@ -1250,7 +1250,7 @@ async function loadDocs() {
       std.forEach(function(item){
         html2 += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1e2130">'+
           '<span style="font-size:12px;color:#ccc">'+(item.label||item.title||'')+'</span>'+
-          (item.generated_by_app?'<button class="action-btn green" onclick="generateSingleDoc(''+tid+'',''+encodeURIComponent(item.label||'')+'')">Generate</button>':
+          (item.generated_by_app?'<button class="action-btn green" onclick="generateSingleDoc(\''+tid+'\',\''+encodeURIComponent(item.label||'')+'\')">Generate</button>':
            '<span style="font-size:11px;color:#555">Get from office</span>')+
         '</div>';
       });
