@@ -599,12 +599,25 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
           <button class="btn btn-ghost btn-sm" onclick="renameProjectTab()">✎ Rename Tab</button>
           <button class="btn btn-ghost btn-sm" onclick="deleteProjectTab()">🗑 Delete Tab</button>
           <button class="btn btn-ghost btn-sm" onclick="addProjectRow()">+ Add Project</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportProjectsTab()">⬇ Export Tab JSON</button>
+          <button class="btn btn-ghost btn-sm" onclick="importProjectsTab()">⬆ Import Tab JSON</button>
         </div>
         <div id="projects-tab-row" class="tab-row" style="margin-bottom:10px"></div>
-        <div style="overflow-x:auto"><table id="projects-table">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <div style="flex:1;min-width:220px">
+            <input id="projects-search" placeholder="Search projects (client/name/domain/tags)..." oninput="projectsSearch=this.value;renderProjectsTable()" style="width:100%;background:#0f1117;color:#ddd;border:1px solid #252830;border-radius:8px;padding:8px 10px;font-size:12px">
+          </div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-ghost btn-sm" id="pv-table" onclick="setProjectsView('table')">☰ Table</button>
+            <button class="btn btn-ghost btn-sm" id="pv-cards" onclick="setProjectsView('cards')">▦ Cards</button>
+          </div>
+        </div>
+        <div id="projects-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+        <div id="projects-table-wrap" style="overflow-x:auto"><table id="projects-table">
           <thead><tr><th>Client</th><th>Project Name</th><th>Value (Cr)</th><th>Status</th><th>Domain</th><th>Mobile GIS</th><th>Central Server</th><th></th></tr></thead>
           <tbody id="projects-tbody"></tbody>
         </table></div>
+        <div id="projects-cards" style="display:none"></div>
       </div>
     </div>
     <div id="profile-tab-employees" class="tab-panel"><div class="card" id="profile-emp-form"><div class="empty-state">Loading...</div></div></div>
@@ -1613,6 +1626,7 @@ async function init() {
 
 // ═══ NEW FEATURES: BOQ, PROFILE, DIAGNOSE ═══
 var boqItems=[],boqConst={categories:[],unit_types:[],manpower_roles:[]},profileData={},currentProjectTabIdx=0;
+var projectsView='table', projectsSearch='', projectsDomain='All';
 
 
 async function loadBOQConst(){try{var r=await fetch('/boq/constants');boqConst=await r.json();}catch(e){}}
@@ -1782,23 +1796,100 @@ function renderProjectsTable(){
   if(!tabs.length) tabs=[{name:'General',projects:[]}];
   if(currentProjectTabIdx>=tabs.length) currentProjectTabIdx=0;
   profileData.project_tabs=tabs;
+
   var tabRow=document.getElementById('projects-tab-row');
   if(tabRow){
     tabRow.innerHTML=tabs.map(function(t,i){
       return '<div class="tab'+(i===currentProjectTabIdx?' active':'')+'" onclick="switchProjectTab('+i+')">'+(t.name||('Tab '+(i+1)))+'</div>';
     }).join('');
   }
+
   var projects=tabs[currentProjectTabIdx].projects||[];
-  document.getElementById('projects-tbody').innerHTML=projects.map((p,i)=>
-    '<tr><td><input type="text" value="'+(p.client||'')+'" data-pidx="'+i+'" data-pkey="client" onchange="pProject(this)" style="width:100%"></td>'+
-    '<td><input type="text" value="'+(p.name||'')+'" data-pidx="'+i+'" data-pkey="name" onchange="pProject(this)" style="width:100%"></td>'+
-    '<td><input type="number" value="'+(p.value_cr||'')+'" data-pidx="'+i+'" data-pkey="value_cr" onchange="pProject(this)" style="width:80px"></td>'+
-    '<td><select data-pidx="'+i+'" data-pkey="status" onchange="pProject(this)">'+['Completed','Ongoing','Under Implementation'].map(s=>'<option'+(p.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></td>'+
-    '<td><input type="text" value="'+(p.domain||'')+'" data-pidx="'+i+'" data-pkey="domain" onchange="pProject(this)" style="width:100%"></td>'+
-    '<td style="text-align:center"><input type="checkbox" '+(p.mobile_gis?'checked':'')+' data-pidx="'+i+'" data-pkey="mobile_gis" onchange="pProjectBool(this)"></td>'+
-    '<td style="text-align:center"><input type="checkbox" '+(p.central_server?'checked':'')+' data-pidx="'+i+'" data-pkey="central_server" onchange="pProjectBool(this)"></td>'+
-    '<td><button class="action-btn red" onclick="delProject('+i+')">✕</button></td></tr>'
-  ).join('');
+  var q=(projectsSearch||'').toLowerCase().trim();
+  var filtered=projects.map(function(p,idx){return {p:(p||{}),idx:idx};}).filter(function(x){
+    var p=x.p;
+    var tags=(p.tags||[]).join(' ');
+    var hay=[p.client,p.name,p.domain,p.status,tags].join(' ').toLowerCase();
+    if(q && !hay.includes(q)) return false;
+    if(projectsDomain && projectsDomain!=='All'){
+      var d=(p.domain||'').toLowerCase();
+      var t=(tags||'').toLowerCase();
+      var key=String(projectsDomain||'').toLowerCase();
+      if(!(d.includes(key)||t.includes(key))) return false;
+    }
+    return true;
+  });
+
+  // Filter chips
+  (function(){
+    var set=new Set();
+    projects.forEach(function(p){
+      if(p && p.domain) set.add(String(p.domain).trim());
+      (p && p.tags ? p.tags : []).forEach(function(t){ if(t) set.add(String(t).trim()); });
+    });
+    var opts=['All'].concat(Array.from(set).filter(Boolean).slice(0,12));
+    var wrap=document.getElementById('projects-filters');
+    if(wrap){
+      wrap.innerHTML=opts.map(function(o){
+        var on=(projectsDomain===o);
+        return '<button class="btn btn-ghost btn-sm" style="padding:4px 10px;'+(on?'border-color:#3b82f6;color:#3b82f6;background:rgba(59,130,246,.08)':'')+'" onclick="projectsDomain='+JSON.stringify(o)+';renderProjectsTable()">'+o+'</button>';
+      }).join('');
+    }
+  })();
+
+  // View toggle
+  var wTable=document.getElementById('projects-table-wrap');
+  var wCards=document.getElementById('projects-cards');
+  var bT=document.getElementById('pv-table');
+  var bC=document.getElementById('pv-cards');
+  if(bT && bC){
+    bT.style.borderColor = projectsView==='table' ? '#3b82f6' : '';
+    bC.style.borderColor = projectsView==='cards' ? '#3b82f6' : '';
+  }
+  if(wTable) wTable.style.display = projectsView==='table' ? 'block' : 'none';
+  if(wCards) wCards.style.display = projectsView==='cards' ? 'block' : 'none';
+
+  if(wCards && projectsView==='cards'){
+    if(!filtered.length){
+      wCards.innerHTML='<div class="empty-state">No projects match current filter.</div>';
+    } else {
+      wCards.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">'+
+        filtered.map(function(x){
+          var p=x.p;
+          var tags=(p.tags||[]).slice(0,6).map(function(t){return '<span style="display:inline-block;padding:2px 6px;border-radius:999px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.15);color:#c4b5fd;font-size:10px">'+t+'</span>';}).join(' ');
+          var val=(p.value_cr!==undefined && p.value_cr!=='' ? ('₹'+p.value_cr+' Cr') : '—');
+          return '<div style="background:#12141e;border:1px solid #1e2130;border-radius:10px;padding:12px">'+
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:6px">'+
+              '<div style="font-weight:700;color:#e5e7eb;font-size:13px;line-height:1.3">'+(p.name||'Project')+'</div>'+
+              '<div style="font-size:11px;color:#93c5fd;white-space:nowrap">'+(p.status||'')+'</div>'+
+            '</div>'+
+            '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px">'+(p.client||'')+'</div>'+
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#6b7280;margin-bottom:8px">'+
+              '<span>Domain: <b style="color:#cbd5e1">'+(p.domain||'—')+'</b></span>'+
+              '<span>Value: <b style="color:#22c55e">'+val+'</b></span>'+
+            '</div>'+
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+tags+'</div>'+
+            '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+              '<button class="btn btn-ghost btn-sm" onclick="projectsView=\\'table\\';renderProjectsTable();setTimeout(function(){try{document.querySelector(\\'#projects-table input[data-pidx=\\\\\\\"'+x.idx+'\\\\\\\"][data-pkey=\\\\\\\"name\\\\\\\"]\\').focus();}catch(e){}},0)">Edit</button>'+
+              '<button class="btn btn-ghost btn-sm" onclick="delProject('+x.idx+')">Delete</button>'+
+            '</div>'+
+          '</div>';
+        }).join('')+
+      '</div>';
+    }
+  }
+
+  document.getElementById('projects-tbody').innerHTML=filtered.map(function(x){
+    var p=x.p, i=x.idx;
+    return '<tr><td><input type="text" value="'+(p.client||'')+'" data-pidx="'+i+'" data-pkey="client" onchange="pProject(this)" style="width:100%"></td>'+
+      '<td><input type="text" value="'+(p.name||'')+'" data-pidx="'+i+'" data-pkey="name" onchange="pProject(this)" style="width:100%"></td>'+
+      '<td><input type="number" value="'+(p.value_cr||'')+'" data-pidx="'+i+'" data-pkey="value_cr" onchange="pProject(this)" style="width:80px"></td>'+
+      '<td><select data-pidx="'+i+'" data-pkey="status" onchange="pProject(this)">'+['Completed','Ongoing','Under Implementation'].map(function(s){return '<option'+(p.status===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></td>'+
+      '<td><input type="text" value="'+(p.domain||'')+'" data-pidx="'+i+'" data-pkey="domain" onchange="pProject(this)" style="width:100%"></td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(p.mobile_gis?'checked':'')+' data-pidx="'+i+'" data-pkey="mobile_gis" onchange="pProjectBool(this)"></td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(p.central_server?'checked':'')+' data-pidx="'+i+'" data-pkey="central_server" onchange="pProjectBool(this)"></td>'+
+      '<td><button class="action-btn red" onclick="delProject('+i+')">✕</button></td></tr>';
+  }).join('');
 }
 
 function activeProjects(){if(!profileData.project_tabs||!profileData.project_tabs.length)profileData.project_tabs=[{name:'General',projects:[]}];if(!profileData.project_tabs[currentProjectTabIdx])currentProjectTabIdx=0;return profileData.project_tabs[currentProjectTabIdx].projects;}
@@ -1814,6 +1905,43 @@ function pProjectBool(el){var i=parseInt(el.getAttribute('data-pidx')),k=el.getA
 function addProjectRow(){var arr=activeProjects();arr.push({client:'New Client',name:'Project Name',value_cr:0,status:'Completed',domain:'',mobile_gis:false,central_server:false,tags:[]});renderProjectsTable();}
 
 function delProject(i){if(!confirm('Delete this project?'))return;activeProjects().splice(i,1);renderProjectsTable();}
+
+function setProjectsView(v){projectsView=v;renderProjectsTable();}
+
+function exportProjectsTab(){
+  try{
+    var tabs=profileData.project_tabs||[];
+    var t=tabs[currentProjectTabIdx]||{name:'General',projects:activeProjects()};
+    var data={name:t.name||('Tab '+(currentProjectTabIdx+1)),projects:t.projects||[]};
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='projects_'+(data.name||'tab').replace(/[^a-z0-9_-]/gi,'_')+'.json';
+    a.click();
+    toast('Exported current tab','success');
+  }catch(e){toast('Export failed: '+e.message,'error');}
+}
+
+function importProjectsTab(){
+  var inp=document.createElement('input');
+  inp.type='file'; inp.accept='.json';
+  inp.onchange=async function(){
+    try{
+      var file=inp.files[0]; if(!file) return;
+      var text=await file.text();
+      var obj=JSON.parse(text);
+      if(!obj || !Array.isArray(obj.projects)) throw new Error('Invalid JSON format');
+      if(!profileData.project_tabs || !profileData.project_tabs.length) profileData.project_tabs=[{name:'General',projects:[]}];
+      var name=(obj.name||'Imported').toString().trim()||'Imported';
+      profileData.project_tabs.push({name:name,projects:obj.projects});
+      currentProjectTabIdx=profileData.project_tabs.length-1;
+      projectsSearch=''; projectsDomain='All';
+      renderProjectsTable();
+      toast('Imported as new tab: '+name,'success');
+    }catch(e){toast('Import failed: '+e.message,'error');}
+  };
+  inp.click();
+}
 
 async function saveProfile(){
   try{var r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileData)});var d=await r.json();toast('Profile saved','success');}
