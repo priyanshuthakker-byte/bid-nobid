@@ -1,14 +1,13 @@
 """
 Bid Tracker - Pipeline, Deadlines, Checklists, Win/Loss
-FIXED: win/loss response shape matches frontend expectations
+FIXED: Removed dead loop that caused ValueError: too many values to unpack
 """
 
-import json
+import json, re
 from pathlib import Path
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from typing import Dict, List
 
-# Always use same path as main.py
 OUTPUT_DIR = Path(__file__).parent / "data"
 OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
 DB_FILE = OUTPUT_DIR / "tenders_db.json"
@@ -48,7 +47,6 @@ def days_left(deadline_str: str) -> int:
     return 999
 
 def get_deadline_alerts() -> List[Dict]:
-    """Return tenders with deadlines in next 7 days that are BID or CONDITIONAL"""
     db = load_db()
     alerts = []
     for tid, t in db["tenders"].items():
@@ -79,27 +77,17 @@ def get_pipeline_stats() -> Dict:
 
 def get_win_loss_stats() -> Dict:
     """
-    Returns stats in shape that frontend expects:
-    - total (not total_bid)
-    - total_won_value (not won_value_cr)
-    - win_rate as 0-1 decimal (frontend multiplies by 100 for %)
-    - results list (not by_org dict) — each item has t247_id, brief, outcome, outcome_value, outcome_competitor
+    FIXED: Removed dead loop. Only .items() loop is used — gives (tid, dict) correctly.
     """
     db = load_db()
     won = lost = total = 0
     won_value = 0.0
-
     results = []
-
-    for tid, t in db["tenders"].values() if hasattr(db["tenders"], "values") else {}.items():
-        pass
 
     for tid, t in db["tenders"].items():
         status = t.get("status", "")
         outcome = t.get("outcome", "")
         cost = float(t.get("estimated_cost_cr", 0) or 0)
-
-        # Count as bid result if has explicit outcome OR status is Won/Lost/Submitted
         effective_outcome = outcome or (status if status in ["Won", "Lost", "Submitted"] else "")
 
         if effective_outcome in ["Won", "Lost", "Submitted", "Disqualified"]:
@@ -109,7 +97,6 @@ def get_win_loss_stats() -> Dict:
                 won_value += float(t.get("outcome_value", 0) or cost or 0)
             elif effective_outcome == "Lost":
                 lost += 1
-
             results.append({
                 "t247_id": tid,
                 "brief": t.get("brief", t.get("tender_name", ""))[:60],
@@ -122,77 +109,74 @@ def get_win_loss_stats() -> Dict:
             })
 
     win_rate = round(won / total, 3) if total > 0 else 0.0
-
-    # Sort by date descending
     results.sort(key=lambda x: x.get("outcome_date", ""), reverse=True)
 
     return {
-        # Frontend-expected field names
         "total": total,
         "won": won,
         "lost": lost,
-        "win_rate": win_rate,              # 0.0 to 1.0 — frontend does *100 for display
+        "win_rate": win_rate,
         "total_won_value": round(won_value, 2),
-        "results": results,                # frontend reads d.results
-        "history": results,                # alias — frontend also checks d.history
-        # Extra fields
+        "results": results,
+        "history": results,
         "submitted": sum(1 for r in results if r["outcome"] == "Submitted"),
         "disqualified": sum(1 for r in results if r["outcome"] == "Disqualified"),
     }
 
 def generate_doc_checklist(tender_data: Dict) -> List[Dict]:
-    """Generate document checklist from tender PQ criteria + standard docs"""
     checklist = []
     pq = tender_data.get("pq_criteria", [])
 
     standard = [
-        {"id": "std-1", "label": "Certificate of Incorporation (COI)", "category": "Company", "source": "Company Records", "done": False},
-        {"id": "std-2", "label": "PAN Card (self-attested)", "category": "Company", "source": "Company Records", "done": False},
-        {"id": "std-3", "label": "GST Registration Certificate (self-attested)", "category": "Company", "source": "Company Records", "done": False},
-        {"id": "std-4", "label": "MSME/Udyam Registration Certificate", "category": "Company", "source": "UDYAM-GJ-01-0007420", "done": False},
-        {"id": "std-5", "label": "Audited Balance Sheet FY 2022-23", "category": "Financial", "source": "CA/Accounts", "done": False},
-        {"id": "std-6", "label": "Audited Balance Sheet FY 2023-24", "category": "Financial", "source": "CA/Accounts", "done": False},
-        {"id": "std-7", "label": "Audited Balance Sheet FY 2024-25", "category": "Financial", "source": "CA/Accounts", "done": False},
-        {"id": "std-8", "label": "CA Certificate for Average Turnover", "category": "Financial", "source": "CA Anuj Sharedalal", "done": False},
-        {"id": "std-9", "label": "Non-Blacklisting Declaration (notarized)", "category": "Legal", "source": "Prepare + Notarise", "done": False},
-        {"id": "std-10", "label": "Authorization Letter / POA (Hitesh Patel) — CHECK VALIDITY", "category": "Legal", "source": "Renew POA — expired 31-Mar-2026", "done": False},
-        {"id": "std-11", "label": "Bid Letter on Company Letterhead", "category": "Bid", "source": "Prepare", "done": False},
-        {"id": "std-12", "label": "CMMI V2.0 Level 3 Certificate", "category": "Certification", "source": "Valid till 19-Dec-2026", "done": False},
-        {"id": "std-13", "label": "ISO 9001:2015 Certificate", "category": "Certification", "source": "Valid till 08-Sep-2028", "done": False},
-        {"id": "std-14", "label": "ISO 27001:2022 Certificate", "category": "Certification", "source": "Valid till 08-Sep-2028", "done": False},
+        {"id": "std-1",  "label": "Certificate of Incorporation (COI)", "category": "Company", "source": "Company Records", "done": False},
+        {"id": "std-2",  "label": "PAN Card — AACCN3670J (self-attested)", "category": "Company", "source": "Company Records", "done": False},
+        {"id": "std-3",  "label": "GST Registration Certificate — 24AACCN3670J1ZG (self-attested)", "category": "Company", "source": "Company Records", "done": False},
+        {"id": "std-4",  "label": "MSME/Udyam Registration Certificate — UDYAM-GJ-01-0007420", "category": "Company", "source": "Lifetime validity", "done": False},
+        {"id": "std-5",  "label": "Audited Balance Sheet FY 2022-23", "category": "Financial", "source": "CA/Accounts", "done": False},
+        {"id": "std-6",  "label": "Audited Balance Sheet FY 2023-24", "category": "Financial", "source": "CA/Accounts", "done": False},
+        {"id": "std-7",  "label": "Audited Balance Sheet FY 2024-25", "category": "Financial", "source": "CA/Accounts", "done": False},
+        {"id": "std-8",  "label": "CA Certificate — Avg Annual IT/ITeS Turnover (3yr avg Rs.17.18 Cr)", "category": "Financial", "source": "CA Anuj J. Sharedalal & Co.", "done": False},
+        {"id": "std-9",  "label": "Non-Blacklisting Declaration (on letterhead, notarized)", "category": "Legal", "source": "Prepare + Notarise", "done": False},
+        {"id": "std-10", "label": "⚠ Power of Attorney — Hitesh Patel (CAO) — EXPIRED 31-Mar-2026 — MUST RENEW BEFORE SUBMISSION", "category": "Legal", "source": "URGENT: Management action required", "done": False},
+        {"id": "std-11", "label": "Covering Letter / Bid Submission Letter on Company Letterhead", "category": "Bid", "source": "Generate from system", "done": False},
+        {"id": "std-12", "label": "CMMI V2.0 Level 3 Certificate — valid till 19-Dec-2026 (Benchmark ID: 68617)", "category": "Certification", "source": "CUNIX Infotech Pvt. Ltd.", "done": False},
+        {"id": "std-13", "label": "ISO 9001:2015 Certificate — valid till 08-Sep-2028 (Cert: 25EQPE64)", "category": "Certification", "source": "Assurance Quality Certification LLC", "done": False},
+        {"id": "std-14", "label": "ISO 27001:2022 Certificate — valid till 08-Sep-2028 (Cert: 25EQPG58)", "category": "Certification", "source": "Assurance Quality Certification LLC", "done": False},
+        {"id": "std-15", "label": "ISO 20000-1:2018 Certificate — valid till 08-Sep-2028 (Cert: 25ZQZQ030409IT)", "category": "Certification", "source": "IQCS UK Ltd", "done": False},
+        {"id": "std-16", "label": "Employee Strength Declaration (67 employees, all IT/ITeS)", "category": "HR", "source": "Prepare on company letterhead", "done": False},
+        {"id": "std-17", "label": "Work Orders + Completion Certificates for qualifying projects", "category": "Experience", "source": "From project files", "done": False},
     ]
     checklist.extend(standard)
 
-    # Add EMD-specific item if EMD mentioned
     emd = tender_data.get("emd", "")
     if emd and emd not in ["—", "Nil", "Not specified", ""]:
         checklist.append({
             "id": "emd-1",
-            "label": f"EMD: {emd} — OR — MSME Exemption Letter (Udyam Certificate)",
+            "label": f"EMD: {emd} — OR — MSME EMD Exemption Letter with Udyam Certificate",
             "category": "EMD",
-            "source": "Finance team / MSME exemption",
+            "source": "Finance — raise pre-bid query for MSME exemption written confirmation",
             "done": False
         })
 
-    # From PQ criteria
     for i, item in enumerate(pq):
-        docs_text = item.get("details", "")
+        docs_text = item.get("documents_required", "") or item.get("details", "")
         if not docs_text:
             continue
-        import re
         docs = re.split(r'[|•\n,]', docs_text)
         for doc in docs:
             doc = doc.strip()
             if len(doc) > 10 and doc not in [d["label"] for d in checklist]:
-                category = ("Certification" if any(k in doc.lower() for k in ["cmmi","iso","cert","certificate"]) else
-                           "Financial" if any(k in doc.lower() for k in ["turnover","balance","audited","ca cert"]) else
-                           "Experience" if any(k in doc.lower() for k in ["work order","completion","client","project"]) else
-                           "Document")
+                category = (
+                    "Certification" if any(k in doc.lower() for k in ["cmmi","iso","cert","certificate"]) else
+                    "Financial" if any(k in doc.lower() for k in ["turnover","balance","audited","ca cert"]) else
+                    "Experience" if any(k in doc.lower() for k in ["work order","completion","client","project"]) else
+                    "Document"
+                )
                 checklist.append({
                     "id": f"pq-{i}-{len(checklist)}",
                     "label": doc[:120],
                     "category": category,
-                    "source": "Refer RFP",
+                    "source": f"RFP {item.get('clause_ref','')}",
                     "clause": item.get("clause_ref", ""),
                     "done": False,
                 })

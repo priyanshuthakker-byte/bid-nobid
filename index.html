@@ -244,7 +244,7 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
     <div id="dash-count" style="font-size:12px;color:#444;margin-bottom:8px"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Deadline</th><th>Days Left</th><th>Verdict</th><th>Actions</th></tr></thead>
+        <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Value</th><th>Deadline</th><th>Days</th><th>Type</th><th>Verdict</th><th>Project Match</th><th>Actions</th></tr></thead>
         <tbody id="dash-table"><tr><td colspan="6" class="empty-state">Loading tenders...</td></tr></tbody>
       </table>
     </div>
@@ -262,7 +262,7 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
     <div class="search-wrap"><input id="tl-search" placeholder="Search..." oninput="renderTenders()"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>Deadline</th><th>Verdict</th><th>Actions</th></tr></thead>
+        <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>Deadline</th><th>Type</th><th>Verdict</th><th>Project Match</th><th>Actions</th></tr></thead>
         <tbody id="tenders-table"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
       </table>
     </div>
@@ -517,7 +517,7 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
     <div class="card">
       <div class="card-title">System Info</div>
       <div style="font-size:12px;color:#666;display:flex;gap:20px;flex-wrap:wrap">
-        <span>Version: <b style="color:#fff">7.0</b></span>
+        <span>Version: <b style="color:#fff">7.1</b></span>
         <span>Drive: <b id="sys-drive" style="color:#fff">checking...</b></span>
         <span>Tenders loaded: <b id="sys-tenders" style="color:#fff">—</b></span>
         <span>API Quota: <b id="sys-quota" style="color:#fff">—</b></span>
@@ -658,6 +658,7 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
 <div id="toast"></div>
 
 <script>
+
 // ═══════════════════════════════════════════════════════════
 // GLOBALS
 // ═══════════════════════════════════════════════════════════
@@ -798,34 +799,70 @@ function renderDash() {
            (t.ref_no||'').toLowerCase().includes(q);
   });
 
-  arr.sort(function(a,b){ return getDaysLeft(a) - getDaysLeft(b); });
+  var sortBy = (document.getElementById('sort-sel') ? document.getElementById('sort-sel').value : 'deadline');
+  if (sortBy === 'value') arr.sort(function(a,b){ return (parseFloat(b.estimated_cost_cr)||0)-(parseFloat(a.estimated_cost_cr)||0); });
+  else if (sortBy === 'verdict') arr.sort(function(a,b){ var o={'BID':0,'CONDITIONAL':1,'REVIEW':2,'NO-BID':3}; return (o[getVerdict(a)]||3)-(o[getVerdict(b)]||3); });
+  else arr.sort(function(a,b){ return getDaysLeft(a) - getDaysLeft(b); });
 
-  document.getElementById('dash-count').textContent = arr.length + ' tender' + (arr.length!==1?'s':'') + (currentFilter?' · filtered':'');
+  document.getElementById('dash-count').textContent = arr.length + ' tender' + (arr.length!==1?'s':'') + (currentFilter?' \u00b7 filtered':'');
 
   var tbody = document.getElementById('dash-table');
   if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">'+(allTenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">'+(allTenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';
     return;
   }
 
-  tbody.innerHTML = arr.map(function(t) {
-    var v = getVerdict(t); var dl = getDaysLeft(t);
-    return '<tr>' +
-      '<td class="mono">'+( t.t247_id||'—')+'</td>'+
-      '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div></td>'+
-      '<td style="white-space:nowrap;color:#666;font-size:12px">'+(t.deadline||'—')+'</td>'+
-      '<td>'+daysDisplay(dl)+'</td>'+
-      '<td>'+verdictBadge(v)+'</td>'+
-      '<td class="actions-cell">'+
-        '<button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\''+encodeURIComponent((t.brief||'').substring(0,40))+'\');showPage(\'analyse\')">Analyse</button>'+
-        '<button class="action-btn amber" onclick="openBOQ(\''+t.t247_id+'\')">BOQ</button>'+
-        (t.bid_no_bid_done?'<button class="action-btn green" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'checklist\')">Checklist</button>':'')+
-        '<button class="action-btn blue" onclick="viewTenderDetail(\''+t.t247_id+'\')">👁 View</button>'+
-        '<button class="action-btn gray" onclick="copyTenderInfo(\''+t.t247_id+'\')">Copy</button>'+
-        '<button class="action-btn gray" onclick="skipTender(\''+t.t247_id+'\')">Skip</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
+  var rows = arr.map(function(t) {
+    var v = getVerdict(t);
+    var dl = getDaysLeft(t);
+    var tid = String(t.t247_id || '');
+
+    // GEM badge
+    var gem = t.is_gem
+      ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#134e4a;color:#34d399;font-weight:700">GeM</span>'
+      : '<span style="font-size:10px;color:#444">T247</span>';
+
+    // Value
+    var val = t.estimated_cost_cr
+      ? '<span style="color:#888;font-size:12px">\u20b9'+t.estimated_cost_cr+'Cr</span>'
+      : '<span style="color:#333">\u2014</span>';
+
+    // Project match
+    var pm = Array.isArray(t.project_matches) ? t.project_matches : [];
+    var pmHtml;
+    if (pm.length) {
+      pmHtml = pm.slice(0,2).map(function(p) {
+        var col = p.strength==='STRONG'?'#22c55e':p.strength==='MODERATE'?'#f59e0b':'#666';
+        var name = String(p.matching_project||p.project_name||'').substring(0,22);
+        return '<div style="font-size:10px;color:'+col+';white-space:nowrap">\u25b8 '+name+'</div>';
+      }).join('');
+    } else if (t.bid_no_bid_done) {
+      pmHtml = '<span style="font-size:10px;color:#333">\u2014</span>';
+    } else {
+      pmHtml = '<span style="font-size:10px;color:#252830">Analyse first</span>';
+    }
+
+    // Actions — NO inline quoted function args; use data-tid on row
+    var acts = '<button class="action-btn blue" onclick="rowView(this)">View</button>'
+      + '<button class="action-btn blue" onclick="rowAnalyse(this)">Analyse</button>'
+      + (t.bid_no_bid_done ? '<button class="action-btn green" onclick="rowChecklist(this)">Checklist</button>' : '')
+      + '<button class="action-btn amber" onclick="rowBOQ(this)">BOQ</button>'
+      + '<button class="action-btn gray" onclick="rowSkip(this)">Skip</button>';
+
+    return '<tr data-tid="'+tid+'">'
+      + '<td class="mono" style="font-size:11px">'+tid+'</td>'
+      + '<td class="brief-cell"><div class="brief">'+(t.brief||'\u2014')+'</div>'
+      +   '<div class="org">'+(t.org_name||'')+(t.location?' \u00b7 '+t.location:'')+'</div></td>'
+      + '<td>'+val+'</td>'
+      + '<td style="white-space:nowrap;color:#666;font-size:12px">'+(t.deadline||'\u2014')+'</td>'
+      + '<td>'+daysDisplay(dl)+'</td>'
+      + '<td>'+gem+'</td>'
+      + '<td>'+verdictBadge(v)+'</td>'
+      + '<td style="min-width:110px;vertical-align:middle">'+pmHtml+'</td>'
+      + '<td class="actions-cell">'+acts+'</td>'
+      + '</tr>';
+  });
+  tbody.innerHTML = rows.join('');
 }
 
 function renderTenders() {
@@ -833,28 +870,41 @@ function renderTenders() {
   var arr = allTenders;
   if (q) arr = arr.filter(function(t){
     return (t.brief||'').toLowerCase().includes(q) || (t.t247_id||'').toLowerCase().includes(q) ||
-           (t.org_name||'').toLowerCase().includes(q);
+           (t.org_name||'').toLowerCase().includes(q) || (t.ref_no||'').toLowerCase().includes(q);
   });
   var tbody = document.getElementById('tenders-table');
-  if (!arr.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No tenders</td></tr>'; return; }
-  tbody.innerHTML = arr.map(function(t) {
+  if (!arr.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No tenders</td></tr>'; return; }
+
+  var rows = arr.map(function(t) {
     var v = getVerdict(t);
-    return '<tr>'+
-      '<td class="mono">'+(t.t247_id||'—')+'</td>'+
-      '<td class="mono" style="font-size:11px">'+(t.ref_no||'—')+'</td>'+
-      '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+'</div></td>'+
-      '<td style="color:#888">'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
-      '<td style="color:#666;font-size:12px">'+(t.deadline||'—')+'</td>'+
-      '<td>'+verdictBadge(v)+'</td>'+
-      '<td class="actions-cell">'+
-      '<button class="action-btn blue" onclick="viewTenderDetail(\''+t.t247_id+'\')">👁 View</button>'+
-      '<button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'analyse\')">Analyse</button>'+
-      (t.bid_no_bid_done?'<button class="action-btn green" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'checklist\')">Checklist</button>':'')+
-      '<button class="action-btn gray" onclick="copyTenderInfo(\''+t.t247_id+'\')">Copy</button>'+
-      '<button class="action-btn gray" onclick="skipTender(\''+t.t247_id+'\')">Skip</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
+    var tid = String(t.t247_id || '');
+    var gem = t.is_gem
+      ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#134e4a;color:#34d399;font-weight:700">GeM</span>'
+      : '<span style="font-size:10px;color:#444">T247</span>';
+    var pm = Array.isArray(t.project_matches) ? t.project_matches : [];
+    var pmHtml = pm.length
+      ? pm.slice(0,2).map(function(p){
+          var col = p.strength==='STRONG'?'#22c55e':p.strength==='MODERATE'?'#f59e0b':'#666';
+          return '<div style="font-size:10px;color:'+col+'">\u25b8 '+String(p.matching_project||'').substring(0,22)+'</div>';
+        }).join('')
+      : '<span style="font-size:10px;color:'+(t.bid_no_bid_done?'#333':'#252830')+'">'+(t.bid_no_bid_done?'\u2014':'Analyse first')+'</span>';
+    var acts = '<button class="action-btn blue" onclick="rowView(this)">View</button>'
+      + '<button class="action-btn blue" onclick="rowAnalyse(this)">Analyse</button>'
+      + (t.bid_no_bid_done?'<button class="action-btn green" onclick="rowChecklist(this)">Checklist</button>':'')
+      + '<button class="action-btn gray" onclick="rowSkip(this)">Skip</button>';
+    return '<tr data-tid="'+tid+'">'
+      + '<td class="mono" style="font-size:11px">'+tid+'</td>'
+      + '<td class="mono" style="font-size:11px">'+(t.ref_no||'\u2014')+'</td>'
+      + '<td class="brief-cell"><div class="brief">'+(t.brief||'\u2014')+'</div><div class="org">'+(t.org_name||'')+'</div></td>'
+      + '<td style="color:#888;font-size:12px">'+(t.estimated_cost_cr?'\u20b9'+t.estimated_cost_cr+'Cr':'\u2014')+'</td>'
+      + '<td style="color:#666;font-size:12px">'+(t.deadline||'\u2014')+'</td>'
+      + '<td>'+gem+'</td>'
+      + '<td>'+verdictBadge(v)+'</td>'
+      + '<td style="min-width:110px">'+pmHtml+'</td>'
+      + '<td class="actions-cell">'+acts+'</td>'
+      + '</tr>';
+  });
+  tbody.innerHTML = rows.join('');
 }
 
 function populateSelects() {
@@ -998,12 +1048,17 @@ async function checkDriveStatus() {
 
 async function loadSettings() {
   try {
-    var r = await fetch('/config'); var d = await r.json();
-    if(d.gemini_api_key)   document.getElementById('key1').value=d.gemini_api_key;
-    if(d.gemini_api_key_2) document.getElementById('key2').value=d.gemini_api_key_2;
-    if(d.gemini_api_key_3) document.getElementById('key3').value=d.gemini_api_key_3;
-    if(d.gemini_api_key_4) document.getElementById('key4').value=d.gemini_api_key_4;
-    if(d.t247_username)    document.getElementById('t247u').value=d.t247_username;
+    var r = await fetch('/config');
+    if (!r.ok) return;
+    var d = await r.json();
+    var byField = [d.gemini_api_key||'', d.gemini_api_key_2||'', d.gemini_api_key_3||'', d.gemini_api_key_4||''];
+    var fromArr = d.gemini_api_keys || [];
+    ['key1','key2','key3','key4'].forEach(function(id,i){
+      var el=document.getElementById(id); if(!el) return;
+      var v = byField[i] || fromArr[i] || ''; if(v) el.value=v;
+    });
+    var tu=document.getElementById('t247u'); if(tu&&d.t247_username) tu.value=d.t247_username;
+    var sd=document.getElementById('sys-drive'); if(sd) sd.textContent=d.drive_connected?'Connected':'—';
   } catch(e) {}
 }
 
@@ -1065,11 +1120,16 @@ async function exportTenders() {
 }
 
 async function saveKeys() {
-  var body = {gemini_api_key:document.getElementById('key1').value,
-    gemini_api_key_2:document.getElementById('key2').value,
-    gemini_api_key_3:document.getElementById('key3').value,
-    gemini_api_key_4:document.getElementById('key4').value};
-  try { await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Keys saved','success'); } catch(e){toast('Failed','error');}
+  var keys = ['key1','key2','key3','key4'].map(function(id){
+    var el = document.getElementById(id); return el ? el.value.trim() : '';
+  }).filter(function(k){ return k && k.length > 20; });
+  if (!keys.length) { toast('Enter at least one valid Gemini API key','info'); return; }
+  var body = { gemini_api_key: keys[0], gemini_api_keys: keys,
+    gemini_api_key_2: keys[1]||'', gemini_api_key_3: keys[2]||'', gemini_api_key_4: keys[3]||'' };
+  try {
+    await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast(keys.length+' Gemini key(s) saved','success');
+  } catch(e){ toast('Save failed: '+e.message,'error'); }
 }
 
 async function saveT247() {
@@ -1743,7 +1803,11 @@ function pField(label,path,val,type='text'){
 function pChange(el){
   var path=el.getAttribute('data-path').split('.'),obj=profileData;
   for(var i=0;i<path.length-1;i++){if(!obj[path[i]])obj[path[i]]={};obj=obj[path[i]];}
-  obj[path[path.length-1]]=el.type==='number'?parseFloat(el.value)||0:el.value;
+  var val=el.type==='number'?parseFloat(el.value)||0:el.value;
+  obj[path[path.length-1]]=val;
+  var fp=el.getAttribute('data-path');
+  if(fp==='company.msme_udyam'){if(!profileData.company)profileData.company={};profileData.company.udyam=val;}
+  if(fp==='company.udyam'){if(!profileData.company)profileData.company={};profileData.company.msme_udyam=val;}
 }
 
 function renderProfileAll(){
@@ -1755,13 +1819,16 @@ function renderProfileAll(){
     pField('Years in Operation','company.years_in_operation',c.years_in_operation,'number')+
     pField('Address','company.address',c.address)+pField('Email','company.email',c.email);
 
-  var f=profileData.finance||{};
+  var f=profileData.finance||{};var tby=f.turnover_by_year||{};
   document.getElementById('profile-finance-form').innerHTML='<div class="card-title">Financial Details</div>'+
-    pField('Turnover FY 2022-23 (Cr)','finance.turnover_fy2223',f.turnover_fy2223,'number')+
-    pField('Turnover FY 2023-24 (Cr)','finance.turnover_fy2324',f.turnover_fy2324,'number')+
-    pField('Turnover FY 2024-25 (Cr)','finance.turnover_fy2425',f.turnover_fy2425,'number')+
-    pField('Avg Last 3 FY (Cr)','finance.avg_turnover_last_3_fy',f.avg_turnover_last_3_fy,'number')+
-    pField('Net Worth (Cr)','finance.net_worth_cr',f.net_worth_cr,'number');
+    "<p style='font-size:11px;color:#555;margin-bottom:8px'>Turnover by FY — used for all eligibility calculations</p>"+
+    pField('Turnover FY 2022-23 (Cr)','finance.turnover_by_year.2022-23',tby['2022-23']||f.turnover_fy2223||16.36,'number')+
+    pField('Turnover FY 2023-24 (Cr)','finance.turnover_by_year.2023-24',tby['2023-24']||f.turnover_fy2324||16.36,'number')+
+    pField('Turnover FY 2024-25 (Cr)','finance.turnover_by_year.2024-25',tby['2024-25']||f.turnover_fy2425||18.83,'number')+
+    pField('Avg 3yr Turnover (Cr)','finance.avg_turnover_last_3_fy',f.avg_turnover_last_3_fy||17.18,'number')+
+    pField('Avg 2yr Turnover (Cr)','finance.avg_turnover_last_2_fy',f.avg_turnover_last_2_fy||17.60,'number')+
+    pField('Net Worth (Cr)','finance.net_worth_cr',f.net_worth_cr||26.09,'number')+
+    pField('CA Firm','finance.ca_name',f.ca_name||'Anuj J. Sharedalal & Co.');
 
   var c2=profileData.certifications||{},cmmi=c2.cmmi||{},iso9=c2.iso_9001||{},iso27=c2.iso_27001||{},iso20=c2.iso_20000||{};
   document.getElementById('profile-certs-form').innerHTML='<div class="card-title">Certifications</div>'+
@@ -2021,6 +2088,14 @@ function editProjectRow(idx) {
 }
 
 
+// Row action helpers — read tid from row's data-tid attribute
+function _rowTid(btn) { return btn.closest ? btn.closest('tr').dataset.tid : btn.parentNode.parentNode.getAttribute('data-tid'); }
+function rowView(btn)      { viewTenderDetail(_rowTid(btn)); }
+function rowAnalyse(btn)   { var tid=_rowTid(btn); var t=allTenders.find(function(x){return x.t247_id===tid;}); setActive(tid,t?(t.brief||'').substring(0,40):''); showPage('analyse'); }
+function rowChecklist(btn) { setActive(_rowTid(btn),''); showPage('checklist'); }
+function rowBOQ(btn)       { openBOQ(_rowTid(btn)); }
+function rowSkip(btn)      { skipTender(_rowTid(btn)); }
+
 init();
 
 // ── Global Search ────────────────────────────────────────────
@@ -2144,6 +2219,7 @@ function copyTenderInfo(tid) {
     toast('Copied to clipboard ✓','success');
   });
 }
+
 
 </script>
 </body>

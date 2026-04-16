@@ -961,8 +961,22 @@ async def get_config_route(request: Request):
     check_admin(request)
     config = load_config()
     key = config.get("gemini_api_key", "")
-    return {"gemini_api_key_set": bool(key), "gemini_api_key": key,
-            "gemini_api_key_preview": (key[:8] + "..." + key[-4:]) if key else ""}
+    keys = config.get("gemini_api_keys", [])
+    # Ensure primary key is first in list
+    if key and key not in keys:
+        keys = [key] + keys
+    groq_key = config.get("groq_api_key", "")
+    return {
+        "gemini_api_key_set": bool(key),
+        "gemini_api_key": key,
+        "gemini_api_key_preview": (key[:8] + "..." + key[-4:]) if key else "",
+        "gemini_api_keys": keys,
+        "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
+        "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
+        "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "groq_api_key": groq_key,
+        "t247_username": config.get("t247_username", ""),
+    }
 
 @app.post("/config")
 async def update_config_route(request: Request, data: dict = Body(...)):
@@ -975,6 +989,15 @@ async def update_config_route(request: Request, data: dict = Body(...)):
         config["gemini_api_keys"] = keys
         if keys:
             config["gemini_api_key"] = keys[0]
+    # Also accept individual key fields from UI (key1/key2/key3/key4)
+    ui_keys = []
+    for field in ["gemini_api_key", "gemini_api_key_2", "gemini_api_key_3", "gemini_api_key_4"]:
+        v = str(data.get(field, "") or "").strip()
+        if v and len(v) > 20:
+            ui_keys.append(v)
+    if ui_keys and not data.get("gemini_api_keys"):
+        config["gemini_api_key"] = ui_keys[0]
+        config["gemini_api_keys"] = ui_keys
     if data.get("groq_api_key"):
         config["groq_api_key"] = data["groq_api_key"].strip()
     if "t247_username" in data:
@@ -1128,10 +1151,11 @@ async def update_stage(t247_id: str, data: dict = Body(...)):
     return {"status": "saved", "new_stage": t.get("status")}
 
 @app.post("/bid-result/{t247_id}")
+@app.post("/tender/{t247_id}/bid-result")
 async def save_bid_result(t247_id: str, data: dict = Body(...)):
     db = load_db()
     t = db["tenders"].get(t247_id, {})
-    t.update({"outcome": data.get("outcome", ""), "outcome_value": data.get("contract_value_cr", data.get("value", "")),
+    t.update({"outcome": data.get("outcome", ""), "outcome_value": data.get("value", ""),
               "outcome_competitor": data.get("competitor", ""), "outcome_notes": data.get("notes", ""),
               "outcome_date": datetime.now().isoformat()})
     if data.get("outcome") == "Won": t["status"] = "Won"
