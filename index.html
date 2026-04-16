@@ -1870,7 +1870,7 @@ function renderProjectsTable(){
             '</div>'+
             '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+tags+'</div>'+
             '<div style="display:flex;gap:8px;justify-content:flex-end">'+
-              '<button class="btn btn-ghost btn-sm" onclick="projectsView=\\'table\\';renderProjectsTable();setTimeout(function(){try{document.querySelector(\\'#projects-table input[data-pidx=\\\\\\\"'+x.idx+'\\\\\\\"][data-pkey=\\\\\\\"name\\\\\\\"]\\').focus();}catch(e){}},0)">Edit</button>'+
+              '<button class="btn btn-ghost btn-sm" onclick="editProjectRow('+x.idx+')">Edit</button>'+
               '<button class="btn btn-ghost btn-sm" onclick="delProject('+x.idx+')">Delete</button>'+
             '</div>'+
           '</div>';
@@ -2008,6 +2008,18 @@ async function restoreTender(tid){
 }
 
 function openBOQ(tid){currentTenderId=tid;showPage('boq');}
+
+function editProjectRow(idx) {
+  projectsView = 'table';
+  renderProjectsTable();
+  setTimeout(function() {
+    try {
+      var el = document.querySelector('#projects-table input[data-pidx="'+idx+'"][data-pkey="name"]');
+      if (el) el.focus();
+    } catch(e) {}
+  }, 0);
+}
+
 
 init();
 
