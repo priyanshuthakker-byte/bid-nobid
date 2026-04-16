@@ -1131,7 +1131,7 @@ async def update_stage(t247_id: str, data: dict = Body(...)):
 async def save_bid_result(t247_id: str, data: dict = Body(...)):
     db = load_db()
     t = db["tenders"].get(t247_id, {})
-    t.update({"outcome": data.get("outcome", ""), "outcome_value": data.get("value", ""),
+    t.update({"outcome": data.get("outcome", ""), "outcome_value": data.get("contract_value_cr", data.get("value", "")),
               "outcome_competitor": data.get("competitor", ""), "outcome_notes": data.get("notes", ""),
               "outcome_date": datetime.now().isoformat()})
     if data.get("outcome") == "Won": t["status"] = "Won"

@@ -1493,11 +1493,11 @@ async function loadAnalytics() {
     var el = document.getElementById('analytics-summary');
     var stats = d.stats || d;
     el.innerHTML = [
-      ['Total Submitted', stats.total_submitted||0, 'c-white'],
+      ['Total Submitted', stats.total||0, 'c-white'],
       ['Won', stats.won||0, 'c-green'],
       ['Lost', stats.lost||0, 'c-red'],
       ['Win Rate', ((stats.win_rate||0)*100).toFixed(0)+'%', 'c-blue'],
-      ['Total Value Won (Cr)', '₹'+(stats.total_value_won||0), 'c-purple'],
+      ['Total Value Won (Cr)', '₹'+(stats.total_won_value||0), 'c-purple'],
     ].map(function(s){
       return '<div class="analytic-card"><div class="analytic-num '+s[2]+'">'+s[1]+'</div><div class="analytic-lbl">'+s[0]+'</div></div>';
     }).join('');
@@ -1510,8 +1510,8 @@ async function loadAnalytics() {
           '<td class="mono">'+(h.t247_id||'')+'</td>'+
           '<td style="font-size:12px">'+(h.brief||'').substring(0,40)+'</td>'+
           '<td><span style="color:'+(h.outcome==='Won'?'#22c55e':h.outcome==='Lost'?'#ef4444':'#f59e0b')+'">'+(h.outcome||'')+'</span></td>'+
-          '<td style="color:#888">'+(h.contract_value_cr?'₹'+h.contract_value_cr+'Cr':'')+'</td>'+
-          '<td style="color:#555;font-size:12px">'+(h.competitor||'')+'</td>'+
+          '<td style="color:#888">'+(h.outcome_value?'₹'+h.outcome_value:'')+'</td>'+
+          '<td style="color:#555;font-size:12px">'+(h.outcome_competitor||'')+'</td>'+
         '</tr>';
       }).join('');
     }
@@ -1522,7 +1522,7 @@ async function saveBidResult() {
   var tid = document.getElementById('res-tid').value.trim(); if(!tid){toast('Enter T247 ID','info');return;}
   var body = {outcome:document.getElementById('res-outcome').value, contract_value_cr:parseFloat(document.getElementById('res-value').value)||0, competitor:document.getElementById('res-competitor').value, notes:document.getElementById('res-notes').value};
   try {
-    await fetch('/tender/'+tid+'/bid-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    await fetch('/bid-result/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     toast('Result saved','success'); loadAnalytics();
     document.getElementById('res-tid').value=''; document.getElementById('res-value').value='';
   } catch(e){toast('Failed','error');}
