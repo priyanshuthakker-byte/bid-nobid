@@ -2,6 +2,7 @@
 BidDocGenerator v4 - Clean rewrite matching KELTRON format
 No emojis. Plain status text. Human language.
 FIXED: verdict color now reads from data["verdict_color"] fallback
+FIXED: scope_items renders correctly for both dict and string formats (v7 AI output)
 """
 
 from docx import Document
@@ -146,13 +147,50 @@ def field_value(v):
     """
     AI v7 may return snapshot fields as dict:
     {"value": "...", "clause_ref": "...", "page_no": "..."}.
-    This helper normalizes to plain display text for doc generation.
+    Normalizes to plain display text.
     """
     if isinstance(v, dict):
         return str(v.get("value", "—") or "—")
     if v is None:
         return "—"
     return str(v)
+
+
+def scope_item_text(item) -> str:
+    """
+    FIXED: scope_items can be dicts (from AI v7 scope_sections) or plain strings.
+    Extracts readable text in both cases.
+    """
+    if isinstance(item, dict):
+        parts = []
+        sec_no = item.get("section_no", "")
+        title = item.get("section_title", "") or item.get("title", "")
+        prose = item.get("prose", "") or item.get("description", "")
+        phase = item.get("phase", "")
+        tech = item.get("tech_specified", "")
+        deliverables = item.get("deliverables", [])
+
+        if sec_no and title:
+            parts.append(f"[{sec_no}] {title}")
+        elif title:
+            parts.append(title)
+
+        if phase and phase not in ("—", ""):
+            parts.append(f"Phase: {phase}")
+
+        if prose:
+            parts.append(prose)
+
+        if tech and tech not in ("—", ""):
+            parts.append(f"Technology: {tech}")
+
+        if deliverables:
+            dl = [str(d) for d in deliverables if d]
+            if dl:
+                parts.append("Deliverables: " + " | ".join(dl))
+
+        return " — ".join(parts) if parts else str(item)
+    return strip_emojis(str(item)) if item else ""
 
 
 class BidDocGenerator:
@@ -237,7 +275,6 @@ class BidDocGenerator:
         verdict_data = data.get("overall_verdict", {})
         verdict = strip_emojis(verdict_data.get("verdict", "PENDING REVIEW"))
 
-        # FIX: check both overall_verdict.color AND top-level verdict_color
         vcolor = verdict_data.get("color") or data.get("verdict_color", "BLUE")
 
         v_txt = {"GREEN": "FFF2CC", "AMBER": "FFF2CC", "RED": "FCE4D6", "BLUE": "DEEAF1"}.get(vcolor, "DEEAF1")
@@ -275,6 +312,7 @@ class BidDocGenerator:
             ("EMD",                      field_value(data.get("emd", "Not specified"))),
             ("EMD Exemption",            field_value(data.get("emd_exemption", "—"))),
             ("Performance Bank Guarantee",field_value(data.get("performance_security", "As per tender"))),
+            ("Bid Validity",             field_value(data.get("bid_validity", "—"))),
             ("Period of Work",           field_value(data.get("contract_period", "—"))),
             ("Post-Implementation Support", field_value(data.get("post_implementation", "—"))),
             ("Project Location",         field_value(data.get("location", "—"))),
@@ -347,8 +385,11 @@ class BidDocGenerator:
             c = row.cells[1]
             set_bg(c, bg)
             set_borders(c)
-            cell_write(c, item.get("clause_ref", "—"), size=9,
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
+            # Show clause ref + page no together
+            ref = item.get("clause_ref", "—")
+            page = item.get("page_no", "")
+            ref_text = f"{ref}\n{page}" if page and page != "—" else ref
+            cell_write(c, ref_text, size=9, align=WD_ALIGN_PARAGRAPH.CENTER)
 
             c = row.cells[2]
             set_bg(c, bg)
@@ -358,7 +399,7 @@ class BidDocGenerator:
             c = row.cells[3]
             set_bg(c, bg)
             set_borders(c)
-            cell_write(c, item.get("details", ""), size=9)
+            cell_write(c, item.get("details", "") or item.get("documents_required", ""), size=9)
 
             c = row.cells[4]
             set_bg(c, C[s_bg])
@@ -370,6 +411,10 @@ class BidDocGenerator:
             set_bg(c, C[s_bg] if sc != "BLUE" else bg)
             set_borders(c)
             remark = strip_emojis(item.get("nascent_remark", ""))
+            # Add calculation if present
+            calc = item.get("calculation_shown", "")
+            if calc and calc != "—":
+                remark = remark + ("\n" if remark else "") + f"Calc: {calc}"
             cell_write(c, remark, size=8)
 
     def _section_pq(self, data):
@@ -377,7 +422,7 @@ class BidDocGenerator:
                           "Criteria reproduced word-for-word from tender | Nascent status checked against company profile")
         headers = [
             "Sr.",
-            "Clause No.\nSub-Clause\nPage No.",
+            "Clause No.\nPage No.",
             "Eligibility Criteria\n(word-for-word from tender)",
             "Supporting Documents\nRequired",
             "Nascent\nStatus",
@@ -385,43 +430,166 @@ class BidDocGenerator:
         ]
         col_w = [Cm(0.9), Cm(2.3), Cm(8.5), Cm(5.0), Cm(2.0), Cm(6.8)]
         self._criteria_table(data.get("pq_criteria", []), headers, col_w)
+
+        # TQ criteria if present
+        tq = data.get("tq_criteria", [])
+        if tq:
+            self._sec_heading("2B", "Technical Qualification (TQ) Criteria",
+                              "Marking scheme and slab calculations")
+            tq_headers = [
+                "Sr.",
+                "Clause\nPage",
+                "Criteria\n(word-for-word)",
+                "Evaluation Criteria\n(Marks / Slabs)",
+                "Score",
+                "Remarks / Calculation",
+            ]
+            # Reuse criteria table but map tq fields
+            mapped = []
+            for item in tq:
+                if not isinstance(item, dict):
+                    continue
+                mapped.append({
+                    "sl_no": item.get("sl_no", ""),
+                    "clause_ref": item.get("clause_ref", "—"),
+                    "page_no": item.get("page_no", "—"),
+                    "criteria": item.get("criteria", ""),
+                    "details": item.get("eval_criteria", "") or item.get("details", ""),
+                    "nascent_status": item.get("nascent_status", "Review"),
+                    "nascent_color": item.get("nascent_color", "BLUE"),
+                    "nascent_remark": (
+                        f"Score: {item.get('nascent_score','?')}/{item.get('max_marks','?')}\n"
+                        + strip_emojis(str(item.get("slab_calculation", "") or ""))
+                        + ("\n" + strip_emojis(str(item.get("nascent_remark", "") or "")) if item.get("nascent_remark") else "")
+                    ),
+                    "calculation_shown": "",
+                })
+            self._criteria_table(mapped, tq_headers, col_w)
+
         self.doc.add_paragraph()
 
     def _section_scope(self, data):
         self._sec_heading("3", "Scope of Work",
                           "Source: Tender document — key deliverables and phases")
+
+        # Try scope_sections (AI v7 format) first, fallback to scope_items
+        scope_sections = data.get("scope_sections", [])
         scope_items = data.get("scope_items", [])
-        if not scope_items:
+
+        # Use scope_sections if present, else scope_items
+        items_to_render = scope_sections if scope_sections else scope_items
+
+        # Background if present
+        bg = data.get("scope_background", "")
+        if bg and isinstance(bg, str) and len(bg) > 10:
+            p = self.doc.add_paragraph()
+            p.paragraph_format.space_after = Pt(6)
+            add_run(p, strip_emojis(bg), size=9, italic=True)
+
+        if not items_to_render:
             p = self.doc.add_paragraph()
             add_run(p, "Refer to tender document for scope of work.", italic=True, size=9)
             self.doc.add_paragraph()
             return
-        for item in scope_items:
+
+        for item in items_to_render:
+            text = scope_item_text(item)  # FIXED: handles both dict and str
+            if not text:
+                continue
             p = self.doc.add_paragraph()
             p.paragraph_format.left_indent = Inches(0.2)
             p.paragraph_format.space_after = Pt(3)
             add_run(p, "• ", size=9)
-            add_run(p, strip_emojis(str(item)), size=9)
+            add_run(p, text, size=9)
+
+        # Key integrations if present
+        integrations = data.get("key_integrations", [])
+        if integrations:
+            p = self.doc.add_paragraph()
+            add_run(p, "Key Integrations:", bold=True, size=9)
+            for intg in integrations:
+                if not isinstance(intg, dict):
+                    continue
+                p2 = self.doc.add_paragraph()
+                p2.paragraph_format.left_indent = Inches(0.3)
+                p2.paragraph_format.space_after = Pt(2)
+                txt = f"{intg.get('system','')} ({intg.get('type','')}) — {intg.get('purpose','')}"
+                add_run(p2, "• " + txt, size=8)
+
         self.doc.add_paragraph()
 
     def _section_payment(self, data):
         self._sec_heading("4", "Payment Terms & Timeline",
                           "Note: Detailed payment schedule from tender document.")
+
+        # Try structured payment_schedule first
+        sched = data.get("payment_schedule", [])
         items = data.get("payment_terms", [])
-        if not items:
-            items = [
+
+        if sched:
+            # Render as table
+            table = self.doc.add_table(rows=1, cols=5)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders(table, color=C["mid_blue"])
+            hrow = table.rows[0]
+            for cell, hdr in zip(hrow.cells, ["Milestone", "Activity / Trigger", "Timeline", "%", "Phase"]):
+                set_bg(cell, C["dark_blue"])
+                set_borders(cell, color="FFFFFF")
+                cell_write(cell, hdr, bold=True, size=9, color="FFFFFF",
+                           align=WD_ALIGN_PARAGRAPH.CENTER)
+            for ri, row_data in enumerate(sched):
+                if not isinstance(row_data, dict):
+                    continue
+                row = table.add_row()
+                bg = C["white"] if ri % 2 == 0 else C["alt_row"]
+                vals = [
+                    row_data.get("milestone_name", row_data.get("milestone_no", "")),
+                    row_data.get("trigger_activity", ""),
+                    row_data.get("timeline", ""),
+                    row_data.get("payment_percent", ""),
+                    row_data.get("phase", ""),
+                ]
+                for cell, val in zip(row.cells, vals):
+                    set_bg(cell, bg)
+                    set_borders(cell)
+                    cell_write(cell, str(val), size=9)
+        elif items:
+            for item in items:
+                p = self.doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.2)
+                p.paragraph_format.space_after = Pt(3)
+                add_run(p, "• ", size=9)
+                add_run(p, strip_emojis(str(item)), size=9)
+        else:
+            fallback = [
                 "Period of work: " + field_value(data.get("contract_period", "As per tender")),
                 "EMD: " + field_value(data.get("emd", "As per tender")),
                 "Performance Bank Guarantee: " + field_value(data.get("performance_security", "As per tender")),
                 "Payment schedule: Not explicitly defined — refer tender document.",
                 "Penalty / LD clause: Refer tender document for applicable clauses.",
             ]
-        for item in items:
+            for item in fallback:
+                p = self.doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.2)
+                p.paragraph_format.space_after = Pt(3)
+                add_run(p, "• ", size=9)
+                add_run(p, strip_emojis(str(item)), size=9)
+
+        # Penalty clauses if present
+        penalties = data.get("penalty_clauses", [])
+        if penalties:
             p = self.doc.add_paragraph()
-            p.paragraph_format.left_indent = Inches(0.2)
-            p.paragraph_format.space_after = Pt(3)
-            add_run(p, "• ", size=9)
-            add_run(p, strip_emojis(str(item)), size=9)
+            p.paragraph_format.space_before = Pt(6)
+            add_run(p, "Penalty / Risk Clauses:", bold=True, size=9, color=C["red_text"])
+            for pen in penalties:
+                if not isinstance(pen, dict):
+                    continue
+                p2 = self.doc.add_paragraph()
+                p2.paragraph_format.left_indent = Inches(0.2)
+                p2.paragraph_format.space_after = Pt(2)
+                txt = f"{pen.get('type','')} — {pen.get('condition','')} | Penalty: {pen.get('penalty','')} | Cap: {pen.get('max_cap','—')}"
+                add_run(p2, "• " + strip_emojis(txt), size=8, color=C["red_text"])
+
         self.doc.add_paragraph()
 
     def _section_recommendation(self, data):
@@ -454,14 +622,13 @@ class BidDocGenerator:
 
         self.doc.add_paragraph()
 
-        # FIX: check both overall_verdict.color AND top-level verdict_color
         vcolor = verdict_data.get("color") or data.get("verdict_color", "BLUE")
         s_bg, s_tc = STATUS_STYLE.get(vcolor, ("blue_bg", "blue_text"))
 
         verdict = strip_emojis(verdict_data.get("verdict", "PENDING REVIEW"))
         reason  = strip_emojis(verdict_data.get("reason", ""))
 
-        # Read company facts from profile (fallback to hardcoded if profile missing)
+        # Read company facts from profile
         try:
             from nascent_checker import load_profile
             p = load_profile()
@@ -477,6 +644,19 @@ class BidDocGenerator:
             emp_str = "67 employees — 11 GIS, 21 IT/Dev, plus QA, PM, BA teams."
             cmmi_str = "CMMI V2.0 Level 3 — valid till 19-Dec-2026."
 
+        # Project matches
+        proj_matches = data.get("project_matches", [])
+        proj_str = ""
+        if proj_matches:
+            proj_str = " | ".join([
+                f"{pm.get('matching_project','')}: {pm.get('relevance','')[:60]}"
+                for pm in proj_matches[:3] if isinstance(pm, dict)
+            ])
+
+        # Key strengths / risks
+        strengths = data.get("key_strengths", [])
+        strengths_str = " | ".join([strip_emojis(str(s))[:80] for s in strengths[:3]]) if strengths else ""
+
         assessment_rows = [
             ("Financial Eligibility",   turnover_str),
             ("Company Registration",    "Private Limited Company since 2006. 19 years in operation."),
@@ -487,8 +667,12 @@ class BidDocGenerator:
             ("Employee Strength",       emp_str),
             ("MSME Status",             "UDYAM-GJ-01-0007420 — eligible for EMD exemption."),
             ("PQ Criteria Summary",     f"Met: {green_count}  Conditional: {amber_count}  Not Met: {red_count}"),
-            ("FINAL RECOMMENDATION",   verdict + "\n" + reason),
         ]
+        if proj_str:
+            assessment_rows.append(("Matching Projects", proj_str))
+        if strengths_str:
+            assessment_rows.append(("Key Strengths", strengths_str))
+        assessment_rows.append(("FINAL RECOMMENDATION", verdict + ("\n" + reason if reason else "")))
 
         tbl2 = self.doc.add_table(rows=0, cols=2)
         tbl2.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -510,6 +694,27 @@ class BidDocGenerator:
             cell_write(c1, val, bold=is_final,
                        size=11 if is_final else 9,
                        color=(C[s_tc] if is_final else None))
+
+        # Action items from assessment
+        action_items = data.get("action_items", [])
+        if action_items:
+            self.doc.add_paragraph()
+            p = self.doc.add_paragraph()
+            add_run(p, "Action Items:", bold=True, size=10, color=C["dark_blue"])
+            for ai in action_items[:8]:
+                if not isinstance(ai, dict):
+                    continue
+                p2 = self.doc.add_paragraph()
+                p2.paragraph_format.left_indent = Inches(0.2)
+                p2.paragraph_format.space_after = Pt(2)
+                priority = ai.get("priority", "")
+                action = strip_emojis(ai.get("action", ""))
+                by = ai.get("target_date", "")
+                clr = C["red_text"] if priority == "URGENT" else C["amber_text"] if priority == "HIGH" else C["dark_blue"]
+                add_run(p2, f"[{priority}] ", bold=True, size=9, color=clr)
+                add_run(p2, action, size=9)
+                if by:
+                    add_run(p2, f" — by {by}", size=8, italic=True)
 
         self.doc.add_paragraph()
 
@@ -533,11 +738,16 @@ class BidDocGenerator:
                 })
 
         for note in data.get("notes", []):
-            note = strip_emojis(str(note))
-            is_risk = any(k in note.lower() for k in ["penalty", "blacklist", "disqualif", "liquidated"])
+            if isinstance(note, dict):
+                note_text = strip_emojis(str(note.get("detail", note.get("title", str(note)))))
+                priority = note.get("priority", "INFO")
+            else:
+                note_text = strip_emojis(str(note))
+                priority = "AWARENESS"
+            is_risk = any(k in note_text.lower() for k in ["penalty", "blacklist", "disqualif", "liquidated", "poa", "power of attorney"])
             action_items.append({
-                "priority": "RISK" if is_risk else "AWARENESS",
-                "text":     note[:200],
+                "priority": "RISK" if is_risk else priority,
+                "text":     note_text[:200],
                 "detail":   "",
                 "color":    C["red_text"] if is_risk else C["dark_blue"],
                 "bg":       "red_bg"  if is_risk else "blue_bg",
@@ -556,7 +766,7 @@ class BidDocGenerator:
         table.alignment = WD_TABLE_ALIGNMENT.CENTER
         set_table_borders(table, color=C["mid_blue"])
 
-        for i, item in enumerate(action_items[:12]):
+        for i, item in enumerate(action_items[:15]):
             row = table.add_row()
             cell = row.cells[0]
             set_bg(cell, C[item["bg"]])
