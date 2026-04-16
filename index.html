@@ -325,6 +325,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);displ
 .input-row{display:flex;gap:6px;margin-bottom:8px}
 .input-row .s-input{flex:1}
 .poa-warn{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:5px;padding:7px 11px;font-size:10px;color:#fca5a5;display:flex;align-items:center;gap:6px;margin-bottom:10px}
+
+/* ANALYTICS GRID */
+.analytics-grid .sc{cursor:default}
+/* CHECKLIST ITEMS */
+.checklist-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1);font-size:11px}
+.cl-check{width:14px;height:14px;cursor:pointer;accent-color:var(--blue);margin-top:1px;flex-shrink:0}
+/* MONO INPUT */
+.s-input.mono{font-family:"JetBrains Mono",monospace}
 </style>
 </head>
 <body>
@@ -351,6 +359,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);displ
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h9M2 12h6"/></svg>
       Pipeline
       <span class="nav-badge y" id="nb-urgent" style="display:none">0</span>
+    </button>
+    <div class="sb-sec">Analysis</div>
+    <button class="nav-a" onclick="nav('analytics')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/></svg>
+      Analytics
+    </button>
+    <button class="nav-a" onclick="nav('checklist')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l2 2 4-4"/><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+      Checklist
+    </button>
+    <div class="sb-sec">Company</div>
+    <button class="nav-a" onclick="nav('rules')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14"/></svg>
+      Bid Rules <span class="nav-badge" id="nb-rules">0</span>
+    </button>
+    <button class="nav-a" onclick="nav('profile')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      Nascent Profile
     </button>
     <div class="sb-sec">Tools</div>
     <button class="nav-a" onclick="nav('vault')">
@@ -648,6 +674,131 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);displ
   </div>
 </div>
 
+
+  <!-- ══ ANALYTICS ══ -->
+  <div class="page" id="wrap-analytics" style="padding:14px 16px;display:none">
+    <div class="analytics-grid" id="analytics-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+    <table class="tbl">
+      <thead><tr>
+        <th>T247 ID</th><th>Tender</th><th>Organisation</th>
+        <th>Outcome</th><th>Value</th><th>Competitor</th><th>Date</th>
+      </tr></thead>
+      <tbody id="analytics-body"></tbody>
+    </table>
+    <div id="analytics-empty" class="empty-state" style="display:none">
+      <div class="ei">📈</div><p>No submitted/won/lost tenders yet. Update pipeline stages to track outcomes.</p>
+    </div>
+  </div>
+
+  <!-- ══ CHECKLIST ══ -->
+  <div class="page" id="wrap-checklist" style="padding:14px 16px;display:none">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <select class="sel-ctrl" id="cl-tender-select" onchange="loadChecklist(this.value)" style="min-width:300px">
+        <option value="">Select a tender to view checklist...</option>
+      </select>
+      <span id="cl-pct" style="font-size:10px;color:var(--t3)"></span>
+    </div>
+    <div id="checklist-body">
+      <div class="empty-state"><div class="ei">✅</div><p>Select an analysed tender above to see its submission checklist.</p></div>
+    </div>
+  </div>
+
+  <!-- ══ BID RULES ══ -->
+  <div class="page" id="wrap-rules" style="padding:14px 16px;display:none">
+    <div class="poa-warn" style="margin-bottom:12px">⚠️ DO NOT BID rules always override preferred sector rules — this is a locked system rule.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="s-card">
+        <div class="s-title" style="color:#f87171">✗ Do Not Bid
+          <span id="dnb-count" style="font-size:9px;color:var(--t3);font-weight:normal;margin-left:6px">0 rules</span>
+        </div>
+        <div id="dnb-tags" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:5px">
+          <input class="s-input" id="dnb-input" placeholder="Add keyword..." style="font-family:inherit;font-size:10px">
+          <button class="s-btn" onclick="addRule('do_not_bid','dnb-input')" style="white-space:nowrap;padding:6px 10px;font-size:10px">+ Add</button>
+        </div>
+      </div>
+      <div class="s-card">
+        <div class="s-title" style="color:var(--green)">✓ Preferred Sectors
+          <span id="pref-count" style="font-size:9px;color:var(--t3);font-weight:normal;margin-left:6px">0 rules</span>
+        </div>
+        <div id="pref-tags" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:5px">
+          <input class="s-input" id="pref-input" placeholder="Add keyword..." style="font-family:inherit;font-size:10px">
+          <button class="s-btn" onclick="addRule('preferred_sectors','pref-input')" style="white-space:nowrap;padding:6px 10px;font-size:10px">+ Add</button>
+        </div>
+      </div>
+      <div class="s-card">
+        <div class="s-title" style="color:var(--yellow)">△ Conditional
+          <span id="cond-count" style="font-size:9px;color:var(--t3);font-weight:normal;margin-left:6px">0 rules</span>
+        </div>
+        <div id="cond-tags" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:5px">
+          <input class="s-input" id="cond-input" placeholder="Add keyword..." style="font-family:inherit;font-size:10px">
+          <button class="s-btn" onclick="addRule('conditional','cond-input')" style="white-space:nowrap;padding:6px 10px;font-size:10px">+ Add</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="s-btn" onclick="reclassifyAll()">🔄 Reclassify All Tenders with Updated Rules</button>
+    </div>
+  </div>
+
+  <!-- ══ PROFILE ══ -->
+  <div class="page" id="wrap-profile" style="padding:14px 16px;display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="s-card">
+        <div class="s-title">Company Identity
+          <button class="s-btn" style="padding:4px 10px;font-size:9px" onclick="saveProfile()">Save</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div class="s-label">Company Name</div><input class="s-input" id="p-name" placeholder="Nascent Info Technologies Pvt. Ltd." style="font-family:inherit"></div>
+          <div><div class="s-label">CIN</div><input class="s-input mono" id="p-cin" placeholder="U72200GJ2006PTC048723"></div>
+          <div><div class="s-label">PAN</div><input class="s-input mono" id="p-pan" placeholder="AACCN3670J"></div>
+          <div><div class="s-label">GSTIN</div><input class="s-input mono" id="p-gstin" placeholder="24AACCN3670J1ZG"></div>
+          <div><div class="s-label">MSME / Udyam No.</div><input class="s-input mono" id="p-udyam" placeholder="UDYAM-GJ-01-0007420"></div>
+          <div><div class="s-label">Years in Operation</div><input class="s-input mono" id="p-years" type="number" placeholder="19"></div>
+        </div>
+        <div class="s-row"><div class="s-label">Address</div><input class="s-input" id="p-address" placeholder="A-805, Shapath IV, SG Highway, Ahmedabad" style="font-family:inherit"></div>
+      </div>
+      <div class="s-card">
+        <div class="s-title">Key Personnel
+          <button class="s-btn" style="padding:4px 10px;font-size:9px" onclick="saveProfile()">Save</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div class="s-label">Managing Director</div><input class="s-input" id="p-md" placeholder="Maulik Bhagat" style="font-family:inherit"></div>
+          <div><div class="s-label">Authorised Signatory</div><input class="s-input" id="p-signatory" placeholder="Hitesh Patel (CAO)" style="font-family:inherit"></div>
+          <div><div class="s-label">Email (Tender)</div><input class="s-input" id="p-email" placeholder="nascent.tender@nascentinfo.com" style="font-family:inherit"></div>
+          <div><div class="s-label">Phone</div><input class="s-input mono" id="p-phone" placeholder="+91-79-40200400"></div>
+          <div><div class="s-label">Total Employees</div><input class="s-input mono" id="p-emp-total" type="number" placeholder="67"></div>
+          <div><div class="s-label">IT/Dev Staff</div><input class="s-input mono" id="p-emp-it" type="number" placeholder="21"></div>
+          <div><div class="s-label">GIS Staff</div><input class="s-input mono" id="p-emp-gis" type="number" placeholder="11"></div>
+          <div><div class="s-label">POA Validity</div><input class="s-input" id="p-poa" placeholder="EXPIRED 31-Mar-2026" style="font-family:inherit"></div>
+        </div>
+      </div>
+      <div class="s-card">
+        <div class="s-title">Financial Data</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div class="s-label">Turnover FY 2024-25 (Cr)</div><input class="s-input mono" id="p-t1" type="number" step="0.01" placeholder="18.83"></div>
+          <div><div class="s-label">Turnover FY 2023-24 (Cr)</div><input class="s-input mono" id="p-t2" type="number" step="0.01" placeholder="16.36"></div>
+          <div><div class="s-label">Turnover FY 2022-23 (Cr)</div><input class="s-input mono" id="p-t3" type="number" step="0.01" placeholder="16.36"></div>
+          <div><div class="s-label">Net Worth (Cr)</div><input class="s-input mono" id="p-nw" type="number" step="0.01" placeholder="26.09"></div>
+        </div>
+        <button class="s-btn primary" onclick="saveProfile()">Save Financial Data</button>
+      </div>
+      <div class="s-card">
+        <div class="s-title">Certifications</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div class="s-label">CMMI Level</div><input class="s-input mono" id="p-cmmi-level" placeholder="3"></div>
+          <div><div class="s-label">CMMI Valid Till</div><input class="s-input" id="p-cmmi-valid" placeholder="19-Dec-2026" style="font-family:inherit"></div>
+          <div><div class="s-label">ISO 9001 Valid Till</div><input class="s-input" id="p-iso9001" placeholder="08-Sep-2028" style="font-family:inherit"></div>
+          <div><div class="s-label">ISO 27001 Valid Till</div><input class="s-input" id="p-iso27001" placeholder="08-Sep-2028" style="font-family:inherit"></div>
+          <div><div class="s-label">ISO 20000 Valid Till</div><input class="s-input" id="p-iso20000" placeholder="08-Sep-2028" style="font-family:inherit"></div>
+        </div>
+        <button class="s-btn primary" onclick="saveProfile()">Save Certifications</button>
+      </div>
+    </div>
+  </div>
+
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-bg" id="excel-modal">
   <div class="modal">
@@ -734,6 +885,10 @@ const PAGE_CONFIG = {
   dashboard: {title:'Dashboard', wrap:'wrap-dashboard', isWrap:true},
   analyse:   {title:'Analyse Tender', wrap:'wrap-analyse', isPage:true},
   pipeline:  {title:'Pipeline', wrap:'wrap-pipeline', isWrap:true},
+  analytics: {title:'Analytics', wrap:'wrap-analytics', isPage:true},
+  checklist: {title:'Checklist', wrap:'wrap-checklist', isPage:true},
+  rules:     {title:'Bid Rules', wrap:'wrap-rules', isPage:true},
+  profile:   {title:'Nascent Profile', wrap:'wrap-profile', isPage:true},
   vault:     {title:'Document Vault', wrap:'wrap-vault', isPage:true},
   chat:      {title:'Bid Assistant', wrap:'wrap-chat', isPage:true},
   settings:  {title:'Settings', wrap:'wrap-settings', isPage:true},
@@ -763,7 +918,11 @@ function nav(page) {
   if (page === 'pipeline') renderPipeline();
   if (page === 'vault') loadVault();
   if (page === 'settings') { loadDiag(); loadDriveStatus(); loadKeys(); }
-  if (page === 'chat') { loadChatHistory(); }
+  if (page === 'chat') loadChatHistory();
+  if (page === 'analytics') loadAnalytics();
+  if (page === 'checklist') loadChecklistTenders();
+  if (page === 'rules') loadRules();
+  if (page === 'profile') loadProfilePage();
 }
 
 // fix nav active state
@@ -1624,6 +1783,234 @@ document.querySelectorAll('.modal-bg').forEach(m => {
 // ── INITIAL LOAD ──────────────────────────────────────
 // Show dashboard properly on load
 document.getElementById('wrap-dashboard').style.display = 'flex';
+
+// ═══════════════ ANALYTICS ═══════════════
+async function loadAnalytics() {
+  try {
+    const data = await api('GET', '/win-loss');
+    const stats = [
+      {n:data.total||0,l:'Submitted/Tracked',c:'#8b5cf6'},
+      {n:data.won||0,l:'Won',c:'var(--green)'},
+      {n:data.lost||0,l:'Lost',c:'var(--red)'},
+      {n:`${((data.win_rate||0)*100).toFixed(0)}%`,l:'Win Rate',c:'var(--blue)'},
+    ];
+    document.getElementById('analytics-cards').innerHTML = stats.map(s=>`
+      <div class="sc"><div class="sc-n" style="color:${s.c}">${s.n}</div><div class="sc-l">${s.l}</div></div>`).join('');
+    const results = data.results || data.history || [];
+    const tbody = document.getElementById('analytics-body');
+    if (!results.length) { tbody.innerHTML=''; document.getElementById('analytics-empty').style.display=''; return; }
+    document.getElementById('analytics-empty').style.display = 'none';
+    tbody.innerHTML = results.map(r=>`<tr class="dr">
+      <td><span class="tid mono">${r.t247_id||'—'}</span></td>
+      <td><div class="tname">${r.brief||'—'}</div></td>
+      <td style="font-size:10px;color:var(--t2)">${r.org_name||'—'}</td>
+      <td>${getVerdictBadge(r.outcome)}</td>
+      <td style="font-size:10px">${r.outcome_value||'—'}</td>
+      <td style="font-size:10px;color:var(--t3)">${r.outcome_competitor||'—'}</td>
+      <td style="font-size:9px;color:var(--t3)">${(r.outcome_date||'').slice(0,10)||'—'}</td>
+    </tr>`).join('');
+  } catch(e) { document.getElementById('analytics-cards').innerHTML='<div class="loading">Failed to load analytics</div>'; }
+}
+
+// ═══════════════ CHECKLIST ═══════════════
+function loadChecklistTenders() {
+  const sel = document.getElementById('cl-tender-select');
+  const analysed = Object.values(S.tenders).filter(t => t.bid_no_bid_done);
+  sel.innerHTML = '<option value="">Select a tender...</option>' +
+    analysed.map(t=>`<option value="${t.t247_id}">${t.t247_id} — ${(t.brief||'').slice(0,60)}</option>`).join('');
+}
+
+async function loadChecklist(tid) {
+  if (!tid) return;
+  try {
+    const data = await api('GET', `/checklist/${tid}`);
+    const cl = data.checklist || [];
+    const done = cl.filter(c=>c.done).length;
+    document.getElementById('cl-pct').textContent = cl.length ? `${done}/${cl.length} completed (${Math.round(done/cl.length*100)}%)` : '';
+    document.getElementById('checklist-body').innerHTML = cl.length ? cl.map((item,i)=>`
+      <div class="checklist-item">
+        <input type="checkbox" class="cl-check" ${item.done?'checked':''} onchange="toggleCLItem('${tid}','${item.id||i}',this.checked)">
+        <div>
+          <div style="font-size:8px;color:var(--t3);font-weight:600">${item.category||item.source||'—'}</div>
+          <div style="font-size:11px;color:var(--t1)">${item.label||item.document||'—'}</div>
+          ${item.nascent_note?`<div style="font-size:8px;color:var(--orange);margin-top:1px">⚠ ${item.nascent_note}</div>`:item.source&&!item.category?`<div style="font-size:9px;color:var(--t3)">${item.source}</div>`:''}
+        </div>
+      </div>`).join('') :
+      '<div class="empty-state"><div class="ei">✅</div><p>No checklist items. Analyse the tender first.</p></div>';
+  } catch(e) { document.getElementById('checklist-body').innerHTML='<div class="loading">Failed to load</div>'; }
+}
+
+async function toggleCLItem(tid, id, done) {
+  try { await api('POST', `/checklist/${tid}/item`, {id, done}); } catch(e) {}
+}
+
+// ═══════════════ BID RULES ═══════════════
+async function loadRules() {
+  try {
+    const data = await api('GET', '/profile');
+    S.rules = data.bid_rules || {};
+    S.profile = data;
+    renderRules();
+  } catch(e) {}
+}
+
+function renderRules() {
+  const r = S.rules;
+  const dnb = r.do_not_bid || [];
+  const pref = r.preferred_sectors || [];
+  const cond = r.conditional || [];
+  document.getElementById('nb-rules') && (document.getElementById('nb-rules').textContent = dnb.length+pref.length+cond.length);
+  document.getElementById('dnb-count').textContent = `${dnb.length} rules`;
+  document.getElementById('pref-count').textContent = `${pref.length} rules`;
+  document.getElementById('cond-count').textContent = `${cond.length} rules`;
+  const rtag = (k, idx, type, cls) => `<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;margin:2px;cursor:default;background:${cls.bg};color:${cls.col};border:1px solid ${cls.border}">${k}<span onclick="delRule('${type}',${idx})" style="margin-left:4px;cursor:pointer;opacity:.7">✕</span></span>`;
+  document.getElementById('dnb-tags').innerHTML = dnb.map((k,i) => rtag(k,i,'do_not_bid',{bg:'rgba(239,68,68,.08)',col:'#f87171',border:'rgba(239,68,68,.2)'})).join('');
+  document.getElementById('pref-tags').innerHTML = pref.map((k,i) => rtag(k,i,'preferred_sectors',{bg:'rgba(34,197,94,.08)',col:'var(--green)',border:'rgba(34,197,94,.2)'})).join('');
+  document.getElementById('cond-tags').innerHTML = cond.map((k,i) => rtag(k,i,'conditional',{bg:'rgba(245,158,11,.08)',col:'var(--yellow)',border:'rgba(245,158,11,.2)'})).join('');
+}
+
+async function addRule(type, inputId) {
+  const input = document.getElementById(inputId);
+  const kw = input.value.trim().toLowerCase(); if (!kw) return;
+  if (!S.rules[type]) S.rules[type] = [];
+  if (!S.rules[type].includes(kw)) S.rules[type].push(kw);
+  input.value = ''; renderRules();
+  await _saveProfileRules();
+}
+
+async function delRule(type, idx) {
+  S.rules[type].splice(idx, 1); renderRules();
+  await _saveProfileRules();
+}
+
+async function _saveProfileRules() {
+  try {
+    S.profile.bid_rules = S.rules;
+    await api('POST', '/profile', S.profile);
+    toast('Rules saved', 'ok');
+  } catch(e) { toast('Failed to save rules: '+e.message, 'err'); }
+}
+
+async function reclassifyAll() {
+  try {
+    const data = await api('POST', '/reclassify-all');
+    toast(`Reclassified ${data.reclassified} tenders`, 'ok');
+    await loadDashboard();
+  } catch(e) { toast('Failed: '+e.message, 'err'); }
+}
+
+// ═══════════════ PROFILE ═══════════════
+async function loadProfilePage() {
+  try {
+    const data = await api('GET', '/profile');
+    S.profile = data;
+    const c = data.company || {};
+    const f = data.finance || {};
+    const e = data.employees || {};
+    const certs = data.certifications || {};
+    const md = data.managing_director || {};
+    const sig = data.authorised_signatory || {};
+    document.getElementById('p-name').value = c.name||'';
+    document.getElementById('p-cin').value = c.cin||'';
+    document.getElementById('p-pan').value = c.pan||'';
+    document.getElementById('p-gstin').value = c.gstin||'';
+    document.getElementById('p-udyam').value = c.udyam||c.msme_udyam||'';
+    document.getElementById('p-years').value = c.years_in_operation||'';
+    document.getElementById('p-address').value = c.address||'';
+    document.getElementById('p-md').value = md.name||c.md||'';
+    document.getElementById('p-signatory').value = sig.name||c.authorised_signatory||'';
+    document.getElementById('p-email').value = c.email||c.tender_email||'';
+    document.getElementById('p-phone').value = c.phone||'';
+    document.getElementById('p-emp-total').value = e.total_confirmed||e.total||'';
+    document.getElementById('p-emp-it').value = e.it_dev_staff||'';
+    document.getElementById('p-emp-gis').value = e.gis_staff||'';
+    document.getElementById('p-poa').value = (sig.poa_validity||c.poa_validity||'').slice(0,50);
+    const tby = f.turnover_by_year || {};
+    document.getElementById('p-t1').value = tby['2024-25']||'';
+    document.getElementById('p-t2').value = tby['2023-24']||'';
+    document.getElementById('p-t3').value = tby['2022-23']||'';
+    document.getElementById('p-nw').value = f.net_worth_cr||'';
+    const cmmi = certs.cmmi || {};
+    document.getElementById('p-cmmi-level').value = cmmi.level||'';
+    document.getElementById('p-cmmi-valid').value = cmmi.valid_to||'';
+    document.getElementById('p-iso9001').value = (certs.iso_9001||{}).valid_to||'';
+    document.getElementById('p-iso27001').value = (certs.iso_27001||{}).valid_to||'';
+    document.getElementById('p-iso20000').value = (certs.iso_20000||{}).valid_to||'';
+  } catch(e) { toast('Failed to load profile', 'err'); }
+}
+
+async function saveProfile() {
+  try {
+    const t1 = parseFloat(document.getElementById('p-t1').value)||0;
+    const t2 = parseFloat(document.getElementById('p-t2').value)||0;
+    const t3 = parseFloat(document.getElementById('p-t3').value)||0;
+    const avg3 = (t1+t2+t3)/3;
+    const avg2 = (t1+t2)/2;
+    const payload = {
+      ...S.profile,
+      company: { ...(S.profile.company||{}),
+        name: document.getElementById('p-name').value,
+        cin: document.getElementById('p-cin').value,
+        pan: document.getElementById('p-pan').value,
+        gstin: document.getElementById('p-gstin').value,
+        udyam: document.getElementById('p-udyam').value,
+        msme_udyam: document.getElementById('p-udyam').value,
+        years_in_operation: parseInt(document.getElementById('p-years').value)||0,
+        address: document.getElementById('p-address').value,
+        md: document.getElementById('p-md').value,
+        email: document.getElementById('p-email').value,
+        tender_email: document.getElementById('p-email').value,
+        phone: document.getElementById('p-phone').value,
+      },
+      managing_director: { name: document.getElementById('p-md').value },
+      authorised_signatory: { ...(S.profile.authorised_signatory||{}),
+        name: document.getElementById('p-signatory').value,
+        poa_validity: document.getElementById('p-poa').value,
+      },
+      employees: { ...(S.profile.employees||{}),
+        total_confirmed: parseInt(document.getElementById('p-emp-total').value)||0,
+        total: parseInt(document.getElementById('p-emp-total').value)||0,
+        it_dev_staff: parseInt(document.getElementById('p-emp-it').value)||0,
+        gis_staff: parseInt(document.getElementById('p-emp-gis').value)||0,
+      },
+      finance: { ...(S.profile.finance||{}),
+        turnover_by_year: {'2024-25':t1,'2023-24':t2,'2022-23':t3},
+        avg_turnover_last_3_fy: Math.round(avg3*100)/100,
+        avg_turnover_last_2_fy: Math.round(avg2*100)/100,
+        net_worth_cr: parseFloat(document.getElementById('p-nw').value)||0,
+      },
+      certifications: { ...(S.profile.certifications||{}),
+        cmmi: { ...(S.profile.certifications?.cmmi||{}), level: parseInt(document.getElementById('p-cmmi-level').value)||3, valid_to: document.getElementById('p-cmmi-valid').value },
+        iso_9001: { ...(S.profile.certifications?.iso_9001||{}), valid_to: document.getElementById('p-iso9001').value },
+        iso_27001: { ...(S.profile.certifications?.iso_27001||{}), valid_to: document.getElementById('p-iso27001').value },
+        iso_20000: { ...(S.profile.certifications?.iso_20000||{}), valid_to: document.getElementById('p-iso20000').value },
+      },
+    };
+    await api('POST', '/profile', payload);
+    S.profile = payload;
+    toast('Profile saved', 'ok');
+  } catch(e) { toast('Failed to save profile: '+e.message, 'err'); }
+}
+
+// helper for analytics
+function getVerdictBadge(v) {
+  const m = {'BID':'<span class="vbadge vb">✓ BID</span>','NO-BID':'<span class="vbadge vn">✗ No-Bid</span>','CONDITIONAL':'<span class="vbadge vc2">△ Conditional</span>','REVIEW':'<span class="vbadge vr">? Review</span>','Won':'<span class="vbadge vb">🏆 Won</span>','Lost':'<span class="vbadge vn">✗ Lost</span>','Submitted':'<span class="vbadge vc2">📤 Submitted</span>'};
+  return m[v] || `<span class="vbadge vr">${v||'—'}</span>`;
+}
+
+// ═══════════════ SKIP TENDER ═══════════════
+async function skipTender(tid) {
+  if (!confirm('Mark as Not Interested?')) return;
+  try {
+    await api('POST', `/tender/${tid}/skip`, {reason: 'Not interested'});
+    if (S.tenders[tid]) S.tenders[tid].status = 'Not Interested';
+    renderTenders();
+    toast('Marked as Not Interested', 'info');
+  } catch(e) { toast('Failed: '+e.message, 'err'); }
+}
+
+// ═══════════════ ADD MISSING CSS ═══════════════
+
 </script>
 </body>
 </html>
