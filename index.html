@@ -322,9 +322,15 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
         </div>
         <div id="an-pq-summary" style="display:flex;gap:8px;flex-wrap:wrap"></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" id="an-dl-btn" onclick="downloadReport()" style="display:none">⬇ Download Report</button>
+          <button class="btn btn-ghost btn-sm" id="an-dl-btn" onclick="downloadReport()" style="display:none">⬇ Report</button>
           <button class="btn btn-ghost btn-sm" onclick="generatePrebidLetter()">✉ Pre-bid Letter</button>
           <button class="btn btn-ghost btn-sm" id="an-gendocs-btn" onclick="generateDocsFromAnalyse()" style="display:none">📦 Gen Docs</button>
+          <button class="btn btn-ghost btn-sm" id="an-mergebtn" onclick="mergePDFFromAnalyse()" style="display:none">🗂 Merge PDF</button>
+        </div>
+        <!-- Download tray — populated after any generate action -->
+        <div id="an-dl-tray" style="display:none;width:100%;margin-top:8px;padding:8px 12px;background:#0f1117;border:1px solid #1e2130;border-radius:6px">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:6px">📥 Downloads</div>
+          <div id="an-dl-links" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
       </div>
 
@@ -1303,13 +1309,13 @@ async function analyseTender() {
   btn.disabled = true; btn.textContent = 'Analysing...';
   document.getElementById('an-result-panel').style.display = 'none';
   document.getElementById('an-warn').style.display = 'none';
+  clearDownloadTray();
 
-  var steps = ['Extracting documents…','Snapshot · Dates · EMD · Fees…','Scope of Work…','PQ Criteria…','TQ Scoring…','Assessment…','Pre-bid Queries…','Checklist…'];
-  var si = 0;
   prog.style.display = '';
-  var stepTimer = setInterval(function(){ prog.textContent = '⏳ ' + (steps[si]||'Finalising…'); si++; }, 7000);
+  prog.textContent = '⏳ Uploading…';
+  var stepTimer = null;
 
-  showLoading('Uploading documents…');
+  showLoading('AI pipeline running — this takes 2-5 minutes…');
   var fd = new FormData();
   if (tid) fd.append('t247_id', tid);
   // Use dropped files or input files
@@ -1395,9 +1401,19 @@ function renderAnalysisResult(td, raw) {
     (pqA?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,.12);color:#fbbf24">△ '+pqA+' Conditional</span>':'')+
     (pqR?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(239,68,68,.12);color:#f87171">✗ '+pqR+' Not Met</span>':'');
 
-  // Download / Gen Docs buttons
-  if (raw.download_file) { document.getElementById('an-dl-btn').style.display=''; document.getElementById('an-dl-btn').setAttribute('data-file', raw.download_file); }
-  if (_lastAnalysisTid) { document.getElementById('an-gendocs-btn').style.display=''; }
+  // Download tray
+  var tray = document.getElementById('an-dl-tray');
+  var trayLinks = document.getElementById('an-dl-links');
+  if (raw.download_file) {
+    document.getElementById('an-dl-btn').style.display='';
+    document.getElementById('an-dl-btn').setAttribute('data-file', raw.download_file);
+    anAddDownload('📄 Bid/No-Bid Report (.docx)', '/download/'+raw.download_file);
+    if (tray) tray.style.display='';
+  }
+  if (_lastAnalysisTid) {
+    document.getElementById('an-gendocs-btn').style.display='';
+    document.getElementById('an-mergebtn').style.display='';
+  }
 
   // AI warning
   if (td.ai_warning) { document.getElementById('an-warn').textContent='⚠ '+td.ai_warning; document.getElementById('an-warn').style.display=''; }
@@ -1558,7 +1574,41 @@ function downloadReport() {
 async function generateDocsFromAnalyse() {
   var tid = _lastAnalysisTid;
   if (!tid) { toast('Enter T247 ID before generating docs','info'); return; }
-  await generateDocs(tid);
+  showLoading('Generating submission documents…');
+  try {
+    var r = await fetch('/generate-docs/'+tid, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    var d = await r.json();
+    hideLoading();
+    if (d.files && d.files.length) {
+      d.files.forEach(function(f) {
+        anAddDownload('📄 '+f.name, '/download/'+(f.filename||f.name));
+      });
+      toast(d.files.length+' documents generated — see Downloads below', 'success');
+    } else if (d.download_url || d.zip_url) {
+      anAddDownload('📦 Submission Package (.zip)', d.download_url||d.zip_url);
+      toast('Submission package ready', 'success');
+    } else {
+      toast('Generated — check Documents page', 'success');
+    }
+  } catch(e) { hideLoading(); toast('Failed: '+e.message, 'error'); }
+}
+
+async function mergePDFFromAnalyse() {
+  var tid = _lastAnalysisTid;
+  if (!tid) { toast('Enter T247 ID first','info'); return; }
+  showLoading('Merging submission PDF…');
+  try {
+    var r = await fetch('/tender/'+tid+'/merge-submission-pdf', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    var d = await r.json();
+    hideLoading();
+    var url = d.download_url || (d.filename ? '/download/'+d.filename : null);
+    if (url) {
+      anAddDownload('🗂 Merged Submission PDF', url);
+      toast('Merged PDF ready — see Downloads below', 'success');
+    } else {
+      toast('Merged — check Documents page', 'success');
+    }
+  } catch(e) { hideLoading(); toast('Merge failed: '+e.message, 'error'); }
 }
 
 
@@ -1587,14 +1637,20 @@ async function loadPrebidQueries() {
 }
 
 async function generatePrebidLetter() {
-  var tid = currentTenderId || document.getElementById('an-tid').value.trim();
+  var tid = currentTenderId || (_lastAnalysisTid) || (document.getElementById('an-tid') ? document.getElementById('an-tid').value.trim() : '');
   if(!tid) { toast('Select a tender first','info'); return; }
-  showLoading('Generating pre-bid letter...');
+  showLoading('Generating pre-bid letter…');
   try {
-    var r = await fetch('/tender/'+tid+'/generate-prebid-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d = await r.json();
+    var r = await fetch('/tender/'+tid+'/generate-prebid-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d = await r.json();
     hideLoading();
-    if(d.download_url) { window.open(d.download_url); toast('Pre-bid letter ready — '+d.query_count+' queries','success'); }
-    else toast('Generated: '+d.filename,'success');
+    var url = d.download_url || (d.filename ? '/download/'+d.filename : null);
+    if (url) {
+      anAddDownload('✉ Pre-bid Letter (.docx)', url);
+      toast('Pre-bid letter ready ('+(d.query_count||'?')+' queries) — see Downloads below', 'success');
+    } else {
+      toast('Pre-bid letter generated', 'success');
+    }
   } catch(e) { hideLoading(); toast('Failed: '+e.message,'error'); }
 }
 
@@ -2731,6 +2787,35 @@ function _appendAnChat(role, text) {
 
 // Notify chat when analysis completes
 var _origRenderAnalysis = typeof renderAnalysisResult !== 'undefined' ? renderAnalysisResult : null;
+
+
+// ═══ DOWNLOAD TRAY HELPERS ═══
+function anAddDownload(label, url) {
+  // Add to analyse page tray
+  var tray = document.getElementById('an-dl-tray');
+  var links = document.getElementById('an-dl-links');
+  if (tray && links) {
+    tray.style.display = '';
+    // Avoid duplicate links
+    var existing = Array.from(links.querySelectorAll('a')).map(function(a){return a.href;});
+    var fullUrl = url.startsWith('http') ? url : window.location.origin + url;
+    if (existing.includes(fullUrl)) return;
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    a.target = '_blank';
+    a.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1e3a5f;border:1px solid #2563eb44;border-radius:5px;color:#93c5fd;font-size:11px;text-decoration:none;cursor:pointer';
+    a.innerHTML = label + ' <span style="font-size:13px">⬇</span>';
+    links.appendChild(a);
+  }
+}
+
+function clearDownloadTray() {
+  var tray = document.getElementById('an-dl-tray');
+  var links = document.getElementById('an-dl-links');
+  if (tray) tray.style.display = 'none';
+  if (links) links.innerHTML = '';
+}
 
 </script>
 </body>
