@@ -1704,6 +1704,14 @@ function renderAnalysisResult(td, raw) {
     '</div>';
   }).join('') : '<div style="text-align:center;padding:20px;color:#4ade80;font-size:12px">✓ No pre-bid queries needed — all criteria appear clear.</div>';
 
+  // Add generate button below queries
+  if (queries.length > 0) {
+    document.getElementById('anp-queries').innerHTML +=
+      '<div style="padding:12px 0;border-top:1px solid #1e2130;margin-top:8px;display:flex;gap:8px">' +
+      '<button class="btn btn-primary btn-sm" onclick="generatePrebidLetter()">📄 Generate Pre-bid Letter (.docx)</button>' +
+      '</div>';
+  }
+
   // ── CHECKLIST TAB ──
   var cl = td.submission_checklist || [];
   document.getElementById('anp-checklist').innerHTML = cl.length ? cl.map(function(item,i) {
@@ -1817,20 +1825,28 @@ async function loadPrebidQueries() {
 
 async function generatePrebidLetter() {
   var tid = currentTenderId || (_lastAnalysisTid) || (document.getElementById('an-tid') ? document.getElementById('an-tid').value.trim() : '');
-  if(!tid) { toast('Select a tender first','info'); return; }
-  showLoading('Generating pre-bid letter…');
+  if(!tid) { toast('Enter or select a T247 ID first','info'); return; }
+  showLoading('Generating pre-bid letter (.docx)…');
   try {
     var r = await fetch('/tender/'+tid+'/generate-prebid-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    if (!r.ok) {
+      var err = await r.json().catch(function(){return {detail:'Server error'};});
+      throw new Error(err.detail || 'HTTP '+r.status);
+    }
     var d = await r.json();
     hideLoading();
-    var url = d.download_url || (d.filename ? '/download/'+d.filename : null);
-    if (url) {
-      anAddDownload('✉ Pre-bid Letter (.docx)', url);
-      toast('Pre-bid letter ready ('+(d.query_count||'?')+' queries) — see Downloads below', 'success');
-    } else {
-      toast('Pre-bid letter generated', 'success');
+    if (d.doc_b64 && d.filename) {
+      // Blob download — no server file dependency
+      var blobUrl = _b64ToBlob(d.doc_b64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      anAddDownloadBlob('✉ Pre-bid Letter ('+d.query_count+' queries)', blobUrl, d.filename);
+      _triggerBlobDownload(blobUrl, d.filename);
+      toast('Pre-bid letter ready — '+d.query_count+' queries', 'success');
+    } else if (d.download_url) {
+      anAddDownload('✉ Pre-bid Letter (.docx)', d.download_url);
+      window.open(d.download_url);
+      toast('Pre-bid letter ready — '+d.query_count+' queries', 'success');
     }
-  } catch(e) { hideLoading(); toast('Failed: '+e.message,'error'); }
+  } catch(e) { hideLoading(); toast('Pre-bid letter failed: '+e.message,'error'); }
 }
 
 async function runCompliance() {

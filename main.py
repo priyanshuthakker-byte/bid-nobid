@@ -513,45 +513,155 @@ async def get_saved_prebid_queries(t247_id: str):
 @app.post("/tender/{t247_id}/generate-prebid-letter")
 async def generate_prebid_letter(t247_id: str):
     """
-    Generate a simple pre-bid query letter from stored prebid_queries.
-    Returns a downloadable .txt file path under /download/.
+    Generate pre-bid query letter as Word doc (.docx) with proper NIT letterhead.
+    Returns base64-encoded doc for direct browser download.
     """
     tender = get_tender(t247_id)
     if not tender:
-        raise HTTPException(404, "Tender not found")
+        raise HTTPException(404, "Tender not found. Analyse tender first.")
 
     queries = tender.get("prebid_queries", [])
     if not queries:
-        raise HTTPException(400, "No pre-bid queries found. Analyse tender first.")
+        raise HTTPException(400, "No pre-bid queries found. Analyse this tender first.")
 
-    lines = [
-        f"Date: {datetime.now().strftime('%d-%m-%Y')}",
-        "",
-        "To,",
-        f"The Tender Inviting Authority, {tender.get('org_name', 'Authority')}",
-        "",
-        f"Subject: Pre-bid Queries — {tender.get('tender_no', t247_id)}",
-        "",
-        f"Tender: {tender.get('tender_name', tender.get('brief', 'N/A'))}",
-        "",
-        "Respected Sir/Madam,",
-        "Please find below the pre-bid clarifications requested by the bidder:",
-        "",
-    ]
-    for i, q in enumerate(queries, 1):
-        if isinstance(q, dict):
-            clause = q.get("clause_ref") or q.get("clause") or "—"
-            qtxt = q.get("query") or q.get("text") or str(q)
-            lines.append(f"{i}. Clause {clause}: {qtxt}")
-        else:
-            lines.append(f"{i}. {q}")
-        lines.append("")
-    lines.extend(["Regards,", "Authorized Signatory"])
+    try:
+        from docx import Document as DocxDocument
+        from docx.shared import Pt, Cm, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        import base64, io
 
-    fname = f"PreBid_{re.sub(r'[^\\w\\-]', '_', str(tender.get('tender_no', t247_id)))[:40]}.txt"
-    fpath = OUTPUT_DIR / fname
-    fpath.write_text("\n".join(lines), encoding="utf-8")
-    return {"status": "success", "filename": fname, "query_count": len(queries), "download_url": f"/download/{fname}"}
+        doc = DocxDocument()
+
+        # Page setup
+        sec = doc.sections[0]
+        sec.page_width = Cm(21); sec.page_height = Cm(29.7)
+        sec.left_margin = sec.right_margin = Cm(2.5)
+        sec.top_margin = sec.bottom_margin = Cm(2)
+
+        # Header — NIT details
+        def add_para(text="", bold=False, size=11, align=WD_ALIGN_PARAGRAPH.LEFT, color=None, space_after=6):
+            p = doc.add_paragraph()
+            p.alignment = align
+            p.paragraph_format.space_after = Pt(space_after)
+            p.paragraph_format.space_before = Pt(0)
+            run = p.add_run(text)
+            run.bold = bold
+            run.font.size = Pt(size)
+            if color:
+                run.font.color.rgb = RGBColor(*color)
+            return p
+
+        add_para("NASCENT INFO TECHNOLOGIES PVT. LTD.", bold=True, size=14,
+                 align=WD_ALIGN_PARAGRAPH.CENTER, color=(0, 70, 127), space_after=2)
+        add_para("A-805, Shapath IV, SG Highway, Prahlad Nagar, Ahmedabad – 380015",
+                 size=9, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+        add_para("📞 +91-79-40200400 | ✉ nascent.tender@nascentinfo.com | 🌐 www.nascentinfo.com",
+                 size=9, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=2)
+        add_para("CIN: U72200GJ2006PTC048723 | PAN: AACCN3670J | GSTIN: 24AACCN3670J1ZG | MSME: UDYAM-GJ-01-0007420",
+                 size=8, align=WD_ALIGN_PARAGRAPH.CENTER, color=(100,100,100), space_after=4)
+
+        # Horizontal line
+        hr = doc.add_paragraph()
+        hr.paragraph_format.space_after = Pt(8)
+        hr_run = hr.add_run("─" * 90)
+        hr_run.font.size = Pt(8); hr_run.font.color.rgb = RGBColor(0, 70, 127)
+
+        # Date + Ref
+        today_str = datetime.now().strftime("%d %B %Y")
+        add_para(f"Date: {today_str}", size=10, space_after=10)
+
+        # To block
+        org = str(tender.get("org_name") or "The Tender Inviting Authority")
+        tender_no = str(tender.get("tender_no") or t247_id)
+        tender_name = str(tender.get("tender_name") or tender.get("brief") or "")
+        contact = str(tender.get("contact") or "")
+
+        add_para("To,", size=11, bold=True, space_after=0)
+        add_para(f"The Tender Inviting Authority", size=11, space_after=0)
+        add_para(org, size=11, space_after=2)
+        if contact and contact not in ("—", "Not specified"):
+            add_para(f"Contact: {contact}", size=10, color=(80,80,80), space_after=2)
+
+        # Subject
+        subj_p = doc.add_paragraph()
+        subj_p.paragraph_format.space_before = Pt(10)
+        subj_p.paragraph_format.space_after = Pt(10)
+        subj_run = subj_p.add_run(f"Subject: Pre-Bid Queries — Ref: {tender_no}")
+        subj_run.bold = True; subj_run.font.size = Pt(11)
+        subj_run.font.color.rgb = RGBColor(0, 70, 127)
+
+        if tender_name and tender_name != "—":
+            add_para(f"Tender: {tender_name[:120]}", size=10, color=(80,80,80), space_after=6)
+
+        add_para("Respected Sir/Madam,", size=11, space_after=6)
+        add_para(
+            "With reference to the above-mentioned tender, Nascent Info Technologies Pvt. Ltd. "
+            "requests clarification on the following points. We request your kind consideration "
+            "and responses at the earliest, preferably before the pre-bid meeting:",
+            size=11, space_after=10
+        )
+
+        # Query table
+        tbl = doc.add_table(rows=1, cols=4)
+        tbl.style = "Table Grid"
+        hdr = tbl.rows[0].cells
+        for cell, text, w in zip(hdr, ["Sr.", "Clause Ref", "RFP Extract", "Our Query"], [1.2, 2.5, 6, 6]):
+            cell.text = text
+            cell.paragraphs[0].runs[0].bold = True
+            cell.paragraphs[0].runs[0].font.size = Pt(9)
+            cell.width = Cm(w)
+
+        for i, q in enumerate(queries, 1):
+            if isinstance(q, dict):
+                clause = str(q.get("clause_ref") or q.get("clause") or "—")
+                rfp_text = str(q.get("rfp_text") or "—")
+                qtxt = str(q.get("query") or q.get("text") or str(q))
+            else:
+                clause = "—"; rfp_text = "—"; qtxt = str(q)
+
+            row = tbl.add_row().cells
+            row[0].text = str(i)
+            row[1].text = clause
+            row[2].text = rfp_text[:200]
+            row[3].text = qtxt[:300]
+            for cell in row:
+                cell.paragraphs[0].runs[0].font.size = Pt(9)
+
+        # Closing
+        doc.add_paragraph()
+        add_para("We hope for your prompt response to ensure clarity for a competitive bid.",
+                 size=11, space_after=14)
+        add_para("Yours sincerely,", size=11, space_after=20)
+        add_para("Authorised Signatory", size=11, bold=True, space_after=2)
+        add_para("Nascent Info Technologies Pvt. Ltd.", size=11, space_after=2)
+        add_para("MSME | CMMI L3 V2.0 | ISO 9001 | ISO 27001 | ISO 20000", size=9, color=(100,100,100))
+
+        # Save to bytes → base64
+        buf = io.BytesIO()
+        doc.save(buf)
+        doc_bytes = buf.getvalue()
+        doc_b64 = base64.b64encode(doc_bytes).decode("utf-8")
+
+        fname = f"PreBid_{re.sub(r'[^\w\-]', '_', tender_no)[:40]}.docx"
+
+        # Also save to disk for /download/ fallback
+        try:
+            (OUTPUT_DIR / fname).write_bytes(doc_bytes)
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "filename": fname,
+            "query_count": len(queries),
+            "download_url": f"/download/{fname}",
+            "doc_b64": doc_b64,
+        }
+
+    except Exception as e:
+        import traceback
+        raise HTTPException(500, f"Pre-bid letter generation failed: {str(e)}\n{traceback.format_exc()[:500]}")
+
 
 @app.post("/tender/{t247_id}/analyze-compliance")
 async def analyze_compliance(t247_id: str):
