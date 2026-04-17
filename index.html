@@ -383,6 +383,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);displ
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6V4a4 4 0 0 1 8 0v2"/><rect x="2" y="6" width="12" height="9" rx="1.5"/><circle cx="8" cy="10.5" r="1.5"/></svg>
       Doc Vault
     </button>
+    <button class="nav-a" onclick="nav('boq')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v2H3zM3 7h10v2H3zM3 11h6v2H3z"/><path d="M11 11l1.5 1.5L15 10"/></svg>
+      BOQ Builder
+    </button>
+    <button class="nav-a" onclick="nav('emd')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+      EMD Tracker
+      <span class="nav-badge y" id="nb-emd" style="display:none">0</span>
+    </button>
     <button class="nav-a" onclick="nav('chat')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5l-3 2V3z"/></svg>
       Bid Assistant
@@ -799,6 +808,95 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);displ
     </div>
   </div>
 
+
+  <!-- ══ BOQ BUILDER ══ -->
+  <div class="page" id="wrap-boq" style="padding:14px 16px;display:none">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <select class="sel-ctrl" id="boq-tender-select" onchange="loadBOQ(this.value)" style="min-width:300px">
+        <option value="">Select an analysed tender to build BOQ...</option>
+      </select>
+      <button class="tb-btn" onclick="regenerateBOQ()">⟳ Regenerate from Scope</button>
+      <button class="tb-btn primary" onclick="saveBOQ()" style="background:var(--green);color:#fff">💾 Save BOQ</button>
+      <button class="tb-btn" onclick="exportBOQ()">⬇ Export Excel</button>
+      <span id="boq-total-badge" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--blue)"></span>
+    </div>
+
+    <!-- margin controls -->
+    <div id="boq-controls" style="display:none;background:var(--card2);border:1px solid var(--b1);border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+        <label style="color:var(--t3)">Margin %</label>
+        <input type="number" id="boq-margin" value="15" min="0" max="60" step="1" class="s-input mono" style="width:60px" oninput="recalcBOQ()">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+        <label style="color:var(--t3)">GST %</label>
+        <input type="number" id="boq-gst" value="18" min="0" max="28" step="1" class="s-input mono" style="width:60px" oninput="recalcBOQ()">
+      </div>
+      <div style="font-size:10px;color:var(--t3)">Auto-generated from scope. Edit rates inline. Margin + GST apply to all items.</div>
+    </div>
+
+    <div id="boq-body">
+      <div class="empty-state"><div class="ei">📋</div><p>Select an analysed tender to auto-generate BOQ from scope items.</p></div>
+    </div>
+
+    <!-- totals footer -->
+    <div id="boq-footer" style="display:none;background:var(--card2);border:1px solid var(--b1);border-radius:6px;padding:12px 16px;margin-top:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+        <div><div style="font-size:9px;color:var(--t3);font-weight:600;text-transform:uppercase">Base Cost</div><div class="sc-n n-b" id="boq-base-total" style="font-size:14px">—</div></div>
+        <div><div style="font-size:9px;color:var(--t3);font-weight:600;text-transform:uppercase">Margin</div><div class="sc-n n-c" id="boq-margin-total" style="font-size:14px">—</div></div>
+        <div><div style="font-size:9px;color:var(--t3);font-weight:600;text-transform:uppercase">GST</div><div class="sc-n n-r" id="boq-gst-total" style="font-size:14px">—</div></div>
+        <div><div style="font-size:9px;color:var(--t3);font-weight:600;text-transform:uppercase">Grand Total (incl. GST)</div><div class="sc-n n-t" id="boq-grand-total" style="font-size:16px;color:var(--blue)">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EMD TRACKER ══ -->
+  <div class="page" id="wrap-emd" style="padding:14px 16px;display:none">
+    <div class="poa-warn" id="emd-poa-warn">⚠️ Hitesh Patel POA EXPIRED 31-Mar-2026 — Cannot sign EMD instruments until renewed.</div>
+
+    <!-- EMD summary cards -->
+    <div id="emd-stat-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0"></div>
+
+    <!-- filter bar -->
+    <div class="toolbar" style="margin-bottom:10px">
+      <button class="f-btn on" onclick="setEmdFilter('all',this)">All</button>
+      <button class="f-btn" onclick="setEmdFilter('due',this)">EMD Due</button>
+      <button class="f-btn" onclick="setEmdFilter('exempt',this)">MSME Exempt</button>
+      <button class="f-btn" onclick="setEmdFilter('bg',this)">BG Required</button>
+      <button class="f-btn" onclick="setEmdFilter('refund',this)">Refund Pending</button>
+    </div>
+
+    <table class="tbl" id="emd-table">
+      <thead><tr>
+        <th>T247 ID</th>
+        <th>Tender</th>
+        <th>Deadline</th>
+        <th>EMD Amount</th>
+        <th>MSME Exempt</th>
+        <th>BG / DD</th>
+        <th>Status</th>
+        <th>Stage</th>
+        <th>Action</th>
+      </tr></thead>
+      <tbody id="emd-body"></tbody>
+    </table>
+    <div id="emd-empty" class="empty-state" style="display:none">
+      <div class="ei">💰</div>
+      <p>No BID/CONDITIONAL tenders with EMD data found. Import and analyse tenders first.</p>
+    </div>
+
+    <!-- EMD Notes -->
+    <div style="margin-top:14px;background:var(--card2);border:1px solid var(--b1);border-radius:6px;padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--t2);margin-bottom:6px">📋 EMD Guidelines</div>
+      <div style="font-size:10px;color:var(--t3);line-height:1.6">
+        • MSME registered companies (UDYAM-GJ-01-0007420) are exempt from EMD under PPP-MSME policy — cite Gazette Notification SR.No.462/2012<br>
+        • EMD in form of BG must be issued from a scheduled bank — not cooperative banks<br>
+        • BG validity = Bid validity + 60 days extra<br>
+        • EMD Exemption Letter should be on company letterhead, signed by authorised signatory<br>
+        • Refund follow-up: EMD must be refunded within 15 days of L1 announcement for non-winners
+      </div>
+    </div>
+  </div>
+
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal-bg" id="excel-modal">
   <div class="modal">
@@ -891,6 +989,8 @@ const PAGE_CONFIG = {
   profile:   {title:'Nascent Profile', wrap:'wrap-profile', isPage:true},
   vault:     {title:'Document Vault', wrap:'wrap-vault', isPage:true},
   chat:      {title:'Bid Assistant', wrap:'wrap-chat', isPage:true},
+  boq:      {title:'BOQ Builder',    wrap:'wrap-boq',      isPage:true},
+  emd:      {title:'EMD Tracker',    wrap:'wrap-emd',      isPage:true},
   settings:  {title:'Settings', wrap:'wrap-settings', isPage:true},
 };
 
@@ -923,6 +1023,8 @@ function nav(page) {
   if (page === 'checklist') loadChecklistTenders();
   if (page === 'rules') loadRules();
   if (page === 'profile') loadProfilePage();
+  if (page === 'boq') loadBOQTenders();
+  if (page === 'emd') loadEMDTracker();
 }
 
 // fix nav active state
@@ -1196,7 +1298,11 @@ async function openTenderPanel(tid) {
   document.getElementById('rp-actions').innerHTML = `
     <button class="rpbtn green" onclick="navAnalyse('${tid}')">⚡ Analyse / Re-analyse</button>
     <button class="rpbtn blue" onclick="openStageModal('${tid}')">✏ Update Stage</button>
-    ${t.bid_no_bid_done && t.report_file ? `<button class="rpbtn" onclick="window.open('/download/${t.report_file}')">⬇ Download Report</button>` : ''}
+    ${t.bid_no_bid_done ? `<button class="rpbtn" onclick="generateDocs('${tid}')">📦 Gen Docs</button>` : ''}
+    ${t.bid_no_bid_done ? `<button class="rpbtn" onclick="mergeSubmission('${tid}')">🗂 Merge PDF</button>` : ''}
+    ${t.bid_no_bid_done ? `<button class="rpbtn" onclick="generatePreBidLetterForTender('${tid}')">✉ Pre-bid</button>` : ''}
+    ${t.bid_no_bid_done ? `<button class="rpbtn" onclick="openBOQForTender('${tid}')">📊 BOQ</button>` : ''}
+    ${t.bid_no_bid_done && t.report_file ? `<button class="rpbtn" onclick="window.open('/download/${t.report_file}')">⬇ Report</button>` : ''}
   `;
 }
 
@@ -2010,6 +2116,242 @@ async function skipTender(tid) {
 }
 
 // ═══════════════ ADD MISSING CSS ═══════════════
+
+// ═══════════════ BOQ BUILDER ═══════════════
+let _boqData = [];
+let _boqTid = null;
+
+function loadBOQTenders() {
+  const sel = document.getElementById('boq-tender-select');
+  const analysed = Object.values(S.tenders).filter(t => t.bid_no_bid_done);
+  sel.innerHTML = '<option value="">Select an analysed tender...</option>' +
+    analysed.map(t=>`<option value="${t.t247_id}">${t.t247_id} — ${(t.brief||'').slice(0,60)}</option>`).join('');
+}
+
+async function loadBOQ(tid) {
+  if (!tid) { document.getElementById('boq-body').innerHTML = '<div class="empty-state"><div class="ei">📋</div><p>Select a tender to load BOQ.</p></div>'; return; }
+  _boqTid = tid;
+  document.getElementById('boq-body').innerHTML = '<div class="loading">Loading BOQ...</div>';
+  try {
+    const data = await api('GET', `/boq/${tid}`);
+    _boqData = data.items || [];
+    document.getElementById('boq-controls').style.display = 'flex';
+    document.getElementById('boq-footer').style.display = '';
+    renderBOQ();
+  } catch(e) {
+    document.getElementById('boq-body').innerHTML = `<div class="empty-state"><div class="ei">📋</div><p>No BOQ yet. Click "Regenerate from Scope" to auto-generate.</p></div>`;
+    document.getElementById('boq-controls').style.display = 'flex';
+    document.getElementById('boq-footer').style.display = '';
+  }
+}
+
+function renderBOQ() {
+  if (!_boqData.length) {
+    document.getElementById('boq-body').innerHTML = '<div class="empty-state"><div class="ei">📋</div><p>No BOQ items. Click Regenerate from Scope.</p></div>';
+    return;
+  }
+  const margin = parseFloat(document.getElementById('boq-margin').value)||15;
+  const gst = parseFloat(document.getElementById('boq-gst').value)||18;
+  let baseTotal = 0;
+  _boqData.forEach(item => { baseTotal += (parseFloat(item.unit_rate)||0) * (parseFloat(item.quantity)||1); });
+  const marginAmt = baseTotal * margin / 100;
+  const subTotal = baseTotal + marginAmt;
+  const gstAmt = subTotal * gst / 100;
+  const grandTotal = subTotal + gstAmt;
+
+  const fmtRs = v => v >= 10000000 ? `₹${(v/10000000).toFixed(2)} Cr` : v >= 100000 ? `₹${(v/100000).toFixed(2)} L` : `₹${v.toFixed(0)}`;
+
+  document.getElementById('boq-base-total').textContent = fmtRs(baseTotal);
+  document.getElementById('boq-margin-total').textContent = fmtRs(marginAmt);
+  document.getElementById('boq-gst-total').textContent = fmtRs(gstAmt);
+  document.getElementById('boq-grand-total').textContent = fmtRs(grandTotal);
+  document.getElementById('boq-total-badge').textContent = `Grand Total: ${fmtRs(grandTotal)}`;
+
+  document.getElementById('boq-body').innerHTML = `
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:40px">#</th>
+        <th>Description</th>
+        <th style="width:80px">Unit</th>
+        <th style="width:80px">Qty</th>
+        <th style="width:110px">Unit Rate (₹)</th>
+        <th style="width:130px">Amount (₹)</th>
+        <th style="width:80px">Category</th>
+        <th style="width:40px">Del</th>
+      </tr></thead>
+      <tbody>${_boqData.map((item,i) => {
+        const amt = (parseFloat(item.unit_rate)||0) * (parseFloat(item.quantity)||1);
+        return `<tr>
+          <td style="font-size:10px;color:var(--t3)">${i+1}</td>
+          <td><input class="s-input" value="${item.description||''}" oninput="_boqData[${i}].description=this.value" style="width:100%;font-size:10px;padding:3px 6px"></td>
+          <td><input class="s-input mono" value="${item.unit||'LS'}" oninput="_boqData[${i}].unit=this.value" style="width:100%;font-size:10px;padding:3px 6px"></td>
+          <td><input class="s-input mono" type="number" value="${item.quantity||1}" oninput="_boqData[${i}].quantity=parseFloat(this.value)||1;recalcBOQ()" style="width:100%;font-size:10px;padding:3px 6px"></td>
+          <td><input class="s-input mono" type="number" value="${item.unit_rate||0}" oninput="_boqData[${i}].unit_rate=parseFloat(this.value)||0;recalcBOQ()" style="width:100%;font-size:10px;padding:3px 6px"></td>
+          <td style="font-size:10px;font-weight:600;color:var(--blue);font-family:monospace">₹${amt.toLocaleString('en-IN')}</td>
+          <td style="font-size:9px;color:var(--t3)">${item.category||''}</td>
+          <td><button onclick="_boqData.splice(${i},1);renderBOQ()" style="border:none;background:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px">✕</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    <button onclick="addBOQItem()" class="tb-btn" style="margin-top:8px">+ Add Item</button>`;
+}
+
+function recalcBOQ() { renderBOQ(); }
+
+function addBOQItem() {
+  _boqData.push({description:'New Item',unit:'LS',quantity:1,unit_rate:0,category:'Additional'});
+  renderBOQ();
+}
+
+async function regenerateBOQ() {
+  if (!_boqTid) { toast('Select a tender first','err'); return; }
+  try {
+    toast('Regenerating from scope...','info',3000);
+    const data = await api('POST', `/boq/${_boqTid}/regenerate`);
+    _boqData = data.items || [];
+    document.getElementById('boq-controls').style.display = 'flex';
+    document.getElementById('boq-footer').style.display = '';
+    renderBOQ();
+    toast('BOQ regenerated','ok');
+  } catch(e) { toast('Regenerate failed: '+e.message,'err'); }
+}
+
+async function saveBOQ() {
+  if (!_boqTid) { toast('No tender selected','err'); return; }
+  const margin = parseFloat(document.getElementById('boq-margin').value)||15;
+  const gst = parseFloat(document.getElementById('boq-gst').value)||18;
+  try {
+    await api('POST', `/boq/${_boqTid}`, {items: _boqData, margin_pct: margin, gst_pct: gst});
+    toast('BOQ saved','ok');
+  } catch(e) { toast('Save failed: '+e.message,'err'); }
+}
+
+async function exportBOQ() {
+  if (!_boqTid) { toast('No tender selected','err'); return; }
+  window.open(`/boq/${_boqTid}/export`);
+}
+
+function openBOQForTender(tid) {
+  nav('boq');
+  document.querySelectorAll('.nav-a').forEach(b => b.classList.remove('on'));
+  const el = document.getElementById('boq-tender-select');
+  if (el) { el.value = tid; loadBOQ(tid); }
+}
+
+// ═══════════════ EMD TRACKER ═══════════════
+let _emdFilter = 'all';
+
+function loadEMDTracker() {
+  const tenders = Object.values(S.tenders);
+  const relevant = tenders.filter(t =>
+    ['BID','CONDITIONAL'].includes(t.verdict) && (t.emd || t.emd_amount)
+  );
+
+  // Stats
+  const exempt = relevant.filter(t => t.emd_exemption || (t.msme_exemption && t.msme_exemption !== 'No') );
+  const bg = relevant.filter(t => (t.emd || '').toLowerCase().includes('bg') || (t.emd || '').match(/\d{2,}/));
+  const total_emd = relevant.reduce((sum,t) => {
+    const m = String(t.emd||'').match(/[\d,]+/);
+    return sum + (m ? parseInt(m[0].replace(/,/g,''))||0 : 0);
+  }, 0);
+
+  document.getElementById('emd-stat-cards').innerHTML = [
+    {n:relevant.length,l:'BID Tenders with EMD',c:'var(--blue)'},
+    {n:exempt.length,l:'MSME Exempt',c:'var(--green)'},
+    {n:bg.length,l:'BG / DD Required',c:'var(--yellow)'},
+    {n:total_emd>0?`₹${(total_emd/100000).toFixed(1)}L`:'—',l:'Total EMD Exposure',c:'var(--red)'},
+  ].map(s=>`<div class="sc"><div class="sc-n" style="color:${s.c}">${s.n}</div><div class="sc-l">${s.l}</div></div>`).join('');
+
+  renderEMDTable(relevant);
+}
+
+function setEmdFilter(f, btn) {
+  _emdFilter = f;
+  document.querySelectorAll('#wrap-emd .f-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  const tenders = Object.values(S.tenders).filter(t => ['BID','CONDITIONAL'].includes(t.verdict) && (t.emd || t.emd_amount));
+  renderEMDTable(tenders);
+}
+
+function renderEMDTable(list) {
+  if (_emdFilter === 'exempt') list = list.filter(t => t.emd_exemption || t.msme_exemption);
+  else if (_emdFilter === 'due') list = list.filter(t => { const d=daysLeft(t.deadline||t.bid_submission_date); return d>=0&&d<=14; });
+  else if (_emdFilter === 'bg') list = list.filter(t => String(t.emd||'').match(/\d{5,}/));
+  else if (_emdFilter === 'refund') list = list.filter(t => ['Submitted','Awaiting Result'].includes(t.status));
+
+  list.sort((a,b) => daysLeft(a.deadline||a.bid_submission_date) - daysLeft(b.deadline||b.bid_submission_date));
+
+  const tbody = document.getElementById('emd-body');
+  if (!list.length) { tbody.innerHTML=''; document.getElementById('emd-empty').style.display=''; return; }
+  document.getElementById('emd-empty').style.display='none';
+
+  const isExempt = t => !!(t.emd_exemption || (t.msme_exemption && t.msme_exemption !== 'No' && t.msme_exemption !== 'Not specified'));
+
+  tbody.innerHTML = list.map(t => {
+    const dl = daysLeft(t.deadline||t.bid_submission_date);
+    const dlStr = dl===999?'—':dl<0?'Expired':dl===0?'TODAY':`${dl}d`;
+    const exempt = isExempt(t);
+    const emdStr = t.emd || t.emd_amount || '—';
+    return `<tr class="dr" onclick="openTenderPanel('${t.t247_id}');nav('dashboard')">
+      <td><span class="tid mono">${t.t247_id}</span></td>
+      <td><div class="tname">${(t.brief||'').slice(0,50)}</div><div class="torg">${t.org_name||''}</div></td>
+      <td><span class="${dlClass(dl)}" style="font-size:10px;font-weight:600">${t.deadline||t.bid_submission_date||'—'}</span><span style="font-size:9px;color:var(--t3);margin-left:4px">(${dlStr})</span></td>
+      <td style="font-family:monospace;font-size:10px;font-weight:600">${emdStr}</td>
+      <td>${exempt ? '<span style="color:var(--green);font-weight:700;font-size:10px">✓ Exempt (MSME)</span>' : '<span style="color:var(--red);font-size:10px">✗ Not Exempt</span>'}</td>
+      <td style="font-size:10px;color:var(--t2)">${t.emd_instrument||'—'}</td>
+      <td>${exempt?'<span class="pipe-badge pb-won" style="font-size:8px">Exempt</span>':stageBadge(t.emd_status||t.status)}</td>
+      <td>${stageBadge(t.status||'Identified')}</td>
+      <td>
+        ${exempt?`<button class="ract ra-g" onclick="event.stopPropagation();downloadEMDExemption('${t.t247_id}')" title="Download EMD Exemption Letter">📄</button>`:''}
+        <button class="ract ra-b" onclick="event.stopPropagation();openStageModal('${t.t247_id}')" title="Update stage">✏</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function downloadEMDExemption(tid) {
+  try {
+    const data = await api('GET', `/tender/${tid}/generate-docs`);
+    if (data.files) { window.open('/download/' + data.files[0]); toast('EMD Exemption letter downloaded','ok'); }
+    else toast('Generate docs first from the Analyse page','info');
+  } catch(e) { toast('Failed: '+e.message,'err'); }
+}
+
+// ═══════════════ GENERATE DOCS + MERGE PDF ═══════════════
+async function generateDocs(tid) {
+  try {
+    toast('Generating submission documents...','info',4000);
+    const data = await api('GET', `/tender/${tid}/generate-docs`);
+    if (data.download_url || data.zip_url) {
+      window.open(data.download_url || data.zip_url);
+      toast(`${data.doc_count||'All'} documents generated — ZIP downloaded`,'ok');
+    } else {
+      toast('Documents generated. Check reports.','ok');
+    }
+    await loadDashboard();
+  } catch(e) { toast('Generate docs failed: '+e.message,'err'); }
+}
+
+async function mergeSubmission(tid) {
+  try {
+    toast('Merging submission PDF...','info',3000);
+    const data = await api('POST', `/tender/${tid}/merge-submission-pdf`);
+    if (data.download_url || data.filename) {
+      window.open('/download/' + (data.filename || data.download_url));
+      toast('Merged PDF ready','ok');
+    }
+  } catch(e) { toast('Merge failed: '+e.message,'err'); }
+}
+
+async function generatePreBidLetterForTender(tid) {
+  try {
+    const data = await api('POST', `/tender/${tid}/generate-prebid-letter`);
+    if (data.download_url) { window.open(data.download_url); toast(`Pre-bid letter ready (${data.query_count} queries)`,'ok'); }
+    else toast('Pre-bid letter generated','ok');
+  } catch(e) { toast('Failed: '+e.message,'err'); }
+}
+
 
 </script>
 </body>
