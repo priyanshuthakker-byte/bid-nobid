@@ -14,10 +14,12 @@ FIXES APPLIED:
 
 import zipfile, tempfile, shutil, json, re, os
 import threading
+import asyncio
+import uuid
 from pathlib import Path
 from datetime import datetime, date
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,6 +77,22 @@ DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 
 # ── FIX 2: Threading lock for safe concurrent DB access ─────────────────────
 _db_lock = threading.Lock()
+
+# ── Background Job Store (for async analysis) ──────────────────────────────
+_analysis_jobs: dict = {}  # job_id -> {status, result, error, progress}
+_jobs_lock = threading.Lock()
+
+def _set_job(job_id: str, **kwargs):
+    with _jobs_lock:
+        if job_id not in _analysis_jobs:
+            _analysis_jobs[job_id] = {}
+        _analysis_jobs[job_id].update(kwargs)
+
+def _get_job(job_id: str) -> dict:
+    with _jobs_lock:
+        return dict(_analysis_jobs.get(job_id, {}))
+
+
 
 # ── FIX 3: Admin token for sensitive endpoints ───────────────────────────────
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
@@ -619,20 +637,41 @@ async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
     return await process_files(files=[file], t247_id=t247_id)
 
 @app.post("/process-files")
-async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
+async def process_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), t247_id: str = ""):
     if not files:
         raise HTTPException(400, "No files uploaded")
 
+    # Read files into memory immediately (before background task)
+    file_contents = []
+    for upload in files:
+        content = await upload.read()
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(413, f"File {upload.filename} too large (max 50MB)")
+        file_contents.append((upload.filename or "upload", content))
+
+    job_id = str(uuid.uuid4())[:12]
+    _set_job(job_id, status="running", progress="Starting…", result=None, error=None, t247_id=t247_id)
+    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id)
+    return {"job_id": job_id, "status": "running"}
+
+
+@app.get("/analyse-status/{job_id}")
+async def analyse_status(job_id: str):
+    job = _get_job(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    return job
+
+
+def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
+    """Runs in background thread — full analysis pipeline."""
     tmp_dir = tempfile.mkdtemp(prefix="tender_", dir=str(TEMP_DIR))
     try:
         extract_dir = Path(tmp_dir) / "extracted"
         extract_dir.mkdir()
 
-        for upload in files:
-            fname = upload.filename or "upload"
-            content = await upload.read()
-            if len(content) > MAX_UPLOAD_BYTES:
-                raise HTTPException(413, f"File {fname} too large (max 50MB)")
+        _set_job(job_id, progress="Extracting documents…")
+        for fname, content in file_contents:
             dest = Path(tmp_dir) / fname
             dest.write_bytes(content)
             if dest.suffix.lower() == ".zip":
@@ -653,11 +692,13 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
         doc_files = unique
 
         if not doc_files:
-            raise HTTPException(400, "No readable documents found.")
+            _set_job(job_id, status="error", error="No readable documents found in uploaded files.")
+            return
 
         corr = [f for f in doc_files if any(k in f.name.lower() for k in ["corrigendum","addendum","amendment","corr_","addend","revised","rectification"])]
         main_files = [f for f in doc_files if f not in corr]
 
+        _set_job(job_id, progress="Reading documents…")
         extractor = TenderExtractor()
         tender_data = extractor.process_documents(main_files if main_files else doc_files)
 
@@ -670,6 +711,7 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
             tender_data["has_corrigendum"] = True
             tender_data["corrigendum_files"] = [f.name for f in corr]
 
+        _set_job(job_id, progress="Reading full text…")
         all_text = ""
         for f in sorted(doc_files, key=lambda x: (0 if any(k in x.name.lower() for k in ["rfp","nit","tender","bid"]) else 1 if any(k in x.name.lower() for k in ["corrigendum","addendum"]) else 2)):
             t = read_document(f)
@@ -679,8 +721,10 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
         config = load_config()
         api_key = config.get("gemini_api_key", "")
         ai_used = False
+
         if api_key and all_text.strip():
             passed = prebid_passed(tender_data.get("prebid_query_date", ""))
+            _set_job(job_id, progress="AI: Snapshot · Dates · EMD…")
             ai_result = analyze_with_gemini(all_text, passed)
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
@@ -690,18 +734,21 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
         elif not api_key:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings."
 
+        _set_job(job_id, progress="Checking eligibility…")
         checker = NascentChecker()
         if not tender_data.get("overall_verdict"):
             tender_data["pq_criteria"] = checker.check_all(tender_data.get("pq_criteria", []))
             tender_data["tq_criteria"] = checker.check_all(tender_data.get("tq_criteria", []))
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
+        _set_job(job_id, progress="Generating Word report…")
         generator = BidDocGenerator()
         safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
         generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
 
         if t247_id:
+            _set_job(job_id, progress="Saving to database…")
             db_record = get_tender(t247_id)
             db_record.update({
                 "t247_id": t247_id,
@@ -711,8 +758,8 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 "bid_submission_date": tender_data.get("bid_submission_date"),
                 "emd": tender_data.get("emd"),
                 "estimated_cost": tender_data.get("estimated_cost"),
-                "verdict": tender_data.get("overall_verdict", {}).get("verdict", ""),
-                "verdict_color": tender_data.get("overall_verdict", {}).get("color", ""),
+                "verdict": (tender_data.get("overall_verdict") or {}).get("verdict", ""),
+                "verdict_color": (tender_data.get("overall_verdict") or {}).get("color", ""),
                 "bid_no_bid_done": True,
                 "report_file": output_filename,
                 "analysed_at": datetime.now().isoformat(),
@@ -720,34 +767,41 @@ async def process_files(files: List[UploadFile] = File(...), t247_id: str = ""):
                 "ai_used": ai_used,
                 "scope_items": tender_data.get("scope_items", []),
                 "contract_period": tender_data.get("contract_period", ""),
-                "post_implementation": tender_data.get("post_implementation", ""),
                 "pq_criteria": tender_data.get("pq_criteria", []),
                 "tq_criteria": tender_data.get("tq_criteria", []),
                 "payment_terms": tender_data.get("payment_terms", []),
                 "notes": tender_data.get("notes", []),
                 "overall_verdict": tender_data.get("overall_verdict", {}),
                 "prebid_queries": tender_data.get("prebid_queries", []),
-                "raw_text": all_text,
-                "prebid_passed": passed if 'passed' in locals() else False,
+                "raw_text": all_text[:50000],
+                "prebid_passed": passed if "passed" in dir() else False,
+                "scope_sections": tender_data.get("scope_sections", []),
+                "tq_total_marks": tender_data.get("tq_total_marks"),
+                "tq_nascent_estimated_total": tender_data.get("tq_nascent_estimated_total"),
+                "submission_checklist": tender_data.get("submission_checklist", []),
             })
             save_tender(t247_id, db_record)
 
-        return {
-            "status": "success",
-            "ai_used": ai_used,
-            "has_corrigendum": tender_data.get("has_corrigendum", False),
-            "corrigendum_files": tender_data.get("corrigendum_files", []),
-            "files_processed": [f.name for f in doc_files],
-            "tender_data": tender_data,
-            "download_file": output_filename,
-        }
-    except HTTPException:
-        raise
+        _set_job(job_id,
+            status="done",
+            progress="Complete",
+            result={
+                "status": "success",
+                "ai_used": ai_used,
+                "has_corrigendum": tender_data.get("has_corrigendum", False),
+                "files_processed": [fc[0] for fc in file_contents],
+                "tender_data": tender_data,
+                "download_file": output_filename,
+            }
+        )
+
     except Exception as e:
         import traceback
-        raise HTTPException(500, f"Error: {str(e)}\n{traceback.format_exc()}")
+        _set_job(job_id, status="error", error=str(e), traceback=traceback.format_exc())
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 
 # ══ GENERATE DOCS ════════════════════════════════════════════════════════════
 @app.post("/generate-docs/{t247_id}")
