@@ -757,15 +757,20 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
         _set_job(job_id, progress="Generating Word report…")
-        output_filename = "BidNoBid_Report.docx"
+        output_filename = ""
+        doc_b64 = ""
         try:
+            import base64
             generator = BidDocGenerator()
             safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
             output_filename = f"BidNoBid_{safe_no}.docx"
-            generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
+            out_path = str(OUTPUT_DIR / output_filename)
+            generator.generate(tender_data, out_path)
+            # Read back as base64 so frontend can download directly (Render disk is ephemeral)
+            with open(out_path, "rb") as docf:
+                doc_b64 = base64.b64encode(docf.read()).decode("utf-8")
         except Exception as doc_err:
             tender_data["doc_warning"] = f"Word report failed: {str(doc_err)[:100]}"
-            # Keep output_filename as-is — file may not exist but analysis result is still valid
 
         if t247_id:
             _set_job(job_id, progress="Saving to database…")
@@ -812,6 +817,8 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 "files_processed": [fc[0] for fc in file_contents],
                 "tender_data": tender_data,
                 "download_file": output_filename,
+                "doc_b64": doc_b64,
+                "doc_filename": output_filename,
             }
         )
 
