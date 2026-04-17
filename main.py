@@ -1027,19 +1027,42 @@ async def generate_docs(t247_id: str):
     if not tender:
         raise HTTPException(404, "Tender not found. Analyse the tender first.")
     try:
-        # Prefer full submission package when available
+        import base64, io, zipfile as _zf
+        files_b64 = []   # [{name, filename, b64}]
+        zip_b64 = ""
+        zip_filename = ""
+
         if SUBMISSION_GEN_AVAILABLE:
             pkg = generate_submission_package(tender, OUTPUT_DIR)
-            if "error" not in pkg:
-                files = []
-                pkg_dir = Path(pkg.get("pkg_dir", "")) if pkg.get("pkg_dir") else None
-                if pkg_dir and pkg_dir.exists():
-                    for f in sorted(pkg_dir.glob("*.docx")):
-                        files.append({"name": f.stem.replace("_", " "), "filename": f.name})
+            if "error" not in pkg and pkg.get("files"):
+                pkg_dir = Path(pkg.get("pkg_dir", ""))
+                # Encode each docx as base64
+                for item in pkg.get("files", []):
+                    fpath = pkg_dir / item["filename"]
+                    if fpath.exists():
+                        b64 = base64.b64encode(fpath.read_bytes()).decode()
+                        files_b64.append({
+                            "name": item["name"],
+                            "filename": item["filename"],
+                            "b64": b64,
+                            "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        })
+                # Encode ZIP
                 if pkg.get("zip_file"):
-                    files.append({"name": "Submission Package ZIP", "filename": pkg["zip_file"]})
-                return {"status": "success", "files": files, "download_file": pkg.get("zip_file")}
+                    zip_path = OUTPUT_DIR / pkg["zip_file"]
+                    if zip_path.exists():
+                        zip_b64 = base64.b64encode(zip_path.read_bytes()).decode()
+                        zip_filename = pkg["zip_file"]
 
+                return {
+                    "status": "success",
+                    "files": files_b64,
+                    "zip_b64": zip_b64,
+                    "zip_filename": zip_filename,
+                    "doc_count": len(files_b64),
+                }
+
+        # Fallback — just bid/no-bid report
         generator = BidDocGenerator()
         safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no") or tender.get("brief", "Report"))[:50]
         output_filename = f"BidNoBid_{safe_no}.docx"
@@ -1051,12 +1074,21 @@ async def generate_docs(t247_id: str):
                 "reason": tender.get("reason", ""),
                 "green": 0, "amber": 0, "red": 0
             }
-        generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
-        tender["report_file"] = output_filename
-        save_tender(t247_id, tender)
-        return {"status": "success", "files": [output_filename], "download_file": output_filename}
+        out_path = OUTPUT_DIR / output_filename
+        generator.generate(tender_data, str(out_path))
+        b64 = base64.b64encode(out_path.read_bytes()).decode()
+        return {
+            "status": "success",
+            "files": [{"name": "Bid/No-Bid Report", "filename": output_filename, "b64": b64,
+                       "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}],
+            "zip_b64": "",
+            "zip_filename": "",
+            "doc_count": 1,
+        }
     except Exception as e:
-        raise HTTPException(500, f"Document generation failed: {str(e)}")
+        import traceback
+        raise HTTPException(500, f"Document generation failed: {str(e)}\n{traceback.format_exc()[:400]}")
+
 
 @app.post("/generate-technical-proposal/{t247_id}")
 async def generate_technical_proposal(t247_id: str):

@@ -1759,24 +1759,15 @@ function downloadReport() {
 }
 
 async function generateDocsFromAnalyse() {
-  var tid = _lastAnalysisTid;
+  var tid = _lastAnalysisTid || (document.getElementById('an-tid') ? document.getElementById('an-tid').value.trim() : '');
   if (!tid) { toast('Enter T247 ID before generating docs','info'); return; }
-  showLoading('Generating submission documents…');
+  showLoading('Generating 6 submission documents…');
   try {
     var r = await fetch('/generate-docs/'+tid, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    if (!r.ok) { var e2=await r.json().catch(function(){return{detail:'Error'}}); throw new Error(e2.detail||'HTTP '+r.status); }
     var d = await r.json();
     hideLoading();
-    if (d.files && d.files.length) {
-      d.files.forEach(function(f) {
-        anAddDownload('📄 '+f.name, '/download/'+(f.filename||f.name));
-      });
-      toast(d.files.length+' documents generated — see Downloads below', 'success');
-    } else if (d.download_url || d.zip_url) {
-      anAddDownload('📦 Submission Package (.zip)', d.download_url||d.zip_url);
-      toast('Submission package ready', 'success');
-    } else {
-      toast('Generated — check Documents page', 'success');
-    }
+    _renderGeneratedDocs(d, null);
   } catch(e) { hideLoading(); toast('Failed: '+e.message, 'error'); }
 }
 
@@ -1986,16 +1977,13 @@ async function generateSingleDoc(tid, docLabel) {
 
 async function generateDocs() {
   var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
-  showLoading('Generating submission documents...');
+  showLoading('Generating 6 submission documents…');
   try {
-    var r = await fetch('/generate-docs/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d = await r.json();
+    var r = await fetch('/generate-docs/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    if (!r.ok) { var e2=await r.json().catch(function(){return{detail:'Error'}}); throw new Error(e2.detail||'HTTP '+r.status); }
+    var d = await r.json();
     hideLoading();
-    var el = document.getElementById('docs-list');
-    if(d.files&&d.files.length){
-      el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Document</th><th>Action</th></tr></thead><tbody>'+
-        d.files.map(function(f){return '<tr><td>'+f.name+'</td><td><a href="/download/'+f.filename+'" download><button class="action-btn blue">⬇ Download</button></a></td></tr>';}).join('')+'</tbody></table></div>';
-    }
-    toast('Generated '+( d.files?d.files.length:0)+' documents','success');
+    _renderGeneratedDocs(d, document.getElementById('docs-list'));
   } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
 
@@ -3267,6 +3255,54 @@ async function vaultDelete(fileId, nameOrBtn) {
     if (r.ok) { toast('Deleted: ' + name, 'success'); vaultRefresh(); }
     else toast('Delete failed', 'error');
   } catch(e) { toast('Delete error: ' + e.message, 'error'); }
+}
+
+
+// ═══ SUBMISSION DOCS RENDERER ═══
+function _renderGeneratedDocs(d, listEl) {
+  var files = d.files || [];
+  var zipB64 = d.zip_b64 || '';
+  var zipFilename = d.zip_filename || 'SubmissionPackage.zip';
+
+  if (!files.length) {
+    toast('No documents generated', 'error');
+    return;
+  }
+
+  // Auto-download ZIP if available (primary deliverable)
+  if (zipB64) {
+    var zipBlob = _b64ToBlob(zipB64, 'application/zip');
+    _triggerBlobDownload(zipBlob, zipFilename);
+    anAddDownloadBlob('📦 Submission Package ZIP ('+files.length+' docs)', zipBlob, zipFilename);
+  }
+
+  // Add individual doc links to download tray
+  files.forEach(function(f) {
+    if (f.b64) {
+      var mime = f.mime || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      var blobUrl = _b64ToBlob(f.b64, mime);
+      anAddDownloadBlob('📄 '+f.name, blobUrl, f.filename);
+    }
+  });
+
+  // Render table in docs-list if provided
+  if (listEl) {
+    listEl.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Document</th><th>Download</th></tr></thead><tbody>' +
+      files.map(function(f) {
+        if (f.b64) {
+          var mime = f.mime || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          var blobUrl = _b64ToBlob(f.b64, mime);
+          return '<tr><td style="font-size:12px">'+f.name+'</td>' +
+            '<td><a href="'+blobUrl+'" download="'+f.filename+'" class="action-btn blue" style="text-decoration:none">⬇ Download</a></td></tr>';
+        }
+        return '<tr><td>'+f.name+'</td><td><a href="/download/'+(f.filename||f.name)+'" download class="action-btn blue" style="text-decoration:none">⬇ Download</a></td></tr>';
+      }).join('') +
+      (zipB64 ? '<tr style="background:rgba(59,130,246,.05)"><td style="font-weight:700;font-size:12px">📦 Complete Package</td>' +
+        '<td><a href="'+_b64ToBlob(zipB64,'application/zip')+'" download="'+zipFilename+'" class="action-btn blue" style="text-decoration:none;font-weight:700">⬇ Download ZIP</a></td></tr>' : '') +
+      '</tbody></table></div>';
+  }
+
+  toast((zipB64 ? 'ZIP downloaded + ' : '') + files.length+' documents ready in Downloads tray', 'success', 5000);
 }
 
 </script>
