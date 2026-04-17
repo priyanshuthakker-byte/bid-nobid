@@ -72,54 +72,46 @@ def read_html(path: Path) -> tuple[str, dict]:
             return "", {}
 
 
-def read_pdf(path: Path) -> str:
-    """Read PDF — searchable first, OCR fallback for scanned."""
+def read_pdf(path: Path, max_chars: int = 120_000) -> str:
+    """Read PDF — memory-safe: caps at max_chars, PyPDF2 primary (lighter than pdfplumber)."""
     text = ""
 
-    # Try pdfplumber first (best for tables)
+    # PyPDF2 primary — lighter memory footprint than pdfplumber
     try:
-        import pdfplumber
-        with pdfplumber.open(str(path)) as pdf:
-            pages_text = []
-            for page in pdf.pages:
-                t = page.extract_text()
-                if t:
-                    pages_text.append(t)
-            text = "\n\n".join(pages_text)
+        from PyPDF2 import PdfReader
+        reader = PdfReader(str(path))
+        parts = []
+        for page in reader.pages:
+            if sum(len(p) for p in parts) >= max_chars:
+                break
+            t = page.extract_text()
+            if t:
+                parts.append(t)
+        text = "\n\n".join(parts)
+        del reader, parts
     except Exception as e:
-        logger.debug(f"pdfplumber failed for {path.name}: {e}")
+        logger.debug(f"PyPDF2 failed for {path.name}: {e}")
 
-    # If pdfplumber gave nothing, try PyPDF2
+    # pdfplumber fallback only if PyPDF2 gave nothing
     if not text or len(text.strip()) < 100:
         try:
-            from PyPDF2 import PdfReader
-            reader = PdfReader(str(path))
+            import pdfplumber
             parts = []
-            for page in reader.pages:
-                t = page.extract_text()
-                if t:
-                    parts.append(t)
+            with pdfplumber.open(str(path)) as pdf:
+                for page in pdf.pages:
+                    if sum(len(p) for p in parts) >= max_chars:
+                        break
+                    t = page.extract_text()
+                    if t:
+                        parts.append(t)
             text = "\n\n".join(parts)
+            del parts
         except Exception as e:
-            logger.debug(f"PyPDF2 failed for {path.name}: {e}")
+            logger.debug(f"pdfplumber failed for {path.name}: {e}")
 
-    # If still empty/tiny → scanned PDF → OCR
-    try:
-        from ocr_engine import needs_ocr, ocr_pdf, get_pdf_page_count, is_available as ocr_ok
-        page_count = get_pdf_page_count(path)
-        if needs_ocr(text, page_count):
-            if ocr_ok():
-                logger.info(f"[OCR] {path.name} appears scanned ({len(text)} chars / {page_count} pages) — running OCR")
-                ocr_text = ocr_pdf(path, max_pages=40)
-                if ocr_text and len(ocr_text) > len(text):
-                    text = ocr_text
-                    logger.info(f"[OCR] Extracted {len(text)} chars from {path.name}")
-            else:
-                logger.warning(f"[OCR] {path.name} appears scanned but OCR tools not available")
-    except Exception as e:
-        logger.debug(f"OCR check failed for {path.name}: {e}")
+    return text[:max_chars]
 
-    return text
+
 
 
 def read_docx(path: Path) -> str:
