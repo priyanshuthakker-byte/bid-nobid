@@ -277,7 +277,8 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
 <!-- ═══ ANALYSE ═══ -->
 <div id="page-analyse" class="page">
   <div class="topbar"><h1>Analyse Tender</h1></div>
-  <div class="page-body">
+  <div class="page-body" style="display:flex;gap:16px;align-items:flex-start;padding:0">
+    <div style="flex:1;min-width:0;padding:20px 0 20px 24px;overflow-y:auto;max-height:calc(100vh - 60px)">
 
     <!-- Context banner -->
     <div id="ctx-banner" style="display:none;background:#1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;display:flex;justify-content:space-between;align-items:center">
@@ -349,16 +350,45 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
       </div>
     </div>
 
-    <!-- Legacy pre-bid section (hidden, kept for compat) -->
-    <div id="prebid-section" style="display:none">
-      <div id="prebid-list"></div>
-    </div>
-    <div id="compliance-section" style="display:none">
-      <div id="compliance-result"></div>
-    </div>
+    <!-- Legacy compat -->
+    <div id="prebid-section" style="display:none"><div id="prebid-list"></div></div>
+    <div id="compliance-section" style="display:none"><div id="compliance-result"></div></div>
     <div id="an-result"></div>
 
-  </div>
+    </div><!-- end scroll col -->
+
+    <!-- ── RIGHT: Chat + Draft sidebar ── -->
+    <div id="an-chat-sidebar" style="width:340px;flex-shrink:0;height:calc(100vh - 60px);display:flex;flex-direction:column;background:#12141e;border-left:1px solid #1e2130;padding:0">
+      <!-- Chat header -->
+      <div style="padding:12px 14px;border-bottom:1px solid #1e2130;display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#4ade80"></div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#e5e7eb">Bid Assistant</div>
+          <div style="font-size:10px;color:#6b7280">Can edit analysis, update verdict, add queries</div>
+        </div>
+        <button onclick="toggleAnChat()" style="margin-left:auto;background:none;border:none;color:#6b7280;cursor:pointer;font-size:16px" title="Collapse">‹</button>
+      </div>
+      <!-- Quick actions -->
+      <div style="padding:8px 10px;border-bottom:1px solid #1e2130;display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'Summarise this tender in 3 bullet points\')">📋 Summarise</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'List all concerns and risks for NIT\')">⚠ Risks</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'What PQ criteria is NIT likely to fail?\')">❓ PQ Gaps</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'Generate 5 strong pre-bid queries\')">✉ Queries</button>
+      </div>
+      <!-- Messages -->
+      <div id="an-chat-msgs" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:11px;color:#6b7280;text-align:center;padding:12px">Analyse a tender — then ask me anything about it.</div>
+      </div>
+      <!-- Input -->
+      <div style="padding:10px;border-top:1px solid #1e2130;display:flex;gap:6px">
+        <textarea id="an-chat-input" placeholder="Ask about this tender..." rows="2"
+          style="flex:1;background:#0f1117;border:1px solid #1e2130;border-radius:6px;color:#e5e7eb;font-size:12px;padding:7px 9px;resize:none;font-family:inherit"
+          onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();anChatSendInput()}"></textarea>
+        <button onclick="anChatSendInput()" style="background:#3b82f6;border:none;border-radius:6px;color:#fff;padding:6px 10px;cursor:pointer;font-size:13px">➤</button>
+      </div>
+    </div>
+
+  </div><!-- end flex page-body -->
 </div>
 
 <!-- ═══ CHECKLIST ═══ -->
@@ -1279,39 +1309,63 @@ async function analyseTender() {
   prog.style.display = '';
   var stepTimer = setInterval(function(){ prog.textContent = '⏳ ' + (steps[si]||'Finalising…'); si++; }, 7000);
 
-  showLoading('AI pipeline running — please wait…');
+  showLoading('Uploading documents…');
   var fd = new FormData();
   if (tid) fd.append('t247_id', tid);
-  for (var i=0; i<files.length; i++) fd.append('files', files[i]);
+  // Use dropped files or input files
+  var filesToSend = (_droppedFiles && _droppedFiles.length) ? _droppedFiles : files;
+  for (var i=0; i<filesToSend.length; i++) fd.append('files', filesToSend[i]);
+  _droppedFiles = null;
 
   try {
+    // Submit job — returns immediately with job_id
     var r = await fetch('/process-files', {method:'POST', body:fd});
-    var d = await r.json();
-    clearInterval(stepTimer);
-    prog.style.display = 'none';
+    var startData = await r.json();
+    if (!r.ok) throw new Error(startData.detail || 'Server error '+r.status);
+
+    var jobId = startData.job_id;
     hideLoading();
-    btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
 
-    if (!r.ok) throw new Error(d.detail || 'Server error '+r.status);
+    // Poll for result
+    var pollInterval = setInterval(async function() {
+      try {
+        var sr = await fetch('/analyse-status/'+jobId);
+        var job = await sr.json();
+        if (job.progress) prog.textContent = '⏳ ' + job.progress;
 
-    var td = d.tender_data || d;
-    _lastAnalysisResult = d;
-    _lastAnalysisTid = tid;
+        if (job.status === 'done') {
+          clearInterval(pollInterval);
+          clearInterval(stepTimer);
+          prog.style.display = 'none';
+          btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
 
-    renderAnalysisResult(td, d);
+          var d = job.result;
+          var td = d.tender_data || d;
+          _lastAnalysisResult = d;
+          _lastAnalysisTid = tid;
+          renderAnalysisResult(td, d);
+          if (tid) { setActive(tid,''); loadDashboard(); }
+          toast('Analysis complete: ' + ((td.overall_verdict||{}).verdict||'done'), 'success');
 
-    if (tid) {
-      setActive(tid,'');
-      loadDashboard();
-    }
-    toast('Analysis complete: ' + (td.overall_verdict||{}).verdict, 'success');
+        } else if (job.status === 'error') {
+          clearInterval(pollInterval);
+          clearInterval(stepTimer);
+          prog.style.display = 'none';
+          btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
+          var errMsg = job.error || 'Analysis failed';
+          toast(errMsg, 'error');
+          document.getElementById('an-warn').textContent = '⚠ ' + errMsg;
+          document.getElementById('an-warn').style.display = '';
+        }
+      } catch(pe) { /* poll error — keep trying */ }
+    }, 3000);
 
   } catch(e) {
     clearInterval(stepTimer);
     prog.style.display = 'none';
     hideLoading();
     btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
-    toast('Analysis failed: '+e.message, 'error');
+    toast('Failed to start analysis: '+e.message, 'error');
     document.getElementById('an-warn').textContent = '⚠ ' + e.message;
     document.getElementById('an-warn').style.display = '';
   }
@@ -2602,6 +2656,81 @@ async function generateEMDExemption(tid) {
     }
   } catch(e) { toast('Failed: '+e.message, 'error'); }
 }
+
+
+// ═══════════════ ANALYSE PAGE CHAT ═══════════════
+var _anChatVisible = true;
+
+function toggleAnChat() {
+  var sidebar = document.getElementById('an-chat-sidebar');
+  _anChatVisible = !_anChatVisible;
+  sidebar.style.display = _anChatVisible ? 'flex' : 'none';
+}
+
+function anChatSend(msg) {
+  document.getElementById('an-chat-input').value = msg;
+  anChatSendInput();
+}
+
+async function anChatSendInput() {
+  var input = document.getElementById('an-chat-input');
+  var msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  _appendAnChat('user', msg);
+  var typing = _appendAnChat('bot', '…');
+
+  // Build context from current analysis result
+  var ctx = '';
+  if (_lastAnalysisResult) {
+    var td = _lastAnalysisResult.tender_data || _lastAnalysisResult;
+    ctx = 'Current tender analysis context:\n' +
+      'Tender: ' + (td.tender_name || td.brief || '') + '\n' +
+      'Org: ' + (td.org_name || '') + '\n' +
+      'Verdict: ' + ((td.overall_verdict||{}).verdict || td.verdict || '') + '\n' +
+      'EMD: ' + (td.emd || '') + '\n' +
+      'Deadline: ' + (td.bid_submission_date || '') + '\n' +
+      'PQ criteria count: ' + ((td.pq_criteria||[]).length) + '\n' +
+      'Verdict reason: ' + ((td.overall_verdict||{}).reason || '') + '\n\n' +
+      'User question: ' + msg;
+  } else {
+    ctx = msg;
+  }
+
+  try {
+    var r = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: ctx})
+    });
+    var d = await r.json();
+    typing.textContent = d.response || 'No response';
+    if (d.action_result) {
+      _appendAnChat('system', '✓ Action: ' + d.action_result);
+      loadDashboard();
+    }
+  } catch(e) {
+    typing.textContent = 'Error: ' + e.message;
+  }
+}
+
+function _appendAnChat(role, text) {
+  var msgs = document.getElementById('an-chat-msgs');
+  var el = document.createElement('div');
+  el.style.cssText = role === 'user'
+    ? 'align-self:flex-end;max-width:85%;background:#1e3a5f;border-radius:8px 8px 2px 8px;padding:8px 10px;font-size:12px;color:#e5e7eb;line-height:1.5'
+    : role === 'system'
+    ? 'align-self:center;font-size:10px;color:#4ade80;background:rgba(74,222,128,.08);padding:4px 10px;border-radius:4px'
+    : 'align-self:flex-start;max-width:90%;background:#1a1d27;border:1px solid #1e2130;border-radius:8px 8px 8px 2px;padding:8px 10px;font-size:12px;color:#d1d5db;line-height:1.5';
+  el.textContent = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+// Notify chat when analysis completes
+var _origRenderAnalysis = typeof renderAnalysisResult !== 'undefined' ? renderAnalysisResult : null;
 
 </script>
 </body>
