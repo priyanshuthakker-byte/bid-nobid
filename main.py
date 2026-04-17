@@ -78,19 +78,50 @@ DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 # ── FIX 2: Threading lock for safe concurrent DB access ─────────────────────
 _db_lock = threading.Lock()
 
-# ── Background Job Store (for async analysis) ──────────────────────────────
-_analysis_jobs: dict = {}  # job_id -> {status, result, error, progress}
+# ── Background Job Store — file-based (survives OOM restarts) ──────────────
+JOBS_DIR = OUTPUT_DIR / "jobs"
+JOBS_DIR.mkdir(exist_ok=True, parents=True)
 _jobs_lock = threading.Lock()
+
+def _job_file(job_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9_\-]", "", job_id)
+    return JOBS_DIR / f"{safe}.json"
 
 def _set_job(job_id: str, **kwargs):
     with _jobs_lock:
-        if job_id not in _analysis_jobs:
-            _analysis_jobs[job_id] = {}
-        _analysis_jobs[job_id].update(kwargs)
+        jf = _job_file(job_id)
+        try:
+            existing = json.loads(jf.read_text()) if jf.exists() else {}
+        except Exception:
+            existing = {}
+        existing.update(kwargs)
+        # Don't persist huge base64 doc inline — store separately
+        doc_b64 = existing.pop("doc_b64", None)
+        try:
+            jf.write_text(json.dumps(existing))
+        except Exception:
+            pass
+        if doc_b64:
+            try:
+                (JOBS_DIR / f"{re.sub(r'[^a-zA-Z0-9_\\-]', '', job_id)}.b64").write_text(doc_b64)
+            except Exception:
+                pass
 
 def _get_job(job_id: str) -> dict:
     with _jobs_lock:
-        return dict(_analysis_jobs.get(job_id, {}))
+        jf = _job_file(job_id)
+        if not jf.exists():
+            return {}
+        try:
+            data = json.loads(jf.read_text())
+            # Re-attach b64 if result is being fetched and file exists
+            b64f = JOBS_DIR / f"{re.sub(r'[^a-zA-Z0-9_\\-]', '', job_id)}.b64"
+            if data.get("status") == "done" and b64f.exists():
+                if data.get("result"):
+                    data["result"]["doc_b64"] = b64f.read_text()
+            return data
+        except Exception:
+            return {}
 
 
 
@@ -110,6 +141,21 @@ MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
 # ── FIX 4: Lifespan replaces deprecated @app.on_event("startup") ────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Clean up old job files on startup
+    import time as _startup_time
+    try:
+        if JOBS_DIR.exists():
+            cutoff = _startup_time.time() - 7200  # 2 hours
+            for jf in JOBS_DIR.glob("*.json"):
+                try:
+                    if jf.stat().st_mtime < cutoff:
+                        jf.unlink(missing_ok=True)
+                        b64f = jf.with_suffix(".b64")
+                        if b64f.exists(): b64f.unlink(missing_ok=True)
+                except Exception:
+                    pass
+    except Exception:
+        pass
     import time
     print("Starting Bid/No-Bid System v6.2...")
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
@@ -739,14 +785,20 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
 
         if api_key and all_text.strip():
             _set_job(job_id, progress="AI: Snapshot · Dates · EMD…")
+            _set_job(job_id, progress="AI pipeline running (this takes 2-5 min)…")
             ai_result = analyze_with_gemini(all_text, passed)
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
                 ai_used = True
             else:
-                tender_data["ai_warning"] = ai_result.get("error", "")
+                err_msg = ai_result.get("error", "AI error")
+                tender_data["ai_warning"] = err_msg
+                # If quota exhausted, still return regex-extracted data as partial result
+                if "429" in err_msg or "quota" in err_msg.lower() or "503" in err_msg:
+                    tender_data["ai_warning"] = f"Gemini quota exhausted — showing regex-extracted data only. Try again in 1 hour. ({err_msg[:80]})"
+                _set_job(job_id, progress=f"AI unavailable — using basic extraction…")
         elif not api_key:
-            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings."
+            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → Gemini AI Keys."
 
         del all_text  # free corpus memory before eligibility check
         _set_job(job_id, progress="Checking eligibility…")

@@ -1336,6 +1336,7 @@ async function analyseTender() {
   prog.style.display = '';
   prog.textContent = '⏳ Uploading…';
   var stepTimer = null;
+  _pollErrors = 0;
 
   showLoading('AI pipeline running — this takes 2-5 minutes…');
   var fd = new FormData();
@@ -1385,7 +1386,19 @@ async function analyseTender() {
           document.getElementById('an-warn').textContent = '⚠ ' + errMsg;
           document.getElementById('an-warn').style.display = '';
         }
-      } catch(pe) { /* poll error — keep trying */ }
+      } catch(pe) {
+        _pollErrors = (_pollErrors||0) + 1;
+        if (_pollErrors >= 5) {
+          clearInterval(pollInterval);
+          clearInterval(stepTimer);
+          prog.style.display = 'none';
+          btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
+          var errMsg = 'Server restarted during analysis (likely OOM). Try again with a smaller ZIP file, or re-upload.';
+          document.getElementById('an-warn').textContent = '⚠ ' + errMsg;
+          document.getElementById('an-warn').style.display = '';
+          toast(errMsg, 'error', 8000);
+        }
+      }
     }, 3000);
 
   } catch(e) {
