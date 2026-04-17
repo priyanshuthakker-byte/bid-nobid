@@ -278,35 +278,86 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
 <div id="page-analyse" class="page">
   <div class="topbar"><h1>Analyse Tender</h1></div>
   <div class="page-body">
+
+    <!-- Context banner -->
     <div id="ctx-banner" style="display:none;background:#1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;display:flex;justify-content:space-between;align-items:center">
-      <span>Active tender: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
+      <span>Active: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
       <button class="btn btn-ghost btn-sm" onclick="clearCtx()">✕ Clear</button>
     </div>
-    <div class="card">
+
+    <!-- Upload card -->
+    <div class="card" id="an-upload-card">
       <div class="card-title">Upload Tender Documents</div>
-      <label>T247 ID (links result to dashboard)</label>
-      <input type="text" id="an-tid" placeholder="e.g. 97290989">
-      <label style="margin-top:12px">Documents (ZIP, PDF, DOCX — multiple allowed)</label>
-      <div class="upload-zone" onclick="document.getElementById('an-files').click()">
-        📦 Drop files here or click to browse<br>
-        <span style="font-size:11px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
+      <label>T247 ID <span style="font-size:10px;color:#666">(links result to dashboard — recommended)</span></label>
+      <input type="text" id="an-tid" placeholder="e.g. 97290989" style="margin-bottom:12px">
+      <label>Documents <span style="font-size:10px;color:#666">ZIP · PDF · DOCX · multiple allowed</span></label>
+      <div class="upload-zone" id="an-dropzone" onclick="document.getElementById('an-files').click()"
+           ondragover="event.preventDefault();this.style.borderColor='#3b82f6'"
+           ondragleave="this.style.borderColor=''"
+           ondrop="handleAnDrop(event)">
+        📦 Drop files here or click to browse
       </div>
       <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
       <div id="an-filelist" style="font-size:12px;color:#555;margin-top:6px"></div>
-      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="analyseTender()">🔍 Analyse with AI</button>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" id="an-btn" onclick="analyseTender()">🔍 Analyse with AI</button>
         <button class="btn btn-ghost" onclick="reanalyseDrive()">♻ Re-analyse from Drive</button>
+        <div id="an-progress" style="display:none;font-size:11px;color:#60a5fa;margin-left:8px"></div>
       </div>
     </div>
+
+    <!-- AI warning banner -->
+    <div id="an-warn" style="display:none;padding:8px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;margin-top:10px;font-size:11px;color:#fbbf24"></div>
+
+    <!-- RESULT PANEL — tabbed -->
+    <div id="an-result-panel" style="display:none;margin-top:16px">
+
+      <!-- Verdict header -->
+      <div id="an-verdict-bar" style="padding:14px 18px;border-radius:8px 8px 0 0;border:1px solid #1e2130;border-bottom:none;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div id="an-verdict-badge" style="font-size:20px;font-weight:800;min-width:100px"></div>
+        <div style="flex:1">
+          <div id="an-tender-name" style="font-size:13px;font-weight:600;color:#e5e7eb"></div>
+          <div id="an-org-name" style="font-size:11px;color:#6b7280;margin-top:2px"></div>
+        </div>
+        <div id="an-pq-summary" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" id="an-dl-btn" onclick="downloadReport()" style="display:none">⬇ Download Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="generatePrebidLetter()">✉ Pre-bid Letter</button>
+          <button class="btn btn-ghost btn-sm" id="an-gendocs-btn" onclick="generateDocsFromAnalyse()" style="display:none">📦 Gen Docs</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div style="border:1px solid #1e2130;border-top:none;border-bottom:none">
+        <div class="tab-row" id="an-tab-row" style="padding:0 16px;background:#12141e;border-bottom:1px solid #1e2130">
+          <div class="tab active" onclick="anTab('snapshot',this)">Snapshot</div>
+          <div class="tab" onclick="anTab('scope',this)">Scope of Work</div>
+          <div class="tab" onclick="anTab('pq',this)">PQ Criteria</div>
+          <div class="tab" onclick="anTab('tq',this)">TQ Scoring</div>
+          <div class="tab" onclick="anTab('queries',this)">Pre-bid Queries</div>
+          <div class="tab" onclick="anTab('checklist',this)">Checklist</div>
+        </div>
+
+        <div style="padding:16px 18px;background:#0f1117;border:1px solid #1e2130;border-top:none;border-radius:0 0 8px 8px;min-height:200px">
+          <div class="tab-panel active" id="anp-snapshot"></div>
+          <div class="tab-panel" id="anp-scope"></div>
+          <div class="tab-panel" id="anp-pq"></div>
+          <div class="tab-panel" id="anp-tq"></div>
+          <div class="tab-panel" id="anp-queries"></div>
+          <div class="tab-panel" id="anp-checklist"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legacy pre-bid section (hidden, kept for compat) -->
+    <div id="prebid-section" style="display:none">
+      <div id="prebid-list"></div>
+    </div>
+    <div id="compliance-section" style="display:none">
+      <div id="compliance-result"></div>
+    </div>
     <div id="an-result"></div>
-    <div id="prebid-section" style="display:none" class="card">
-      <div class="card-title">Pre-bid Queries <div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="loadPrebidQueries()">↺ Refresh</button><button class="btn btn-primary btn-sm" onclick="generatePrebidLetter()">📄 Generate Letter</button></div></div>
-      <div id="prebid-list"><div class="empty-state">Analyse a tender to generate pre-bid queries.</div></div>
-    </div>
-    <div id="compliance-section" style="display:none" class="card">
-      <div class="card-title">⚖ Compliance Check <button class="btn btn-ghost btn-sm" onclick="runCompliance()">Analyse</button></div>
-      <div id="compliance-result"><div class="empty-state">Click Analyse to check RFP against Indian procurement laws.</div></div>
-    </div>
+
   </div>
 </div>
 
@@ -1215,81 +1266,247 @@ function updateFileList(input) {
 async function analyseTender() {
   var tid = document.getElementById('an-tid').value.trim();
   var files = document.getElementById('an-files').files;
-  if(!files.length&&!tid) { toast('Upload files or enter T247 ID','info'); return; }
-  showLoading('Analysing tender with AI...');
+  if (!files.length && !tid) { toast('Upload files or enter T247 ID','info'); return; }
+
+  var btn = document.getElementById('an-btn');
+  var prog = document.getElementById('an-progress');
+  btn.disabled = true; btn.textContent = 'Analysing...';
+  document.getElementById('an-result-panel').style.display = 'none';
+  document.getElementById('an-warn').style.display = 'none';
+
+  var steps = ['Extracting documents…','Snapshot · Dates · EMD · Fees…','Scope of Work…','PQ Criteria…','TQ Scoring…','Assessment…','Pre-bid Queries…','Checklist…'];
+  var si = 0;
+  prog.style.display = '';
+  var stepTimer = setInterval(function(){ prog.textContent = '⏳ ' + (steps[si]||'Finalising…'); si++; }, 7000);
+
+  showLoading('AI pipeline running — please wait…');
   var fd = new FormData();
-  if(tid) fd.append('t247_id', tid);
-  for(var i=0;i<files.length;i++) fd.append('files', files[i]);
+  if (tid) fd.append('t247_id', tid);
+  for (var i=0; i<files.length; i++) fd.append('files', files[i]);
+
   try {
-    var r = await fetch('/process-files',{method:'POST',body:fd}); var d = await r.json();
+    var r = await fetch('/process-files', {method:'POST', body:fd});
+    var d = await r.json();
+    clearInterval(stepTimer);
+    prog.style.display = 'none';
     hideLoading();
+    btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
+
+    if (!r.ok) throw new Error(d.detail || 'Server error '+r.status);
+
     var td = d.tender_data || d;
-    var v = td.verdict || td.bid_no_bid || td.bid_no_bid_verdict || d.verdict || d.bid_no_bid || 'REVIEW';
-    v = v.toUpperCase().replace('NO BID','NO-BID');
-    var col = v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
-    var pq = td.pq_criteria||d.pq_criteria||[];
-    var tq = td.tq_criteria||d.tq_criteria||[];
-    var concerns = td.concerns||d.concerns||[];
-    var pqHtml = '';
-    if(pq.length) {
-      pqHtml = '<div style="margin-top:14px"><div style="font-size:11px;color:#444;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pre-Qualification Criteria</div><table style="width:100%;font-size:12px;border-collapse:collapse">';
-      (Array.isArray(pq)?pq:[pq]).forEach(function(c){
-        var txt = typeof c==='object'?(c.criteria||c.name||c.text||JSON.stringify(c)):c;
-        var status = typeof c==='object'?(c.status||c.met||''):'';
-        var met = (status+'').toLowerCase().includes('met')||status===true;
-        var notmet = (status+'').toLowerCase().includes('not')||status===false;
-        var clr = met?'#22c55e':notmet?'#ef4444':'#888';
-        var icon = met?'✓':notmet?'✗':'?';
-        pqHtml += '<tr><td style="padding:5px 0;color:#aaa;border-bottom:1px solid #1e2130">'+txt+'</td><td style="text-align:right;color:'+clr+';font-weight:600;border-bottom:1px solid #1e2130">'+icon+'</td></tr>';
-      });
-      pqHtml += '</table></div>';
-    }
-    document.getElementById('an-result').innerHTML =
-      '<div class="card" style="border-left:4px solid '+col+';padding-left:16px">' +
-      '<div style="font-size:22px;font-weight:700;color:'+col+';margin-bottom:6px">'+v+'</div>'+
-      '<div style="font-size:13px;color:#aaa;line-height:1.6;margin-bottom:12px">'+(td.reason||td.scope_summary||d.reason||'Analysis complete.')+'</div>'+
-      (concerns.length?'<div style="background:#2d1a00;border-radius:6px;padding:10px 12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:600;margin-bottom:6px">⚠ CONCERNS</div>'+(Array.isArray(concerns)?concerns:concerns.split(',')).map(function(c){return '<div style="font-size:12px;color:#f59e0b;margin-bottom:3px">• '+c.trim()+'</div>';}).join('')+'</div>':'')+
-      pqHtml+
-      '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">'+
-      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'checklist\')">✅ Checklist</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'documents\')">📄 Documents</button>'+
-      '<button class="btn btn-primary btn-sm" onclick="loadPrebidQueries()">Pre-bid Queries</button>'+
-      '<button class="btn btn-ghost btn-sm" onclick="runCompliance()">📋 Compliance Check</button>'+
-      '</div></div>';
-    if(tid) {
+    _lastAnalysisResult = d;
+    _lastAnalysisTid = tid;
+
+    renderAnalysisResult(td, d);
+
+    if (tid) {
       setActive(tid,'');
-      // Populate checklist and document selects immediately
-      var sel1 = document.getElementById('cl-select');
-      var sel2 = document.getElementById('doc-select');
-      if(sel1) { sel1.value = tid; }
-      if(sel2) { sel2.value = tid; }
+      loadDashboard();
     }
-    // Show pre-bid queries inline if AI returned them
-    var prebidSec = document.getElementById('prebid-section');
-    if(prebidSec) prebidSec.style.display='block';
-    var compSec = document.getElementById('compliance-section');
-    if(compSec) compSec.style.display='block';
-    // Render pre-bid queries inline
-    var queries = d.prebid_queries || [];
-    var pbList = document.getElementById('prebid-list');
-    if(pbList && queries.length) {
-      pbList.innerHTML = queries.map(function(q,i){
-        var qtext = typeof q==='string'?q:(q.query||q.text||q.issue||JSON.stringify(q));
-        var issue = typeof q==='object'?(q.issue||q.criteria||''):'';
-        var ref   = typeof q==='object'?(q.clause_ref||q.guideline_ref||''):'';
-        return '<div style="padding:10px 0;border-bottom:1px solid #1e2130">'+
-          '<div style="font-size:11px;color:#444;margin-bottom:4px">Q'+(i+1)+(ref?' · <span style="color:#555">'+ref+'</span>':'')+
-          (issue?'<span style="float:right;color:#666">'+issue.substring(0,60)+'</span>':'')+'</div>'+
-          '<div style="font-size:13px;color:#ccc;line-height:1.6">'+qtext+'</div>'+
-        '</div>';
-      }).join('');
-    } else if(pbList) {
-      pbList.innerHTML = '<div class="empty-state" style="font-size:12px">No pre-bid queries generated — all criteria appear clear.</div>';
-    }
-    loadDashboard();
-    toast('Analysis complete: '+v+' · Saved to Drive', v==='BID'?'success':'info');
-  } catch(e) { hideLoading(); toast('Analysis failed: '+e.message,'error'); document.getElementById('an-result').innerHTML='<div class="card" style="border-color:#ef4444"><div style="color:#ef4444">Error: '+e.message+'</div></div>'; }
+    toast('Analysis complete: ' + (td.overall_verdict||{}).verdict, 'success');
+
+  } catch(e) {
+    clearInterval(stepTimer);
+    prog.style.display = 'none';
+    hideLoading();
+    btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
+    toast('Analysis failed: '+e.message, 'error');
+    document.getElementById('an-warn').textContent = '⚠ ' + e.message;
+    document.getElementById('an-warn').style.display = '';
+  }
 }
+
+var _lastAnalysisResult = null;
+var _lastAnalysisTid = '';
+
+function renderAnalysisResult(td, raw) {
+  var ov = td.overall_verdict || {};
+  var verdict = (td.verdict || ov.verdict || 'REVIEW').toUpperCase().replace('NO BID','NO-BID');
+  var col = verdict==='BID'?'#22c55e':verdict==='NO-BID'?'#ef4444':verdict==='CONDITIONAL'?'#f59e0b':'#3b82f6';
+
+  // Verdict bar
+  document.getElementById('an-verdict-badge').innerHTML = '<span style="color:'+col+'">'+verdict+'</span>';
+  document.getElementById('an-verdict-bar').style.background = verdict==='BID'?'rgba(34,197,94,.06)':verdict==='NO-BID'?'rgba(239,68,68,.06)':'rgba(245,158,11,.06)';
+  document.getElementById('an-tender-name').textContent = td.tender_name || td.brief || '—';
+  document.getElementById('an-org-name').textContent = td.org_name || '';
+
+  // PQ summary chips
+  var pq = td.pq_criteria || [];
+  var pqG = pq.filter(function(p){return (p.nascent_color||p.color||'').toUpperCase()==='GREEN'||p.met===true;}).length;
+  var pqA = pq.filter(function(p){return (p.nascent_color||p.color||'').toUpperCase()==='AMBER';}).length;
+  var pqR = pq.filter(function(p){return (p.nascent_color||p.color||'').toUpperCase()==='RED'||p.met===false;}).length;
+  document.getElementById('an-pq-summary').innerHTML =
+    '<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(34,197,94,.12);color:#4ade80">✓ '+pqG+' Met</span>'+
+    (pqA?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,.12);color:#fbbf24">△ '+pqA+' Conditional</span>':'')+
+    (pqR?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(239,68,68,.12);color:#f87171">✗ '+pqR+' Not Met</span>':'');
+
+  // Download / Gen Docs buttons
+  if (raw.download_file) { document.getElementById('an-dl-btn').style.display=''; document.getElementById('an-dl-btn').setAttribute('data-file', raw.download_file); }
+  if (_lastAnalysisTid) { document.getElementById('an-gendocs-btn').style.display=''; }
+
+  // AI warning
+  if (td.ai_warning) { document.getElementById('an-warn').textContent='⚠ '+td.ai_warning; document.getElementById('an-warn').style.display=''; }
+
+  // ── SNAPSHOT TAB ──
+  var snap = [
+    ['Tender No', td.tender_no], ['Organisation', td.org_name],
+    ['Mode', td.mode_of_selection], ['Tender Type', td.tender_type],
+    ['Submission Deadline', td.bid_submission_date], ['Opening Date', td.bid_opening_date],
+    ['Pre-bid Deadline', td.prebid_query_date], ['Pre-bid Meeting', td.prebid_meeting],
+    ['Estimated Cost', td.estimated_cost], ['Tender Fee', td.tender_fee],
+    ['EMD', td.emd], ['EMD Exemption', td.emd_exemption],
+    ['Bid Validity', td.bid_validity], ['JV Allowed', td.jv_allowed],
+    ['Performance Security', td.performance_security], ['Contract Period', td.contract_period],
+    ['Location', td.location], ['Portal', td.portal], ['Contact', td.contact],
+    ['Technology Mandatory', td.technology_mandatory],
+  ];
+  function sv(v) { if(!v||v==='—'||v==='Not specified'||v==='Refer document') return null; if(typeof v==='object'&&v.value!==undefined) return v.value; return String(v); }
+  function ref(v) { if(typeof v!=='object'||!v) return ''; return [v.clause_ref,v.page_no].filter(Boolean).join(' · '); }
+  var snapHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">';
+  snap.forEach(function(row) {
+    var val=sv(row[1]); if(!val) return;
+    var r=ref(row[1]);
+    snapHtml += '<div style="background:#12141e;border:1px solid #1e2130;border-radius:6px;padding:10px 12px">'+
+      '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:3px">'+row[0]+'</div>'+
+      '<div style="font-size:12px;color:#e5e7eb;font-weight:500">'+val+'</div>'+
+      (r?'<div style="font-size:9px;color:#4b5563;margin-top:2px">'+r+'</div>':'')+
+    '</div>';
+  });
+  snapHtml += '</div>';
+  if (ov.reason) snapHtml += '<div style="margin-top:12px;padding:10px 12px;background:rgba('+
+    (verdict==='BID'?'34,197,94':verdict==='NO-BID'?'239,68,68':'245,158,11')+',.06);border:1px solid rgba('+
+    (verdict==='BID'?'34,197,94':verdict==='NO-BID'?'239,68,68':'245,158,11')+',.2);border-radius:6px;font-size:12px;color:#d1d5db;line-height:1.6">'+
+    '<div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:4px">ASSESSMENT</div>'+ov.reason+'</div>';
+  document.getElementById('anp-snapshot').innerHTML = snapHtml || '<div class="empty-state">No snapshot data extracted.</div>';
+
+  // ── SCOPE TAB ──
+  var scopes = td.scope_sections || td.scope_items || [];
+  document.getElementById('anp-scope').innerHTML = scopes.length ? scopes.map(function(s) {
+    return '<div style="border-bottom:1px solid #1e2130;padding:12px 0">'+
+      '<div style="font-size:10px;color:#6b7280;margin-bottom:3px">['+( s.section_no||'—')+'] '+( s.page_no||'')+'</div>'+
+      '<div style="font-size:13px;font-weight:600;color:#e5e7eb;margin-bottom:5px">'+( s.section_title||s.title||'—')+'</div>'+
+      '<div style="font-size:12px;color:#9ca3af;line-height:1.6">'+( s.prose||s.description||'—')+'</div>'+
+      ((s.deliverables||[]).length?'<div style="margin-top:6px;font-size:10px;color:#6b7280">Deliverables: '+s.deliverables.join(', ')+'</div>':'')+
+    '</div>';
+  }).join('') : '<div class="empty-state">Scope not extracted — or not present in documents.</div>';
+
+  // ── PQ TAB ──
+  document.getElementById('anp-pq').innerHTML = pq.length ? pq.map(function(p) {
+    var color = (p.nascent_color||p.color||'').toUpperCase();
+    var col2 = color==='GREEN'?'#4ade80':color==='RED'?'#f87171':'#fbbf24';
+    var bg  = color==='GREEN'?'rgba(34,197,94,.06)':color==='RED'?'rgba(239,68,68,.06)':'rgba(245,158,11,.06)';
+    return '<div style="border:1px solid #1e2130;border-left:3px solid '+col2+';border-radius:0 6px 6px 0;padding:12px 14px;margin-bottom:8px;background:'+bg+'">'+
+      '<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-bottom:6px">'+
+        '<span style="font-size:10px;background:#1e2130;border-radius:3px;padding:1px 6px;color:#9ca3af">'+( p.sl_no||'—')+'</span>'+
+        '<span style="font-size:12px;font-weight:600;color:#e5e7eb;flex:1">'+( p.clause_header||p.criteria?.slice(0,60)||'—')+'</span>'+
+        '<span style="font-size:10px;color:#6b7280">'+( p.clause_ref||'')+(p.page_no?' · '+p.page_no:'')+'</span>'+
+        '<span style="font-size:11px;font-weight:700;color:'+col2+'">'+( p.nascent_status||p.status||'—')+'</span>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#9ca3af;line-height:1.5;margin-bottom:5px">'+( p.criteria||'—')+'</div>'+
+      (p.documents_required&&p.documents_required!=='—'?'<div style="font-size:10px;color:#6b7280;margin-bottom:3px"><b>Docs required:</b> '+p.documents_required+'</div>':'')+
+      '<div style="font-size:11px;color:'+col2+';line-height:1.5">'+( p.nascent_remark||p.remark||'')+'</div>'+
+      (p.calculation_shown&&p.calculation_shown!=='—'?'<div style="font-size:10px;font-family:monospace;color:#60a5fa;margin-top:4px;background:#0f1117;padding:4px 8px;border-radius:4px">'+p.calculation_shown+'</div>':'')+
+      (p.evidence_projects&&p.evidence_projects!=='—'?'<div style="font-size:10px;color:#818cf8;margin-top:4px">Projects: '+p.evidence_projects+'</div>':'')+
+    '</div>';
+  }).join('') : '<div class="empty-state">No PQ criteria extracted.</div>';
+
+  // ── TQ TAB ──
+  var tq = td.tq_criteria || [];
+  var tqHeader = (td.tq_total_marks||td.tq_min_qualifying_score||td.tq_nascent_estimated_total) ?
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#12141e;border:1px solid #1e2130;border-radius:6px;font-size:11px">'+
+    (td.tq_total_marks?'<span>Total Marks: <b style="color:#e5e7eb">'+td.tq_total_marks+'</b></span>':'')+
+    (td.tq_min_qualifying_score?'<span>Min Qualifying: <b style="color:#fbbf24">'+td.tq_min_qualifying_score+'</b></span>':'')+
+    (td.tq_nascent_estimated_total?'<span>Nascent Estimated: <b style="color:#4ade80">'+td.tq_nascent_estimated_total+'</b></span>':'')+
+    '</div>' : '';
+  document.getElementById('anp-tq').innerHTML = tqHeader + (tq.length ? tq.map(function(t2) {
+    var score = parseFloat(t2.nascent_score||0), max = parseFloat(t2.max_marks||0);
+    var pct = max>0?score/max:0;
+    var col3 = pct>=0.8?'#4ade80':pct>=0.5?'#fbbf24':'#f87171';
+    return '<div style="border:1px solid #1e2130;border-radius:6px;padding:12px 14px;margin-bottom:8px">'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">'+
+        '<span style="font-size:10px;background:#1e2130;border-radius:3px;padding:1px 6px;color:#9ca3af">'+( t2.sl_no||'—')+'</span>'+
+        '<span style="font-size:12px;font-weight:600;color:#e5e7eb;flex:1">'+( t2.criteria?.slice(0,60)||'—')+'</span>'+
+        '<span style="font-size:13px;font-weight:700;color:'+col3+'">'+( t2.nascent_score||'?')+'/'+( t2.max_marks||'?')+'</span>'+
+      '</div>'+
+      (t2.eval_criteria?'<div style="font-size:11px;color:#9ca3af;line-height:1.5;margin-bottom:4px">'+t2.eval_criteria+'</div>':'')+
+      (t2.slab_calculation?'<div style="font-size:10px;font-family:monospace;color:#60a5fa;background:#0f1117;padding:4px 8px;border-radius:4px;margin-bottom:4px">'+t2.slab_calculation+'</div>':'')+
+      '<div style="font-size:11px;color:#9ca3af">'+( t2.nascent_remark||'')+'</div>'+
+    '</div>';
+  }).join('') : '<div class="empty-state">No TQ criteria extracted.</div>');
+
+  // ── QUERIES TAB ──
+  var queries = td.prebid_queries || raw.prebid_queries || [];
+  // Also populate legacy div for compat
+  var pbList = document.getElementById('prebid-list');
+  if (pbList && queries.length) pbList.innerHTML = queries.map(function(q){ return '<div>'+( q.query||q)+'</div>'; }).join('');
+  document.getElementById('anp-queries').innerHTML = queries.length ? queries.map(function(q,i) {
+    var qtext = typeof q==='string'?q:(q.query||q.text||JSON.stringify(q));
+    var pri = (q.priority||'MEDIUM').toUpperCase();
+    var priCol = pri==='HIGH'?'#f87171':pri==='MEDIUM'?'#fbbf24':'#9ca3af';
+    return '<div style="border-bottom:1px solid #1e2130;padding:12px 0">'+
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:5px;flex-wrap:wrap">'+
+        '<span style="font-size:10px;font-weight:700;color:#9ca3af">Q'+(i+1)+'</span>'+
+        '<span style="font-size:9px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.05);color:'+priCol+';font-weight:700">'+pri+'</span>'+
+        (q.clause_ref?'<span style="font-size:10px;color:#6b7280">'+q.clause_ref+(q.page_no?' · '+q.page_no:'')+'</span>':'')+
+        (q.guideline_cited&&q.guideline_cited!=='None'?'<span style="font-size:9px;color:#818cf8">📋 '+q.guideline_cited+'</span>':'')+
+      '</div>'+
+      (q.rfp_text&&q.rfp_text!=='—'?'<div style="font-size:10px;color:#6b7280;background:#12141e;padding:5px 8px;border-radius:4px;margin-bottom:5px;font-style:italic">"'+q.rfp_text+'"</div>':'')+
+      '<div style="font-size:12px;color:#d1d5db;line-height:1.6">'+qtext+'</div>'+
+    '</div>';
+  }).join('') : '<div style="text-align:center;padding:20px;color:#4ade80;font-size:12px">✓ No pre-bid queries needed — all criteria appear clear.</div>';
+
+  // ── CHECKLIST TAB ──
+  var cl = td.submission_checklist || [];
+  document.getElementById('anp-checklist').innerHTML = cl.length ? cl.map(function(item,i) {
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #1e2130">'+
+      '<input type="checkbox" style="margin-top:2px" '+(item.status==='Ready'?'checked':'')+'>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:600">'+( item.category||'—')+(item.annexure&&item.annexure!=='—'?' · '+item.annexure:'')+'</div>'+
+        '<div style="font-size:12px;color:#e5e7eb">'+( item.document||'—')+'</div>'+
+        (item.nascent_note?'<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ '+item.nascent_note+'</div>':'')+
+      '</div>'+
+      '<span style="font-size:9px;color:#6b7280;white-space:nowrap">'+( item.status||'Prepare')+'</span>'+
+    '</div>';
+  }).join('') : '<div class="empty-state">No checklist generated. Analyse with AI first.</div>';
+
+  // Show result panel
+  document.getElementById('an-result-panel').style.display = '';
+  anTab('snapshot', document.querySelector('#an-tab-row .tab'));
+}
+
+function anTab(tab, btn) {
+  document.querySelectorAll('#an-tab-row .tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('#an-result-panel .tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var pane = document.getElementById('anp-'+tab);
+  if (pane) pane.classList.add('active');
+}
+
+function handleAnDrop(e) {
+  e.preventDefault();
+  document.getElementById('an-dropzone').style.borderColor='';
+  var files = e.dataTransfer.files;
+  if (files.length) {
+    document.getElementById('an-files').files; // can't set directly
+    updateFileList({files:files});
+    // Store for submit
+    _droppedFiles = files;
+  }
+}
+var _droppedFiles = null;
+
+function downloadReport() {
+  var f = document.getElementById('an-dl-btn').getAttribute('data-file');
+  if (f) window.open('/download/'+f);
+}
+
+async function generateDocsFromAnalyse() {
+  var tid = _lastAnalysisTid;
+  if (!tid) { toast('Enter T247 ID before generating docs','info'); return; }
+  await generateDocs(tid);
+}
+
 
 async function reanalyseDrive() {
   var tid = currentTenderId || document.getElementById('an-tid').value.trim();
