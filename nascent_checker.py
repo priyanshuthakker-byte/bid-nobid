@@ -631,9 +631,25 @@ class NascentChecker:
             reason = f"All {green} PQ/TQ criteria met. Nascent is fully eligible to bid."
             color = "GREEN"
 
+        # QCBS numerical score — sum nascent_score from TQ criteria if present
+        tq_score = None
+        tq_max = None
+        tq_pct = None
+        tq_items = [c for c in checked_criteria if c.get("nascent_score") is not None and c.get("max_marks") is not None]
+        if tq_items:
+            try:
+                tq_score = sum(float(str(c.get("nascent_score", 0)).split("/")[0].strip()) for c in tq_items)
+                tq_max = sum(float(str(c.get("max_marks", 0))) for c in tq_items)
+                tq_pct = round(tq_score / tq_max * 100, 1) if tq_max > 0 else None
+            except Exception:
+                pass
+
         return {
             "verdict": verdict, "reason": reason, "color": color,
-            "green": green, "amber": amber, "red": red
+            "green": green, "amber": amber, "red": red,
+            "tq_nascent_score": tq_score,
+            "tq_max_marks": tq_max,
+            "tq_score_pct": tq_pct,
         }
 
     # ── UTILITIES ──────────────────────────────────────────────

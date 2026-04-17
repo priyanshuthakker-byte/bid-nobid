@@ -1003,6 +1003,63 @@ function setFilter(f) {
 // ═══════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════
+
+// ═══ TENDER SCORING ═══
+var NIT_DOMAINS = ['gis','geographic','geospatial','mapping','survey','lidar','drone',
+  'smart city','ict','e-governance','egovernance','digital','software','web','mobile',
+  'mis','erp','portal','dashboard','app','application','database','server','infrastructure',
+  'municipal','urban','satellite','remote sensing','cadastral','land record','property'];
+
+var NIT_STATES = ['gujarat','rajasthan','maharashtra','madhya pradesh','mp','chhattisgarh',
+  'goa','karnataka','telangana','andhra','up','uttar pradesh'];
+
+function computeTenderScore(t) {
+  // Returns 0-100 score or null if not enough data
+  var brief = ((t.brief||'') + ' ' + (t.org_name||'') + ' ' + (t.location||'')).toLowerCase();
+  var scope = (t.scope_items||[]).map(function(s){ return (s.description||s.title||'').toLowerCase(); }).join(' ');
+  var text = brief + ' ' + scope;
+
+  if (!text.trim() || text.length < 10) return null;
+
+  var pts = 0; var max = 0;
+
+  // Domain match (40 pts)
+  max += 40;
+  var domainHits = NIT_DOMAINS.filter(function(d){ return text.includes(d); }).length;
+  pts += Math.min(40, domainHits * 8);
+
+  // Value bracket (20 pts) — NIT range: 0.25 Cr to 50 Cr
+  max += 20;
+  var val = parseFloat(t.estimated_cost_cr||0);
+  if (val > 0) {
+    if (val >= 0.5 && val <= 50) pts += 20;
+    else if (val > 0.25 && val < 100) pts += 10;
+  } else {
+    pts += 10; // unknown value — neutral
+  }
+
+  // State match (15 pts)
+  max += 15;
+  var loc = (t.location||'').toLowerCase();
+  if (NIT_STATES.some(function(s){ return loc.includes(s); })) pts += 15;
+  else if (!loc) pts += 7; // unknown — neutral
+
+  // PQ pass rate (25 pts) — only if analysed
+  max += 25;
+  var pq = t.pq_criteria || [];
+  if (pq.length > 0) {
+    var green = pq.filter(function(p){ return (p.nascent_color||'').toUpperCase()==='GREEN'; }).length;
+    var red = pq.filter(function(p){ return (p.nascent_color||'').toUpperCase()==='RED'; }).length;
+    if (red === 0) pts += 25;
+    else if (red <= 1) pts += 15;
+    else if (red <= 2) pts += 5;
+  } else if (!t.bid_no_bid_done) {
+    pts += 12; // not yet analysed — neutral
+  }
+
+  return Math.round(pts / max * 100);
+}
+
 function renderDash() {
   var q = (document.getElementById('dash-search').value || '').toLowerCase();
   var arr = allTenders.filter(function(t){ return t.status !== 'Not Interested'; });
@@ -1045,19 +1102,33 @@ function renderDash() {
       ? '<span style="color:#888;font-size:12px">\u20b9'+t.estimated_cost_cr+'Cr</span>'
       : '<span style="color:#333">\u2014</span>';
 
-    // Project match
+    // Project match + score
     var pm = Array.isArray(t.project_matches) ? t.project_matches : [];
+    var score = computeTenderScore(t);
     var pmHtml;
+    // Score badge
+    var scoreBadge = score !== null
+      ? '<span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-bottom:3px;background:'+(score>=70?'rgba(34,197,94,.12)':score>=40?'rgba(245,158,11,.12)':'rgba(239,68,68,.1)')+';color:'+(score>=70?'#4ade80':score>=40?'#fbbf24':'#f87171')+'">'+score+'% match</span><br>'
+      : '';
     if (pm.length) {
-      pmHtml = pm.slice(0,2).map(function(p) {
-        var col = p.strength==='STRONG'?'#22c55e':p.strength==='MODERATE'?'#f59e0b':'#666';
-        var name = String(p.matching_project||p.project_name||'').substring(0,22);
-        return '<div style="font-size:10px;color:'+col+';white-space:nowrap">\u25b8 '+name+'</div>';
+      pmHtml = scoreBadge + pm.slice(0,2).map(function(p) {
+        var col = p.strength==='STRONG'?'#22c55e':p.strength==='MODERATE'?'#f59e0b':'#555';
+        var name = String(p.matching_project||p.project_name||'').substring(0,24);
+        return '<div style="font-size:10px;color:'+col+';white-space:nowrap">▸ '+name+'</div>';
       }).join('');
     } else if (t.bid_no_bid_done) {
-      pmHtml = '<span style="font-size:10px;color:#333">\u2014</span>';
+      pmHtml = scoreBadge || '<span style="font-size:10px;color:#333">—</span>';
     } else {
-      pmHtml = '<span style="font-size:10px;color:#252830">Analyse first</span>';
+      pmHtml = '<span style="font-size:10px;color:#333">Analyse first</span>';
+    }
+    // Append TQ score if available
+    var ov = t.overall_verdict || {};
+    if (ov.tq_nascent_score !== undefined && ov.tq_max_marks) {
+      var tqPct = ov.tq_score_pct;
+      var tqCol = tqPct >= 70 ? '#4ade80' : tqPct >= 50 ? '#fbbf24' : '#f87171';
+      pmHtml += '<div style="font-size:9px;color:' + tqCol + ';margin-top:2px">TQ: ' + ov.tq_nascent_score + '/' + ov.tq_max_marks + ' (' + tqPct + '%)</div>';
+    } else if (t.tq_nascent_estimated_total) {
+      pmHtml += '<div style="font-size:9px;color:#818cf8;margin-top:2px">TQ est: ' + t.tq_nascent_estimated_total + '</div>';
     }
 
     // Actions — NO inline quoted function args; use data-tid on row
