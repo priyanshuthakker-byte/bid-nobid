@@ -364,38 +364,59 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
 
     </div><!-- end scroll col -->
 
-    <!-- ── RIGHT: Chat + Draft sidebar ── -->
-    <div id="an-chat-sidebar" style="width:340px;flex-shrink:0;height:calc(100vh - 60px);display:flex;flex-direction:column;background:#12141e;border-left:1px solid #1e2130;padding:0">
-      <!-- Chat header -->
-      <div style="padding:12px 14px;border-bottom:1px solid #1e2130;display:flex;align-items:center;gap:8px">
-        <div style="width:8px;height:8px;border-radius:50%;background:#4ade80"></div>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#e5e7eb">Bid Assistant</div>
-          <div style="font-size:10px;color:#6b7280">Can edit analysis, update verdict, add queries</div>
+    <!-- ── RIGHT: Preview + Chat sidebar ── -->
+    <div id="an-sidebar" style="width:360px;flex-shrink:0;height:calc(100vh - 60px);display:flex;flex-direction:column;background:#12141e;border-left:1px solid #1e2130">
+
+      <!-- Sidebar mode tabs -->
+      <div style="display:flex;border-bottom:1px solid #1e2130">
+        <button id="sb-tab-preview" onclick="setSbMode('preview')"
+          style="flex:1;padding:10px;font-size:11px;font-weight:600;background:none;border:none;border-bottom:2px solid #3b82f6;color:#60a5fa;cursor:pointer">
+          👁 Preview
+        </button>
+        <button id="sb-tab-chat" onclick="setSbMode('chat')"
+          style="flex:1;padding:10px;font-size:11px;font-weight:600;background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;cursor:pointer">
+          💬 AI Chat
+        </button>
+        <button onclick="document.getElementById('an-sidebar').style.display='none'"
+          style="padding:10px 12px;background:none;border:none;color:#6b7280;cursor:pointer;font-size:15px">‹</button>
+      </div>
+
+      <!-- PREVIEW MODE -->
+      <div id="sb-preview" style="flex:1;overflow-y:auto;padding:12px">
+        <div id="sb-preview-content" style="font-size:11px;color:#9ca3af;text-align:center;padding:20px">
+          Analyse a tender to see full preview here.
         </div>
-        <button onclick="toggleAnChat()" style="margin-left:auto;background:none;border:none;color:#6b7280;cursor:pointer;font-size:16px" title="Collapse">‹</button>
       </div>
-      <!-- Quick actions -->
-      <div style="padding:8px 10px;border-bottom:1px solid #1e2130;display:flex;gap:5px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'Summarise this tender in 3 bullet points\')">📋 Summarise</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'List all concerns and risks for NIT\')">⚠ Risks</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'What PQ criteria is NIT likely to fail?\')">❓ PQ Gaps</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend(\'Generate 5 strong pre-bid queries\')">✉ Queries</button>
+
+      <!-- CHAT MODE -->
+      <div id="sb-chat" style="display:none;flex:1;overflow:hidden;display:none;flex-direction:column">
+        <div style="padding:6px 10px;border-bottom:1px solid #1e2130;display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend('Summarise this tender in 3 bullet points')">📋 Summarise</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend('What are the key risks and concerns for NIT?')">⚠ Risks</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend('Which PQ criteria is NIT most likely to fail and why?')">❓ PQ Gaps</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend('Generate 5 strong pre-bid queries citing RFP clauses')">✉ Queries</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 7px" onclick="anChatSend('What is the bid strategy recommendation for NIT?')">🎯 Strategy</button>
+        </div>
+        <div id="an-chat-msgs" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;color:#6b7280;text-align:center;padding:12px">Analyse a tender — then ask me anything.</div>
+        </div>
+        <div style="padding:10px;border-top:1px solid #1e2130;display:flex;gap:6px">
+          <textarea id="an-chat-input" placeholder="Ask about this tender..." rows="2"
+            style="flex:1;background:#0f1117;border:1px solid #1e2130;border-radius:6px;color:#e5e7eb;font-size:12px;padding:7px 9px;resize:none;font-family:inherit"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();anChatSendInput()}"></textarea>
+          <button onclick="anChatSendInput()" style="background:#3b82f6;border:none;border-radius:6px;color:#fff;padding:6px 10px;cursor:pointer;font-size:13px">➤</button>
+        </div>
       </div>
-      <!-- Messages -->
-      <div id="an-chat-msgs" style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px">
-        <div style="font-size:11px;color:#6b7280;text-align:center;padding:12px">Analyse a tender — then ask me anything about it.</div>
-      </div>
-      <!-- Input -->
-      <div style="padding:10px;border-top:1px solid #1e2130;display:flex;gap:6px">
-        <textarea id="an-chat-input" placeholder="Ask about this tender..." rows="2"
-          style="flex:1;background:#0f1117;border:1px solid #1e2130;border-radius:6px;color:#e5e7eb;font-size:12px;padding:7px 9px;resize:none;font-family:inherit"
-          onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();anChatSendInput()}"></textarea>
-        <button onclick="anChatSendInput()" style="background:#3b82f6;border:none;border-radius:6px;color:#fff;padding:6px 10px;cursor:pointer;font-size:13px">➤</button>
-      </div>
+
     </div>
+    <!-- Show sidebar toggle when collapsed -->
+    <button id="sb-show-btn" onclick="document.getElementById('an-sidebar').style.display='flex';this.style.display='none'"
+      style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);background:#1e3a5f;border:1px solid #2563eb44;border-right:none;padding:8px 4px;border-radius:6px 0 0 6px;color:#60a5fa;font-size:13px;cursor:pointer;writing-mode:vertical-rl">
+      Preview ›
+    </button>
 
   </div><!-- end flex page-body -->
+
 </div>
 
 <!-- ═══ CHECKLIST ═══ -->
@@ -1381,6 +1402,8 @@ async function analyseTender() {
 var _lastAnalysisResult = null;
 var _lastAnalysisTid = '';
 
+
+function _sv(v) { if(!v||v==='—'||v==='Not specified'||v==='Refer document') return ''; if(typeof v==='object'&&v!==null&&v.value!==undefined) return String(v.value||''); if(typeof v==='object') return ''; return String(v||''); }
 function renderAnalysisResult(td, raw) {
   var ov = td.overall_verdict || {};
   var verdict = (td.verdict || ov.verdict || 'REVIEW').toUpperCase().replace('NO BID','NO-BID');
@@ -1389,8 +1412,8 @@ function renderAnalysisResult(td, raw) {
   // Verdict bar
   document.getElementById('an-verdict-badge').innerHTML = '<span style="color:'+col+'">'+verdict+'</span>';
   document.getElementById('an-verdict-bar').style.background = verdict==='BID'?'rgba(34,197,94,.06)':verdict==='NO-BID'?'rgba(239,68,68,.06)':'rgba(245,158,11,.06)';
-  document.getElementById('an-tender-name').textContent = td.tender_name || td.brief || '—';
-  document.getElementById('an-org-name').textContent = td.org_name || '';
+  document.getElementById('an-tender-name').textContent = _sv(td.tender_name) || _sv(td.brief) || '—';
+  document.getElementById('an-org-name').textContent = _sv(td.org_name) || '';
 
   // PQ summary chips
   var pq = td.pq_criteria || [];
@@ -1405,7 +1428,14 @@ function renderAnalysisResult(td, raw) {
   // Download tray — show immediately after analysis
   var tray = document.getElementById('an-dl-tray');
   if (tray) tray.style.display = '';
-  if (raw.download_file) {
+
+  // Word report — use base64 blob (Render disk is ephemeral, /download/ may 404)
+  if (raw.doc_b64 && raw.doc_filename) {
+    var blobUrl = _b64ToBlob(raw.doc_b64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    anAddDownloadBlob('📄 Bid/No-Bid Report (.docx)', blobUrl, raw.doc_filename);
+    document.getElementById('an-dl-btn').style.display='';
+    document.getElementById('an-dl-btn').onclick = function(){ _triggerBlobDownload(blobUrl, raw.doc_filename); };
+  } else if (raw.download_file) {
     document.getElementById('an-dl-btn').style.display='';
     document.getElementById('an-dl-btn').setAttribute('data-file', raw.download_file);
     anAddDownload('📄 Bid/No-Bid Report (.docx)', '/download/'+raw.download_file);
@@ -1413,7 +1443,6 @@ function renderAnalysisResult(td, raw) {
   if (_lastAnalysisTid) {
     document.getElementById('an-gendocs-btn').style.display='';
     document.getElementById('an-mergebtn').style.display='';
-    // Add quick links for common docs
     anAddDownload('✉ Pre-bid Letter', '#prebid-letter', true);
     anAddDownload('📦 Submission Docs', '#gen-docs', true);
   }
@@ -1434,7 +1463,7 @@ function renderAnalysisResult(td, raw) {
     ['Location', td.location], ['Portal', td.portal], ['Contact', td.contact],
     ['Technology Mandatory', td.technology_mandatory],
   ];
-  function sv(v) { if(!v||v==='—'||v==='Not specified'||v==='Refer document') return null; if(typeof v==='object'&&v.value!==undefined) return v.value; return String(v); }
+  function sv(v) { if(!v||v==='—'||v==='Not specified'||v==='Refer document') return null; if(typeof v==='object'&&v!==null&&v.value!==undefined) return v.value||null; return String(v); }
   function ref(v) { if(typeof v!=='object'||!v) return ''; return [v.clause_ref,v.page_no].filter(Boolean).join(' · '); }
   var snapHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">';
   snap.forEach(function(row) {
@@ -1546,6 +1575,7 @@ function renderAnalysisResult(td, raw) {
   // Show result panel
   document.getElementById('an-result-panel').style.display = '';
   anTab('snapshot', document.querySelector('#an-tab-row .tab'));
+  renderSbPreview(td);
 }
 
 function anTab(tab, btn) {
@@ -2842,6 +2872,138 @@ function clearDownloadTray() {
   var links = document.getElementById('an-dl-links');
   if (tray) tray.style.display = 'none';
   if (links) links.innerHTML = '';
+}
+
+
+// ═══ BLOB DOWNLOAD HELPERS ═══
+function _b64ToBlob(b64, mime) {
+  var byteChars = atob(b64);
+  var byteNums = new Array(byteChars.length);
+  for (var i=0; i<byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+  return URL.createObjectURL(new Blob([new Uint8Array(byteNums)], {type: mime}));
+}
+
+function _triggerBlobDownload(url, filename) {
+  var a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+}
+
+function anAddDownloadBlob(label, blobUrl, filename) {
+  var links = document.getElementById('an-dl-links');
+  var tray = document.getElementById('an-dl-tray');
+  if (!links) return;
+  if (tray) tray.style.display = '';
+  var a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  a.setAttribute('data-url', blobUrl);
+  a.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1e3a5f;border:1px solid #2563eb55;border-radius:5px;color:#60a5fa;font-size:11px;text-decoration:none;cursor:pointer;font-weight:500';
+  a.innerHTML = label + ' <span style="font-size:14px">⬇</span>';
+  links.appendChild(a);
+}
+
+
+// ═══ ANALYSE SIDEBAR ═══
+function setSbMode(mode) {
+  var preview = document.getElementById('sb-preview');
+  var chat = document.getElementById('sb-chat');
+  var tabP = document.getElementById('sb-tab-preview');
+  var tabC = document.getElementById('sb-tab-chat');
+  if (mode === 'preview') {
+    preview.style.display = 'block';
+    chat.style.display = 'none';
+    tabP.style.borderBottomColor = '#3b82f6'; tabP.style.color = '#60a5fa';
+    tabC.style.borderBottomColor = 'transparent'; tabC.style.color = '#6b7280';
+  } else {
+    preview.style.display = 'none';
+    chat.style.display = 'flex';
+    tabP.style.borderBottomColor = 'transparent'; tabP.style.color = '#6b7280';
+    tabC.style.borderBottomColor = '#3b82f6'; tabC.style.color = '#60a5fa';
+  }
+}
+
+function renderSbPreview(td) {
+  var el = document.getElementById('sb-preview-content');
+  if (!el) return;
+
+  var ov = td.overall_verdict || {};
+  var verdict = (td.verdict || ov.verdict || 'REVIEW').toUpperCase();
+  var vcol = verdict==='BID'?'#4ade80':verdict==='NO-BID'?'#f87171':verdict==='CONDITIONAL'?'#fbbf24':'#60a5fa';
+  var pq = td.pq_criteria || [];
+
+  // Build editable-looking preview sections
+  var html2 = '';
+
+  // Verdict summary
+  html2 += '<div style="background:rgba('+
+    (verdict==='BID'?'74,222,128':verdict==='NO-BID'?'248,113,113':'251,191,36')+
+    ',.06);border:1px solid rgba('+
+    (verdict==='BID'?'74,222,128':verdict==='NO-BID'?'248,113,113':'251,191,36')+
+    ',.2);border-radius:6px;padding:10px 12px;margin-bottom:10px">'+
+    '<div style="font-size:16px;font-weight:800;color:'+vcol+'">'+verdict+'</div>'+
+    '<div style="font-size:10px;color:#9ca3af;margin-top:3px;line-height:1.5">'+(ov.reason||'').slice(0,200)+'</div>'+
+  '</div>';
+
+  // Key fields
+  var fields = [
+    ['Tender No', td.tender_no], ['Organisation', td.org_name],
+    ['Estimated Cost', td.estimated_cost], ['EMD', td.emd],
+    ['Tender Fee', td.tender_fee], ['Bid Deadline', td.bid_submission_date],
+    ['Pre-bid Deadline', td.prebid_query_date], ['Contract Period', td.contract_period],
+    ['JV Allowed', td.jv_allowed], ['MSME Exempt', td.emd_exemption],
+    ['Mode', td.mode_of_selection], ['Location', td.location],
+  ];
+  html2 += '<div style="margin-bottom:10px">';
+  html2 += '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:6px;font-weight:600">Key Info</div>';
+  fields.forEach(function(row) {
+    var val = _sv(row[1]); if (!val || val === '—') return;
+    html2 += '<div style="display:flex;gap:6px;padding:4px 0;border-bottom:1px solid #1e2130">'+
+      '<span style="color:#6b7280;min-width:100px;font-size:10px">'+row[0]+'</span>'+
+      '<span style="color:#e5e7eb;font-size:10px;flex:1;word-break:break-word">'+val+'</span>'+
+    '</div>';
+  });
+  html2 += '</div>';
+
+  // PQ summary
+  if (pq.length) {
+    html2 += '<div style="margin-bottom:10px">';
+    html2 += '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:6px;font-weight:600">PQ Criteria ('+pq.length+')</div>';
+    pq.forEach(function(p) {
+      var col = (p.nascent_color||'').toUpperCase()==='GREEN'?'#4ade80':(p.nascent_color||'').toUpperCase()==='RED'?'#f87171':'#fbbf24';
+      html2 += '<div style="display:flex;gap:6px;padding:5px 0;border-bottom:1px solid #1e2130;align-items:flex-start">'+
+        '<span style="color:'+col+';font-size:12px;margin-top:1px">'+((p.nascent_color||'').toUpperCase()==='GREEN'?'✓':(p.nascent_color||'').toUpperCase()==='RED'?'✗':'△')+'</span>'+
+        '<div style="flex:1">'+
+          '<div style="font-size:10px;color:#e5e7eb;line-height:1.4">'+(p.clause_header||'').slice(0,60)+'</div>'+
+          '<div style="font-size:9px;color:#6b7280;margin-top:2px">'+(p.nascent_remark||'').slice(0,80)+'</div>'+
+        '</div>'+
+      '</div>';
+    });
+    html2 += '</div>';
+  }
+
+  // Pre-bid queries
+  var queries = td.prebid_queries || [];
+  if (queries.length) {
+    html2 += '<div style="margin-bottom:10px">';
+    html2 += '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:6px;font-weight:600">Pre-bid Queries ('+queries.length+')</div>';
+    queries.slice(0,5).forEach(function(q,i) {
+      var qtext = typeof q==='string'?q:(q.query||q.text||'');
+      html2 += '<div style="padding:5px 0;border-bottom:1px solid #1e2130">'+
+        '<div style="font-size:9px;color:#6b7280;margin-bottom:2px">Q'+(i+1)+(q.priority?' · '+q.priority:'')+'</div>'+
+        '<div style="font-size:10px;color:#d1d5db;line-height:1.4">'+qtext.slice(0,120)+'</div>'+
+      '</div>';
+    });
+    if (queries.length > 5) html2 += '<div style="font-size:9px;color:#6b7280;padding:4px 0">+' + (queries.length-5) + ' more — see Pre-bid Queries tab</div>';
+    html2 += '</div>';
+  }
+
+  // Chat prompt at bottom
+  html2 += '<div style="margin-top:12px;padding:8px 10px;background:#1e2130;border-radius:6px;cursor:pointer" onclick="setSbMode(\'chat\')">' +
+    '<div style="font-size:10px;color:#6b7280">💬 See something wrong? Switch to AI Chat to fix it.</div>' +
+  '</div>';
+
+  el.innerHTML = html2;
+  el.style.cssText = 'font-size:11px';
 }
 
 </script>
