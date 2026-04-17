@@ -193,6 +193,18 @@ async def lifespan(app: FastAPI):
     print(f"BOQ: {'loaded' if BOQ_AVAILABLE else 'missing boq_engine.py'}")
     print(f"Admin token: {'set' if ADMIN_TOKEN else 'not set (admin routes open)'}")
     print("Server ready — v6.2")
+    # Restore profile from Drive if local is missing/empty
+    try:
+        if drive_available():
+            profile_data = load_from_drive("nascent_profile.json")
+            if profile_data:
+                runtime_prof = BASE_DIR / "nascent_profile.json"
+                raw = profile_data if isinstance(profile_data, bytes) else profile_data.encode()
+                if not runtime_prof.exists() or len(runtime_prof.read_bytes()) < 100:
+                    runtime_prof.write_bytes(raw)
+                    print("✅ Profile restored from Drive")
+    except Exception:
+        pass
     yield
     # Shutdown: nothing needed
 
@@ -1181,6 +1193,13 @@ async def update_profile(data: dict = Body(...)):
         invalidate_rules_cache()
     except (ImportError, AttributeError):
         pass
+    # Backup profile to Drive so it survives redeploys
+    try:
+        if drive_available():
+            import json as _json
+            save_to_drive("nascent_profile.json", _json.dumps(data, indent=2, ensure_ascii=False).encode())
+    except Exception as _pe:
+        pass  # Drive backup failure should not block profile save
     return {"status": "saved", "runtime_profile": str(runtime_path), "repo_profile": str(repo_path)}
 
 # ══ BOQ ══════════════════════════════════════════════════════════════════════

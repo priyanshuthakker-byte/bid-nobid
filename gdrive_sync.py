@@ -267,23 +267,47 @@ def get_drive_diagnostic():
 
 
 # Vault functions
+def _get_vault_folder_id() -> str:
+    """Get or create a 'vault' subfolder inside the main Drive folder."""
+    if not _drive_service:
+        return ""
+    parent_id = _get_folder_id()
+    if not parent_id:
+        return ""
+    try:
+        q = f"name='vault' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        res = _drive_service.files().list(q=q, fields="files(id)", supportsAllDrives=True).execute()
+        files = res.get("files", [])
+        if files:
+            return files[0]["id"]
+        # Create vault subfolder
+        meta = {"name": "vault", "mimeType": "application/vnd.google-apps.folder", "parents": [parent_id]}
+        f = _drive_service.files().create(body=meta, fields="id", supportsAllDrives=True).execute()
+        return f.get("id", "")
+    except Exception as e:
+        print(f"❌ Vault folder error: {e}")
+        return parent_id  # fallback to root folder
+
+
 def vault_upload(file_bytes: bytes, filename: str, category: str = "general") -> dict:
     if not _drive_service:
         return {"success": False, "error": "Drive not connected"}
-    folder_id = _get_folder_id()
-    if not folder_id:
+    vault_id = _get_vault_folder_id()
+    if not vault_id:
         return {"success": False, "error": "GDRIVE_FOLDER_ID not set"}
     try:
         from googleapiclient.http import MediaIoBaseUpload
         import mimetypes
         mime = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-        meta = {"name": f"{category}_{filename}", "parents": [folder_id]}
+        # Store with category prefix for easy filtering
+        stored_name = f"[{category}] {filename}"
+        meta = {"name": stored_name, "parents": [vault_id]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime, resumable=False)
         result = _drive_service.files().create(
-            body=meta, media_body=media, fields="id,name,size",
+            body=meta, media_body=media, fields="id,name,size,mimeType",
             supportsAllDrives=True
         ).execute()
-        return {"success": True, "file_id": result["id"], "name": result["name"]}
+        return {"success": True, "file_id": result["id"], "name": result["name"], "size": result.get("size", 0)}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -291,16 +315,27 @@ def vault_upload(file_bytes: bytes, filename: str, category: str = "general") ->
 def vault_list() -> list:
     if not _drive_service:
         return []
-    folder_id = _get_folder_id()
-    if not folder_id:
+    vault_id = _get_vault_folder_id()
+    if not vault_id:
         return []
     try:
-        q = f"'{folder_id}' in parents and trashed=false"
+        q = f"'{vault_id}' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"
         results = _drive_service.files().list(
             q=q, fields="files(id,name,size,modifiedTime,mimeType)",
-            pageSize=100, supportsAllDrives=True
+            orderBy="modifiedTime desc",
+            pageSize=200, supportsAllDrives=True
         ).execute()
-        return results.get("files", [])
+        files = results.get("files", [])
+        # Parse category from [category] prefix
+        for f in files:
+            name = f.get("name", "")
+            if name.startswith("[") and "]" in name:
+                f["category"] = name[1:name.index("]")]
+                f["display_name"] = name[name.index("]")+2:]
+            else:
+                f["category"] = "general"
+                f["display_name"] = name
+        return files
     except Exception as e:
         print(f"❌ Vault list failed: {e}")
         return []

@@ -185,6 +185,7 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
   <button class="nav-btn" onclick="showPage('checklist')"><span class="icon">✅</span>Checklist</button>
   <button class="nav-btn" onclick="showPage('documents')"><span class="icon">📄</span>Documents</button>
   <button class="nav-btn" onclick="showPage('letterhead')"><span class="icon">🏢</span>Letterhead</button>
+  <button class="nav-btn" onclick="showPage('vault')"><span class="icon">🔒</span>Doc Vault</button>
 
   <div class="nav-section">Reports</div>
   <button class="nav-btn" onclick="showPage('reports')"><span class="icon">📑</span>Reports</button>
@@ -509,6 +510,66 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
 </div>
 
 <!-- ═══ REPORTS ═══ -->
+<div id="page-vault" class="page">
+  <div class="topbar"><h1>Document Vault</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="vaultRefresh()">🔄 Refresh</button>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('vault-file-input').click()">☁ Upload Document</button>
+      <input type="file" id="vault-file-input" style="display:none" multiple onchange="vaultUploadFiles(this.files)">
+    </div>
+  </div>
+  <div class="page-body">
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#fca5a5">
+      ⚠️ <strong>POA EXPIRED 31-Mar-2026</strong> — Hitesh Patel cannot sign documents until renewed.
+    </div>
+
+    <!-- Category filter -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="vault-cat-filters">
+      <button class="btn btn-ghost btn-sm vault-cat active" onclick="vaultSetCat('all',this)">All</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('registration',this)">Registration</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('financial',this)">Financial</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('certification',this)">Certifications</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('empanelment',this)">Empanelment</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('legal',this)">Legal</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('technical',this)">Technical</button>
+      <button class="btn btn-ghost btn-sm vault-cat" onclick="vaultSetCat('general',this)">General</button>
+    </div>
+
+    <!-- Upload area -->
+    <div id="vault-drop-zone" style="border:2px dashed #252830;border-radius:8px;padding:20px;text-align:center;margin-bottom:14px;cursor:pointer;font-size:12px;color:#6b7280"
+      onclick="document.getElementById('vault-file-input').click()"
+      ondragover="event.preventDefault();this.style.borderColor='#3b82f6'"
+      ondragleave="this.style.borderColor='#252830'"
+      ondrop="vaultHandleDrop(event)">
+      ☁ Drop files here to upload to Google Drive Vault
+      <div style="font-size:10px;margin-top:4px">PDF · DOCX · XLSX · PNG · JPG — any format accepted</div>
+    </div>
+    <div id="vault-upload-progress" style="display:none;font-size:11px;color:#60a5fa;margin-bottom:10px"></div>
+
+    <!-- Category select for upload -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:11px">
+      <label style="color:#6b7280">Upload category:</label>
+      <select id="vault-cat-select" class="btn btn-ghost btn-sm" style="font-size:11px">
+        <option value="general">General</option>
+        <option value="registration">Registration</option>
+        <option value="financial">Financial</option>
+        <option value="certification">Certifications</option>
+        <option value="empanelment">Empanelment</option>
+        <option value="legal">Legal</option>
+        <option value="technical">Technical</option>
+      </select>
+    </div>
+
+    <!-- Drive status -->
+    <div id="vault-drive-status" style="font-size:10px;color:#6b7280;margin-bottom:10px"></div>
+
+    <!-- Files list -->
+    <div id="vault-list">
+      <div class="empty-state">Loading vault...</div>
+    </div>
+  </div>
+</div>
+
 <div id="page-reports" class="page">
   <div class="topbar"><h1>Reports</h1><div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadReports()">↺ Refresh</button></div></div>
   <div class="page-body">
@@ -845,6 +906,7 @@ function showPage(name) {
   if (name === 'analytics') loadAnalytics();
   if (name === 'skipped') loadSkipped();
   if (name === 'emd') loadEMDPage();
+  if (name === 'vault') { vaultRefresh(); }
   if (name === 'letterhead') loadLetterheadStatus();
   if (name === 'boq') { loadBOQConst(); populateBOQSelect(); }
   if (name === 'profile') loadProfile();
@@ -3017,6 +3079,107 @@ function renderSbPreview(td) {
 
   el.innerHTML = html2;
   el.style.cssText = 'font-size:11px';
+}
+
+
+// ═══════════════ DOC VAULT ═══════════════
+var _vaultFiles = [];
+var _vaultCat = 'all';
+
+async function vaultRefresh() {
+  var listEl = document.getElementById('vault-list');
+  var statusEl = document.getElementById('vault-drive-status');
+  if (listEl) listEl.innerHTML = '<div class="empty-state">Loading from Drive...</div>';
+  try {
+    var r = await fetch('/vault/list');
+    var d = await r.json();
+    _vaultFiles = d.files || [];
+    if (statusEl) statusEl.textContent = d.count + ' files in Drive vault · ' + (d.count > 0 ? 'Last sync: just now' : 'Empty');
+    vaultRenderList();
+  } catch(e) {
+    if (listEl) listEl.innerHTML = '<div class="empty-state" style="color:#f87171">Failed to load vault: ' + e.message + '<br><small>Check Google Drive connection in Settings</small></div>';
+  }
+}
+
+function vaultSetCat(cat, btn) {
+  _vaultCat = cat;
+  document.querySelectorAll('.vault-cat').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  vaultRenderList();
+}
+
+function vaultRenderList() {
+  var listEl = document.getElementById('vault-list');
+  if (!listEl) return;
+  var files = _vaultCat === 'all' ? _vaultFiles : _vaultFiles.filter(function(f){ return f.category === _vaultCat; });
+  if (!files.length) {
+    listEl.innerHTML = '<div class="empty-state"><div style="font-size:32px">🔒</div>' +
+      (_vaultCat === 'all' ? '<p>Vault is empty. Upload company documents to Google Drive.</p>' : '<p>No files in "' + _vaultCat + '" category.</p>') + '</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="table-wrap"><table><thead><tr>' +
+    '<th>Document</th><th>Category</th><th>Size</th><th>Modified</th><th>Actions</th>' +
+    '</tr></thead><tbody>' +
+    files.map(function(f) {
+      var size = f.size ? (parseInt(f.size) > 1048576 ? (parseInt(f.size)/1048576).toFixed(1)+'MB' : Math.round(parseInt(f.size)/1024)+'KB') : '—';
+      var date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      var icon = f.mimeType && f.mimeType.includes('pdf') ? '📄' : f.mimeType && f.mimeType.includes('word') ? '📝' : f.mimeType && f.mimeType.includes('image') ? '🖼️' : '📎';
+      return '<tr>' +
+        '<td><span style="margin-right:6px">' + icon + '</span><span style="font-size:12px;color:#e5e7eb">' + (f.display_name || f.name) + '</span></td>' +
+        '<td><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(59,130,246,.1);color:#93c5fd">' + (f.category || 'general') + '</span></td>' +
+        '<td style="font-size:11px;color:#6b7280">' + size + '</td>' +
+        '<td style="font-size:11px;color:#6b7280">' + date + '</td>' +
+        '<td>' +
+          '<a href="/vault/download/' + f.id + '" download="' + (f.display_name||f.name) + '" class="action-btn blue" style="text-decoration:none;padding:3px 8px;font-size:10px">⬇ Download</a> ' +
+          '<button class="action-btn red" onclick="vaultDelete(\'' + f.id + '\',this.getAttribute(\'data-name\'))" data-name="' + (f.display_name||f.name) + '" style="font-size:10px;padding:3px 8px">✕</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+}
+
+async function vaultUploadFiles(files) {
+  if (!files || !files.length) return;
+  var cat = document.getElementById('vault-cat-select') ? document.getElementById('vault-cat-select').value : 'general';
+  var prog = document.getElementById('vault-upload-progress');
+  if (prog) prog.style.display = '';
+  var ok = 0;
+  for (var i=0; i<files.length; i++) {
+    var f = files[i];
+    if (prog) prog.textContent = 'Uploading ' + (i+1) + '/' + files.length + ': ' + f.name + '...';
+    try {
+      var fd = new FormData();
+      fd.append('file', f);
+      fd.append('category', cat);
+      var r = await fetch('/vault/upload?category=' + encodeURIComponent(cat), {method:'POST', body:fd});
+      var d = await r.json();
+      if (d.success !== false) ok++;
+      else toast('Upload failed: ' + d.error, 'error');
+    } catch(e) {
+      toast('Upload error: ' + e.message, 'error');
+    }
+  }
+  if (prog) prog.style.display = 'none';
+  if (ok > 0) {
+    toast(ok + ' file(s) uploaded to Drive vault', 'success');
+    vaultRefresh();
+  }
+}
+
+function vaultHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('vault-drop-zone').style.borderColor = '#252830';
+  vaultUploadFiles(e.dataTransfer.files);
+}
+
+async function vaultDelete(fileId, nameOrBtn) {
+  var name = typeof nameOrBtn === 'string' ? nameOrBtn : (nameOrBtn && nameOrBtn.getAttribute ? nameOrBtn.getAttribute('data-name') : 'this file');
+  if (!confirm('Delete "' + name + '" from Drive vault?')) return;
+  try {
+    var r = await fetch('/vault/delete/' + fileId, {method:'DELETE'});
+    if (r.ok) { toast('Deleted: ' + name, 'success'); vaultRefresh(); }
+    else toast('Delete failed', 'error');
+  } catch(e) { toast('Delete error: ' + e.message, 'error'); }
 }
 
 </script>
