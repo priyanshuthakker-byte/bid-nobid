@@ -765,7 +765,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
         except Exception as doc_err:
             tender_data["doc_warning"] = f"Word report failed: {str(doc_err)[:100]}"
-            output_filename = ""  # no download file but analysis still works
+            # Keep output_filename as-is — file may not exist but analysis result is still valid
 
         if t247_id:
             _set_job(job_id, progress="Saving to database…")

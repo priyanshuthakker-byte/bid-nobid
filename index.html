@@ -327,11 +327,12 @@ select.fsel{padding:4px 8px;border-radius:6px;border:1px solid #252830;backgroun
           <button class="btn btn-ghost btn-sm" id="an-gendocs-btn" onclick="generateDocsFromAnalyse()" style="display:none">📦 Gen Docs</button>
           <button class="btn btn-ghost btn-sm" id="an-mergebtn" onclick="mergePDFFromAnalyse()" style="display:none">🗂 Merge PDF</button>
         </div>
-        <!-- Download tray — populated after any generate action -->
-        <div id="an-dl-tray" style="display:none;width:100%;margin-top:8px;padding:8px 12px;background:#0f1117;border:1px solid #1e2130;border-radius:6px">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:6px">📥 Downloads</div>
-          <div id="an-dl-links" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        </div>
+      </div>
+
+      <!-- Download tray — always visible after analysis, below tabs -->
+      <div id="an-dl-tray" style="display:none;margin-top:10px;padding:10px 14px;background:#0a1628;border:1px solid #1e3a5f;border-radius:6px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:8px">📥 Downloads — click to save</div>
+        <div id="an-dl-links" style="display:flex;flex-wrap:wrap;gap:8px"></div>
       </div>
 
       <!-- Tabs -->
@@ -1401,18 +1402,20 @@ function renderAnalysisResult(td, raw) {
     (pqA?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,.12);color:#fbbf24">△ '+pqA+' Conditional</span>':'')+
     (pqR?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(239,68,68,.12);color:#f87171">✗ '+pqR+' Not Met</span>':'');
 
-  // Download tray
+  // Download tray — show immediately after analysis
   var tray = document.getElementById('an-dl-tray');
-  var trayLinks = document.getElementById('an-dl-links');
+  if (tray) tray.style.display = '';
   if (raw.download_file) {
     document.getElementById('an-dl-btn').style.display='';
     document.getElementById('an-dl-btn').setAttribute('data-file', raw.download_file);
     anAddDownload('📄 Bid/No-Bid Report (.docx)', '/download/'+raw.download_file);
-    if (tray) tray.style.display='';
   }
   if (_lastAnalysisTid) {
     document.getElementById('an-gendocs-btn').style.display='';
     document.getElementById('an-mergebtn').style.display='';
+    // Add quick links for common docs
+    anAddDownload('✉ Pre-bid Letter', '#prebid-letter', true);
+    anAddDownload('📦 Submission Docs', '#gen-docs', true);
   }
 
   // AI warning
@@ -2741,14 +2744,27 @@ async function anChatSendInput() {
   var ctx = '';
   if (_lastAnalysisResult) {
     var td = _lastAnalysisResult.tender_data || _lastAnalysisResult;
-    ctx = 'Current tender analysis context:\n' +
-      'Tender: ' + (td.tender_name || td.brief || '') + '\n' +
-      'Org: ' + (td.org_name || '') + '\n' +
-      'Verdict: ' + ((td.overall_verdict||{}).verdict || td.verdict || '') + '\n' +
+    var pq = td.pq_criteria || [];
+    var pqMet = pq.filter(function(p){return (p.nascent_color||'').toUpperCase()==='GREEN';}).length;
+    var pqFail = pq.filter(function(p){return (p.nascent_color||'').toUpperCase()==='RED';}).length;
+    var tqEst = td.tq_nascent_estimated_total || '';
+    ctx = '[TENDER CONTEXT FOR ANALYSIS]\n' +
+      'Tender: ' + (td.tender_name || td.brief || 'Unknown') + '\n' +
+      'Organisation: ' + (td.org_name || '') + '\n' +
+      'Tender No: ' + (td.tender_no || '') + '\n' +
+      'Verdict: ' + ((td.overall_verdict||{}).verdict || td.verdict || 'REVIEW') + '\n' +
+      'Verdict Reason: ' + ((td.overall_verdict||{}).reason || '') + '\n' +
+      'Estimated Cost: ' + (td.estimated_cost || '') + '\n' +
       'EMD: ' + (td.emd || '') + '\n' +
-      'Deadline: ' + (td.bid_submission_date || '') + '\n' +
-      'PQ criteria count: ' + ((td.pq_criteria||[]).length) + '\n' +
-      'Verdict reason: ' + ((td.overall_verdict||{}).reason || '') + '\n\n' +
+      'Bid Deadline: ' + (td.bid_submission_date || '') + '\n' +
+      'Pre-bid Deadline: ' + (td.prebid_query_date || '') + '\n' +
+      'Contract Period: ' + (td.contract_period || '') + '\n' +
+      'PQ: ' + pqMet + ' met, ' + pqFail + ' failed out of ' + pq.length + ' criteria\n' +
+      (tqEst ? 'TQ Estimated Score: ' + tqEst + '\n' : '') +
+      'JV Allowed: ' + (td.jv_allowed || '') + '\n' +
+      'MSME Exempt: ' + (td.emd_exemption || '') + '\n' +
+      'Note: For downloads — user should click buttons in Download tray on screen or use the ⬇ Download Report button\n' +
+      '[END CONTEXT]\n\n' +
       'User question: ' + msg;
   } else {
     ctx = msg;
@@ -2790,24 +2806,35 @@ var _origRenderAnalysis = typeof renderAnalysisResult !== 'undefined' ? renderAn
 
 
 // ═══ DOWNLOAD TRAY HELPERS ═══
-function anAddDownload(label, url) {
-  // Add to analyse page tray
+function anAddDownload(label, url, isAction) {
   var tray = document.getElementById('an-dl-tray');
   var links = document.getElementById('an-dl-links');
-  if (tray && links) {
-    tray.style.display = '';
-    // Avoid duplicate links
-    var existing = Array.from(links.querySelectorAll('a')).map(function(a){return a.href;});
-    var fullUrl = url.startsWith('http') ? url : window.location.origin + url;
-    if (existing.includes(fullUrl)) return;
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = '';
-    a.target = '_blank';
-    a.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1e3a5f;border:1px solid #2563eb44;border-radius:5px;color:#93c5fd;font-size:11px;text-decoration:none;cursor:pointer';
-    a.innerHTML = label + ' <span style="font-size:13px">⬇</span>';
-    links.appendChild(a);
+  if (!links) return;
+  tray.style.display = '';
+  // Avoid duplicates
+  var existing = Array.from(links.querySelectorAll('[data-url]')).map(function(e){return e.getAttribute('data-url');});
+  if (existing.includes(url)) return;
+  var el;
+  if (isAction) {
+    // Button that triggers a function, not a file download
+    el = document.createElement('button');
+    el.className = 'btn btn-ghost btn-sm';
+    el.style.cssText = 'font-size:11px;padding:5px 10px;border:1px solid #374151;border-radius:5px;color:#9ca3af;cursor:pointer';
+    el.setAttribute('data-url', url);
+    el.innerHTML = label;
+    if (url === '#prebid-letter') el.onclick = function(){ generatePrebidLetter(); };
+    else if (url === '#gen-docs') el.onclick = function(){ generateDocsFromAnalyse(); };
+    else if (url === '#merge-pdf') el.onclick = function(){ mergePDFFromAnalyse(); };
+  } else {
+    el = document.createElement('a');
+    el.href = url;
+    el.setAttribute('data-url', url);
+    el.setAttribute('download', '');
+    el.target = '_blank';
+    el.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1e3a5f;border:1px solid #2563eb55;border-radius:5px;color:#60a5fa;font-size:11px;text-decoration:none;cursor:pointer;font-weight:500';
+    el.innerHTML = label + ' <span style="font-size:14px">⬇</span>';
   }
+  links.appendChild(el);
 }
 
 function clearDownloadTray() {
