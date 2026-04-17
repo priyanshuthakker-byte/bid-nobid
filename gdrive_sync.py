@@ -130,7 +130,7 @@ def _get_or_create_file(filename, folder_id=None):
         return None
 
 
-def save_to_drive(local_path, filename="tenders_db.json"):
+def save_to_drive(local_path, filename="tenders_db.json", content_bytes=None):
     global _drive_service
     if not _drive_service:
         return False
@@ -146,7 +146,13 @@ def save_to_drive(local_path, filename="tenders_db.json"):
         try:
             from googleapiclient.http import MediaIoBaseUpload
             file_id = _get_or_create_file(filename, folder_id)
-            content = local_path.read_bytes()
+            if content_bytes is not None:
+                content = content_bytes
+            elif hasattr(local_path, 'read_bytes'):
+                content = local_path.read_bytes()
+            else:
+                # local_path is actually a filename string — shouldn't happen but handle it
+                content = str(local_path).encode()
             media = MediaIoBaseUpload(
                 io.BytesIO(content),
                 mimetype="application/json",
@@ -217,9 +223,6 @@ def load_from_drive(local_path, filename="tenders_db.json"):
             parsed = json.loads(data)
             if filename == "tenders_db.json":
                 tender_count = len(parsed.get("tenders", {}))
-                if tender_count == 0:
-                    print(f"⚠️  Drive tenders_db has 0 tenders — skipping load")
-                    return False
                 print(f"✅ Loaded {filename} from Drive ({len(data)//1024} KB, {tender_count} tenders)")
             else:
                 print(f"✅ Loaded {filename} from Drive ({len(data)//1024} KB)")

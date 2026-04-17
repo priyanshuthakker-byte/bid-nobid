@@ -193,15 +193,15 @@ async def lifespan(app: FastAPI):
     print(f"BOQ: {'loaded' if BOQ_AVAILABLE else 'missing boq_engine.py'}")
     print(f"Admin token: {'set' if ADMIN_TOKEN else 'not set (admin routes open)'}")
     print("Server ready — v6.2")
-    # Restore profile from Drive if local is missing/empty
+    # Restore profile from Drive (always, to get latest edits)
     try:
         if drive_available():
-            profile_data = load_from_drive("nascent_profile.json")
-            if profile_data:
-                runtime_prof = BASE_DIR / "nascent_profile.json"
-                raw = profile_data if isinstance(profile_data, bytes) else profile_data.encode()
-                if not runtime_prof.exists() or len(runtime_prof.read_bytes()) < 100:
-                    runtime_prof.write_bytes(raw)
+            _prof_local = BASE_DIR / "nascent_profile.json"
+            _prof_drive = OUTPUT_DIR / "nascent_profile.json"
+            if load_from_drive(_prof_drive, filename="nascent_profile.json"):
+                _prof_bytes = _prof_drive.read_bytes()
+                if len(_prof_bytes) > 50:
+                    _prof_local.write_bytes(_prof_bytes)
                     print("✅ Profile restored from Drive")
     except Exception:
         pass
@@ -224,18 +224,34 @@ def load_db() -> dict:
     with _db_lock:
         if DB_FILE.exists():
             try:
-                return json.loads(DB_FILE.read_text(encoding="utf-8"))
+                raw = DB_FILE.read_text(encoding="utf-8")
+                parsed = json.loads(raw)
+                if parsed.get("tenders"):  # non-empty — good
+                    return parsed
+                # Empty local DB — fall through to try Drive
             except Exception:
                 pass
+        # Local missing or empty — try Drive restore
+        try:
+            if drive_available():
+                DB_FILE.parent.mkdir(exist_ok=True, parents=True)
+                if load_from_drive(DB_FILE):
+                    data = json.loads(DB_FILE.read_text(encoding="utf-8"))
+                    if data.get("tenders"):
+                        print(f"🔄 load_db: restored {len(data['tenders'])} tenders from Drive")
+                        return data
+        except Exception:
+            pass
         return {"tenders": {}}
 
 def save_db(db: dict):
     with _db_lock:
+        DB_FILE.parent.mkdir(exist_ok=True, parents=True)
         DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
         save_to_drive(DB_FILE)
-    except Exception:
-        pass
+    except Exception as _e:
+        print(f"⚠️ Drive sync failed: {_e}")
 
 def get_tender(t247_id: str) -> dict:
     return load_db()["tenders"].get(str(t247_id), {})
@@ -1307,7 +1323,11 @@ async def update_profile(data: dict = Body(...)):
     try:
         if drive_available():
             import json as _json
-            save_to_drive("nascent_profile.json", _json.dumps(data, indent=2, ensure_ascii=False).encode())
+            # Write to temp file then sync, OR use content_bytes shortcut
+            _prof_bytes = _json.dumps(data, indent=2, ensure_ascii=False).encode()
+            _prof_tmp = OUTPUT_DIR / "nascent_profile.json"
+            _prof_tmp.write_bytes(_prof_bytes)
+            save_to_drive(_prof_tmp, filename="nascent_profile.json")
     except Exception as _pe:
         pass  # Drive backup failure should not block profile save
     return {"status": "saved", "runtime_profile": str(runtime_path), "repo_profile": str(repo_path)}
