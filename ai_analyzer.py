@@ -1327,6 +1327,14 @@ def analyze_with_gemini(full_text: str, prebid_passed_flag: bool = False) -> Dic
             main_text = main_text[:quarter]
             print(f"[AI Pipeline v7] Deduplicated — using {len(main_text)} chars")
 
+    # Hard cap — Render free tier has 512MB RAM; keep corpus under 300KB
+    MAX_MAIN = 300_000
+    if len(main_text) > MAX_MAIN:
+        keep_head = int(MAX_MAIN * 0.8)
+        keep_tail = MAX_MAIN - keep_head
+        main_text = main_text[:keep_head] + "\n\n[... TRUNCATED FOR MEMORY ...]\n\n" + main_text[-keep_tail:]
+        print(f"[AI Pipeline v7] Corpus capped at {MAX_MAIN} chars for memory safety")
+
     # Regex baseline
     result = regex_extract_snapshot(full_text)
     print(f"[AI Pipeline v7] Regex baseline: {len(result)} fields")

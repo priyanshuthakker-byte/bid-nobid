@@ -650,16 +650,24 @@ async def process_files(background_tasks: BackgroundTasks, files: List[UploadFil
         file_contents.append((upload.filename or "upload", content))
 
     job_id = str(uuid.uuid4())[:12]
-    _set_job(job_id, status="running", progress="Starting…", result=None, error=None, t247_id=t247_id)
+    import time
+    _set_job(job_id, status="running", progress="Starting…", result=None, error=None, t247_id=t247_id, started_at=time.time())
     background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id)
     return {"job_id": job_id, "status": "running"}
 
 
 @app.get("/analyse-status/{job_id}")
 async def analyse_status(job_id: str):
+    import time as _time
     job = _get_job(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
+    # Auto-fail jobs stuck > 8 minutes (Gemini timeout / crash)
+    if job.get("status") == "running" and job.get("started_at"):
+        elapsed = _time.time() - job["started_at"]
+        if elapsed > 480:
+            _set_job(job_id, status="error", error=f"Analysis timed out after {int(elapsed)}s. Check Gemini API key and try again.")
+            return _get_job(job_id)
     return job
 
 
@@ -713,17 +721,23 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
 
         _set_job(job_id, progress="Reading full text…")
         all_text = ""
+        MAX_CORPUS = 350_000  # ~350KB — keeps RAM under 512MB on Render free tier
         for f in sorted(doc_files, key=lambda x: (0 if any(k in x.name.lower() for k in ["rfp","nit","tender","bid"]) else 1 if any(k in x.name.lower() for k in ["corrigendum","addendum"]) else 2)):
+            if len(all_text) >= MAX_CORPUS:
+                break
             t = read_document(f)
             if t and t.strip():
-                all_text += f"\n\n=== FILE: {f.name} ===\n{t}"
+                remaining = MAX_CORPUS - len(all_text)
+                all_text += f"\n\n=== FILE: {f.name} ===\n{t[:remaining]}"
+        # Free doc file handles from memory before AI pipeline
+        del doc_files
 
         config = load_config()
         api_key = config.get("gemini_api_key", "")
         ai_used = False
+        passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
         if api_key and all_text.strip():
-            passed = prebid_passed(tender_data.get("prebid_query_date", ""))
             _set_job(job_id, progress="AI: Snapshot · Dates · EMD…")
             ai_result = analyze_with_gemini(all_text, passed)
             if "error" not in ai_result:
@@ -734,6 +748,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         elif not api_key:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings."
 
+        del all_text  # free corpus memory before eligibility check
         _set_job(job_id, progress="Checking eligibility…")
         checker = NascentChecker()
         if not tender_data.get("overall_verdict"):
@@ -742,10 +757,15 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
         _set_job(job_id, progress="Generating Word report…")
-        generator = BidDocGenerator()
-        safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
-        output_filename = f"BidNoBid_{safe_no}.docx"
-        generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
+        output_filename = "BidNoBid_Report.docx"
+        try:
+            generator = BidDocGenerator()
+            safe_no = re.sub(r'[^\w\-]', '_', tender_data.get("tender_no", "Report"))[:50]
+            output_filename = f"BidNoBid_{safe_no}.docx"
+            generator.generate(tender_data, str(OUTPUT_DIR / output_filename))
+        except Exception as doc_err:
+            tender_data["doc_warning"] = f"Word report failed: {str(doc_err)[:100]}"
+            output_filename = ""  # no download file but analysis still works
 
         if t247_id:
             _set_job(job_id, progress="Saving to database…")
@@ -773,7 +793,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 "notes": tender_data.get("notes", []),
                 "overall_verdict": tender_data.get("overall_verdict", {}),
                 "prebid_queries": tender_data.get("prebid_queries", []),
-                "raw_text": all_text[:50000],
+                "raw_text": all_text[:20000],
                 "prebid_passed": passed if "passed" in dir() else False,
                 "scope_sections": tender_data.get("scope_sections", []),
                 "tq_total_marks": tender_data.get("tq_total_marks"),
