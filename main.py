@@ -1338,31 +1338,47 @@ async def update_profile(data: dict = Body(...)):
                     flat_projects.append(item)
         data["projects"] = flat_projects
 
-    # Write profile to runtime path (used first by checker) and repo path (fallback)
+    payload = json.dumps(data, indent=2, ensure_ascii=False)
+    payload_bytes = payload.encode("utf-8")
+
+    # Write to all locations
+    repo_path = BASE_DIR / "nascent_profile.json"
+    try:
+        repo_path.write_text(payload, encoding="utf-8")
+    except Exception as e:
+        print(f"⚠️ repo profile write failed: {e}")
+
     runtime_dir = Path(os.environ.get("BIDNOBID_RUNTIME_DIR", "/tmp/bid-nobid"))
     runtime_dir.mkdir(parents=True, exist_ok=True)
     runtime_path = runtime_dir / "nascent_profile.json"
-    repo_path = BASE_DIR / "nascent_profile.json"
-    payload = json.dumps(data, indent=2)
-    runtime_path.write_text(payload, encoding="utf-8")
-    repo_path.write_text(payload, encoding="utf-8")
+    try:
+        runtime_path.write_text(payload, encoding="utf-8")
+    except Exception as e:
+        print(f"⚠️ runtime profile write failed: {e}")
+
+    # Drive backup — this is the ONLY one that survives redeploy
+    drive_saved = False
+    try:
+        if drive_available():
+            prof_tmp = OUTPUT_DIR / "nascent_profile.json"
+            OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
+            prof_tmp.write_bytes(payload_bytes)
+            drive_saved = save_to_drive(prof_tmp, filename="nascent_profile.json")
+            if drive_saved:
+                print("✅ Profile saved to Drive")
+            else:
+                print("⚠️ Profile Drive save failed")
+    except Exception as e:
+        print(f"⚠️ Profile Drive backup failed: {e}")
+
     try:
         from excel_processor import invalidate_rules_cache
         invalidate_rules_cache()
     except (ImportError, AttributeError):
         pass
-    # Backup profile to Drive so it survives redeploys
-    try:
-        if drive_available():
-            import json as _json
-            # Write to temp file then sync, OR use content_bytes shortcut
-            _prof_bytes = _json.dumps(data, indent=2, ensure_ascii=False).encode()
-            _prof_tmp = OUTPUT_DIR / "nascent_profile.json"
-            _prof_tmp.write_bytes(_prof_bytes)
-            save_to_drive(_prof_tmp, filename="nascent_profile.json")
-    except Exception as _pe:
-        pass  # Drive backup failure should not block profile save
-    return {"status": "saved", "runtime_profile": str(runtime_path), "repo_profile": str(repo_path)}
+
+    return {"status": "saved", "drive_synced": drive_saved}
+
 
 # ══ BOQ ══════════════════════════════════════════════════════════════════════
 @app.get("/boq/constants")

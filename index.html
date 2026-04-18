@@ -2586,8 +2586,13 @@ function importProjectsTab(){
 }
 
 async function saveProfile(){
-  try{var r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileData)});var d=await r.json();toast('Profile saved','success');}
-  catch(e){toast('Save failed: '+e.message,'error');}
+  try{
+    var r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileData)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    if(d.drive_synced) toast('Profile saved & synced to Drive ✓','success');
+    else toast('Profile saved locally (Drive sync failed — check connection)','success');
+  } catch(e){toast('Save failed: '+e.message,'error');}
 }
 
 async function runDiagnose(){
