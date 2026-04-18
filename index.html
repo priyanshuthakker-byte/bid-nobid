@@ -822,12 +822,42 @@ textarea.form-input{height:auto;padding:8px 10px;resize:vertical}
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h8M3 12h6"/></svg>
       <span class="ni-label">All Tenders</span>
     </div>
+    <div class="nav-item" onclick="showPage('calendar')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 1v4M11 1v4M2 7h12"/></svg>
+      <span class="ni-label">Calendar</span>
+    </div>
+    <div class="nav-item" onclick="showPage('pipeline')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="3" width="4" height="10" rx="1"/><rect x="11" y="3" width="4" height="10" rx="1"/></svg>
+      <span class="ni-label">Pipeline Kanban</span>
+    </div>
+    <div class="nav-item" onclick="showPage('notices')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 0 1 5 5v2l1 2H2l1-2V7a5 5 0 0 1 5-5z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+      <span class="ni-label">Alerts</span>
+      <span class="nav-badge nb-red" id="nb-notices" style="display:none">!</span>
+    </div>
 
     <div class="sb-section">Analysis</div>
     <div class="nav-item" onclick="showPage('analyse')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><path d="m10.5 10.5 3 3"/><path d="M7 5v4M5 7h4"/></svg>
       <span class="ni-label">Analyse Tender</span>
     </div>
+    <div class="nav-item" onclick="showPage('corrigendum')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8l3 3v9H1V2h3z"/><path d="M11 2v4h3"/><path d="M5 7h6M5 10h4"/><circle cx="12" cy="12" r="3" fill="var(--navy2)"/><path d="M11 12h2M12 11v2"/></svg>
+      <span class="ni-label">Corrigendum</span>
+    </div>
+    <div class="nav-item" onclick="showPage('prebidmtg')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 1v4M11 1v4M2 7h12M6 11l1 1 2-2"/></svg>
+      <span class="ni-label">Pre-bid Meeting</span>
+    </div>
+    <div class="nav-item" onclick="showPage('bidrules')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M5 8l2 2 4-4"/></svg>
+      <span class="ni-label">Bid Rules</span>
+    </div>
+    <div class="nav-item" onclick="showPage('competitors')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="3"/><circle cx="11" cy="5" r="3"/><path d="M2 14c0-2.2 1.3-4 3-4M14 14c0-2.2-1.3-4-3-4M8 8v6"/></svg>
+      <span class="ni-label">Competitors</span>
+    </div>
+
     <div class="nav-item" onclick="showPage('boq')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v2H3zM3 7h10v2H3zM3 11h6v2H3z"/><path d="M11 10l1.5 1.5L15 9"/></svg>
       <span class="ni-label">BOQ / Costing</span>
@@ -870,7 +900,25 @@ textarea.form-input{height:auto;padding:8px 10px;resize:vertical}
       <span class="ni-label">Skipped</span>
     </div>
 
+    <div class="sb-section">Finance & Legal</div>
+    <div class="nav-item" onclick="showPage('bankguarantee')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M2 8h12M5 4V2M11 4V2"/></svg>
+      <span class="ni-label">Bank Guarantee & PS</span>
+    </div>
+    <div class="nav-item" onclick="showPage('costsheet')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M5 5h6M5 8h4M5 11h5"/><circle cx="12" cy="11" r="3" fill="var(--navy2)"/><path d="M11 11h2"/></svg>
+      <span class="ni-label">Cost Sheet</span>
+    </div>
+    <div class="nav-item" onclick="showPage('amc')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2z"/><path d="M8 5v3l2 2"/><path d="M4 1l8 1"/></svg>
+      <span class="ni-label">AMC Tracker</span>
+    </div>
+
     <div class="sb-section">System</div>
+    <div class="nav-item" onclick="showPage('portals')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2a9 9 0 0 1 0 12M8 2a9 9 0 0 0 0 12"/></svg>
+      <span class="ni-label">Tender Portals & DSC</span>
+    </div>
     <div class="nav-item" onclick="showPage('vault')">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6V4a4 4 0 0 1 8 0v2"/><rect x="2" y="6" width="12" height="9" rx="1.5"/><circle cx="8" cy="10.5" r="1.5"/></svg>
       <span class="ni-label">Doc Vault</span>
@@ -1517,6 +1565,209 @@ textarea.form-input{height:auto;padding:8px 10px;resize:vertical}
       </div>
     </div>
   </div>
+
+
+  <!-- ════════════════════ CALENDAR ════════════════════ -->
+  <div id="page-calendar" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <button class="btn btn-ghost btn-sm" onclick="calNav(-1)">‹ Prev</button>
+        <div style="font-size:15px;font-weight:700;color:var(--t1);flex:1;text-align:center" id="cal-month-label"></div>
+        <button class="btn btn-ghost btn-sm" onclick="calNav(1)">Next ›</button>
+        <button class="btn btn-ghost btn-sm" onclick="calToday()">Today</button>
+        <select class="sort-sel" id="cal-type-filter" onchange="renderCalendar()">
+          <option value="all">All Events</option>
+          <option value="deadline">Submission Deadline</option>
+          <option value="prebid">Pre-bid Meeting</option>
+          <option value="corrigendum">Corrigendum</option>
+          <option value="emd">EMD Due</option>
+          <option value="milestone">Milestone</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden">
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">SUN</div>
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">MON</div>
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">TUE</div>
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">WED</div>
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">THU</div>
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">FRI</div>
+        <div style="background:var(--navy4);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--t3)">SAT</div>
+        <div id="cal-grid" style="display:contents"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:10px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#ef4444;display:inline-block"></span>Submission Deadline</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block"></span>Pre-bid Meeting</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#8b5cf6;display:inline-block"></span>Corrigendum</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#06b6d4;display:inline-block"></span>EMD Due</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#10b981;display:inline-block"></span>Milestone</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ PIPELINE KANBAN ════════════════════ -->
+  <div id="page-pipeline" class="page">
+    <div class="content-main" style="padding:20px;overflow-x:auto">
+      <div style="display:flex;gap:10px;min-width:900px" id="kanban-board"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ CORRIGENDUM ════════════════════ -->
+  <div id="page-corrigendum" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select class="sort-sel" id="corr-tender-sel" style="width:360px;height:34px;font-size:12px" onchange="loadCorrigendum(this.value)">
+          <option value="">Select tender...</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="addCorrigendum()">+ Add Corrigendum</button>
+        <div class="ml-a"></div>
+        <span id="corr-count" style="font-size:11px;color:var(--t3)"></span>
+      </div>
+      <div id="corr-alerts" style="margin-bottom:10px"></div>
+      <div id="corr-list">
+        <div class="empty-state"><div class="ei">📋</div><p>Select a tender to view its corrigendums (RFP amendments).</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ PRE-BID MEETING ════════════════════ -->
+  <div id="page-prebidmtg" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select class="sort-sel" id="pbm-tender-sel" style="width:360px;height:34px;font-size:12px" onchange="loadPreBidMeeting(this.value)">
+          <option value="">Select tender...</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="savePBM()">💾 Save</button>
+      </div>
+      <div id="pbm-content">
+        <div class="empty-state"><div class="ei">📅</div><p>Select a tender to manage its pre-bid meeting details.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ BID RULES ════════════════════ -->
+  <div id="page-bidrules" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;color:var(--t1)">Bid Decision Rules</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="addBidRule('do_not_bid')">+ DO NOT BID Rule</button>
+          <button class="btn btn-ghost btn-sm" onclick="addBidRule('conditional')">+ Conditional Rule</button>
+          <button class="btn btn-ghost btn-sm" onclick="addBidRule('preferred_sectors')">+ Preferred Sector</button>
+          <button class="btn btn-primary btn-sm" onclick="saveBidRules()">💾 Save & Reclassify</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="bidrules-grid"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ COMPETITOR TRACKING ════════════════════ -->
+  <div id="page-competitors" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;color:var(--t1)">Competitor Intelligence</div>
+        <div class="ml-a"></div>
+        <button class="btn btn-primary btn-sm" onclick="addCompetitor()">+ Add Entry</button>
+      </div>
+      <div class="kpi-row" id="comp-kpis" style="margin-bottom:14px"></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tender</th><th>Competitor</th><th>Their L1 Rate</th><th>Our Quote</th><th>Outcome</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="comp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ BANK GUARANTEE ════════════════════ -->
+  <div id="page-bankguarantee" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;color:var(--t1)">Bank Guarantee & Performance Security Tracker</div>
+        <div class="ml-a"></div>
+        <button class="btn btn-primary btn-sm" onclick="addBG()">+ Add BG/PS</button>
+      </div>
+      <div class="kpi-row" id="bg-kpis"></div>
+      <div class="tbl-wrap" style="margin-top:14px">
+        <table>
+          <thead><tr><th>Tender/Project</th><th>Type</th><th>BG No.</th><th>Bank</th><th>Amount</th><th>Valid From</th><th>Valid To</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="bg-tbody"></tbody>
+        </table>
+      </div>
+      <div class="emd-rule" style="margin-top:14px">
+        BG Rules: • Only scheduled bank (not cooperative) • BG validity = Bid validity + 60 days • Performance Security = 3% of contract value (MSME benefit) • Keep physical BG safe — loss = forfeit risk
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ TENDER PORTALS ════════════════════ -->
+  <div id="page-portals" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;color:var(--t1)">Tender Portal Logins & DSC Tracker</div>
+        <div class="ml-a"></div>
+        <button class="btn btn-primary btn-sm" onclick="addPortal()">+ Add Portal</button>
+      </div>
+      <div id="dsc-alert" style="display:none" class="alert-bar amber" style="margin-bottom:10px">
+        <div class="alert-dot"></div>
+        <span id="dsc-alert-text"></span>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Digital Signature Certificate (DSC)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          <div class="form-group"><label class="form-label">DSC Holder</label><input class="form-input" id="dsc-holder" value="Hitesh Patel" oninput="saveDSC()"></div>
+          <div class="form-group"><label class="form-label">Class</label><input class="form-input" id="dsc-class" value="Class 3" oninput="saveDSC()"></div>
+          <div class="form-group"><label class="form-label">Valid From</label><input class="form-input" type="date" id="dsc-from" oninput="saveDSC()"></div>
+          <div class="form-group"><label class="form-label">Valid To</label><input class="form-input" type="date" id="dsc-to" oninput="checkDSCExpiry()"></div>
+          <div class="form-group"><label class="form-label">Issuing CA</label><input class="form-input" id="dsc-ca" value="NSDL e-Gov" oninput="saveDSC()"></div>
+        </div>
+        <div id="dsc-status" style="margin-top:8px;font-size:11px"></div>
+      </div>
+      <div id="portals-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ AMC TRACKER ════════════════════ -->
+  <div id="page-amc" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600;color:var(--t1)">AMC / O&M Contract Tracker</div>
+        <div class="ml-a"></div>
+        <button class="btn btn-primary btn-sm" onclick="addAMC()">+ Add AMC Contract</button>
+      </div>
+      <div class="kpi-row" id="amc-kpis"></div>
+      <div class="tbl-wrap" style="margin-top:14px">
+        <table>
+          <thead><tr><th>Project</th><th>Client</th><th>AMC Value/Yr</th><th>Start</th><th>End</th><th>Days Left</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="amc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ COST SHEET ════════════════════ -->
+  <div id="page-costsheet" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select class="sort-sel" id="cs-tender-sel" style="width:360px;height:34px;font-size:12px">
+          <option value="">Select tender...</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadCostSheet()">Load</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportCostSheet()">⬇ Export Excel</button>
+      </div>
+      <div id="cs-content">
+        <div class="empty-state"><div class="ei">💰</div><p>Select a tender to build internal cost sheet.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ NOTICES / NOTIFICATIONS ════════════════════ -->
+  <div id="page-notices" class="page">
+    <div class="content-main" style="padding:20px">
+      <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:14px">Upcoming Deadlines & Alerts</div>
+      <div id="notices-list"></div>
+    </div>
+  </div>
+
 
 </div><!-- /#main -->
 </div><!-- /#app -->
@@ -4690,6 +4941,593 @@ document.addEventListener('DOMContentLoaded', function() {
   loadDashboard();
   showPage('dashboard');
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW MODULES JS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── SIDEBAR NAV UPDATE ──────────────────────────────────────────────────────
+var PAGE_TITLES_EXT = {
+  calendar:'Calendar', pipeline:'Pipeline Kanban',
+  corrigendum:'Corrigendum Tracker', prebidmtg:'Pre-bid Meeting',
+  bidrules:'Bid Rules', competitors:'Competitor Intelligence',
+  bankguarantee:'Bank Guarantee & PS', portals:'Tender Portals & DSC',
+  amc:'AMC Tracker', costsheet:'Internal Cost Sheet',
+  notices:'Alerts & Notices'
+};
+
+// Extend showPage
+var _basShowPage = showPage;
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  var pg = document.getElementById('page-'+name);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  var nav = document.querySelector('.nav-item[onclick*="\''+name+'\'"]');
+  if(nav) nav.classList.add('active');
+  var allTitles = Object.assign({}, PAGE_TITLES || {}, PAGE_TITLES_EXT);
+  document.getElementById('page-title').textContent = allTitles[name] || name;
+
+  // Route to loader
+  var loaders = {
+    dashboard: loadDashboard, settings: loadSettings,
+    analytics: loadAnalytics, skipped: loadSkipped,
+    emd: loadEMDPage, reports: loadReports,
+    vault: vaultRefresh, profile: loadProfile,
+    calendar: renderCalendar, pipeline: renderKanban,
+    corrigendum: function(){ populateSelects(); loadCorrigendum(''); },
+    prebidmtg: function(){ populateSelects(); },
+    bidrules: renderBidRulesPage,
+    competitors: renderCompetitors,
+    bankguarantee: renderBGTracker,
+    portals: renderPortals,
+    amc: renderAMCTracker,
+    costsheet: function(){ populateSelects(); },
+    notices: renderNotices,
+    boq: populateSelects,
+    checklist: populateSelects,
+    documents: populateSelects,
+    postaward: populatePASelect
+  };
+  if(loaders[name]) loaders[name]();
+}
+
+// ── CALENDAR ────────────────────────────────────────────────────────────────
+var _calDate = new Date();
+var CAL_COLORS = {deadline:'#ef4444',prebid:'#f59e0b',corrigendum:'#8b5cf6',emd:'#06b6d4',milestone:'#10b981'};
+
+function calNav(dir){ _calDate.setMonth(_calDate.getMonth()+dir); renderCalendar(); }
+function calToday(){ _calDate = new Date(); renderCalendar(); }
+
+function renderCalendar(){
+  var yr = _calDate.getFullYear(), mo = _calDate.getMonth();
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var lbl = document.getElementById('cal-month-label');
+  if(lbl) lbl.textContent = months[mo]+' '+yr;
+
+  var first = new Date(yr,mo,1).getDay();
+  var days = new Date(yr,mo+1,0).getDate();
+  var today = new Date(); today.setHours(0,0,0,0);
+  var flt = (document.getElementById('cal-type-filter')||{value:'all'}).value;
+
+  // Collect events from tenders
+  var events = {}; // date string -> [{type,label,tid,color}]
+  var tenders = Object.values(_lastDb||{});
+  tenders.forEach(function(t){
+    function addEvt(ds,type,label){
+      if(!ds||!ds.match(/\d/)) return;
+      var d = parseDate(ds); if(!d) return;
+      if(d.getFullYear()!==yr||d.getMonth()!==mo) return;
+      var k = d.getDate();
+      if(!events[k]) events[k]=[];
+      if(flt==='all'||flt===type)
+        events[k].push({type:type,label:label,tid:t.t247_id,color:CAL_COLORS[type]});
+    }
+    addEvt(t.bid_submission_date||t.deadline,'deadline',(t.brief||t.t247_id||'').substring(0,20));
+    addEvt(t.prebid_query_date,'prebid','Pre-bid: '+(t.brief||'').substring(0,15));
+    // corrigendums
+    var corrs = t.corrigendums||[];
+    corrs.forEach(function(c){ addEvt(c.date,'corrigendum','Corr: '+(t.brief||'').substring(0,12)); });
+    // milestones
+    var ms = t.milestones||[];
+    ms.forEach(function(m){ addEvt(m.target_date,'milestone',m.name||'Milestone'); });
+  });
+
+  var grid = document.getElementById('cal-grid');
+  if(!grid) return;
+  var cells = '';
+  for(var i=0;i<first;i++) cells += '<div style="background:var(--navy3);min-height:80px;padding:4px"></div>';
+  for(var d=1;d<=days;d++){
+    var isToday = (new Date(yr,mo,d).getTime()===today.getTime());
+    var evts = events[d]||[];
+    cells += '<div style="background:var(--navy2);min-height:80px;padding:4px;cursor:default;transition:background .1s" onmouseover="this.style.background=\'var(--navy4)\'" onmouseout="this.style.background=\'var(--navy2)\'">'
+      +'<div style="font-size:11px;font-weight:'+(isToday?'700':'400')+';color:'+(isToday?'var(--blue2)':'var(--t2)')+';background:'+(isToday?'rgba(37,99,235,.15)':'none')+';border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin-bottom:2px">'+d+'</div>'
+      +evts.slice(0,3).map(function(e){
+        return '<div onclick="viewTenderDetail(\''+e.tid+'\')" title="'+e.label+'" style="font-size:9px;background:'+e.color+'22;color:'+e.color+';border-left:2px solid '+e.color+';padding:1px 4px;border-radius:0 3px 3px 0;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">'+e.label+'</div>';
+      }).join('')
+      +(evts.length>3?'<div style="font-size:9px;color:var(--t3)">+'+( evts.length-3)+' more</div>':'')
+      +'</div>';
+  }
+  grid.innerHTML = cells;
+}
+
+function parseDate(s){
+  if(!s) return null;
+  var m;
+  // dd-mm-yyyy or dd/mm/yyyy
+  m = s.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if(m) return new Date(parseInt(m[3]),parseInt(m[2])-1,parseInt(m[1]));
+  // dd Mon yyyy
+  m = s.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
+  if(m){ var mn={'Jan':0,'Feb':1,'Mar':2,'Apr':3,'May':4,'Jun':5,'Jul':6,'Aug':7,'Sep':8,'Oct':9,'Nov':10,'Dec':11}; return new Date(parseInt(m[3]),mn[m[2].substring(0,3)],parseInt(m[1])); }
+  return null;
+}
+
+// ── PIPELINE KANBAN ─────────────────────────────────────────────────────────
+var STAGES = ['Identified','Documents Ready','Pre-bid Submitted','Submitted','Awaiting Result','Won','Lost'];
+var STAGE_COLORS = {Identified:'var(--t3)',Won:'var(--green)',Lost:'var(--red2)',Submitted:'var(--purple)','Awaiting Result':'var(--amber)','Documents Ready':'var(--cyan)','Pre-bid Submitted':'var(--blue2)'};
+
+function renderKanban(){
+  var board = document.getElementById('kanban-board');
+  if(!board) return;
+  var tenders = Object.values(_lastDb||{});
+  var cols = {};
+  STAGES.forEach(function(s){ cols[s]=[]; });
+  tenders.forEach(function(t){
+    var s = t.pipeline_stage||'Identified';
+    if(!cols[s]) cols[s]=[];
+    cols[s].push(t);
+  });
+  board.innerHTML = STAGES.map(function(stage){
+    var items = cols[stage]||[];
+    var col = STAGE_COLORS[stage]||'var(--t3)';
+    return '<div style="width:200px;flex-shrink:0">'
+      +'<div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;background:var(--navy2);border:1px solid var(--bd);border-radius:var(--r) var(--r) 0 0;display:flex;justify-content:space-between;align-items:center">'
+      +stage+'<span style="font-size:9px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:10px">'+items.length+'</span></div>'
+      +'<div style="min-height:400px;background:rgba(255,255,255,.02);border:1px solid var(--bd);border-top:none;border-radius:0 0 var(--r) var(--r);padding:6px;display:flex;flex-direction:column;gap:5px">'
+      +items.map(function(t){
+        var v = getVerdict(t);
+        var dl = getDaysLeft(t);
+        var vCls = v==='BID'?'vb-bid':v==='NO-BID'?'vb-nobid':v==='CONDITIONAL'?'vb-cond':'vb-rev';
+        return '<div onclick="viewTenderDetail(\''+t.t247_id+'\')" style="background:var(--navy2);border:1px solid var(--bd);border-radius:var(--r);padding:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--bd2)\'" onmouseout="this.style.borderColor=\'var(--bd)\'">'
+          +'<div style="font-size:11px;color:var(--t1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px">'+(t.brief||t.tender_name||t.t247_id).substring(0,30)+'</div>'
+          +'<div style="font-size:9px;color:var(--t3);margin-bottom:4px">'+(t.org_name||'').substring(0,25)+'</div>'
+          +'<div style="display:flex;justify-content:space-between;align-items:center">'
+          +'<span class="vbadge '+vCls+'" style="font-size:8px;padding:1px 5px">'+v+'</span>'
+          +'<span style="font-size:9px;color:'+(dl<=7&&dl>=0?'var(--red2)':dl<0?'var(--t4)':'var(--t3)')+'">'+daysDisplay(dl)+'</span>'
+          +'</div></div>';
+      }).join('')
+      +'<button onclick="addToStage(\''+stage+'\')" style="border:1px dashed var(--bd2);border-radius:var(--r);padding:6px;font-size:10px;color:var(--t3);cursor:pointer;background:none;transition:border-color .15s;margin-top:auto" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'var(--bd2)\'">+ Move here</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+function addToStage(stage){
+  var tid = prompt('Enter T247 ID to move to "'+stage+'":');
+  if(!tid||!_lastDb[tid]) { if(tid) toast('Tender not found','error'); return; }
+  fetch('/bid-result/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stage:stage})})
+    .then(function(){toast('Moved to '+stage,'success'); loadDashboard(); setTimeout(renderKanban,500);});
+}
+
+// ── CORRIGENDUM ─────────────────────────────────────────────────────────────
+var _corrTender = null;
+function loadCorrigendum(tid){
+  if(!tid) return;
+  _corrTender = _lastDb[String(tid)];
+  renderCorrigendums();
+}
+
+function renderCorrigendums(){
+  var el = document.getElementById('corr-list');
+  if(!el||!_corrTender) return;
+  var corrs = _corrTender.corrigendums||[];
+  document.getElementById('corr-count').textContent = corrs.length+' corrigendum(s)';
+  if(!corrs.length){
+    el.innerHTML='<div class="empty-state"><div class="ei">📋</div><p>No corrigendums recorded for this tender.<br>Click "+ Add Corrigendum" to track RFP amendments.</p></div>';
+    return;
+  }
+  el.innerHTML = corrs.map(function(c,i){
+    var isDeadlineChange = c.changes && (c.changes.toLowerCase().includes('deadline')||c.changes.toLowerCase().includes('date'));
+    return '<div class="card" style="border-left:3px solid var(--purple)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+      +'<div><div style="font-size:12px;font-weight:700;color:var(--t1)">Corrigendum #'+c.number+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-top:2px">Issued: '+(c.date||'—')+(c.source?' · '+c.source:'')+'</div></div>'
+      +(isDeadlineChange?'<span class="alert-bar amber" style="padding:3px 8px;margin:0;font-size:10px">⚠ Deadline change</span>':'')
+      +'<button class="btn btn-danger btn-sm" onclick="deleteCorrigendum('+i+')">✕</button>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--t1);margin-bottom:6px">'+c.subject+'</div>'
+      +'<div style="font-size:11px;color:var(--t2);line-height:1.6">'+c.changes+'</div>'
+      +(c.new_deadline?'<div style="margin-top:8px;padding:6px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);font-size:11px;color:var(--red2)">New Deadline: <b>'+c.new_deadline+'</b></div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function addCorrigendum(){
+  var tid = (document.getElementById('corr-tender-sel')||{value:''}).value;
+  if(!tid){toast('Select a tender first','info');return;}
+  var num = prompt('Corrigendum number:','1');
+  if(!num) return;
+  var subj = prompt('Subject (brief description of change):');
+  if(!subj) return;
+  var changes = prompt('Detailed changes:','');
+  var date = prompt('Date issued (DD-MM-YYYY):',new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-'));
+  var newDl = prompt('New deadline (if changed, else leave blank):','');
+  var t = _lastDb[tid];
+  if(!t) return;
+  if(!t.corrigendums) t.corrigendums=[];
+  var corr = {number:parseInt(num)||1,date:date,subject:subj,changes:changes||subj,source:'Portal'};
+  if(newDl) { corr.new_deadline=newDl; t.bid_submission_date=newDl; t.deadline=newDl; }
+  t.corrigendums.push(corr);
+  saveTenderLocal(tid,t);
+  _corrTender=t;
+  renderCorrigendums();
+  toast('Corrigendum #'+num+' added','success');
+}
+
+function deleteCorrigendum(i){
+  if(!_corrTender||!confirm('Delete this corrigendum?')) return;
+  _corrTender.corrigendums.splice(i,1);
+  saveTenderLocal(_corrTender.t247_id,_corrTender);
+  renderCorrigendums();
+}
+
+// ── PRE-BID MEETING ─────────────────────────────────────────────────────────
+var _pbmTid = null;
+function loadPreBidMeeting(tid){
+  _pbmTid=tid;
+  if(!tid){ document.getElementById('pbm-content').innerHTML='<div class="empty-state"><div class="ei">📅</div><p>Select a tender.</p></div>'; return; }
+  var t = _lastDb[tid]||{};
+  var pbm = t.prebid_meeting||{};
+  var qlist = (pbm.queries_submitted||[]).map(function(q,i){
+    return '<div style="display:flex;gap:6px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--bd)">'
+      +'<span style="font-size:10px;color:var(--t3);min-width:20px">'+(i+1)+'.</span>'
+      +'<span style="flex:1;font-size:11px;color:var(--t1)">'+q.query+'</span>'
+      +'<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:rgba('+(q.answered?'16,185,129':'245,158,11')+', .1);color:var('+(q.answered?'--green2':'--amber2')+')">'+( q.answered?'Answered':'Pending')+'</span>'
+      +'</div>';
+  }).join('');
+  document.getElementById('pbm-content').innerHTML = '<div class="card"><div class="card-title">Pre-bid Meeting Details</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px">'
+    +'<div class="form-group"><label class="form-label">Meeting Date</label><input class="form-input" id="pbm-date" type="date" value="'+(_pDate(pbm.date)||'')+'"></div>'
+    +'<div class="form-group"><label class="form-label">Time</label><input class="form-input" id="pbm-time" value="'+(pbm.time||'')+'"></div>'
+    +'<div class="form-group"><label class="form-label">Venue</label><input class="form-input" id="pbm-venue" value="'+(pbm.venue||'Online / Office of '+(_sv(t.org_name)||'Client'))+'"></div>'
+    +'<div class="form-group"><label class="form-label">NIT Representative</label><input class="form-input" id="pbm-rep" value="'+(pbm.nit_rep||'Parthav Thakkar')+'"></div>'
+    +'<div class="form-group"><label class="form-label">Mode</label><select class="form-input" id="pbm-mode" style="height:34px"><option '+(pbm.mode==='Online'?'selected':'')+'>Online</option><option '+(pbm.mode==='Physical'?'selected':'')+'>Physical</option><option '+(pbm.mode==='Hybrid'?'selected':'')+'>Hybrid</option></select></div>'
+    +'<div class="form-group"><label class="form-label">Our Team Attended</label><input class="form-input" id="pbm-team" value="'+(pbm.team_attended||'')+'"></div>'
+    +'</div>'
+    +'<div class="form-group"><label class="form-label">Meeting Notes / MOM</label><textarea class="form-input" id="pbm-notes" style="height:100px">'+(pbm.notes||'')+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Action Items</label><textarea class="form-input" id="pbm-actions" style="height:60px">'+(pbm.action_items||'')+'</textarea></div>'
+    +'</div>'
+    +'<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="card-title" style="margin-bottom:0">Queries Submitted in Meeting</div><button class="btn btn-ghost btn-sm" onclick="addPBMQuery()">+ Add Query</button></div>'
+    +'<div id="pbm-query-list">'+( qlist||'<div style="font-size:11px;color:var(--t3)">No queries recorded yet.</div>')+'</div>'
+    +'</div>';
+}
+
+function _pDate(s){
+  if(!s) return '';
+  var d = parseDate(s);
+  if(!d) return '';
+  return d.getFullYear()+'-'+(''+(d.getMonth()+1)).padStart(2,'0')+'-'+(''+d.getDate()).padStart(2,'0');
+}
+
+function savePBM(){
+  if(!_pbmTid){toast('Select a tender','info');return;}
+  var t = _lastDb[_pbmTid]||{};
+  t.prebid_meeting = {
+    date: document.getElementById('pbm-date').value,
+    time: document.getElementById('pbm-time').value,
+    venue: document.getElementById('pbm-venue').value,
+    nit_rep: document.getElementById('pbm-rep').value,
+    mode: document.getElementById('pbm-mode').value,
+    team_attended: document.getElementById('pbm-team').value,
+    notes: document.getElementById('pbm-notes').value,
+    action_items: document.getElementById('pbm-actions').value,
+    queries_submitted: (t.prebid_meeting||{}).queries_submitted||[]
+  };
+  saveTenderLocal(_pbmTid,t);
+  toast('Pre-bid meeting saved','success');
+}
+
+function addPBMQuery(){
+  var q = prompt('Query submitted in meeting:');
+  if(!q||!_pbmTid) return;
+  var t = _lastDb[_pbmTid]||{};
+  if(!t.prebid_meeting) t.prebid_meeting={queries_submitted:[]};
+  if(!t.prebid_meeting.queries_submitted) t.prebid_meeting.queries_submitted=[];
+  t.prebid_meeting.queries_submitted.push({query:q,answered:false});
+  saveTenderLocal(_pbmTid,t);
+  loadPreBidMeeting(_pbmTid);
+  toast('Query added','success');
+}
+
+// ── BID RULES PAGE ───────────────────────────────────────────────────────────
+function renderBidRulesPage(){
+  var br = (profileData||{}).bid_rules||{};
+  var el = document.getElementById('bidrules-grid');
+  if(!el) return;
+  var makeCol = function(title,key,color,desc){
+    var items = br[key]||[];
+    return '<div class="card" style="border-top:3px solid '+color+'">'
+      +'<div style="font-size:12px;font-weight:700;color:'+color+';margin-bottom:4px">'+title+'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-bottom:10px">'+desc+'</div>'
+      +'<div id="brl-'+key+'" style="display:flex;flex-direction:column;gap:5px">'
+      +items.map(function(item,i){
+        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--navy3);border-radius:var(--r);font-size:11px">'
+          +'<span style="flex:1;color:var(--t1)">'+item+'</span>'
+          +'<button onclick="deleteBidRule(\''+key+'\','+i+')" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px">✕</button>'
+          +'</div>';
+      }).join('')
+      +'</div>'
+      +'<button onclick="addBidRule(\''+key+'\')" style="margin-top:8px;width:100%;padding:6px;background:none;border:1px dashed var(--bd2);border-radius:var(--r);font-size:11px;color:var(--t3);cursor:pointer">+ Add rule</button>'
+      +'</div>';
+  };
+  el.innerHTML = makeCol('🚫 DO NOT BID','do_not_bid','var(--red)','Tenders matching these keywords will be auto-classified NO-BID')
+    +makeCol('⚠ CONDITIONAL','conditional','var(--amber)','Tenders matching these will be flagged for pre-bid query')
+    +makeCol('✅ PREFERRED SECTORS','preferred_sectors','var(--green)','Sectors where NIT has strong credentials');
+}
+
+function addBidRule(key){
+  var rule = prompt('Enter new rule / keyword:');
+  if(!rule) return;
+  if(!profileData.bid_rules) profileData.bid_rules={};
+  if(!profileData.bid_rules[key]) profileData.bid_rules[key]=[];
+  profileData.bid_rules[key].push(rule.trim().toLowerCase());
+  renderBidRulesPage();
+}
+function deleteBidRule(key,i){
+  if(!profileData.bid_rules||!profileData.bid_rules[key]) return;
+  profileData.bid_rules[key].splice(i,1);
+  renderBidRulesPage();
+}
+function saveBidRules(){
+  saveProfile();
+  setTimeout(reclassifyAll,500);
+}
+
+// ── COMPETITOR TRACKING ──────────────────────────────────────────────────────
+var _competitors = JSON.parse(localStorage.getItem('nit_competitors')||'[]');
+function renderCompetitors(){
+  var el = document.getElementById('comp-tbody');
+  var kpis = document.getElementById('comp-kpis');
+  if(!el) return;
+  var wins = _competitors.filter(function(c){return c.outcome==='Won'}).length;
+  var losses = _competitors.filter(function(c){return c.outcome==='Lost'}).length;
+  var rate = _competitors.length ? Math.round(wins/_competitors.length*100) : 0;
+  if(kpis) kpis.innerHTML = [
+    {n:_competitors.length,l:'Total Tracked',c:'var(--blue2)'},
+    {n:wins,l:'Won',c:'var(--green2)'},
+    {n:losses,l:'Lost',c:'var(--red2)'},
+    {n:rate+'%',l:'Win Rate',c:rate>=50?'var(--green2)':'var(--amber2)'}
+  ].map(function(k){return '<div class="kpi-card"><div class="kpi-n" style="color:'+k.c+'">'+k.n+'</div><div class="kpi-l">'+k.l+'</div></div>';}).join('');
+  el.innerHTML = _competitors.map(function(c,i){
+    return '<tr><td style="font-size:11px">'+c.tender+'</td>'
+      +'<td style="font-weight:600;color:var(--t1)">'+c.competitor+'</td>'
+      +'<td style="font-family:var(--fm)">'+( c.their_rate||'—')+'</td>'
+      +'<td style="font-family:var(--fm)">'+( c.our_quote||'—')+'</td>'
+      +'<td><span class="vbadge '+(c.outcome==='Won'?'vb-bid':'vb-nobid')+'">'+c.outcome+'</span></td>'
+      +'<td style="font-size:11px;color:var(--t2)">'+( c.notes||'')+'</td>'
+      +'<td><button class="ract" onclick="deleteComp('+i+')">✕</button></td></tr>';
+  }).join('');
+}
+function addCompetitor(){
+  var c = {
+    tender:prompt('Tender name/ID:',''),
+    competitor:prompt('Competitor company name:',''),
+    their_rate:prompt('Their L1 rate (if known):',''),
+    our_quote:prompt('Our quoted amount:',''),
+    outcome:prompt('Outcome (Won/Lost/Pending):','Lost'),
+    notes:prompt('Notes:','')
+  };
+  if(!c.competitor) return;
+  _competitors.push(c);
+  localStorage.setItem('nit_competitors',JSON.stringify(_competitors));
+  renderCompetitors();
+  toast('Competitor entry added','success');
+}
+function deleteComp(i){
+  if(!confirm('Delete this entry?')) return;
+  _competitors.splice(i,1);
+  localStorage.setItem('nit_competitors',JSON.stringify(_competitors));
+  renderCompetitors();
+}
+
+// ── BANK GUARANTEE / PS TRACKER ──────────────────────────────────────────────
+var _bgList = JSON.parse(localStorage.getItem('nit_bg')||'[]');
+function renderBGTracker(){
+  var el = document.getElementById('bg-tbody');
+  var kpis = document.getElementById('bg-kpis');
+  if(!el) return;
+  var now = new Date(); now.setHours(0,0,0,0);
+  var expiring = _bgList.filter(function(b){
+    var d = parseDate(b.valid_to);
+    if(!d) return false;
+    var days = Math.round((d-now)/86400000);
+    return days>=0&&days<=30;
+  }).length;
+  if(kpis) kpis.innerHTML = [
+    {n:_bgList.length,l:'Total BG/PS',c:'var(--blue2)'},
+    {n:_bgList.filter(function(b){return b.type==='BG'}).length,l:'Bank Guarantees',c:'var(--cyan)'},
+    {n:_bgList.filter(function(b){return b.type==='PS'}).length,l:'Performance Security',c:'var(--purple)'},
+    {n:expiring,l:'Expiring in 30 days',c:expiring>0?'var(--red2)':'var(--green2)'}
+  ].map(function(k){return '<div class="kpi-card"><div class="kpi-n" style="color:'+k.c+'">'+k.n+'</div><div class="kpi-l">'+k.l+'</div></div>';}).join('');
+  var now2 = new Date(); now2.setHours(0,0,0,0);
+  el.innerHTML = _bgList.map(function(b,i){
+    var d = parseDate(b.valid_to);
+    var days = d ? Math.round((d-now2)/86400000) : 999;
+    var status = days<0?'Expired':days<=7?'⚠ Expiring':days<=30?'Due Soon':'Active';
+    var sc = days<0?'var(--red2)':days<=7?'var(--orange)':days<=30?'var(--amber2)':'var(--green2)';
+    return '<tr><td style="font-size:11px;color:var(--t1)">'+b.project+'</td>'
+      +'<td><span style="font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(139,92,246,.1);color:var(--purple)">'+b.type+'</span></td>'
+      +'<td style="font-family:var(--fm);font-size:11px">'+( b.bg_no||'—')+'</td>'
+      +'<td style="font-size:11px">'+b.bank+'</td>'
+      +'<td style="font-family:var(--fm);font-weight:600;color:var(--t1)">₹'+b.amount+'</td>'
+      +'<td style="font-size:11px">'+( b.valid_from||'—')+'</td>'
+      +'<td style="font-size:11px;color:'+sc+'">'+b.valid_to+' <span style="font-size:9px">('+days+'d)</span></td>'
+      +'<td><span style="font-size:10px;color:'+sc+'">'+status+'</span></td>'
+      +'<td><button class="ract" onclick="deleteBG('+i+')">✕</button></td></tr>';
+  }).join('');
+}
+function addBG(){
+  var b = {
+    project:prompt('Project/Tender name:',''),
+    type:prompt('Type (BG/PS):','BG'),
+    bg_no:prompt('BG Number:',''),
+    bank:prompt('Bank Name:','Bank of India'),
+    amount:prompt('Amount (₹):',''),
+    valid_from:prompt('Valid From (DD-MM-YYYY):',''),
+    valid_to:prompt('Valid To (DD-MM-YYYY):','')
+  };
+  if(!b.project) return;
+  _bgList.push(b);
+  localStorage.setItem('nit_bg',JSON.stringify(_bgList));
+  renderBGTracker();
+  toast('BG/PS entry added','success');
+}
+function deleteBG(i){ if(!confirm('Delete?')) return; _bgList.splice(i,1); localStorage.setItem('nit_bg',JSON.stringify(_bgList)); renderBGTracker(); }
+
+// ── TENDER PORTALS & DSC ─────────────────────────────────────────────────────
+var _portals = JSON.parse(localStorage.getItem('nit_portals')||'null') || [
+  {name:'CPP / NIC eProcure',url:'https://eprocure.gov.in/eprocure/app',user:'nascent.tender@nascentinfo.com',region:'Central'},
+  {name:'GeM Portal',url:'https://gem.gov.in',user:'nascentinfo2',region:'Central'},
+  {name:'MahaTenders',url:'https://mahatenders.gov.in/nicgep/app',user:'nascent.tender@nascentinfo.com',region:'Maharashtra'},
+  {name:'Gujarat nProcure',url:'https://nprocure.com',user:'nascentinfo',region:'Gujarat'},
+  {name:'Rajasthan eProcure',url:'https://eproc.rajasthan.gov.in/nicgep/app',user:'nascent.tender@nascentinfo.com',region:'Rajasthan'},
+  {name:'Karnataka eProcure',url:'',user:'S96176',region:'Karnataka'},
+  {name:'MP Tenders',url:'https://mptenders.gov.in/nicgep/app',user:'nascent.tender@nascentinfo.com',region:'MP'},
+  {name:'Kerala eTenders',url:'http://etenders.kerala.gov.in/nicgep/app',user:'nascent.tender@nascentinfo.com',region:'Kerala'},
+  {name:'UP eTender',url:'https://etender.up.nic.in/nicgep/app',user:'nascent.tender@nascentinfo.com',region:'UP'},
+  {name:'Haryana eTenders',url:'https://etenders.hry.nic.in/nicgep/app',user:'nascent.tender@nascentinfo.com',region:'Haryana'},
+  {name:'Maharashtra GAD',url:'https://gad.maharashtra.etenders.in',user:'nascentinfo',region:'Maharashtra'},
+  {name:'TenderWizard',url:'https://www.tenderwizard.com',user:'nascent123',region:'Aggregator'},
+];
+function renderPortals(){
+  checkDSCExpiry();
+  var el = document.getElementById('portals-grid');
+  if(!el) return;
+  el.innerHTML = _portals.map(function(p,i){
+    return '<div class="card" style="margin-bottom:0">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+      +'<div><div style="font-size:12px;font-weight:600;color:var(--t1)">'+p.name+'</div>'
+      +'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+p.region+'</div></div>'
+      +(p.url?'<a href="'+p.url+'" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">Open ↗</a>':'')
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--t2);font-family:var(--fm)">'+p.user+'</div>'
+      +'<div style="margin-top:8px;display:flex;gap:5px">'
+      +'<button class="btn btn-ghost btn-sm" onclick="editPortal('+i+')">Edit</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="deletePortal('+i+')">✕</button>'
+      +'</div></div>';
+  }).join('');
+}
+function checkDSCExpiry(){
+  var to = document.getElementById('dsc-to');
+  var status = document.getElementById('dsc-status');
+  var alert = document.getElementById('dsc-alert');
+  if(!to||!to.value) return;
+  var d = new Date(to.value);
+  var now = new Date(); now.setHours(0,0,0,0);
+  var days = Math.round((d-now)/86400000);
+  if(status) status.textContent = days<0?'⚠ EXPIRED':'Valid for '+days+' days';
+  if(status) status.style.color = days<0?'var(--red2)':days<=30?'var(--amber2)':'var(--green2)';
+  if(alert&&days<=30){ alert.style.display='flex'; document.getElementById('dsc-alert-text').textContent='DSC expiring in '+days+' days — renew immediately to avoid bid submission failure!'; }
+}
+function saveDSC(){ /* persist to localStorage */ }
+function addPortal(){ var n=prompt('Portal name:',''); if(!n) return; _portals.push({name:n,url:prompt('URL:','https://'),user:prompt('Username:','nascent.tender@nascentinfo.com'),region:prompt('State/Region:','Central')}); localStorage.setItem('nit_portals',JSON.stringify(_portals)); renderPortals(); }
+function editPortal(i){ var p=_portals[i]; p.user=prompt('Username:',p.user)||p.user; localStorage.setItem('nit_portals',JSON.stringify(_portals)); renderPortals(); }
+function deletePortal(i){ if(!confirm('Remove?')) return; _portals.splice(i,1); localStorage.setItem('nit_portals',JSON.stringify(_portals)); renderPortals(); }
+
+// ── AMC TRACKER ──────────────────────────────────────────────────────────────
+var _amcList = JSON.parse(localStorage.getItem('nit_amc')||'[]');
+function renderAMCTracker(){
+  var el=document.getElementById('amc-tbody');
+  var kpis=document.getElementById('amc-kpis');
+  if(!el) return;
+  var now=new Date(); now.setHours(0,0,0,0);
+  var expiring=_amcList.filter(function(a){ var d=parseDate(a.end); return d&&Math.round((d-now)/86400000)<=60&&Math.round((d-now)/86400000)>=0; }).length;
+  if(kpis) kpis.innerHTML=[
+    {n:_amcList.length,l:'Active AMC Contracts',c:'var(--blue2)'},
+    {n:'₹'+_amcList.reduce(function(s,a){return s+parseFloat(a.value||0)},0).toFixed(2)+'Cr',l:'Annual AMC Revenue',c:'var(--green2)'},
+    {n:expiring,l:'Expiring in 60 days',c:expiring>0?'var(--red2)':'var(--green2)'}
+  ].map(function(k){return '<div class="kpi-card"><div class="kpi-n" style="color:'+k.c+'">'+k.n+'</div><div class="kpi-l">'+k.l+'</div></div>';}).join('');
+  var now2=new Date(); now2.setHours(0,0,0,0);
+  el.innerHTML=_amcList.map(function(a,i){
+    var d=parseDate(a.end);
+    var days=d?Math.round((d-now2)/86400000):999;
+    var sc=days<0?'var(--red2)':days<=30?'var(--orange)':days<=60?'var(--amber2)':'var(--green2)';
+    return '<tr><td style="font-size:12px;font-weight:500;color:var(--t1)">'+a.project+'</td>'
+      +'<td style="font-size:11px;color:var(--t2)">'+a.client+'</td>'
+      +'<td style="font-family:var(--fm);font-weight:600;color:var(--green2)">₹'+a.value+'Cr/yr</td>'
+      +'<td style="font-size:11px">'+( a.start||'—')+'</td>'
+      +'<td style="font-size:11px;color:'+sc+'">'+( a.end||'—')+'</td>'
+      +'<td style="font-size:11px;font-weight:700;color:'+sc+'">'+( days>=0?days+' days':'Expired')+'</td>'
+      +'<td><span style="font-size:10px;color:'+sc+'">'+(days<0?'Expired':days<=30?'⚠ Critical':days<=60?'Renew Soon':'Active')+'</span></td>'
+      +'<td><button class="btn btn-ghost btn-sm" onclick="renewAMC('+i+')">Renew</button> <button class="ract" onclick="deleteAMC('+i+')">✕</button></td></tr>';
+  }).join('');
+}
+function addAMC(){
+  var a={project:prompt('Project name:',''),client:prompt('Client:',''),value:prompt('AMC value (₹Cr/yr):',''),start:prompt('Start date (DD-MM-YYYY):',''),end:prompt('End date (DD-MM-YYYY):','')};
+  if(!a.project) return;
+  _amcList.push(a);
+  localStorage.setItem('nit_amc',JSON.stringify(_amcList));
+  renderAMCTracker();
+  toast('AMC contract added','success');
+}
+function renewAMC(i){ var a=_amcList[i]; a.end=prompt('New end date:',a.end); localStorage.setItem('nit_amc',JSON.stringify(_amcList)); renderAMCTracker(); toast('AMC renewed','success'); }
+function deleteAMC(i){ if(!confirm('Delete?')) return; _amcList.splice(i,1); localStorage.setItem('nit_amc',JSON.stringify(_amcList)); renderAMCTracker(); }
+
+// ── ALERTS / NOTICES ─────────────────────────────────────────────────────────
+function renderNotices(){
+  var el=document.getElementById('notices-list');
+  if(!el) return;
+  var now=new Date(); now.setHours(0,0,0,0);
+  var notices=[];
+  Object.values(_lastDb||{}).forEach(function(t){
+    var dl=getDaysLeft(t);
+    if(dl>=0&&dl<=7) notices.push({type:'deadline',color:'var(--red)',text:'DEADLINE in '+dl+' day'+(dl!==1?'s':''),sub:(t.brief||t.t247_id)+' · '+(t.org_name||''),tid:t.t247_id,days:dl});
+    var pd=t.prebid_query_date; if(pd){var pdd=parseDate(pd);if(pdd){var pdays=Math.round((pdd-now)/86400000);if(pdays>=0&&pdays<=5)notices.push({type:'prebid',color:'var(--amber)',text:'PRE-BID in '+pdays+' day'+(pdays!==1?'s':''),sub:(t.brief||t.t247_id),tid:t.t247_id,days:pdays});}}
+  });
+  // AMC
+  _amcList.forEach(function(a){var d=parseDate(a.end);if(!d)return;var days=Math.round((d-now)/86400000);if(days>=0&&days<=60)notices.push({type:'amc',color:'var(--cyan)',text:'AMC expiry in '+days+' days',sub:a.project+' · '+a.client,days:days});});
+  // BG
+  _bgList.forEach(function(b){var d=parseDate(b.valid_to);if(!d)return;var days=Math.round((d-now)/86400000);if(days>=0&&days<=30)notices.push({type:'bg',color:'var(--purple)',text:'BG/PS expires in '+days+' days',sub:b.project+' · '+b.bank,days:days});});
+  notices.sort(function(a,b){return a.days-b.days;});
+  if(!notices.length){el.innerHTML='<div class="empty-state"><div class="ei">✅</div><p>No urgent alerts. All clear!</p></div>';return;}
+  el.innerHTML=notices.map(function(n){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--navy2);border:1px solid var(--bd);border-left:3px solid '+n.color+';border-radius:0 var(--r) var(--r) 0;margin-bottom:6px;cursor:'+(n.tid?'pointer':'default')+'" '+(n.tid?'onclick="viewTenderDetail(\''+n.tid+'\')"':'')+'>'
+      +'<div style="font-size:9px;font-weight:700;color:'+n.color+';min-width:110px">'+n.type.toUpperCase()+'</div>'
+      +'<div><div style="font-size:12px;font-weight:600;color:'+n.color+'">'+n.text+'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+n.sub+'</div></div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── LOCAL TENDER SAVE ────────────────────────────────────────────────────────
+function saveTenderLocal(tid,data){
+  _lastDb[String(tid)]=data;
+  fetch('/tender/'+tid+'/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){
+    // Fallback: save via bid-result endpoint if update not available
+  });
+}
+
+// ── INIT POPULATE SELECTS OVERRIDE ──────────────────────────────────────────
+var _origPS = typeof populateSelects === 'function' ? populateSelects : null;
+function populateSelects(){
+  if(_origPS) _origPS();
+  var tenders = Object.values(_lastDb||{});
+  var analysed = tenders.filter(function(t){return t.bid_no_bid_done;});
+  ['corr-tender-sel','pbm-tender-sel','cs-tender-sel'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    el.innerHTML='<option value="">Select tender...</option>'
+      +tenders.map(function(t){return '<option value="'+t.t247_id+'">'+t.t247_id+' — '+(t.brief||t.org_name||'').substring(0,45)+'</option>';}).join('');
+  });
+}
+
+// Update notices badge on load
+var _origLD = loadDashboard;
+function loadDashboard(){
+  _origLD();
+  setTimeout(function(){ renderNotices(); }, 600);
+}
+
+
 </script>
 </body>
 </html>
