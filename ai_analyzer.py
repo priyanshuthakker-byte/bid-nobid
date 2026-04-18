@@ -171,38 +171,63 @@ def get_all_api_keys() -> List[str]:
     return [k for k in keys if k and k.strip() and len(k.strip()) > 20]
 
 def call_gemini(prompt: str, api_key: str, max_tokens: int = 8192) -> str:
+    import time as _time
     last_error = None
-    for model in GEMINI_MODELS:
+
+    def _try_model(model, key):
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={api_key}"
+            f"{model}:generateContent?key={key}"
         )
         payload = json.dumps({
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.1, "maxOutputTokens": max_tokens},
         }).encode("utf-8")
-        req = urllib.request.Request(
-            url, data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+        req = urllib.request.Request(url, data=payload,
+            headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            return result["candidates"][0]["content"]["parts"][0]["text"]
+
+    # Pass 1: try all models once
+    all_429 = True
+    for model in GEMINI_MODELS:
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-                text = result["candidates"][0]["content"]["parts"][0]["text"]
-                logger.info(f"Gemini OK: {model}")
-                return text
+            text = _try_model(model, api_key)
+            logger.info(f"Gemini OK: {model}")
+            return text
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")
-            if e.code in [429, 503, 500, 404]:
+            if e.code == 429:
+                logger.warning(f"{model} 429 — trying next")
+                last_error = "HTTP 429"
+                continue
+            elif e.code in [503, 500]:
                 logger.warning(f"{model} {e.code} — trying next")
                 last_error = f"HTTP {e.code}"
+                all_429 = False
                 continue
-            raise Exception(f"Gemini HTTP {e.code}: {body[:200]}")
+            else:
+                raise Exception(f"Gemini HTTP {e.code}: {body[:200]}")
         except Exception as e:
             logger.warning(f"{model} failed: {e}")
             last_error = str(e)
+            all_429 = False
             continue
+
+    # Pass 2: if all 429, wait 65s for rate limit window to reset, retry best model
+    if all_429:
+        logger.warning("All models 429 — waiting 65s for rate limit reset...")
+        _time.sleep(65)
+        for model in GEMINI_MODELS[:2]:  # only try top 2 after wait
+            try:
+                text = _try_model(model, api_key)
+                logger.info(f"Gemini OK after wait: {model}")
+                return text
+            except Exception as e:
+                last_error = str(e)
+                continue
+
     raise Exception(f"All Gemini models failed: {last_error}")
 
 def call_groq(prompt: str, groq_key: str) -> str:

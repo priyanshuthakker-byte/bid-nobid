@@ -151,8 +151,21 @@ def save_to_drive(local_path, filename="tenders_db.json", content_bytes=None):
             elif hasattr(local_path, 'read_bytes'):
                 content = local_path.read_bytes()
             else:
-                # local_path is actually a filename string — shouldn't happen but handle it
                 content = str(local_path).encode()
+            # Guard: never upload empty or trivially small content
+            if len(content) < 10:
+                print(f"⚠️ Skipping Drive upload of {filename} — content too small ({len(content)} bytes)")
+                return False
+            # Guard: for tenders_db.json, verify it has tenders
+            if filename == "tenders_db.json":
+                try:
+                    parsed = json.loads(content)
+                    if not parsed.get("tenders"):
+                        print(f"⚠️ Skipping Drive upload — tenders_db has 0 tenders (would overwrite good data)")
+                        return False
+                except Exception:
+                    print(f"⚠️ Skipping Drive upload — tenders_db is not valid JSON")
+                    return False
             media = MediaIoBaseUpload(
                 io.BytesIO(content),
                 mimetype="application/json",

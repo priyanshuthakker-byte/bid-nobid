@@ -3035,7 +3035,11 @@ function _b64ToBlob(b64, mime) {
 
 function _triggerBlobDownload(url, filename) {
   var a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
+  a.href = url; a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 function anAddDownloadBlob(label, blobUrl, filename) {
@@ -3043,13 +3047,15 @@ function anAddDownloadBlob(label, blobUrl, filename) {
   var tray = document.getElementById('an-dl-tray');
   if (!links) return;
   if (tray) tray.style.display = '';
-  var a = document.createElement('a');
-  a.href = blobUrl;
-  a.download = filename;
-  a.setAttribute('data-url', blobUrl);
-  a.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1e3a5f;border:1px solid #2563eb55;border-radius:5px;color:#60a5fa;font-size:11px;text-decoration:none;cursor:pointer;font-weight:500';
-  a.innerHTML = label + ' <span style="font-size:14px">⬇</span>';
-  links.appendChild(a);
+  var btn = document.createElement('button');
+  btn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1e3a5f;border:1px solid #2563eb55;border-radius:5px;color:#60a5fa;font-size:11px;cursor:pointer;font-weight:500';
+  btn.innerHTML = label + ' <span style="font-size:14px">⬇</span>';
+  btn.onclick = function() {
+    var a = document.createElement('a');
+    a.href = blobUrl; a.download = filename; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+  links.appendChild(btn);
 }
 
 
