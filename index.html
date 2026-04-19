@@ -1898,12 +1898,19 @@ async function analyseTender() {
           btn.disabled = false; btn.textContent = '🔍 Analyse with AI';
 
           var d = job.result;
+          if (!d) { toast('Analysis returned empty result — try again', 'error'); return; }
           var td = d.tender_data || d;
           _lastAnalysisResult = d;
           _lastAnalysisTid = tid;
-          renderAnalysisResult(td, d);
+          try {
+            renderAnalysisResult(td, d);
+          } catch(re) {
+            document.getElementById('an-warn').textContent = '⚠ Render error: ' + re.message;
+            document.getElementById('an-warn').style.display = '';
+            console.error('renderAnalysisResult failed:', re);
+          }
           if (tid) { setActive(tid,''); loadDashboard(); }
-          toast('Analysis complete: ' + ((td.overall_verdict||{}).verdict||'done'), 'success');
+          toast('Analysis complete: ' + ((td.overall_verdict||{}).verdict||td.verdict||'done'), 'success');
 
         } else if (job.status === 'error') {
           clearInterval(pollInterval);
@@ -2007,7 +2014,7 @@ function renderAnalysisResult(td, raw) {
     function ref(v) { if(typeof v!=='object'||!v) return ''; return [v.clause_ref,v.page_no].filter(Boolean).join(' · '); }
   var snapHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">';
   snap.forEach(function(row) {
-    var val=sv(row[1]); if(!val) return;
+    var val=_sv(row[1]); if(!val) return;
     var r=ref(row[1]);
     snapHtml += '<div style="background:#12141e;border:1px solid #1e2130;border-radius:6px;padding:10px 12px">'+
       '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:3px">'+row[0]+'</div>'+
@@ -2122,7 +2129,7 @@ function renderAnalysisResult(td, raw) {
 
   // Show result panel
   document.getElementById('an-res').style.display = '';
-  anTab('snapshot', document.querySelector('#an-tab-row .tab'));
+  anTab('snapshot', document.querySelector('#an-tabs .tab'));
   renderSbPreview(td);
 }
 
@@ -3568,11 +3575,11 @@ var PAGE_TITLES = {
 };
 // Tab switcher for analyse page
 function anTab(name, btn) {
-  document.querySelectorAll('#an-tab-row .tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
-  if(btn) btn.classList.add('active');
+  document.querySelectorAll('#an-tabs .tab').forEach(function(t){ t.classList.remove('on'); });
+  document.querySelectorAll('#an-tabs ~ .tc-inner .tp, .tp[id^="anp-"]').forEach(function(p){ p.classList.remove('on'); });
+  if(btn) btn.classList.add('on');
   var pane = document.getElementById('anp-'+name);
-  if(pane) pane.classList.add('active');
+  if(pane) pane.classList.add('on');
 }
 
 // Global search dropdown

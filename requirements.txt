@@ -3,6 +3,7 @@ uvicorn[standard]
 python-multipart
 python-docx
 openpyxl
+xlrd
 PyPDF2
 pdfplumber
 beautifulsoup4

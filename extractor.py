@@ -136,6 +136,24 @@ def read_docx(path: Path) -> str:
 
 
 def read_xlsx(path: Path) -> str:
+    ext = path.suffix.lower()
+    # Old .xls format — use xlrd
+    if ext == ".xls":
+        try:
+            import xlrd
+            wb = xlrd.open_workbook(str(path))
+            parts = []
+            for sheet in wb.sheets():
+                parts.append(f"=== Sheet: {sheet.name} ===")
+                for rx in range(sheet.nrows):
+                    row_text = " | ".join(str(sheet.cell_value(rx, cx)) for cx in range(sheet.ncols) if str(sheet.cell_value(rx, cx)).strip())
+                    if row_text:
+                        parts.append(row_text)
+            return "\n".join(parts)
+        except Exception as e:
+            logger.warning(f"XLS read failed for {path.name}: {e}")
+            return ""
+    # Modern .xlsx format — use openpyxl
     try:
         import openpyxl
         wb = openpyxl.load_workbook(str(path), data_only=True)
