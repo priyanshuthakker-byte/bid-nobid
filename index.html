@@ -1538,7 +1538,7 @@ function switchTab2(group, tab, el) {
 // UTILITIES
 // ═══════════════════════════════════════════════════════════
 function toast(msg, type) {
-  var el = document.getElementById('toast');
+  var el = document.getElementById('tw');
   el.textContent = msg;
   el.style.display = 'block';
   el.style.borderLeftColor = type==='error'?'#ef4444':type==='success'?'#22c55e':'#3b82f6';
@@ -1548,12 +1548,12 @@ function toast(msg, type) {
 }
 
 function showLoading(msg) {
-  document.getElementById('loading-text').textContent = msg || 'Processing...';
-  document.getElementById('loading-overlay').classList.add('show');
+  document.getElementById('ltxt').textContent = msg || 'Processing...';
+  document.getElementById('lov').classList.add('show');
 }
 
 function hideLoading() {
-  document.getElementById('loading-overlay').classList.remove('show');
+  document.getElementById('lov').classList.remove('show');
 }
 
 function getVerdict(t) {
@@ -1658,7 +1658,7 @@ function computeTenderScore(t) {
 }
 
 function renderDash() {
-  var q = (document.getElementById('dash-search').value || '').toLowerCase();
+  var q = (document.getElementById('dash-q').value || '').toLowerCase();
   var arr = allTenders.filter(function(t){ return t.status !== 'Not Interested'; });
 
   if (currentFilter === 'urgent') arr = arr.filter(function(t){ var d=getDaysLeft(t); return d>=0&&d<=7; });
@@ -1671,14 +1671,14 @@ function renderDash() {
            (t.ref_no||'').toLowerCase().includes(q);
   });
 
-  var sortBy = (document.getElementById('sort-sel') ? document.getElementById('sort-sel').value : 'deadline');
+  var sortBy = (document.getElementById('dash-q') ? document.getElementById('dash-q').value : 'deadline');
   if (sortBy === 'value') arr.sort(function(a,b){ return (parseFloat(b.estimated_cost_cr)||0)-(parseFloat(a.estimated_cost_cr)||0); });
   else if (sortBy === 'verdict') arr.sort(function(a,b){ var o={'BID':0,'CONDITIONAL':1,'REVIEW':2,'NO-BID':3}; return (o[getVerdict(a)]||3)-(o[getVerdict(b)]||3); });
   else arr.sort(function(a,b){ return getDaysLeft(a) - getDaysLeft(b); });
 
-  document.getElementById('dash-count').textContent = arr.length + ' tender' + (arr.length!==1?'s':'') + (currentFilter?' \u00b7 filtered':'');
+  document.getElementById('dash-cnt').textContent = arr.length + ' tender' + (arr.length!==1?'s':'') + (currentFilter?' \u00b7 filtered':'');
 
-  var tbody = document.getElementById('dash-table');
+  var tbody = document.getElementById('dash-tb');
   if (!arr.length) {
     tbody.innerHTML = '<tr><td colspan="9" class="empty-state">'+(allTenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';
     return;
@@ -1752,13 +1752,13 @@ function renderDash() {
 }
 
 function renderTenders() {
-  var q = (document.getElementById('tl-search') ? document.getElementById('tl-search').value : '').toLowerCase();
+  var q = (document.getElementById('tl-q') ? document.getElementById('tl-q').value : '').toLowerCase();
   var arr = allTenders;
   if (q) arr = arr.filter(function(t){
     return (t.brief||'').toLowerCase().includes(q) || (t.t247_id||'').toLowerCase().includes(q) ||
            (t.org_name||'').toLowerCase().includes(q) || (t.ref_no||'').toLowerCase().includes(q);
   });
-  var tbody = document.getElementById('tenders-table');
+  var tbody = document.getElementById('tl-body');
   if (!arr.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No tenders</td></tr>'; return; }
 
   var rows = arr.map(function(t) {
@@ -1816,7 +1816,7 @@ function setActive(tid, brief) {
   currentTenderId = tid;
   currentTenderBrief = decodeURIComponent(brief || '');
   localStorage.setItem('activeTenderId', tid);
-  var banner = document.getElementById('ctx-banner');
+  var banner = document.getElementById('ctx-bar');
   if (banner) { banner.style.display='flex'; document.getElementById('ctx-id').textContent=tid; document.getElementById('ctx-brief').textContent=currentTenderBrief; }
   document.getElementById('an-tid').value = tid;
 }
@@ -1826,7 +1826,7 @@ async function viewTenderDetail(tid) {
   if(!t) { toast('Tender not found','error'); return; }
   var v = getVerdict(t);
   var col = v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
-  var panel = document.getElementById('detail-panel');
+  var panel = document.getElementById('rp');
   if(!panel) {
     panel = document.createElement('div');
     panel.id = 'detail-panel';
@@ -1868,12 +1868,12 @@ async function viewTenderDetail(tid) {
 }
 
 function closeDetailOutside(e) {
-  var panel = document.getElementById('detail-panel');
+  var panel = document.getElementById('rp');
   if(panel && !panel.contains(e.target)) closeDetail();
 }
 
 function closeDetail() {
-  var panel = document.getElementById('detail-panel');
+  var panel = document.getElementById('rp');
   if(panel) panel.style.transform = 'translateX(100%)';
 }
 
@@ -1892,7 +1892,7 @@ async function autoDownload(tid) {
 function clearCtx() {
   currentTenderId = ''; currentTenderBrief = '';
   localStorage.removeItem('activeTenderId');
-  var b = document.getElementById('ctx-banner'); if(b) b.style.display='none';
+  var b = document.getElementById('ctx-bar'); if(b) b.style.display='none';
   document.getElementById('an-tid').value = '';
 }
 
@@ -1903,29 +1903,29 @@ async function loadDashboard() {
   try {
     var r = await fetch('/dashboard'); var d = await r.json();
     var s = d.stats || {};
-    document.getElementById('s-total').textContent = s.total || 0;
-    document.getElementById('s-bid').textContent   = s.bid || 0;
-    document.getElementById('s-cond').textContent  = s.conditional || 0;
-    document.getElementById('s-nobid').textContent = s.no_bid || 0;
-    document.getElementById('s-review').textContent= s.review || 0;
-    document.getElementById('nb-total').textContent= s.total || 0;
-    document.getElementById('sys-tenders').textContent = s.total || 0;
+    document.getElementById('nb-tot').textContent = s.total || 0;
+    document.getElementById("__null__").textContent   = s.bid || 0;
+    document.getElementById("__null__").textContent  = s.conditional || 0;
+    document.getElementById("__null__").textContent = s.no_bid || 0;
+    document.getElementById("__null__").textContent= s.review || 0;
+    document.getElementById('nb-tot').textContent= s.total || 0;
+    document.getElementById('sys-t').textContent = s.total || 0;
     allTenders = d.tenders || [];
     renderDash();
     // alerts
-    var ac = document.getElementById('alert-container'); ac.innerHTML = '';
+    var ac = document.getElementById('alert-box'); ac.innerHTML = '';
     if ((s.deadline_today||0)>0) ac.innerHTML += '<div class="alert-bar red">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
     if ((s.deadline_3days||0)>0) ac.innerHTML += '<div class="alert-bar amber">⚠ '+s.deadline_3days+' tender(s) due within 3 days</div>';
   } catch(e) {
-    document.getElementById('dash-table').innerHTML = '<tr><td colspan="6" class="empty-state" style="color:#ef4444">Error: '+e.message+'</td></tr>';
+    document.getElementById('dash-tb').innerHTML = '<tr><td colspan="6" class="empty-state" style="color:#ef4444">Error: '+e.message+'</td></tr>';
   }
 }
 
 async function checkDriveStatus() {
   try {
     var r = await fetch('/drive-status'); var d = await r.json();
-    var dot = document.getElementById('drive-dot'); var lbl = document.getElementById('drive-label');
-    var sys = document.getElementById('sys-drive');
+    var dot = document.getElementById('ds-dot'); var lbl = document.getElementById('ds-label');
+    var sys = document.getElementById('sys-d');
     if (d.drive_connected) {
       dot.className='status-dot dot-green'; lbl.textContent='Drive connected';
       if(sys) sys.textContent='Connected';
@@ -1933,7 +1933,7 @@ async function checkDriveStatus() {
       dot.className='status-dot dot-red'; lbl.textContent='Drive offline';
       if(sys) sys.textContent='Not connected';
     }
-  } catch(e) { document.getElementById('drive-label').textContent='Drive: error'; }
+  } catch(e) { document.getElementById('ds-label').textContent='Drive: error'; }
 }
 
 async function loadSettings() {
@@ -1947,8 +1947,8 @@ async function loadSettings() {
       var el=document.getElementById(id); if(!el) return;
       var v = byField[i] || fromArr[i] || ''; if(v) el.value=v;
     });
-    var tu=document.getElementById('t247u'); if(tu&&d.t247_username) tu.value=d.t247_username;
-    var sd=document.getElementById('sys-drive'); if(sd) sd.textContent=d.drive_connected?'Connected':'—';
+    var tu=document.getElementById('t247-user'); if(tu&&d.t247_username) tu.value=d.t247_username;
+    var sd=document.getElementById('sys-d'); if(sd) sd.textContent=d.drive_connected?'Connected':'—';
   } catch(e) {}
 }
 
@@ -1956,8 +1956,8 @@ async function loadQuota() {
   try {
     var r = await fetch('/api-quota-status'); var d = await r.json();
     var q = d.today_used !== undefined ? d.today_used+'/'+d.daily_limit+' used' : (d.status||'OK');
-    document.getElementById('api-quota').textContent = 'API: '+q;
-    document.getElementById('sys-quota').textContent = q;
+    document.getElementById('test-result').textContent = 'API: '+q;
+    document.getElementById('sys-k').textContent = q;
   } catch(e) {}
 }
 
@@ -2023,7 +2023,7 @@ async function saveKeys() {
 }
 
 async function saveT247() {
-  var body = {t247_username:document.getElementById('t247u').value, t247_password:document.getElementById('t247p').value};
+  var body = {t247_username:document.getElementById('t247-user').value, t247_password:document.getElementById('t247-pass').value};
   try { await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('T247 credentials saved','success'); } catch(e){toast('Failed','error');}
 }
 
@@ -2033,7 +2033,7 @@ async function testAI() {
 }
 
 async function testT247() {
-  var el = document.getElementById('t247-test-result'); if(el) el.textContent='Testing...';
+  var el = document.getElementById('test-result'); if(el) el.textContent='Testing...';
   try { var r=await fetch('/test-t247'); var d=await r.json();
     if(el) el.textContent = d.status==='ok'?'✅ Connected as '+d.username:'❌ '+(d.message||'Failed');
     if(el) el.style.color = d.status==='ok'?'#22c55e':'#ef4444';
@@ -2047,7 +2047,7 @@ async function skipTender(tid) {
 
 // ANALYSE
 function updateFileList(input) {
-  var el = document.getElementById('an-filelist');
+  var el = document.getElementById('an-fl');
   if(el) el.textContent = Array.from(input.files).map(function(f){return f.name;}).join(', ');
 }
 
@@ -2057,9 +2057,9 @@ async function analyseTender() {
   if (!files.length && !tid) { toast('Upload files or enter T247 ID','info'); return; }
 
   var btn = document.getElementById('an-btn');
-  var prog = document.getElementById('an-progress');
+  var prog = document.getElementById('an-prog');
   btn.disabled = true; btn.textContent = 'Analysing...';
-  document.getElementById('an-result-panel').style.display = 'none';
+  document.getElementById('an-res').style.display = 'none';
   document.getElementById('an-warn').style.display = 'none';
   clearDownloadTray();
 
@@ -2153,17 +2153,17 @@ function renderAnalysisResult(td, raw) {
   var col = verdict==='BID'?'#22c55e':verdict==='NO-BID'?'#ef4444':verdict==='CONDITIONAL'?'#f59e0b':'#3b82f6';
 
   // Verdict bar
-  document.getElementById('an-verdict-badge').innerHTML = '<span style="color:'+col+'">'+verdict+'</span>';
-  document.getElementById('an-verdict-bar').style.background = verdict==='BID'?'rgba(34,197,94,.06)':verdict==='NO-BID'?'rgba(239,68,68,.06)':'rgba(245,158,11,.06)';
-  document.getElementById('an-tender-name').textContent = _sv(td.tender_name) || _sv(td.brief) || '—';
-  document.getElementById('an-org-name').textContent = _sv(td.org_name) || '';
+  document.getElementById('an-vdict').innerHTML = '<span style="color:'+col+'">'+verdict+'</span>';
+  document.getElementById('an-vbar').style.background = verdict==='BID'?'rgba(34,197,94,.06)':verdict==='NO-BID'?'rgba(239,68,68,.06)':'rgba(245,158,11,.06)';
+  document.getElementById('an-tname').textContent = _sv(td.tender_name) || _sv(td.brief) || '—';
+  document.getElementById('an-oname').textContent = _sv(td.org_name) || '';
 
   // PQ summary chips
   var pq = td.pq_criteria || [];
   var pqG = pq.filter(function(p){return (p.nascent_color||p.color||'').toUpperCase()==='GREEN'||p.met===true;}).length;
   var pqA = pq.filter(function(p){return (p.nascent_color||p.color||'').toUpperCase()==='AMBER';}).length;
   var pqR = pq.filter(function(p){return (p.nascent_color||p.color||'').toUpperCase()==='RED'||p.met===false;}).length;
-  document.getElementById('an-pq-summary').innerHTML =
+  document.getElementById('an-pq-sum').innerHTML =
     '<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(34,197,94,.12);color:#4ade80">✓ '+pqG+' Met</span>'+
     (pqA?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,.12);color:#fbbf24">△ '+pqA+' Conditional</span>':'')+
     (pqR?'<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(239,68,68,.12);color:#f87171">✗ '+pqR+' Not Met</span>':'');
@@ -2184,8 +2184,8 @@ function renderAnalysisResult(td, raw) {
     anAddDownload('📄 Bid/No-Bid Report (.docx)', '/download/'+raw.download_file);
   }
   if (_lastAnalysisTid) {
-    document.getElementById('an-gendocs-btn').style.display='';
-    document.getElementById('an-mergebtn').style.display='';
+    document.getElementById('an-docs-btn').style.display='';
+    document.getElementById('an-docs-btn').style.display='';
     anAddDownload('✉ Pre-bid Letter', '#prebid-letter', true);
     anAddDownload('📦 Submission Docs', '#gen-docs', true);
   }
@@ -2324,7 +2324,7 @@ function renderAnalysisResult(td, raw) {
   }).join('') : '<div class="empty-state">No checklist generated. Analyse with AI first.</div>';
 
   // Show result panel
-  document.getElementById('an-result-panel').style.display = '';
+  document.getElementById('an-res').style.display = '';
   anTab('snapshot', document.querySelector('#an-tab-row .tab'));
   renderSbPreview(td);
 }
@@ -2339,7 +2339,7 @@ function anTab(tab, btn) {
 
 function handleAnDrop(e) {
   e.preventDefault();
-  document.getElementById('an-dropzone').style.borderColor='';
+  document.getElementById('an-dz').style.borderColor='';
   var files = e.dataTransfer.files;
   if (files.length) {
     document.getElementById('an-files').files; // can't set directly
@@ -2457,8 +2457,8 @@ async function runCompliance() {
 
 // CHECKLIST
 async function loadChecklist() {
-  var tid = document.getElementById('cl-select').value; if(!tid) return;
-  var el = document.getElementById('cl-content');
+  var tid = document.getElementById('cl-sel').value; if(!tid) return;
+  var el = document.getElementById('cl-body');
   el.innerHTML = '<div class="empty-state">Loading...</div>';
   try {
     var r = await fetch('/checklist/'+tid); var d = await r.json();
@@ -2523,7 +2523,7 @@ async function loadDocs() {
   try {
     var r = await fetch('/checklist/'+tid); var d = await r.json();
     var items = d.checklist || [];
-    var el = document.getElementById('docs-checklist-status');
+    var el = document.getElementById('cl-pct');
     if(el && items.length) {
       var rfp = items.filter(function(i){ return (i.source||'').includes('rfp'); });
       var std = items.filter(function(i){ return !(i.source||'').includes('rfp'); });
@@ -2606,7 +2606,7 @@ async function mergePDF() {
   } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
 
-function currentDocType(){var el=document.getElementById('draft-doc-type');return el?el.value:'analysis';}
+function currentDocType(){var el=document.getElementById('draft-type');return el?el.value:'analysis';}
 function currentDraftText(){var el=document.getElementById('draft-editor');return el?el.value:'';}
 function setDraftText(v){var el=document.getElementById('draft-editor');if(el)el.value=v||'';}
 
@@ -2646,7 +2646,7 @@ async function saveDraft() {
 
 async function chatEditDraft() {
   var tid = document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
-  var instruction = (document.getElementById('draft-chat-instruction').value||'').trim();
+  var instruction = (document.getElementById('chat-edit-input').value||'').trim();
   if(!instruction){toast('Enter edit instruction','info');return;}
   showLoading('AI editing draft...');
   try {
@@ -2655,7 +2655,7 @@ async function chatEditDraft() {
     hideLoading();
     if(!r.ok) throw new Error(d.detail||'AI edit failed');
     setDraftText(d.content||'');
-    document.getElementById('draft-chat-instruction').value = '';
+    document.getElementById('chat-edit-input').value = '';
     toast('Draft updated by AI','success');
   } catch(e){hideLoading();toast('Chat edit failed: '+e.message,'error');}
 }
@@ -2690,7 +2690,7 @@ async function loadReports() {
   try {
     var r = await fetch('/reports-list'); var d = await r.json();
     var reports = d.reports || [];
-    var tbody = document.getElementById('reports-table');
+    var tbody = document.getElementById('reports-tb');
     if(!reports.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No reports yet.</td></tr>';return;}
     tbody.innerHTML = reports.map(function(rep){
       return '<tr>'+
@@ -2708,7 +2708,7 @@ async function loadReports() {
 async function loadAnalytics() {
   try {
     var r = await fetch('/analytics/win-loss'); var d = await r.json();
-    var el = document.getElementById('analytics-summary');
+    var el = document.getElementById('an-kpis');
     var stats = d.stats || d;
     el.innerHTML = [
       ['Total Submitted', stats.total||0, 'c-white'],
@@ -2721,7 +2721,7 @@ async function loadAnalytics() {
     }).join('');
     // Win/loss table
     var history = d.history || [];
-    var tbody = document.getElementById('winloss-table');
+    var tbody = document.getElementById('an-tb2');
     if(history.length){
       tbody.innerHTML = history.slice(0,20).map(function(h){
         return '<tr>'+
@@ -2733,16 +2733,16 @@ async function loadAnalytics() {
         '</tr>';
       }).join('');
     }
-  } catch(e){document.getElementById('analytics-summary').innerHTML='<div class="empty-state">No analytics data yet.</div>';}
+  } catch(e){document.getElementById('an-kpis').innerHTML='<div class="empty-state">No analytics data yet.</div>';}
 }
 
 async function saveBidResult() {
-  var tid = document.getElementById('res-tid').value.trim(); if(!tid){toast('Enter T247 ID','info');return;}
-  var body = {outcome:document.getElementById('res-outcome').value, contract_value_cr:parseFloat(document.getElementById('res-value').value)||0, competitor:document.getElementById('res-competitor').value, notes:document.getElementById('res-notes').value};
+  var tid = document.getElementById('stage-tid').value.trim(); if(!tid){toast('Enter T247 ID','info');return;}
+  var body = {outcome:document.getElementById('stage-res').value, contract_value_cr:parseFloat(document.getElementById('inv-amount').value)||0, competitor:document.getElementById('stage-comp').value, notes:document.getElementById('stage-note').value};
   try {
     await fetch('/bid-result/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     toast('Result saved','success'); loadAnalytics();
-    document.getElementById('res-tid').value=''; document.getElementById('res-value').value='';
+    document.getElementById('stage-tid').value=''; document.getElementById('inv-amount').value='';
   } catch(e){toast('Failed','error');}
 }
 
@@ -2753,7 +2753,7 @@ async function loadMilestones() {
   try {
     var r = await fetch('/post-award/'+tid+'/milestones'); var d = await r.json();
     var milestones = d.milestones || [];
-    var el = document.getElementById('milestones-list');
+    var el = document.getElementById('milestone-list');
     if(!milestones.length){el.innerHTML='<div class="empty-state">No milestones yet. Click Setup.</div>';return;}
     el.innerHTML = milestones.map(function(m){
       var cls = m.completed?'dot-done':(m.due_date&&getDaysLeft({deadline:m.due_date})<0?'dot-late':'dot-pending');
@@ -2789,14 +2789,14 @@ async function genLetter(type) {
   try {
     var r = await fetch('/post-award/'+tid+'/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d = await r.json();
     hideLoading();
-    document.getElementById('pa-letter-result').innerHTML = '<div style="margin-top:12px"><a href="/download/'+(d.filename||'')+'" download><button class="btn btn-success">⬇ Download '+type+' Letter</button></a></div>';
+    document.getElementById('letter-result').innerHTML = '<div style="margin-top:12px"><a href="/download/'+(d.filename||'')+'" download><button class="btn btn-success">⬇ Download '+type+' Letter</button></a></div>';
     toast('Letter generated','success');
   } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
 
 async function generateInvoice() {
   var tid = document.getElementById('pa-select').value; if(!tid){toast('Select tender','info');return;}
-  var body = {description:document.getElementById('inv-desc').value, amount:parseFloat(document.getElementById('inv-amount').value)||0};
+  var body = {description:document.getElementById('inv-milestone').value, amount:parseFloat(document.getElementById('inv-amount').value)||0};
   showLoading('Generating invoice...');
   try {
     var r = await fetch('/post-award/'+tid+'/invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); var d = await r.json();
@@ -2811,7 +2811,7 @@ async function loadSkipped() {
   try {
     var r = await fetch('/skipped-tenders'); var d = await r.json();
     var tenders = d.tenders || [];
-    var tbody = document.getElementById('skipped-table');
+    var tbody = document.getElementById('skip-tb');
     if(!tenders.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr>';return;}
     tbody.innerHTML = tenders.map(function(t){
       return '<tr>'+
@@ -2853,15 +2853,15 @@ var projectsView='table', projectsSearch='', projectsDomain='All';
 async function loadBOQConst(){try{var r=await fetch('/boq/constants');boqConst=await r.json();}catch(e){}}
 
 async function loadBOQ(){
-  var tid=document.getElementById('boq-select').value;
+  var tid=document.getElementById('boq-sel').value;
   if(!tid){document.getElementById('boq-content').style.display='none';return;}
   currentTenderId=tid;showLoading('Loading BOQ...');
   try{var r=await fetch('/boq/'+tid),d=await r.json();hideLoading();
-    var info=document.getElementById('boq-info');
+    var info=document.getElementById('boq-badge');
     if(info)info.textContent=(d.source==='auto'?'⚡ Auto-generated from RFP scope':'✓ Saved BOQ')+(d.tender_name?' — '+d.tender_name:'');
     var boq=d.boq||{};
     boqItems=(boq.items||[]).map((item,i)=>({...item,_id:item._id||i}));
-    document.getElementById('boq-margin').value=boq.margin_pct||15;
+    document.getElementById('boq-mgn').value=boq.margin_pct||15;
     document.getElementById('boq-gst').value=boq.gst_pct||18;
     document.getElementById('boq-content').style.display='block';
     renderBOQTable();boqRecalc();
@@ -2869,22 +2869,22 @@ async function loadBOQ(){
 }
 
 async function boqRegenerate(){
-  var tid=document.getElementById('boq-select').value;
+  var tid=document.getElementById('boq-sel').value;
   if(!tid){toast('Select a tender first','info');return;}
   showLoading('Regenerating from RFP...');
   try{var r=await fetch('/boq/'+tid+'/regenerate',{method:'POST'}),d=await r.json();hideLoading();
     var boq=d.boq||{};boqItems=(boq.items||[]).map((item,i)=>({...item,_id:i}));
-    document.getElementById('boq-margin').value=15;document.getElementById('boq-gst').value=18;
+    document.getElementById('boq-mgn').value=15;document.getElementById('boq-gst').value=18;
     document.getElementById('boq-content').style.display='block';renderBOQTable();boqRecalc();
     toast('BOQ regenerated from RFP scope','success');
   }catch(e){hideLoading();toast('Failed: '+e.message,'error');}
 }
 
 async function boqSave(){
-  var tid=document.getElementById('boq-select').value;
+  var tid=document.getElementById('boq-sel').value;
   if(!tid){toast('Select a tender first','info');return;}
   boqReadTable();showLoading('Saving BOQ...');
-  try{var r=await fetch('/boq/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:boqItems,margin_pct:parseFloat(document.getElementById('boq-margin').value)||15,gst_pct:parseFloat(document.getElementById('boq-gst').value)||18})});var d=await r.json();
+  try{var r=await fetch('/boq/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:boqItems,margin_pct:parseFloat(document.getElementById('boq-mgn').value)||15,gst_pct:parseFloat(document.getElementById('boq-gst').value)||18})});var d=await r.json();
     hideLoading();toast('BOQ saved','success');loadDashboard();
   }catch(e){hideLoading();toast('Save failed: '+e.message,'error');}
 }
@@ -2911,13 +2911,13 @@ function boqReadTable(){
 
 function boqRecalc(){
   boqReadTable();
-  var margin=parseFloat(document.getElementById('boq-margin').value)||0;
+  var margin=parseFloat(document.getElementById('boq-mgn').value)||0;
   var gst=parseFloat(document.getElementById('boq-gst').value)||0;
   var base=boqItems.reduce((s,i)=>s+(parseFloat(i.rate)||0)*(parseFloat(i.qty)||0),0);
   var mAmt=base*margin/100,sub=base+mAmt,gAmt=sub*gst/100,grand=sub+gAmt;
   document.getElementById('bt-base').textContent=fmtMoney(base);
-  document.getElementById('bt-margin').textContent=fmtMoney(mAmt)+' ('+margin+'%)';
-  document.getElementById('bt-sub').textContent=fmtMoney(sub);
+  document.getElementById('bt-mgn').textContent=fmtMoney(mAmt)+' ('+margin+'%)';
+  document.getElementById('bt-gst').textContent=fmtMoney(sub);
   document.getElementById('bt-gst').textContent=fmtMoney(gAmt)+' ('+gst+'%)';
   document.getElementById('bt-grand').textContent=fmtMoney(grand);
   document.querySelectorAll('#boq-tbody tr[data-id]').forEach(row=>{
@@ -2949,7 +2949,7 @@ function renderBOQTable(){
       '</tr>';
     });
   });
-  document.getElementById('boq-tbody').innerHTML=html||'<tr><td colspan="9" class="empty-state">No items. Click + Add Row or Regenerate from RFP.</td></tr>';
+  document.getElementById('boq-content').innerHTML=html||'<tr><td colspan="9" class="empty-state">No items. Click + Add Row or Regenerate from RFP.</td></tr>';
 }
 
 
@@ -3021,7 +3021,7 @@ function renderProjectsTable(){
   if(currentProjectTabIdx>=tabs.length) currentProjectTabIdx=0;
   profileData.project_tabs=tabs;
 
-  var tabRow=document.getElementById('projects-tab-row');
+  var tabRow=document.getElementById("__null__");
   if(tabRow){
     tabRow.innerHTML=tabs.map(function(t,i){
       return '<div class="tab'+(i===currentProjectTabIdx?' active':'')+'" onclick="switchProjectTab('+i+')">'+(t.name||('Tab '+(i+1)))+'</div>';
@@ -3052,7 +3052,7 @@ function renderProjectsTable(){
       (p && p.tags ? p.tags : []).forEach(function(t){ if(t) set.add(String(t).trim()); });
     });
     var opts=['All'].concat(Array.from(set).filter(Boolean).slice(0,12));
-    var wrap=document.getElementById('projects-filters');
+    var wrap=document.getElementById("__null__");
     if(wrap){
       wrap.innerHTML=opts.map(function(o){
         var on=(projectsDomain===o);
@@ -3062,9 +3062,9 @@ function renderProjectsTable(){
   })();
 
   // View toggle
-  var wTable=document.getElementById('projects-table-wrap');
-  var wCards=document.getElementById('projects-cards');
-  var bT=document.getElementById('pv-table');
+  var wTable=document.getElementById("__null__");
+  var wCards=document.getElementById('proj-cards');
+  var bT=document.getElementById('pv-tbl');
   var bC=document.getElementById('pv-cards');
   if(bT && bC){
     bT.style.borderColor = projectsView==='table' ? '#3b82f6' : '';
@@ -3103,7 +3103,7 @@ function renderProjectsTable(){
     }
   }
 
-  document.getElementById('projects-tbody').innerHTML=filtered.map(function(x){
+  document.getElementById('proj-tb').innerHTML=filtered.map(function(x){
     var p=x.p, i=x.idx;
     return '<tr><td><input type="text" value="'+(p.client||'')+'" data-pidx="'+i+'" data-pkey="client" onchange="pProject(this)" style="width:100%"></td>'+
       '<td><input type="text" value="'+(p.name||'')+'" data-pidx="'+i+'" data-pkey="name" onchange="pProject(this)" style="width:100%"></td>'+
@@ -3191,13 +3191,13 @@ async function runDiagnose(){
       '<div style="flex:1"><div class="diag-name">'+c.name+'</div>'+
       '<div class="diag-detail">'+c.detail+'</div>'+
       (c.fix?'<div class="diag-fix">Fix: '+c.fix+'</div>':'')+'</div></div>').join('');
-    document.getElementById('diagnose-results').innerHTML=html;
+    document.getElementById('diag-res').innerHTML=html;
     toast(overall==='OK'?'All systems healthy':overall==='WARN'?'Some warnings found':'Errors found — see details',overall==='OK'?'success':overall==='WARN'?'info':'error');
-  }catch(e){hideLoading();toast('Diagnose failed: '+e.message,'error');document.getElementById('diagnose-results').innerHTML='<div style="color:#ef4444">Diagnose error: '+e.message+'</div>';}
+  }catch(e){hideLoading();toast('Diagnose failed: '+e.message,'error');document.getElementById('diag-res').innerHTML='<div style="color:#ef4444">Diagnose error: '+e.message+'</div>';}
 }
 
 async function aiDiagnose(){
-  var errorText=document.getElementById('error-log-input').value.trim();
+  var errorText=document.getElementById('diag-err').value.trim();
   if(!errorText){toast('Paste an error log first','info');return;}
   showLoading('AI is diagnosing...');
   try{var r=await fetch('/diagnose/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({error:errorText})}),d=await r.json();hideLoading();
@@ -3211,7 +3211,7 @@ async function aiDiagnose(){
         '<span style="flex:1;color:#ccc">'+f.action+'</span>'+
         '<span style="color:#555;font-size:11px;white-space:nowrap">'+f.where+'</span></div>').join('')+
       '</div>';
-    document.getElementById('ai-diagnose-result').innerHTML=html;
+    document.getElementById('ai-diag-res').innerHTML=html;
   }catch(e){hideLoading();toast('AI diagnosis failed: '+e.message,'error');}
 }
 
@@ -3225,7 +3225,7 @@ function fmtMoney(n){n=parseFloat(n)||0;if(n>=10000000)return '₹'+(n/10000000)
 
 function populateBOQSelect(){
   var opts='<option value="">-- Select a tender --</option>'+allTenders.map(t=>'<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+(t.boq?' ✓':'')+'</option>').join('');
-  var el=document.getElementById('boq-select');if(el)el.innerHTML=opts;
+  var el=document.getElementById('boq-sel');if(el)el.innerHTML=opts;
   if(currentTenderId){el.value=currentTenderId;loadBOQ();}
 }
 
@@ -3264,7 +3264,7 @@ var gsActive = -1;
 
 function globalSearchType(q) {
   q = (q||'').toLowerCase().trim();
-  var drop = document.getElementById('gsearch-drop');
+  var drop = document.getElementById('cmd-res');
   if(!q) { drop.style.display='none'; gsResults=[]; return; }
   gsResults = allTenders.filter(function(t){
     return (t.brief||'').toLowerCase().includes(q) ||
@@ -3294,7 +3294,7 @@ function globalSearchType(q) {
 }
 
 function globalSearchKey(e) {
-  var drop = document.getElementById('gsearch-drop');
+  var drop = document.getElementById('cmd-res');
   if(e.key==='ArrowDown') {
     e.preventDefault();
     gsActive = Math.min(gsActive+1, Math.min(gsResults.length,12)-1);
@@ -3309,7 +3309,7 @@ function globalSearchKey(e) {
     else gsShowAll();
   } else if(e.key==='Escape') {
     closeGSearch();
-    document.getElementById('global-search').blur();
+    document.getElementById('cmd-inp').blur();
   }
 }
 
@@ -3317,23 +3317,23 @@ function gsPickOne(idx) {
   var t = gsResults[idx];
   if(!t) return;
   closeGSearch();
-  document.getElementById('global-search').value = '';
+  document.getElementById('cmd-inp').value = '';
   viewTenderDetail(t.t247_id);
 }
 
 function gsShowAll() {
   closeGSearch();
-  var q = document.getElementById('global-search').value.trim();
-  document.getElementById('global-search').value = '';
+  var q = document.getElementById('cmd-inp').value.trim();
+  document.getElementById('cmd-inp').value = '';
   // Show on All Tenders page with results filtered
-  var tl = document.getElementById('tl-search');
+  var tl = document.getElementById('tl-q');
   if(tl) tl.value = q;
   showPageDirect('tenders');
   renderTenders();
 }
 
 function closeGSearch() {
-  var drop = document.getElementById('gsearch-drop');
+  var drop = document.getElementById('cmd-res');
   if(drop) drop.style.display='none';
 }
 
@@ -3434,7 +3434,7 @@ function renderEMDTable(list) {
 
   list.sort(function(a,b){ return getDaysLeft(a)-getDaysLeft(b); });
 
-  var tbody = document.getElementById('emd-tbody');
+  var tbody = document.getElementById('emd-tb');
   var empty = document.getElementById('emd-empty');
   if (!list.length) { if(tbody) tbody.innerHTML=''; if(empty) empty.style.display=''; return; }
   if (empty) empty.style.display = 'none';
@@ -3488,18 +3488,18 @@ async function generateEMDExemption(tid) {
 var _anChatVisible = true;
 
 function toggleAnChat() {
-  var sidebar = document.getElementById('an-chat-sidebar');
+  var sidebar = document.getElementById('an-sb');
   _anChatVisible = !_anChatVisible;
   sidebar.style.display = _anChatVisible ? 'flex' : 'none';
 }
 
 function anChatSend(msg) {
-  document.getElementById('an-chat-input').value = msg;
+  document.getElementById('an-chat-inp').value = msg;
   anChatSendInput();
 }
 
 async function anChatSendInput() {
-  var input = document.getElementById('an-chat-input');
+  var input = document.getElementById('an-chat-inp');
   var msg = input.value.trim();
   if (!msg) return;
   input.value = '';
@@ -3555,7 +3555,7 @@ async function anChatSendInput() {
 }
 
 function _appendAnChat(role, text) {
-  var msgs = document.getElementById('an-chat-msgs');
+  var msgs = document.getElementById('an-msgs');
   var el = document.createElement('div');
   el.style.cssText = role === 'user'
     ? 'align-self:flex-end;max-width:85%;background:#1e3a5f;border-radius:8px 8px 2px 8px;padding:8px 10px;font-size:12px;color:#e5e7eb;line-height:1.5'
@@ -3648,7 +3648,7 @@ function anAddDownloadBlob(label, blobUrl, filename) {
 
 // ═══ ANALYSE SIDEBAR ═══
 function setSbMode(mode) {
-  var preview = document.getElementById('sb-preview');
+  var preview = document.getElementById('sb-prev');
   var chat = document.getElementById('sb-chat');
   var tabP = document.getElementById('sb-tab-preview');
   var tabC = document.getElementById('sb-tab-chat');
@@ -3666,7 +3666,7 @@ function setSbMode(mode) {
 }
 
 function renderSbPreview(td) {
-  var el = document.getElementById('sb-preview-content');
+  var el = document.getElementById('sb-prev-body');
   if (!el) return;
 
   var ov = td.overall_verdict || {};
@@ -3902,7 +3902,7 @@ function _renderGeneratedDocs(d, listEl) {
 // ═══ NEW UI FUNCTIONS ════════════════════════════════════════════════════════
 
 function toggleSidebar() {
-  var sb = document.getElementById('sidebar');
+  var sb = document.getElementById('sb');
   sb.classList.toggle('collapsed');
   var icon = sb.querySelector('.sb-collapse svg');
   if (sb.classList.contains('collapsed')) {
@@ -3913,7 +3913,7 @@ function toggleSidebar() {
 }
 
 function toggleAnSidebar() {
-  var sb = document.getElementById('an-sidebar');
+  var sb = document.getElementById('an-sb');
   sb.style.width = sb.style.width === '0px' ? '' : '0px';
 }
 
@@ -3924,7 +3924,7 @@ function closeModal(id) {
 function setToday() {
   var d = new Date();
   var opts = {day:'2-digit',month:'short',year:'numeric'};
-  document.getElementById('today-date').textContent = d.toLocaleDateString('en-IN', opts);
+  document.getElementById('today-d').textContent = d.toLocaleDateString('en-IN', opts);
 }
 
 // Override showPage to update topbar title
@@ -3945,7 +3945,7 @@ function showPage(name) {
   var nav = document.querySelector('.nav-item[onclick*="\''+name+'\'"]');
   if (nav) nav.classList.add('active');
   var t = PAGE_TITLES[name] || name;
-  document.getElementById('page-title').textContent = t;
+  document.getElementById('pg-title').textContent = t;
   if (name === 'dashboard') loadDashboard();
   if (name === 'settings') loadSettings();
   if (name === 'analytics') loadAnalytics();
@@ -3972,7 +3972,7 @@ function anTab(name, btn) {
 
 // Global search dropdown
 function globalSearchType(val) {
-  var drop = document.getElementById('gsearch-drop');
+  var drop = document.getElementById('cmd-res');
   if (!val || val.length < 2) { drop.style.display = 'none'; return; }
   var db = _lastDb || {};
   var tenders = Object.values(db);
@@ -3996,11 +3996,11 @@ function globalSearchKey(e) {
   if(e.key==='Escape') closeGSearch();
 }
 function closeGSearch() {
-  document.getElementById('gsearch-drop').style.display = 'none';
+  document.getElementById('cmd-res').style.display = 'none';
 }
 function gSearchSelect(tid) {
   closeGSearch();
-  document.getElementById('global-search').value = '';
+  document.getElementById('cmd-inp').value = '';
   showPage('dashboard');
   setTimeout(function(){ viewTenderDetail(tid); }, 300);
 }
@@ -4010,7 +4010,7 @@ var _lastDb = {};
 function renderDash() {
   var db = _lastDb;
   var tenders = Object.values(db);
-  var q = (document.getElementById('dash-search')||{value:''}).value.toLowerCase();
+  var q = (document.getElementById('dash-q')||{value:''}).value.toLowerCase();
   var activeFilter = document.querySelector('.flt-btn.on');
   var flt = activeFilter ? activeFilter.textContent.trim() : '';
   // Normalise filter text
@@ -4031,15 +4031,15 @@ function renderDash() {
   });
 
   // Sort
-  var sortEl = document.getElementById('sort-sel');
+  var sortEl = document.getElementById('dash-q');
   var sort = sortEl ? sortEl.value : '';
   if(sort==='dl-asc') arr.sort(function(a,b){ return getDaysLeft(a)-getDaysLeft(b); });
   else if(sort==='cost-desc') arr.sort(function(a,b){ return parseFloat(b.estimated_cost_cr||0)-parseFloat(a.estimated_cost_cr||0); });
   else if(sort==='score-desc') arr.sort(function(a,b){ return (computeTenderScore(b)||0)-(computeTenderScore(a)||0); });
 
-  var tbody = document.getElementById('dash-table');
+  var tbody = document.getElementById('dash-tb');
   var empty = document.getElementById('dash-empty');
-  var count = document.getElementById('dash-count');
+  var count = document.getElementById('dash-cnt');
   if(!arr.length) {
     tbody.innerHTML='';
     if(empty) empty.style.display='';
@@ -4105,10 +4105,10 @@ function viewTenderDetail(tid) {
   var db = _lastDb;
   var t = db[String(tid)];
   if(!t) return;
-  var rp = document.getElementById('right-panel');
+  var rp = document.getElementById('rp');
   var body = document.getElementById('rp-body');
-  var acts = document.getElementById('rp-actions');
-  var title = document.getElementById('rp-title');
+  var acts = document.getElementById('rp-acts');
+  var title = document.getElementById('rp-ttl');
   rp.classList.add('open');
   title.textContent = t.brief || t.tender_name || tid;
   var v = getVerdict(t);
@@ -4150,7 +4150,7 @@ function rowAnalyseFromPanel(tid) {
 }
 
 function closeDetail() {
-  document.getElementById('right-panel').classList.remove('open');
+  document.getElementById('rp').classList.remove('open');
   document.querySelectorAll('#dash-table tr').forEach(function(r){ r.classList.remove('selected'); });
 }
 
@@ -4161,11 +4161,11 @@ function showStageModal(tid) {
 
 function saveStageFromModal() {
   var tid = document.getElementById('stage-tid').value;
-  var stage = document.getElementById('stage-select').value;
+  var stage = document.getElementById('stage-sel').value;
   var note = document.getElementById('stage-note').value;
-  var result = document.getElementById('stage-result').value;
-  var competitor = document.getElementById('stage-competitor').value;
-  var outcomeVal = document.getElementById('stage-outcome-value').value;
+  var result = document.getElementById('stage-res').value;
+  var competitor = document.getElementById('stage-comp').value;
+  var outcomeVal = document.getElementById('stage-res').value;
   if(!tid) return;
   var body = {stage:stage, note:note};
   if(result) body.result = {outcome:result, competitor:competitor, value:outcomeVal};
@@ -4195,7 +4195,7 @@ function renderStatCards(stats) {
       +'<div class="stat-l">'+d.l+'</div>'
       +'</div>';
   }).join('');
-  document.getElementById('nb-total').textContent = stats.total||0;
+  document.getElementById('nb-tot').textContent = stats.total||0;
 }
 
 function filterStatCard(flt) {
@@ -4214,7 +4214,7 @@ function setFilter(flt, btn) {
 
 // Tenders page
 function renderTenders() {
-  var q = (document.getElementById('tl-search')||{value:''}).value.toLowerCase();
+  var q = (document.getElementById('tl-q')||{value:''}).value.toLowerCase();
   var tenders = Object.values(_lastDb).filter(function(t){
     if(!q) return true;
     var s = (t.brief||'')+(t.org_name||'')+(t.t247_id||'');
@@ -4263,15 +4263,15 @@ function loadDashboard() {
     var alerts = '';
     if(d.stats && d.stats.expiring>0) alerts += '<div class="alert-bar amber"><div class="alert-dot"></div><b>'+d.stats.expiring+'</b> tender'+(d.stats.expiring!==1?'s':'')+' deadline within 7 days</div>';
     if(d.stats && d.stats.total===0) alerts += '<div class="alert-bar amber"><div class="alert-dot"></div>Database empty — import Excel or analyse a tender to populate.</div>';
-    document.getElementById('alert-container').innerHTML = alerts;
+    document.getElementById('alert-box').innerHTML = alerts;
   }).catch(function(){ });
 }
 
 // Override checkDriveStatus for new UI
 function checkDriveStatus() {
   fetch('/drive-status').then(function(r){return r.json();}).then(function(d){
-    var dot = document.getElementById('drive-dot');
-    var label = document.getElementById('drive-label');
+    var dot = document.getElementById('ds-dot');
+    var label = document.getElementById('ds-label');
     if(d.connected){
       dot.className='sb-drive-dot on';
       if(label) label.textContent='Drive connected';
@@ -4280,7 +4280,7 @@ function checkDriveStatus() {
       if(label) label.textContent='Drive offline';
     }
   }).catch(function(){
-    var dot = document.getElementById('drive-dot');
+    var dot = document.getElementById('ds-dot');
     if(dot) dot.className='sb-drive-dot off';
   });
 }
@@ -4535,7 +4535,7 @@ function renderProfileBidRules(data) {
 
 // Toast override for new UI
 function toast(msg, type, dur) {
-  var wrap = document.getElementById('toast-wrap');
+  var wrap = document.getElementById('tw');
   var div = document.createElement('div');
   div.className = 'toast '+(type==='error'?'err':type==='success'?'ok':'info');
   div.textContent = msg;
@@ -4544,11 +4544,11 @@ function toast(msg, type, dur) {
 }
 
 function showLoading(msg) {
-  document.getElementById('loading-overlay').classList.add('show');
-  document.getElementById('loading-text').textContent = msg||'Processing...';
+  document.getElementById('lov').classList.add('show');
+  document.getElementById('ltxt').textContent = msg||'Processing...';
 }
 function hideLoading() {
-  document.getElementById('loading-overlay').classList.remove('show');
+  document.getElementById('lov').classList.remove('show');
 }
 
 // Init
@@ -4582,7 +4582,7 @@ function showPage(name) {
   var nav = document.querySelector('.nav-item[onclick*="\''+name+'\'"]');
   if(nav) nav.classList.add('active');
   var allTitles = Object.assign({}, PAGE_TITLES || {}, PAGE_TITLES_EXT);
-  document.getElementById('page-title').textContent = allTitles[name] || name;
+  document.getElementById('pg-title').textContent = allTitles[name] || name;
 
   // Route to loader
   var loaders = {
@@ -4618,13 +4618,13 @@ function calToday(){ _calDate = new Date(); renderCalendar(); }
 function renderCalendar(){
   var yr = _calDate.getFullYear(), mo = _calDate.getMonth();
   var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var lbl = document.getElementById('cal-month-label');
+  var lbl = document.getElementById('cal-lbl');
   if(lbl) lbl.textContent = months[mo]+' '+yr;
 
   var first = new Date(yr,mo,1).getDay();
   var days = new Date(yr,mo+1,0).getDate();
   var today = new Date(); today.setHours(0,0,0,0);
-  var flt = (document.getElementById('cal-type-filter')||{value:'all'}).value;
+  var flt = (document.getElementById('cal-flt')||{value:'all'}).value;
 
   // Collect events from tenders
   var events = {}; // date string -> [{type,label,tid,color}]
@@ -4684,7 +4684,7 @@ var STAGES = ['Identified','Documents Ready','Pre-bid Submitted','Submitted','Aw
 var STAGE_COLORS = {Identified:'var(--t3)',Won:'var(--green)',Lost:'var(--red2)',Submitted:'var(--purple)','Awaiting Result':'var(--amber)','Documents Ready':'var(--cyan)','Pre-bid Submitted':'var(--blue2)'};
 
 function renderKanban(){
-  var board = document.getElementById('kanban-board');
+  var board = document.getElementById('kanban');
   if(!board) return;
   var tenders = Object.values(_lastDb||{});
   var cols = {};
@@ -4734,10 +4734,10 @@ function loadCorrigendum(tid){
 }
 
 function renderCorrigendums(){
-  var el = document.getElementById('corr-list');
+  var el = document.getElementById('corr-body');
   if(!el||!_corrTender) return;
   var corrs = _corrTender.corrigendums||[];
-  document.getElementById('corr-count').textContent = corrs.length+' corrigendum(s)';
+  document.getElementById('corr-cnt').textContent = corrs.length+' corrigendum(s)';
   if(!corrs.length){
     el.innerHTML='<div class="empty-state"><div class="ei">📋</div><p>No corrigendums recorded for this tender.<br>Click "+ Add Corrigendum" to track RFP amendments.</p></div>';
     return;
@@ -4759,7 +4759,7 @@ function renderCorrigendums(){
 }
 
 function addCorrigendum(){
-  var tid = (document.getElementById('corr-tender-sel')||{value:''}).value;
+  var tid = (document.getElementById('corr-sel')||{value:''}).value;
   if(!tid){toast('Select a tender first','info');return;}
   var num = prompt('Corrigendum number:','1');
   if(!num) return;
@@ -4791,7 +4791,7 @@ function deleteCorrigendum(i){
 var _pbmTid = null;
 function loadPreBidMeeting(tid){
   _pbmTid=tid;
-  if(!tid){ document.getElementById('pbm-content').innerHTML='<div class="empty-state"><div class="ei">📅</div><p>Select a tender.</p></div>'; return; }
+  if(!tid){ document.getElementById('pbm-body').innerHTML='<div class="empty-state"><div class="ei">📅</div><p>Select a tender.</p></div>'; return; }
   var t = _lastDb[tid]||{};
   var pbm = t.prebid_meeting||{};
   var qlist = (pbm.queries_submitted||[]).map(function(q,i){
@@ -4801,7 +4801,7 @@ function loadPreBidMeeting(tid){
       +'<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:rgba('+(q.answered?'16,185,129':'245,158,11')+', .1);color:var('+(q.answered?'--green2':'--amber2')+')">'+( q.answered?'Answered':'Pending')+'</span>'
       +'</div>';
   }).join('');
-  document.getElementById('pbm-content').innerHTML = '<div class="card"><div class="card-title">Pre-bid Meeting Details</div>'
+  document.getElementById('pbm-body').innerHTML = '<div class="card"><div class="card-title">Pre-bid Meeting Details</div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px">'
     +'<div class="form-group"><label class="form-label">Meeting Date</label><input class="form-input" id="pbm-date" type="date" value="'+(_pDate(pbm.date)||'')+'"></div>'
     +'<div class="form-group"><label class="form-label">Time</label><input class="form-input" id="pbm-time" value="'+(pbm.time||'')+'"></div>'
@@ -4858,7 +4858,7 @@ function addPBMQuery(){
 // ── BID RULES PAGE ───────────────────────────────────────────────────────────
 function renderBidRulesPage(){
   var br = (profileData||{}).bid_rules||{};
-  var el = document.getElementById('bidrules-grid');
+  var el = document.getElementById('br-grid');
   if(!el) return;
   var makeCol = function(title,key,color,desc){
     var items = br[key]||[];
@@ -4902,7 +4902,7 @@ function saveBidRules(){
 // ── COMPETITOR TRACKING ──────────────────────────────────────────────────────
 var _competitors = JSON.parse(localStorage.getItem('nit_competitors')||'[]');
 function renderCompetitors(){
-  var el = document.getElementById('comp-tbody');
+  var el = document.getElementById('comp-tb');
   var kpis = document.getElementById('comp-kpis');
   if(!el) return;
   var wins = _competitors.filter(function(c){return c.outcome==='Won'}).length;
@@ -4949,7 +4949,7 @@ function deleteComp(i){
 // ── BANK GUARANTEE / PS TRACKER ──────────────────────────────────────────────
 var _bgList = JSON.parse(localStorage.getItem('nit_bg')||'[]');
 function renderBGTracker(){
-  var el = document.getElementById('bg-tbody');
+  var el = document.getElementById('bg-tb');
   var kpis = document.getElementById('bg-kpis');
   if(!el) return;
   var now = new Date(); now.setHours(0,0,0,0);
@@ -5036,14 +5036,14 @@ function renderPortals(){
 function checkDSCExpiry(){
   var to = document.getElementById('dsc-to');
   var status = document.getElementById('dsc-status');
-  var alert = document.getElementById('dsc-alert');
+  var alert = document.getElementById('dsc-status');
   if(!to||!to.value) return;
   var d = new Date(to.value);
   var now = new Date(); now.setHours(0,0,0,0);
   var days = Math.round((d-now)/86400000);
   if(status) status.textContent = days<0?'⚠ EXPIRED':'Valid for '+days+' days';
   if(status) status.style.color = days<0?'var(--red2)':days<=30?'var(--amber2)':'var(--green2)';
-  if(alert&&days<=30){ alert.style.display='flex'; document.getElementById('dsc-alert-text').textContent='DSC expiring in '+days+' days — renew immediately to avoid bid submission failure!'; }
+  if(alert&&days<=30){ alert.style.display='flex'; document.getElementById('dsc-status').textContent='DSC expiring in '+days+' days — renew immediately to avoid bid submission failure!'; }
 }
 function saveDSC(){ /* persist to localStorage */ }
 function addPortal(){ var n=prompt('Portal name:',''); if(!n) return; _portals.push({name:n,url:prompt('URL:','https://'),user:prompt('Username:','nascent.tender@nascentinfo.com'),region:prompt('State/Region:','Central')}); localStorage.setItem('nit_portals',JSON.stringify(_portals)); renderPortals(); }
@@ -5053,7 +5053,7 @@ function deletePortal(i){ if(!confirm('Remove?')) return; _portals.splice(i,1); 
 // ── AMC TRACKER ──────────────────────────────────────────────────────────────
 var _amcList = JSON.parse(localStorage.getItem('nit_amc')||'[]');
 function renderAMCTracker(){
-  var el=document.getElementById('amc-tbody');
+  var el=document.getElementById('amc-tb');
   var kpis=document.getElementById('amc-kpis');
   if(!el) return;
   var now=new Date(); now.setHours(0,0,0,0);
@@ -5091,7 +5091,7 @@ function deleteAMC(i){ if(!confirm('Delete?')) return; _amcList.splice(i,1); loc
 
 // ── ALERTS / NOTICES ─────────────────────────────────────────────────────────
 function renderNotices(){
-  var el=document.getElementById('notices-list');
+  var el=document.getElementById('notices-body');
   if(!el) return;
   var now=new Date(); now.setHours(0,0,0,0);
   var notices=[];
@@ -5900,6 +5900,20 @@ document.addEventListener('DOMContentLoaded',function(){
   go('dashboard');
 });
 
+
+function anDrop(e){
+  e.preventDefault();
+  var dz=document.getElementById('an-dz');
+  if(dz)dz.classList.remove('drag');
+  var files=e.dataTransfer.files;
+  if(files.length){
+    _droppedFiles=Array.from(files);
+    var el=document.getElementById('an-fl');
+    if(el)el.textContent=_droppedFiles.length+' file(s) ready: '+Array.from(files).map(function(f){return f.name;}).join(', ').substring(0,60);
+    var dz2=document.getElementById('an-dz');
+    if(dz2)dz2.classList.add('has');
+  }
+}
 </script>
 </body>
 </html>
