@@ -1696,3 +1696,161 @@ async def test_t247():
 @app.post("/auto-download/{t247_id}")
 async def auto_download_tender(t247_id: str):
     return {"status": "unavailable", "message": "Download manually from tender247.com — Playwright not available on Render free tier."}
+
+
+# ── TENDER UPDATE (alias for status) ─────────────────────────
+@app.post("/tender/{t247_id}/update")
+async def update_tender_fields(t247_id: str, body: dict = Body(...)):
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id))
+        if not t:
+            raise HTTPException(404, "Tender not found")
+        allowed = {"verdict","reason","status","notes","notes_internal","pipeline_stage",
+                   "outcome","outcome_value","outcome_competitor","outcome_notes"}
+        for k, v in body.items():
+            if k in allowed:
+                t[k] = v
+        t["updated_at"] = datetime.now().isoformat()
+        db["tenders"][str(t247_id)] = t
+        save_db(db)
+    return {"status": "ok", "t247_id": t247_id}
+
+
+# ── VAULT (doc storage) ───────────────────────────────────────
+_vault: list = []
+
+@app.get("/vault/list")
+async def vault_list():
+    return {"files": _vault}
+
+@app.post("/vault/upload")
+async def vault_upload(file: UploadFile = File(...), category: str = "general"):
+    import base64
+    data = await file.read()
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": file.filename,
+        "category": category,
+        "size": len(data),
+        "uploaded_at": datetime.now().isoformat(),
+        "b64": base64.b64encode(data).decode(),
+        "mime": file.content_type or "application/octet-stream",
+    }
+    _vault.append(entry)
+    return {"status": "ok", "file": {k: v for k, v in entry.items() if k != "b64"}}
+
+@app.delete("/vault/delete/{file_id}")
+async def vault_delete(file_id: str):
+    global _vault
+    before = len(_vault)
+    _vault = [f for f in _vault if f.get("id") != file_id]
+    return {"status": "ok", "deleted": before - len(_vault)}
+
+@app.get("/vault/download/{file_id}")
+async def vault_download(file_id: str):
+    import base64
+    from fastapi.responses import Response
+    f = next((x for x in _vault if x.get("id") == file_id), None)
+    if not f:
+        raise HTTPException(404, "File not found")
+    return Response(content=base64.b64decode(f["b64"]),
+                    media_type=f.get("mime","application/octet-stream"),
+                    headers={"Content-Disposition": f'attachment; filename="{f["name"]}"'})
+
+
+# ── POST-AWARD MILESTONES ─────────────────────────────────────
+@app.get("/post-award/{t247_id}/milestones")
+async def get_milestones(t247_id: str):
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id), {})
+    return {"milestones": t.get("milestones", []), "invoices": t.get("invoices", [])}
+
+@app.post("/post-award/{t247_id}/milestones")
+async def add_milestone(t247_id: str, body: dict = Body(...)):
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id))
+        if not t:
+            raise HTTPException(404, "Tender not found")
+        ms = t.get("milestones", [])
+        new_ms = {
+            "id": str(uuid.uuid4())[:8],
+            "name": body.get("name", "Milestone"),
+            "due_date": body.get("due_date", ""),
+            "value_pct": body.get("value_pct", 0),
+            "status": body.get("status", "Pending"),
+            "notes": body.get("notes", ""),
+            "created_at": datetime.now().isoformat(),
+        }
+        ms.append(new_ms)
+        t["milestones"] = ms
+        db["tenders"][str(t247_id)] = t
+        save_db(db)
+    return {"status": "ok", "milestone": new_ms}
+
+@app.post("/post-award/{t247_id}/milestones/setup")
+async def setup_milestones(t247_id: str, body: dict = Body(...)):
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id))
+        if not t:
+            raise HTTPException(404, "Tender not found")
+        t["milestones"] = body.get("milestones", [])
+        db["tenders"][str(t247_id)] = t
+        save_db(db)
+    return {"status": "ok", "count": len(t["milestones"])}
+
+@app.patch("/post-award/{t247_id}/milestones/{mid}")
+async def update_milestone(t247_id: str, mid: str, body: dict = Body(...)):
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id))
+        if not t:
+            raise HTTPException(404, "Tender not found")
+        for ms in t.get("milestones", []):
+            if ms.get("id") == mid:
+                ms.update({k: v for k, v in body.items()})
+                ms["updated_at"] = datetime.now().isoformat()
+                break
+        db["tenders"][str(t247_id)] = t
+        save_db(db)
+    return {"status": "ok"}
+
+@app.post("/post-award/{t247_id}/invoice")
+async def add_invoice(t247_id: str, body: dict = Body(...)):
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id))
+        if not t:
+            raise HTTPException(404, "Tender not found")
+        invoices = t.get("invoices", [])
+        inv = {
+            "id": str(uuid.uuid4())[:8],
+            "invoice_no": body.get("invoice_no", ""),
+            "amount": body.get("amount", 0),
+            "date": body.get("date", ""),
+            "status": body.get("status", "Raised"),
+            "milestone_id": body.get("milestone_id", ""),
+            "created_at": datetime.now().isoformat(),
+        }
+        invoices.append(inv)
+        t["invoices"] = invoices
+        db["tenders"][str(t247_id)] = t
+        save_db(db)
+    return {"status": "ok", "invoice": inv}
+
+@app.post("/post-award/{t247_id}/{doc_type}")
+async def post_award_doc(t247_id: str, doc_type: str, body: dict = Body(...)):
+    """Generic post-award doc save (amc, extension, etc.)"""
+    with db_lock:
+        db = load_db()
+        t = db["tenders"].get(str(t247_id))
+        if not t:
+            raise HTTPException(404, "Tender not found")
+        t[f"pa_{doc_type}"] = body
+        t[f"pa_{doc_type}_updated"] = datetime.now().isoformat()
+        db["tenders"][str(t247_id)] = t
+        save_db(db)
+    return {"status": "ok", "type": doc_type}
