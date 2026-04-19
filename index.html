@@ -1913,6 +1913,10 @@ async function analyseTender() {
             document.getElementById('an-warn').style.display = '';
             console.error('renderAnalysisResult failed:', re);
           }
+          // Auto-open document preview panel
+          if (typeof dppShowAnalysis === 'function') dppShowAnalysis(td);
+          // Ensure download button always visible after analysis
+          _ensureDownloadBtn(d, tid);
           if (tid) { setActive(tid,''); loadDashboard(); }
           toast('Analysis complete: ' + ((td.overall_verdict||{}).verdict||td.verdict||'done'), 'success');
 
@@ -5249,6 +5253,34 @@ function dppShowDocList(title, files, zipBlob, zipName) {
     downloads.push({label: '📦 Download ZIP', url: zipBlob});
   }
   dppOpen(title, html, downloads);
+}
+
+function _ensureDownloadBtn(raw, tid) {
+  var btn = document.getElementById('an-dl-btn');
+  if (!btn) return;
+  // If blob already set up, just make visible
+  if (raw && raw.doc_b64 && raw.doc_filename) {
+    try {
+      var blobUrl = _b64ToBlob(raw.doc_b64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      btn.style.display = '';
+      btn.onclick = function(){ _triggerBlobDownload(blobUrl, raw.doc_filename); };
+      anAddDownloadBlob('📄 BidNoBid Report (.docx)', blobUrl, raw.doc_filename);
+      return;
+    } catch(e) { console.warn('blob failed', e); }
+  }
+  // Fallback: fetch latest report from /reports-list
+  btn.style.display = '';
+  btn.textContent = '⬇ Report';
+  btn.onclick = function() {
+    fetch('/reports-list').then(function(r){ return r.json(); }).then(function(d) {
+      var reports = d.reports || d || [];
+      // Find report matching this tid
+      var match = reports.find(function(r){ return r.t247_id == tid || (r.filename||'').includes(tid); });
+      var file = match ? match.filename : (reports[0] ? reports[0].filename : null);
+      if (file) { window.open('/download/' + file, '_blank'); }
+      else { toast('Report file not found — try Re-analyse', 'error'); }
+    }).catch(function(){ toast('Could not fetch report list', 'error'); });
+  };
 }
 
 var _lastDppTender = null;
