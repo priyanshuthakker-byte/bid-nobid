@@ -4879,6 +4879,7 @@ var _origLoadDash = loadDashboard;
 function loadDashboard(){
   fetch('/dashboard').then(function(r){return r.json();}).then(function(d){
     _db={};(d.tenders||[]).forEach(function(t){_db[String(t.t247_id)]=t;});
+    _lastDb = _db; // sync so renderDash() can read it
     if(typeof allTenders!=='undefined') allTenders=d.tenders||[];
     if(typeof _origLoadDash==='function' && _origLoadDash !== loadDashboard) _origLoadDash();
     else {
