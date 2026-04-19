@@ -1892,8 +1892,7 @@ function renderAnalysisResult(td, raw) {
     ['Location', td.location], ['Portal', td.portal], ['Contact', td.contact],
     ['Technology Mandatory', td.technology_mandatory],
   ];
-  function sv(v) { if(!v||v==='—'||v==='Not specified'||v==='Refer document') return null; if(typeof v==='object'&&v!==null&&v.value!==undefined) return v.value||null; return String(v); }
-  function ref(v) { if(typeof v!=='object'||!v) return ''; return [v.clause_ref,v.page_no].filter(Boolean).join(' · '); }
+    function ref(v) { if(typeof v!=='object'||!v) return ''; return [v.clause_ref,v.page_no].filter(Boolean).join(' · '); }
   var snapHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">';
   snap.forEach(function(row) {
     var val=sv(row[1]); if(!val) return;
@@ -4365,29 +4364,6 @@ function saveBidRules(){
 
 // ── COMPETITOR TRACKING ──────────────────────────────────────────────────────
 var _competitors = JSON.parse(localStorage.getItem('nit_competitors')||'[]');
-function renderCompetitors(){
-  var el = document.getElementById('comp-tb');
-  var kpis = document.getElementById('comp-kpis');
-  if(!el) return;
-  var wins = _competitors.filter(function(c){return c.outcome==='Won'}).length;
-  var losses = _competitors.filter(function(c){return c.outcome==='Lost'}).length;
-  var rate = _competitors.length ? Math.round(wins/_competitors.length*100) : 0;
-  if(kpis) kpis.innerHTML = [
-    {n:_competitors.length,l:'Total Tracked',c:'var(--blue2)'},
-    {n:wins,l:'Won',c:'var(--green2)'},
-    {n:losses,l:'Lost',c:'var(--red2)'},
-    {n:rate+'%',l:'Win Rate',c:rate>=50?'var(--green2)':'var(--amber2)'}
-  ].map(function(k){return '<div class="kpi-card"><div class="kpi-n" style="color:'+k.c+'">'+k.n+'</div><div class="kpi-l">'+k.l+'</div></div>';}).join('');
-  el.innerHTML = _competitors.map(function(c,i){
-    return '<tr><td style="font-size:11px">'+c.tender+'</td>'
-      +'<td style="font-weight:600;color:var(--t1)">'+c.competitor+'</td>'
-      +'<td style="font-family:var(--fm)">'+( c.their_rate||'—')+'</td>'
-      +'<td style="font-family:var(--fm)">'+( c.our_quote||'—')+'</td>'
-      +'<td><span class="vbadge '+(c.outcome==='Won'?'vb-bid':'vb-nobid')+'">'+c.outcome+'</span></td>'
-      +'<td style="font-size:11px;color:var(--t2)">'+( c.notes||'')+'</td>'
-      +'<td><button class="ract" onclick="deleteComp('+i+')">✕</button></td></tr>';
-  }).join('');
-}
 function addCompetitor(){
   var c = {
     tender:prompt('Tender name/ID:',''),
@@ -4658,27 +4634,35 @@ function go(name){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+name);
   if(pg) pg.classList.add('on');
-  document.querySelectorAll('.nav-i').forEach(function(n){n.classList.remove('on');});
   document.querySelectorAll('.nav-i').forEach(function(n){
     var oc=n.getAttribute('onclick')||'';
-    if(oc.includes("'"+name+"'")) n.classList.add('on');
+    n.classList.toggle('on', oc.includes("'"+name+"'"));
   });
-  var t=PG_TITLES[name]||name;
+  var titles={dashboard:'Dashboard',tenders:'All Tenders',calendar:'Calendar',
+    pipeline:'Pipeline Kanban',notices:'Alerts',analyse:'Analyse Tender',
+    corrigendum:'Corrigendum',prebidmtg:'Pre-bid Meeting',bidrules:'Bid Rules',
+    checklist:'Checklist',boq:'BOQ / Costing',competitors:'Competitors',
+    documents:'Documents',vault:'Doc Vault',letterhead:'Letterhead',
+    emd:'EMD Tracker',bankguarantee:'Bank Guarantee',reports:'Reports',
+    analytics:'Analytics',postaward:'Post-Award',amc:'AMC Tracker',
+    skipped:'Skipped',portals:'Portals & DSC',profile:'Company Profile',
+    diagnose:'Self-Diagnose',settings:'Settings'};
   var ptEl=document.getElementById('pg-title');
-  if(ptEl) ptEl.textContent=t;
+  if(ptEl) ptEl.textContent=titles[name]||name;
   var loaders={
-    dashboard:loadDashboard,settings:loadSettings,analytics:loadAnalytics,
-    skipped:loadSkipped,emd:loadEMDPage,reports:loadReports,
-    vault:vaultRefresh,profile:loadProfile,calendar:renderCal,
-    pipeline:renderKanban,notices:renderNotices,
-    corrigendum:function(){populateSelects();loadCorr('');},
-    prebidmtg:function(){populateSelects();loadPBM('');},
-    bidrules:renderBRPage,competitors:renderComps,
-    bankguarantee:renderBGPage,portals:renderPortals,
-    amc:renderAMCPage,boq:populateSelects,checklist:populateSelects,
-    documents:populateSelects,postaward:populatePASelect
+    dashboard:loadDashboard, settings:loadSettings, analytics:loadAnalytics,
+    skipped:loadSkipped, emd:loadEMDPage, reports:loadReports,
+    vault:vaultRefresh, profile:loadProfile,
+    calendar:renderCalendar, pipeline:renderKanban, notices:renderNotices,
+    corrigendum:loadCorrigendum, prebidmtg:loadPreBidMeeting,
+    bidrules:renderBRPage, portals:renderPortals,
+    boq:populateSelects, checklist:populateSelects,
+    documents:populateSelects, postaward:populatePASelect,
+    competitors:function(){renderCompetitors&&renderCompetitors();},
+    bankguarantee:function(){renderBGTable&&renderBGTable();},
+    amc:function(){renderAMCTable&&renderAMCTable();}
   };
-  if(loaders[name]) try{loaders[name]();}catch(e){}
+  if(loaders[name]) try{loaders[name]();}catch(e){console.warn('Loader error:',name,e);}
 }
 
 function openRP(tid){
@@ -4823,6 +4807,37 @@ function populatePASelect(){
     return '<option value="'+t.t247_id+'">'+t.t247_id+' — '+(t.brief||'').substring(0,40)+'</option>';
   }).join('');
 }
+
+function openStageM(tid){
+  document.getElementById('stage-tid').value=tid;
+  var m=document.getElementById('stage-modal');
+  if(m)m.classList.add('open');
+}
+function saveStage(){
+  var tid=document.getElementById('stage-tid').value;
+  var stage=document.getElementById('stage-sel').value;
+  var note=document.getElementById('stage-note').value;
+  if(!tid)return;
+  fetch('/tender/'+tid+'/stage',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({stage:stage,note:note})})
+    .then(function(r){return r.json();}).then(function(){
+      toast('Stage updated','success');
+      closeM('stage-modal');
+      loadDashboard();
+    }).catch(function(e){toast('Failed: '+e.message,'error');});
+}
+
+function renderCompetitors(){
+  var el=document.getElementById('comp-tb');
+  if(el&&typeof _compList!=='undefined') renderComps&&renderComps();
+}
+function renderBGTable(){
+  if(typeof renderBGPage==='function') renderBGPage();
+}
+function renderAMCTable(){
+  if(typeof renderAMCPage==='function') renderAMCPage();
+}
+function closeM(id){var m=document.getElementById(id);if(m)m.classList.remove('open');}
 </script>
 </body>
 </html>
