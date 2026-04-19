@@ -71,8 +71,14 @@ def save_history(history: List[Dict]):
     except: pass
 
 
+_ctx_cache: Dict = {"ts": 0, "val": ""}
+
 def build_context() -> str:
-    """Rich context — everything AI needs to give accurate answers."""
+    """Rich context with 3-min cache to reduce redundant DB reads."""
+    import time
+    now = time.time()
+    if now - _ctx_cache["ts"] < 180 and _ctx_cache["val"]:
+        return _ctx_cache["val"]
     db = load_db()
     tenders = list(db["tenders"].values())
     profile = load_profile()
@@ -118,7 +124,7 @@ def build_context() -> str:
     pref_list = ",".join(rules.get("preferred_sectors",[])[:8])
     cond_list = ",".join(rules.get("conditional",[])[:6])
 
-    return (
+    result = (
         f"TODAY:{today.strftime('%d-%b-%Y')} | "
         f"TENDERS:total={total},BID={bid},COND={cond},NOBID={nobid},analysed={analysed} | "
         f"PIPELINE:{json.dumps(stages)} | "
@@ -132,6 +138,10 @@ def build_context() -> str:
         f"PROJECTS:{proj_summary} | "
         f"RULES:DNB_count={dnb_count},preferred={pref_list},conditional={cond_list}"
     )
+    import time
+    _ctx_cache["ts"] = time.time()
+    _ctx_cache["val"] = result
+    return result
 
 
 SYSTEM_PROMPT = """You are Bid Assistant — the AI brain of Nascent Info Technologies' tender management system.
@@ -197,17 +207,17 @@ def call_gemini_chat(messages: List[Dict], context: str, api_key: str) -> str:
 
     system = SYSTEM_PROMPT + "\n\nLIVE DATA:\n" + context
     conversation = "SYSTEM:\n" + system + "\n\n"
-    for msg in messages[-6:]:
+    for msg in messages[-4:]:
         role = "USER" if msg["role"] == "user" else "ASSISTANT"
         conversation += role + ": " + str(msg.get("content","")) + "\n\n"
     conversation += "ASSISTANT:"
 
-    models = ["gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro-latest"]
+    models = ["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash-latest"]
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         payload = json.dumps({
             "contents": [{"parts": [{"text": conversation}]}],
-            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 800},
+            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 600},
         }).encode("utf-8")
         try:
             req = urllib.request.Request(url, data=payload,
@@ -257,6 +267,9 @@ def extract_actions(text: str) -> List[Dict]:
     return actions
 
 
+def _bust_ctx_cache():
+    _ctx_cache["ts"] = 0
+
 def execute_action(action: Dict) -> str:
     """Execute action and return human-readable result."""
     act = action.get("action","")
@@ -281,6 +294,7 @@ def execute_action(action: Dict) -> str:
                 rules["do_not_bid_remarks"] = remarks
             profile["bid_rules"] = rules
             save_profile(profile)
+            _bust_ctx_cache()
             return f"✓ Rule added: '{keyword}' → {rule_type.replace('_',' ')}"
         return f"Rule already exists: '{keyword}'"
 

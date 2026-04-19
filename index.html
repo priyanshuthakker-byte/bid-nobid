@@ -569,6 +569,62 @@ textarea.fi{height:auto;padding:7px 9px;resize:vertical}
 .dl-urg{color:var(--red2);font-weight:800}
 .dl-exp{color:var(--t4)}
 .emd-rule{font-size:11px;color:var(--t2);line-height:1.8;padding:10px 13px;background:var(--bg3);border-radius:var(--r);border-left:3px solid var(--blue)}
+
+/* ── GLOBAL CHAT PANEL ─────────────────────────────── */
+#gchat-btn{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#06b6d4);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,99,235,.55);z-index:500;transition:transform .2s,box-shadow .2s}
+#gchat-btn:hover{transform:scale(1.09);box-shadow:0 6px 30px rgba(37,99,235,.75)}
+#gchat-btn svg{width:22px;height:22px;color:#fff}
+#gchat-btn .gchat-unread{position:absolute;top:1px;right:1px;width:14px;height:14px;border-radius:50%;background:var(--red);border:2px solid var(--bg0);font-size:8px;font-weight:800;color:#fff;display:none;align-items:center;justify-content:center}
+#gchat-panel{position:fixed;right:0;top:0;bottom:0;width:390px;background:var(--bg1);border-left:1px solid var(--bd2);display:flex;flex-direction:column;z-index:600;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(0,0,0,.4)}
+#gchat-panel.open{transform:translateX(0)}
+.gcp-head{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:9px;flex-shrink:0;background:var(--bg2)}
+.gcp-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0;animation:pulse-green 2s infinite}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 6px var(--green)}50%{box-shadow:0 0 14px var(--green)}}
+.gcp-info{flex:1}
+.gcp-title{font-size:13px;font-weight:700;color:var(--t0)}
+.gcp-sub{font-size:9px;color:var(--t3);margin-top:1px}
+.gcp-ctx{padding:6px 11px;border-bottom:1px solid var(--bd);flex-shrink:0;display:flex;align-items:center;gap:6px}
+.gcp-ctx select{flex:1;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);padding:3px 7px;font-size:10px;color:var(--t2);outline:none;font-family:var(--ff)}
+.gcp-ctx select:focus{border-color:var(--blue)}
+.gcp-quick{padding:6px 10px;border-bottom:1px solid var(--bd);display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0}
+.gcp-q{font-size:9px;padding:3px 8px;border-radius:20px;background:var(--bg3);border:1px solid var(--bd2);color:var(--t2);cursor:pointer;transition:all .12s;white-space:nowrap}
+.gcp-q:hover{border-color:var(--blue);color:var(--blue3)}
+.gcp-msgs{flex:1;overflow-y:auto;padding:11px 12px;display:flex;flex-direction:column;gap:8px}
+.gcp-msg-u{align-self:flex-end;max-width:84%;background:var(--blue);color:#fff;border-radius:12px 12px 3px 12px;padding:9px 12px;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.gcp-msg-b{align-self:flex-start;max-width:92%;background:var(--bg3);border:1px solid var(--bd2);border-radius:12px 12px 12px 3px;padding:9px 12px;font-size:12px;color:var(--t1);line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.gcp-msg-s{align-self:center;font-size:10px;color:var(--green2);background:rgba(16,185,129,.08);padding:3px 11px;border-radius:10px;max-width:95%;text-align:center}
+.gcp-msg-err{align-self:center;font-size:10px;color:var(--red2);background:rgba(239,68,68,.08);padding:3px 11px;border-radius:10px}
+.gcp-foot{padding:9px 10px;border-top:1px solid var(--bd);display:flex;gap:6px;flex-shrink:0;align-items:flex-end}
+.gcp-inp{flex:1;background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r2);padding:8px 11px;font-size:12px;color:var(--t1);outline:none;resize:none;font-family:var(--ff);line-height:1.45;max-height:110px;min-height:38px}
+.gcp-inp:focus{border-color:var(--blue)}
+.gcp-send{width:36px;height:36px;flex-shrink:0;background:var(--blue);border:none;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .13s}
+.gcp-send:hover{background:#1d4ed8}
+.gcp-send[disabled]{background:var(--bg4);cursor:not-allowed}
+.gcp-send svg{width:14px;height:14px;color:#fff}
+.gcp-typing span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--t3);margin:0 1px;animation:dot-bounce .9s infinite}
+.gcp-typing span:nth-child(2){animation-delay:.15s}
+.gcp-typing span:nth-child(3){animation-delay:.3s}
+@keyframes dot-bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* ── DOC PREVIEW PANEL ─────────────────────────────── */
+#dpp{position:fixed;right:0;top:0;bottom:0;width:52vw;max-width:720px;min-width:320px;background:var(--bg1);border-left:1px solid var(--bd2);display:flex;flex-direction:column;z-index:580;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(0,0,0,.4)}
+#dpp.open{transform:translateX(0)}
+.dpp-head{padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:9px;flex-shrink:0;background:var(--bg2)}
+.dpp-icon{font-size:18px;flex-shrink:0}
+.dpp-title{font-size:13px;font-weight:700;color:var(--t0);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpp-body{flex:1;overflow-y:auto;padding:18px}
+.dpp-doc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:22px 26px;font-size:12px;line-height:1.8;color:var(--t1);min-height:400px}
+.dpp-doc h1{font-size:16px;font-weight:800;color:var(--t0);margin:0 0 14px;letter-spacing:-.3px}
+.dpp-doc h2{font-size:12px;font-weight:700;color:var(--t1);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);padding-bottom:4px}
+.dpp-doc h3{font-size:11px;font-weight:700;color:var(--blue3);margin:12px 0 5px}
+.dpp-doc table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+.dpp-doc table th{background:var(--bg3);padding:6px 9px;text-align:left;font-weight:700;color:var(--t2);font-size:9px;text-transform:uppercase;letter-spacing:.4px;border:1px solid var(--bd2)}
+.dpp-doc table td{padding:6px 9px;border:1px solid var(--bd);color:var(--t2);vertical-align:top}
+.dpp-doc .verdict-block{border-radius:var(--r);padding:12px 14px;margin-bottom:14px;font-weight:700;font-size:14px}
+.dpp-doc .field-row{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--bd);font-size:11px}
+.dpp-doc .field-lbl{color:var(--t3);min-width:120px;flex-shrink:0}
+.dpp-doc .field-val{color:var(--t1);flex:1;word-break:break-word}
+.dpp-foot{padding:10px 14px;border-top:1px solid var(--bd);display:flex;gap:7px;flex-shrink:0;background:var(--bg2)}
 </style>
 </head>
 <body>
@@ -1404,6 +1460,62 @@ textarea.fi{height:auto;padding:7px 9px;resize:vertical}
   </div>
 </div><!-- /#main -->
 </div><!-- /#app -->
+
+<!-- ══ GLOBAL CHAT PANEL ══════════════════════════════════════ -->
+<button id="gchat-btn" onclick="gchatToggle()" title="Bid Assistant">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span id="gchat-unreads" class="gchat-unread"></span>
+</button>
+
+<div id="gchat-panel">
+  <div class="gcp-head">
+    <div class="gcp-dot"></div>
+    <div class="gcp-info">
+      <div class="gcp-title">Bid Assistant</div>
+      <div class="gcp-sub">Ask anything · Take actions · Update anything</div>
+    </div>
+    <button class="ract" onclick="gchatClearHistory()" title="Clear history" style="font-size:10px">🗑</button>
+    <button class="ract" onclick="gchatToggle()" title="Close" style="margin-left:3px">✕</button>
+  </div>
+  <div class="gcp-ctx">
+    <span style="font-size:10px;color:var(--t3);white-space:nowrap">Context:</span>
+    <select id="gchat-ctx-sel">
+      <option value="">No specific tender (general)</option>
+    </select>
+  </div>
+  <div class="gcp-quick">
+    <div class="gcp-q" onclick="gchatQuick('What are our urgent tenders this week?')">⚠ Urgent</div>
+    <div class="gcp-q" onclick="gchatQuick('Show me tenders where we bid and their current stages')">📋 Pipeline</div>
+    <div class="gcp-q" onclick="gchatQuick('What is our current bid rate and win rate?')">📊 Stats</div>
+    <div class="gcp-q" onclick="gchatQuick('POA renewal status and what we need to do before next submission')">📝 POA</div>
+    <div class="gcp-q" onclick="gchatQuick('Which tenders have deadlines in the next 7 days?')">🗓 Deadlines</div>
+    <div class="gcp-q" onclick="gchatQuick('List our do-not-bid rules and explain them')">🚫 Rules</div>
+  </div>
+  <div class="gcp-msgs" id="gchat-msgs"></div>
+  <div class="gcp-foot">
+    <textarea class="gcp-inp" id="gchat-inp" rows="1" placeholder="Ask anything or give an instruction…"
+      onkeydown="gchatInpKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
+    <button class="gcp-send" id="gchat-send-btn" onclick="gchatSend()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8l12-6-6 12-2-4-4-2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══ DOC PREVIEW PANEL ══════════════════════════════════════ -->
+<div id="dpp">
+  <div class="dpp-head">
+    <span class="dpp-icon">📄</span>
+    <div class="dpp-title" id="dpp-title">Document Preview</div>
+    <button class="btn btn-g btn-sm" onclick="openAnalysisPreview()" title="Show analysis preview" style="font-size:10px;margin-right:4px">🔍 Analysis</button>
+    <button class="ract" onclick="dppClose()">✕</button>
+  </div>
+  <div class="dpp-body" id="dpp-body">
+    <div class="empty"><div class="empty-i">📄</div><p>Generate a document or run analysis to see preview here.</p></div>
+  </div>
+  <div class="dpp-foot" id="dpp-foot">
+    <button class="btn btn-g btn-sm" onclick="dppClose()">✕ Close</button>
+  </div>
+</div>
 
 <!-- COMMAND PALETTE -->
 <div id="cmd-overlay" onclick="if(event.target===this)closeCmd()">
@@ -3274,6 +3386,7 @@ function setSbMode(mode) {
 }
 
 function renderSbPreview(td) {
+  _lastDppTender = td; // store for doc preview panel
   var el = document.getElementById('sb-prev-body');
   if (!el) return;
 
@@ -3406,7 +3519,12 @@ function _renderGeneratedDocs(d, listEl) {
       '</tbody></table></div>';
   }
 
-  toast((zipB64 ? 'ZIP downloaded + ' : '') + files.length+' documents ready in Downloads tray', 'success', 5000);
+  // Show in document preview panel
+  if (typeof dppShowDocList === 'function') {
+    var dppZipBlob = zipB64 ? _b64ToBlob(zipB64, 'application/zip') : null;
+    dppShowDocList('Submission Package (' + files.length + ' docs)', files, dppZipBlob, zipFilename);
+  }
+  toast((zipB64 ? 'ZIP downloaded + ' : '') + files.length+' documents ready', 'success', 5000);
 }
 
 
@@ -4838,6 +4956,296 @@ function renderAMCTable(){
   if(typeof renderAMCPage==='function') renderAMCPage();
 }
 function closeM(id){var m=document.getElementById(id);if(m)m.classList.remove('open');}
+
+// ══════════════════════════════════════════════════════════════
+// GLOBAL CHAT PANEL — Claude-style, works on every page
+// ══════════════════════════════════════════════════════════════
+var _gchat_open = false;
+var _gchat_busy = false;
+var _gchat_loaded = false;
+
+function gchatToggle() {
+  _gchat_open = !_gchat_open;
+  var panel = document.getElementById('gchat-panel');
+  var btn = document.getElementById('gchat-btn');
+  if (_gchat_open) {
+    panel.classList.add('open');
+    btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+    if (!_gchat_loaded) { gchatLoadHistory(); _gchat_loaded = true; }
+    var u = document.getElementById('gchat-unreads');
+    if (u) u.style.display = 'none';
+    setTimeout(function(){ var inp = document.getElementById('gchat-inp'); if(inp) inp.focus(); }, 200);
+  } else {
+    panel.classList.remove('open');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  }
+  gchatPopulateCtx();
+}
+
+function gchatPopulateCtx() {
+  var sel = document.getElementById('gchat-ctx-sel');
+  if (!sel) return;
+  var tenders = Object.values(_db || {});
+  sel.innerHTML = '<option value="">No specific tender (general)</option>' +
+    tenders.map(function(t){
+      return '<option value="' + t.t247_id + '">' + t.t247_id + ' — ' + (t.brief||t.org_name||'').substring(0,38) + '</option>';
+    }).join('');
+}
+
+function gchatLoadHistory() {
+  fetch('/chat/history').then(function(r){ return r.json(); }).then(function(d) {
+    var msgs = Array.isArray(d) ? d : (d.history || []);
+    var el = document.getElementById('gchat-msgs');
+    if (!el) return;
+    if (!msgs.length) {
+      _gchatAppend('bot', 'Hello! I\'m Bid Assistant. I can update tender stages, record outcomes, modify bid rules, add pre-bid queries, search tenders — anything you\'d normally do in the system. Just tell me what you need.');
+      return;
+    }
+    msgs.slice(-40).forEach(function(m) {
+      _gchatAppend(m.role === 'user' ? 'user' : 'bot', m.content, true);
+    });
+    gchatScroll();
+  }).catch(function() {
+    _gchatAppend('bot', 'Hello! I\'m Bid Assistant — ready to help with any tender, rule, or system update.');
+  });
+}
+
+function gchatQuick(msg) {
+  document.getElementById('gchat-inp').value = msg;
+  gchatSend();
+}
+
+async function gchatSend() {
+  if (_gchat_busy) return;
+  var inp = document.getElementById('gchat-inp');
+  var msg = (inp.value || '').trim();
+  if (!msg) return;
+  inp.value = '';
+  inp.style.height = '';
+  _gchat_busy = true;
+  document.getElementById('gchat-send-btn').disabled = true;
+
+  _gchatAppend('user', msg);
+  var typing = _gchatAppend('bot', null, false, true);
+
+  // Optionally attach tender context
+  var ctx_tid = (document.getElementById('gchat-ctx-sel') || {}).value || '';
+  var full_msg = msg;
+  if (ctx_tid && _db && _db[ctx_tid]) {
+    var t = _db[ctx_tid];
+    full_msg = '[TENDER CONTEXT: T247-' + ctx_tid + ' | ' + (t.brief||'') + ' | Verdict: ' + (t.verdict||'') + ' | Org: ' + (t.org_name||'') + ' | Deadline: ' + (t.deadline||t.bid_submission_date||'') + ']\n\n' + msg;
+  }
+
+  try {
+    var r = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: full_msg})
+    });
+    var d = await r.json();
+    typing.classList.remove('gcp-typing');
+    typing.textContent = d.response || 'No response';
+    if (d.action_result) {
+      _gchatAppend('sys', '✓ ' + d.action_result);
+      loadDashboard();
+    }
+  } catch(e) {
+    typing.classList.remove('gcp-typing');
+    typing.classList.add('gcp-msg-err');
+    typing.textContent = 'Error: ' + e.message;
+  }
+  _gchat_busy = false;
+  document.getElementById('gchat-send-btn').disabled = false;
+  gchatScroll();
+}
+
+function _gchatAppend(role, text, noScroll, isTyping) {
+  var msgs = document.getElementById('gchat-msgs');
+  var el = document.createElement('div');
+  if (role === 'user') {
+    el.className = 'gcp-msg-u';
+    el.textContent = text;
+  } else if (role === 'sys') {
+    el.className = 'gcp-msg-s';
+    el.textContent = text;
+  } else if (isTyping) {
+    el.className = 'gcp-msg-b gcp-typing';
+    el.innerHTML = '<span></span><span></span><span></span>';
+  } else {
+    el.className = 'gcp-msg-b';
+    el.textContent = text;
+  }
+  msgs.appendChild(el);
+  if (!noScroll) gchatScroll();
+  return el;
+}
+
+function gchatScroll() {
+  var msgs = document.getElementById('gchat-msgs');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function gchatClearHistory() {
+  fetch('/chat/history', {method:'DELETE'}).then(function(){
+    var msgs = document.getElementById('gchat-msgs');
+    if (msgs) msgs.innerHTML = '';
+    _gchatAppend('bot', 'Chat history cleared. How can I help you?');
+  }).catch(function(e){ toast('Clear failed: '+e.message,'error'); });
+}
+
+function gchatInpKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); gchatSend(); }
+  var inp = e.target;
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 110) + 'px';
+}
+
+// Bridge: also send anChat through gchat when sidebar not visible
+function anChat(msg) {
+  var sb = document.getElementById('an-sb');
+  if (sb && sb.style.display !== 'none' && !sb.classList.contains('hidden')) {
+    anChatSend(msg);
+  } else {
+    if (!_gchat_open) gchatToggle();
+    document.getElementById('gchat-inp').value = msg;
+    gchatSend();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// DOCUMENT PREVIEW PANEL
+// ══════════════════════════════════════════════════════════════
+var _dpp_downloads = [];
+
+function dppOpen(title, htmlContent, downloads) {
+  _dpp_downloads = downloads || [];
+  document.getElementById('dpp-title').textContent = title || 'Document Preview';
+  document.getElementById('dpp-body').innerHTML = '<div class="dpp-doc">' + htmlContent + '</div>';
+  _dppRenderFooter();
+  document.getElementById('dpp').classList.add('open');
+  // Push gchat button left so it doesn't overlap
+  var btn = document.getElementById('gchat-btn');
+  if (btn) btn.style.right = (parseInt(getComputedStyle(document.getElementById('dpp')).width) + 16) + 'px';
+}
+
+function dppClose() {
+  document.getElementById('dpp').classList.remove('open');
+  var btn = document.getElementById('gchat-btn');
+  if (btn) btn.style.right = '24px';
+}
+
+function _dppRenderFooter() {
+  var foot = document.getElementById('dpp-foot');
+  foot.innerHTML = '<button class="btn btn-g btn-sm" onclick="dppClose()">✕ Close</button>';
+  _dpp_downloads.forEach(function(dl) {
+    var btn = document.createElement('a');
+    btn.href = dl.url; btn.download = ''; btn.target = '_blank';
+    btn.className = 'btn btn-pri btn-sm';
+    btn.style.textDecoration = 'none';
+    btn.innerHTML = '⬇ ' + dl.label;
+    foot.appendChild(btn);
+  });
+}
+
+function dppShowAnalysis(td) {
+  if (!td) return;
+  var ov = td.overall_verdict || {};
+  var verdict = (td.verdict || ov.verdict || 'REVIEW').toUpperCase();
+  var vcol = verdict==='BID'?'var(--green)':verdict==='NO-BID'?'var(--red)':verdict==='CONDITIONAL'?'var(--amber)':'var(--blue2)';
+  var vbg = verdict==='BID'?'rgba(16,185,129,.08)':verdict==='NO-BID'?'rgba(239,68,68,.08)':'rgba(245,158,11,.08)';
+
+  var html = '<div class="verdict-block" style="background:'+vbg+';border:1px solid '+vcol+'40;color:'+vcol+'">'+verdict+'</div>';
+  html += '<div style="font-size:11px;color:var(--t3);margin-bottom:14px;line-height:1.6">'+(ov.reason||td.reason||'')+'</div>';
+
+  // Key fields table
+  var fields = [
+    ['Tender No', td.tender_no||td.tender_number],['Organisation', td.org_name],
+    ['Estimated Cost', td.estimated_cost],['EMD', td.emd],
+    ['Tender Fee', td.tender_fee],['Bid Deadline', td.bid_submission_date||td.deadline],
+    ['Pre-bid Date', td.prebid_query_date],['Contract Period', td.contract_period],
+    ['JV Allowed', td.jv_allowed],['MSME Exempt', td.emd_exemption],
+    ['Mode', td.mode_of_selection],['Location', td.location],
+  ];
+  html += '<h2>Tender Snapshot</h2>';
+  fields.forEach(function(f) {
+    var v = _sv(f[1]); if (!v || v==='—') return;
+    html += '<div class="field-row"><span class="field-lbl">'+f[0]+'</span><span class="field-val">'+v+'</span></div>';
+  });
+
+  // PQ Criteria
+  var pq = td.pq_criteria || [];
+  if (pq.length) {
+    html += '<h2>PQ Criteria ('+pq.length+')</h2>';
+    html += '<table><thead><tr><th>Criterion</th><th>Required</th><th>Nascent Status</th></tr></thead><tbody>';
+    pq.forEach(function(p) {
+      var col = (p.nascent_color||p.status||'').toUpperCase()==='GREEN'?'var(--green)':
+                (p.nascent_color||p.status||'').toUpperCase()==='RED'?'var(--red)':'var(--amber)';
+      var icon = (p.nascent_color||p.status||'').toUpperCase()==='GREEN'?'✓':
+                 (p.nascent_color||p.status||'').toUpperCase()==='RED'?'✗':'△';
+      html += '<tr><td>'+(p.clause_header||p.criterion||'')+'</td><td style="font-size:10px;color:var(--t3)">'+(p.required_value||p.rfp_requirement||'')+'</td>'
+        +'<td><span style="color:'+col+';font-weight:700">'+icon+' '+(p.nascent_remark||p.nascent_value||'')+'</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  // Pre-bid queries
+  var queries = td.prebid_queries || [];
+  if (queries.length) {
+    html += '<h2>Pre-bid Queries ('+queries.length+')</h2>';
+    html += '<table><thead><tr><th>#</th><th>Clause</th><th>Query</th><th>Guideline</th></tr></thead><tbody>';
+    queries.slice(0,10).forEach(function(q,i) {
+      var qtext = typeof q==='string'?q:(q.query||q.text||'');
+      var clause = q.clause_ref||q.clause||'—';
+      var guide = q.guideline_cited||q.guideline||'';
+      html += '<tr><td style="color:var(--t3)">Q'+(i+1)+'</td><td style="font-size:10px;color:var(--blue3)">'+clause+'</td>'
+        +'<td>'+qtext+'</td><td style="font-size:10px;color:var(--t3)">'+guide+'</td></tr>';
+    });
+    if (queries.length > 10) html += '<tr><td colspan="4" style="color:var(--t3);font-size:10px">+'+(queries.length-10)+' more queries</td></tr>';
+    html += '</tbody></table>';
+  }
+
+  // Scope
+  var scope = td.scope_items || td.scope || [];
+  if (scope.length) {
+    html += '<h2>Scope of Work</h2>';
+    html += '<ul style="padding-left:16px;color:var(--t2)">';
+    (Array.isArray(scope)?scope:[scope]).slice(0,15).forEach(function(s){
+      html += '<li style="margin-bottom:5px;font-size:11px">'+(typeof s==='string'?s:(s.item||s.description||JSON.stringify(s)))+'</li>';
+    });
+    html += '</ul>';
+  }
+
+  dppOpen('BidNoBid Analysis — ' + (td.brief||td.tender_name||'Tender'), html, []);
+}
+
+function dppShowDocList(title, files, zipBlob, zipName) {
+  var html = '<h2>Generated Documents</h2>';
+  html += '<p style="font-size:11px;color:var(--t3);margin-bottom:14px">'+files.length+' document(s) generated. Download individually or as a ZIP package.</p>';
+  html += '<table><thead><tr><th>Document</th><th>Action</th></tr></thead><tbody>';
+  var downloads = [];
+  files.forEach(function(f) {
+    if (f.b64) {
+      var mime = f.mime || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      var blobUrl = _b64ToBlob(f.b64, mime);
+      html += '<tr><td>'+f.name+'</td>'
+        +'<td><a href="'+blobUrl+'" download="'+(f.filename||f.name)+'" style="color:var(--blue3);font-size:11px">⬇ Download</a></td></tr>';
+    }
+  });
+  html += '</tbody></table>';
+  if (zipBlob) {
+    html += '<div style="margin-top:14px;padding:10px 13px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.2);border-radius:var(--r);font-size:11px;color:var(--blue3)">📦 Full submission package ZIP also downloaded automatically.</div>';
+    downloads.push({label: '📦 Download ZIP', url: zipBlob});
+  }
+  dppOpen(title, html, downloads);
+}
+
+var _lastDppTender = null;
+function openAnalysisPreview() {
+  if (_lastDppTender) dppShowAnalysis(_lastDppTender);
+  else if (typeof _lastAnalysisResult !== 'undefined' && _lastAnalysisResult)
+    dppShowAnalysis(_lastAnalysisResult.tender_data || _lastAnalysisResult);
+  else toast('Run an analysis first', 'info');
+}
 </script>
 </body>
 </html>
