@@ -19,10 +19,12 @@ import uuid
 from pathlib import Path
 from datetime import datetime, date
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks, Depends
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import text
 from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
@@ -34,6 +36,12 @@ from gdrive_sync import init_drive, save_to_drive, load_from_drive, is_available
 from tracker import (get_deadline_alerts, get_pipeline_stats,
                      get_win_loss_stats, generate_doc_checklist,
                      PIPELINE_STAGES, STAGE_COLORS)
+from core.config import settings
+from core.database import engine, Base, get_db_session
+from core.models import User, WorkItem, TenderRecord, TenderSource, IngestedTender, ClauseEvidence
+from core.auth import hash_password, verify_password, create_access_token, decode_token
+from core.worker import work_queue
+from core.ingestion import registry as ingestion_registry, JsonApiSource, CpppFeedSource, StatePortalTableSource
 try:
     from submission_generator import generate_submission_package
     SUBMISSION_GEN_AVAILABLE = True
@@ -76,7 +84,8 @@ LATEST_EXCEL_FILE = OUTPUT_DIR / "latest_tenders_import.xlsx"
 DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 
 # ── FIX 2: Threading lock for safe concurrent DB access ─────────────────────
-_db_lock = threading.Lock()
+_db_lock = threading.RLock()
+db_lock = _db_lock
 
 # ── Background Job Store — file-based (survives OOM restarts) ──────────────
 JOBS_DIR = OUTPUT_DIR / "jobs"
@@ -137,6 +146,155 @@ def check_admin(request: Request):
         raise HTTPException(403, "Admin token required. Set X-Admin-Token header.")
 
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+auth_scheme = HTTPBearer(auto_error=False)
+
+
+def _current_user(credentials: HTTPAuthorizationCredentials | None) -> dict:
+    if not credentials:
+        return {}
+    payload = decode_token(credentials.credentials)
+    return payload or {}
+
+
+def _require_role(credentials: HTTPAuthorizationCredentials | None, allowed_roles: set[str]) -> dict:
+    user = _current_user(credentials)
+    if not user:
+        raise HTTPException(401, "Authentication required")
+    if user.get("role") not in allowed_roles:
+        raise HTTPException(403, "Insufficient role")
+    return user
+
+
+def _handle_tender_scoring(payload: dict) -> dict:
+    """Initial worker handler; can evolve into full ML scoring."""
+    risk_score = float(payload.get("risk_score", 0) or 0)
+    margin_score = float(payload.get("margin_score", 0) or 0)
+    fit_score = float(payload.get("fit_score", 0) or 0)
+    win_probability = max(0.0, min(100.0, (margin_score * 0.35 + fit_score * 0.45 + (100 - risk_score) * 0.20)))
+    return {
+        "win_probability": round(win_probability, 2),
+        "recommended": "BID" if win_probability >= 65 else "CONDITIONAL" if win_probability >= 45 else "NO-BID",
+    }
+
+
+def _extract_clause_candidates(text_blob: str) -> list[dict]:
+    text_blob = text_blob or ""
+    patterns = {
+        "emd": r"(?:emd|earnest money deposit)[^.\n]{0,140}",
+        "turnover": r"(?:turnover|annual turnover)[^.\n]{0,180}",
+        "experience": r"(?:experience|work order|completion certificate)[^.\n]{0,200}",
+        "security": r"(?:performance security|pbg|bank guarantee)[^.\n]{0,180}",
+        "timeline": r"(?:timeline|completion period|contract period|delivery period)[^.\n]{0,180}",
+    }
+    found = []
+    for ctype, pattern in patterns.items():
+        for m in re.finditer(pattern, text_blob, flags=re.IGNORECASE):
+            snippet = m.group(0).strip()
+            if len(snippet) < 12:
+                continue
+            found.append({
+                "clause_type": ctype,
+                "clause_text": snippet[:500],
+                "evidence_text": snippet[:500],
+                "confidence": 0.55,
+            })
+            if len(found) >= 100:
+                return found
+    return found
+
+
+def _handle_ingestion_sync(payload: dict) -> dict:
+    if not settings.database_enabled:
+        raise RuntimeError("DATABASE_URL is required")
+    source_name = str(payload.get("source_name", "")).strip()
+    endpoint = str(payload.get("endpoint", "")).strip()
+    source_type = str(payload.get("source_type", "json_api")).strip().lower()
+    if not source_name:
+        raise RuntimeError("source_name is required")
+    if source_type == "json_api":
+        source = JsonApiSource(endpoint=endpoint)
+    elif source_type == "cppp_feed":
+        source = CpppFeedSource(endpoint=endpoint)
+    elif source_type == "state_portal_table":
+        source = StatePortalTableSource(endpoint=endpoint)
+    else:
+        raise RuntimeError(f"unsupported source_type: {source_type}")
+    items = source.fetch()
+    inserted = 0
+    with get_db_session() as db:
+        for row in items[:500]:
+            ext_id = str(row.get("id") or row.get("external_id") or row.get("tender_id") or "")
+            if not ext_id:
+                ext_id = f"{source_name}-{uuid.uuid4().hex[:12]}"
+            exists = (
+                db.query(IngestedTender)
+                .filter(IngestedTender.source_name == source_name, IngestedTender.external_id == ext_id)
+                .first()
+            )
+            if exists:
+                continue
+            title = str(row.get("title") or row.get("brief") or row.get("tender_name") or "")
+            org = str(row.get("org_name") or row.get("organization") or "")
+            deadline = str(row.get("deadline") or row.get("bid_submission_date") or "")
+            ref = str(row.get("ref_no") or row.get("reference_no") or "")
+            raw_text = str(row.get("raw_text") or row.get("description") or "")
+            db.add(
+                IngestedTender(
+                    source_name=source_name,
+                    external_id=ext_id,
+                    title=title[:1000],
+                    org_name=org[:255],
+                    deadline=deadline[:120],
+                    reference_no=ref[:255],
+                    payload_json=json.dumps(row, default=str),
+                    raw_text=raw_text[:20000],
+                )
+            )
+            inserted += 1
+    return {"inserted": inserted, "fetched": len(items), "source_name": source_name, "source_type": source_type}
+
+
+def _handle_clause_index(payload: dict) -> dict:
+    if not settings.database_enabled:
+        raise RuntimeError("DATABASE_URL is required")
+    t247_id = str(payload.get("t247_id", "")).strip()
+    source_record_id = int(payload.get("source_record_id") or 0)
+    if not t247_id and not source_record_id:
+        raise RuntimeError("t247_id or source_record_id is required")
+
+    if t247_id:
+        tender = get_tender(t247_id)
+        text_blob = " ".join([
+            str(tender.get("eligibility", "")),
+            str(tender.get("checklist", "")),
+            str(tender.get("raw_text", "")),
+            str(tender.get("brief", "")),
+        ])
+    else:
+        with get_db_session() as db:
+            row = db.query(IngestedTender).filter(IngestedTender.id == source_record_id).first()
+            if not row:
+                raise RuntimeError("source record not found")
+            text_blob = " ".join([row.title or "", row.raw_text or "", row.payload_json or ""])
+
+    clauses = _extract_clause_candidates(text_blob)
+    with get_db_session() as db:
+        if t247_id:
+            db.query(ClauseEvidence).filter(ClauseEvidence.t247_id == t247_id).delete()
+        elif source_record_id:
+            db.query(ClauseEvidence).filter(ClauseEvidence.source_record_id == source_record_id).delete()
+        for c in clauses:
+            db.add(
+                ClauseEvidence(
+                    t247_id=t247_id,
+                    source_record_id=source_record_id,
+                    clause_type=c["clause_type"],
+                    clause_text=c["clause_text"],
+                    evidence_text=c["evidence_text"],
+                    confidence=c["confidence"],
+                )
+            )
+    return {"indexed": len(clauses), "t247_id": t247_id, "source_record_id": source_record_id}
 
 # ── FIX 4: Lifespan replaces deprecated @app.on_event("startup") ────────────
 @asynccontextmanager
@@ -193,6 +351,21 @@ async def lifespan(app: FastAPI):
     print(f"BOQ: {'loaded' if BOQ_AVAILABLE else 'missing boq_engine.py'}")
     print(f"Admin token: {'set' if ADMIN_TOKEN else 'not set (admin routes open)'}")
     print("Server ready — v6.2")
+    if settings.database_enabled and engine is not None:
+        try:
+            Base.metadata.create_all(bind=engine)
+            work_queue.register("tender_scoring", _handle_tender_scoring)
+            work_queue.register("ingestion_sync", _handle_ingestion_sync)
+            work_queue.register("clause_index", _handle_clause_index)
+            work_queue.start()
+            with get_db_session() as db:
+                if not db.query(TenderSource).first():
+                    db.add(TenderSource(name="manual", source_type="manual", base_url="", is_active=True, config_json="{}"))
+            print("Postgres connected and worker started")
+        except Exception as e:
+            print(f"Database bootstrap failed: {e}")
+    else:
+        print("DATABASE_URL not set — running in file-db mode")
     # Restore profile from Drive (always, to get latest edits)
     try:
         if drive_available():
@@ -207,8 +380,12 @@ async def lifespan(app: FastAPI):
         pass
     yield
     # Shutdown: nothing needed
+    try:
+        work_queue.stop()
+    except Exception:
+        pass
 
-app = FastAPI(title="Bid/No-Bid System v6.2", version="6.2", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
 # ── FIX 5: CORS locked to env var, not wildcard ──────────────────────────────
 _allowed_origin = os.environ.get("ALLOWED_ORIGIN", "*")
@@ -343,6 +520,25 @@ async def root():
 async def healthz():
     return {"status": "ok"}
 
+
+@app.get("/health/deep")
+async def health_deep():
+    db_state = "disabled"
+    if settings.database_enabled and engine is not None:
+        try:
+            with get_db_session() as db:
+                db.execute(text("SELECT 1"))
+            db_state = "ok"
+        except Exception:
+            db_state = "error"
+    return {
+        "status": "ok" if db_state != "error" else "degraded",
+        "database": db_state,
+        "drive": "ok" if drive_available() else "disabled",
+        "worker": "running" if settings.database_enabled else "disabled",
+        "sources": ingestion_registry.list_sources(),
+    }
+
 @app.get("/health")
 async def health():
     config = load_config()
@@ -358,6 +554,339 @@ async def health():
         "boq_available": BOQ_AVAILABLE,
         "drive_warning": not drive_available(),
     }
+
+
+@app.post("/auth/bootstrap-admin")
+async def bootstrap_admin(data: dict = Body(...)):
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required for user auth")
+    username = str(data.get("username", "")).strip()
+    password = str(data.get("password", "")).strip()
+    if len(username) < 3 or len(password) < 8:
+        raise HTTPException(400, "Username/password too short")
+    with get_db_session() as db:
+        if db.query(User).filter(User.username == username).first():
+            return {"status": "exists"}
+        user = User(username=username, password_hash=hash_password(password), role="admin")
+        db.add(user)
+    return {"status": "created", "username": username}
+
+
+@app.post("/auth/login")
+async def login(data: dict = Body(...)):
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required for user auth")
+    username = str(data.get("username", "")).strip()
+    password = str(data.get("password", "")).strip()
+    with get_db_session() as db:
+        user = db.query(User).filter(User.username == username, User.is_active == True).first()
+        if not user or not verify_password(password, user.password_hash):
+            raise HTTPException(401, "Invalid credentials")
+        token = create_access_token(subject=user.username, role=user.role)
+    return {"access_token": token, "token_type": "bearer", "role": user.role}
+
+
+@app.get("/auth/me")
+async def auth_me(credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme)):
+    user = _current_user(credentials)
+    if not user:
+        raise HTTPException(401, "Not authenticated")
+    return {"username": user.get("sub"), "role": user.get("role")}
+
+
+@app.post("/work-items")
+async def create_work_item(
+    data: dict = Body(...),
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required for work queue")
+    work_type = str(data.get("work_type", "")).strip()
+    payload = data.get("payload", {})
+    if not work_type:
+        raise HTTPException(400, "work_type is required")
+    with get_db_session() as db:
+        item = WorkItem(work_type=work_type, payload_json=json.dumps(payload))
+        db.add(item)
+        db.flush()
+        item_id = item.id
+    return {"status": "queued", "id": item_id}
+
+
+@app.get("/work-items/{item_id}")
+async def get_work_item(
+    item_id: int,
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst", "viewer"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required for work queue")
+    with get_db_session() as db:
+        item = db.query(WorkItem).filter(WorkItem.id == item_id).first()
+        if not item:
+            raise HTTPException(404, "Work item not found")
+        return {
+            "id": item.id,
+            "work_type": item.work_type,
+            "status": item.status,
+            "attempts": item.attempts,
+            "payload": json.loads(item.payload_json or "{}"),
+            "result": json.loads(item.result_json or "{}"),
+            "error": item.error_text,
+        }
+
+
+@app.post("/platform/sync-json-to-postgres")
+async def sync_json_to_postgres(credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme)):
+    _require_role(credentials, {"admin"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    db_data = load_db()
+    tenders = db_data.get("tenders", {})
+    synced = 0
+    with get_db_session() as db:
+        for t247_id, t in tenders.items():
+            row = db.query(TenderRecord).filter(TenderRecord.t247_id == str(t247_id)).first()
+            if not row:
+                row = TenderRecord(t247_id=str(t247_id))
+                db.add(row)
+            row.verdict = str(t.get("verdict", ""))
+            row.org_name = str(t.get("org_name", ""))
+            row.tender_name = str(t.get("tender_name", t.get("brief", "")))
+            row.estimated_cost = str(t.get("estimated_cost", t.get("estimated_cost_cr", "")))
+            row.status = str(t.get("status", "Identified"))
+            row.payload_json = json.dumps(t, default=str)
+            synced += 1
+    return {"status": "ok", "synced": synced}
+
+
+@app.get("/platform/tenders")
+async def list_platform_tenders(
+    limit: int = 50,
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst", "viewer"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    limit = max(1, min(limit, 500))
+    with get_db_session() as db:
+        rows = (
+            db.query(TenderRecord)
+            .order_by(TenderRecord.updated_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return {
+            "items": [
+                {
+                    "t247_id": r.t247_id,
+                    "verdict": r.verdict,
+                    "org_name": r.org_name,
+                    "tender_name": r.tender_name,
+                    "estimated_cost": r.estimated_cost,
+                    "win_probability": r.win_probability,
+                    "risk_score": r.risk_score,
+                    "status": r.status,
+                    "updated_at": r.updated_at.isoformat() if r.updated_at else "",
+                }
+                for r in rows
+            ]
+        }
+
+
+@app.get("/platform/sources")
+async def list_platform_sources(credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme)):
+    _require_role(credentials, {"admin", "analyst", "viewer"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    with get_db_session() as db:
+        rows = db.query(TenderSource).order_by(TenderSource.name.asc()).all()
+        return {
+            "items": [
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "source_type": r.source_type,
+                    "base_url": r.base_url,
+                    "is_active": r.is_active,
+                    "config": json.loads(r.config_json or "{}"),
+                }
+                for r in rows
+            ]
+        }
+
+
+@app.post("/platform/sources")
+async def upsert_platform_source(
+    data: dict = Body(...),
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    name = str(data.get("name", "")).strip()
+    source_type = str(data.get("source_type", "json_api")).strip()
+    base_url = str(data.get("base_url", "")).strip()
+    config = data.get("config", {}) or {}
+    if not name:
+        raise HTTPException(400, "name is required")
+    with get_db_session() as db:
+        row = db.query(TenderSource).filter(TenderSource.name == name).first()
+        if not row:
+            row = TenderSource(name=name, source_type=source_type)
+            db.add(row)
+        row.source_type = source_type
+        row.base_url = base_url
+        row.is_active = bool(data.get("is_active", True))
+        row.config_json = json.dumps(config, default=str)
+    return {"status": "saved", "name": name}
+
+
+@app.post("/platform/ingestion/run")
+async def run_ingestion(
+    data: dict = Body(...),
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    source_name = str(data.get("source_name", "")).strip()
+    if not source_name:
+        raise HTTPException(400, "source_name is required")
+    with get_db_session() as db:
+        src = db.query(TenderSource).filter(TenderSource.name == source_name).first()
+        if not src:
+            raise HTTPException(404, "source not found")
+        payload = {
+            "source_name": src.name,
+            "source_type": src.source_type,
+            "endpoint": src.base_url,
+            "config": json.loads(src.config_json or "{}"),
+        }
+        item = WorkItem(work_type="ingestion_sync", payload_json=json.dumps(payload))
+        db.add(item)
+        db.flush()
+        work_id = item.id
+    return {"status": "queued", "work_item_id": work_id}
+
+
+@app.post("/platform/ingestion/preview")
+async def preview_ingestion(
+    data: dict = Body(...),
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst"})
+    source_type = str(data.get("source_type", "json_api")).strip().lower()
+    endpoint = str(data.get("endpoint", "")).strip()
+    if not endpoint:
+        raise HTTPException(400, "endpoint is required")
+
+    if source_type == "json_api":
+        source = JsonApiSource(endpoint=endpoint)
+    elif source_type == "cppp_feed":
+        source = CpppFeedSource(endpoint=endpoint)
+    elif source_type == "state_portal_table":
+        source = StatePortalTableSource(endpoint=endpoint)
+    else:
+        raise HTTPException(400, f"Unsupported source_type: {source_type}")
+
+    rows = source.fetch()
+    return {
+        "status": "ok",
+        "source_type": source_type,
+        "count": len(rows),
+        "sample": rows[:5],
+    }
+
+
+@app.get("/platform/ingested")
+async def list_ingested(
+    limit: int = 100,
+    source_name: str = "",
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst", "viewer"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    limit = max(1, min(limit, 1000))
+    with get_db_session() as db:
+        q = db.query(IngestedTender)
+        if source_name:
+            q = q.filter(IngestedTender.source_name == source_name)
+        rows = q.order_by(IngestedTender.updated_at.desc()).limit(limit).all()
+        return {
+            "items": [
+                {
+                    "id": r.id,
+                    "source_name": r.source_name,
+                    "external_id": r.external_id,
+                    "title": r.title,
+                    "org_name": r.org_name,
+                    "deadline": r.deadline,
+                    "reference_no": r.reference_no,
+                    "updated_at": r.updated_at.isoformat() if r.updated_at else "",
+                }
+                for r in rows
+            ]
+        }
+
+
+@app.post("/platform/clauses/index")
+async def enqueue_clause_index(
+    data: dict = Body(...),
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    payload = {
+        "t247_id": str(data.get("t247_id", "")).strip(),
+        "source_record_id": int(data.get("source_record_id") or 0),
+    }
+    with get_db_session() as db:
+        item = WorkItem(work_type="clause_index", payload_json=json.dumps(payload))
+        db.add(item)
+        db.flush()
+        work_id = item.id
+    return {"status": "queued", "work_item_id": work_id}
+
+
+@app.get("/platform/clauses")
+async def list_clause_evidence(
+    t247_id: str = "",
+    source_record_id: int = 0,
+    clause_type: str = "",
+    limit: int = 200,
+    credentials: HTTPAuthorizationCredentials | None = Depends(auth_scheme),
+):
+    _require_role(credentials, {"admin", "analyst", "viewer"})
+    if not settings.database_enabled:
+        raise HTTPException(400, "DATABASE_URL is required")
+    limit = max(1, min(limit, 2000))
+    with get_db_session() as db:
+        q = db.query(ClauseEvidence)
+        if t247_id:
+            q = q.filter(ClauseEvidence.t247_id == t247_id)
+        if source_record_id:
+            q = q.filter(ClauseEvidence.source_record_id == source_record_id)
+        if clause_type:
+            q = q.filter(ClauseEvidence.clause_type == clause_type)
+        rows = q.order_by(ClauseEvidence.created_at.desc()).limit(limit).all()
+        return {
+            "items": [
+                {
+                    "id": r.id,
+                    "t247_id": r.t247_id,
+                    "source_record_id": r.source_record_id,
+                    "clause_type": r.clause_type,
+                    "clause_text": r.clause_text,
+                    "evidence_text": r.evidence_text,
+                    "confidence": r.confidence,
+                }
+                for r in rows
+            ]
+        }
 
 @app.get("/api-quota-status")
 async def api_quota_status():
@@ -938,6 +1467,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         elif not api_key:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → Gemini AI Keys."
 
+        raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
         _set_job(job_id, progress="Checking eligibility…")
         checker = NascentChecker()
@@ -988,7 +1518,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 "notes": tender_data.get("notes", []),
                 "overall_verdict": tender_data.get("overall_verdict", {}),
                 "prebid_queries": tender_data.get("prebid_queries", []),
-                "raw_text": all_text[:20000],
+                "raw_text": raw_text_preview,
                 "prebid_passed": passed if "passed" in dir() else False,
                 "scope_sections": tender_data.get("scope_sections", []),
                 "tq_total_marks": tender_data.get("tq_total_marks"),
@@ -1100,6 +1630,10 @@ async def generate_technical_proposal(t247_id: str):
     first = files[0]["filename"] if files else result.get("download_file")
     return {"status": "success", "filename": first}
 
+@app.post("/tender/{t247_id}/technical-proposal")
+async def generate_technical_proposal_alias(t247_id: str):
+    return await generate_technical_proposal(t247_id)
+
 @app.post("/merge-submission-pdf/{t247_id}")
 async def merge_submission_pdf(t247_id: str):
     tender = get_tender(t247_id)
@@ -1123,7 +1657,13 @@ async def merge_submission_pdf(t247_id: str):
         include_cover=True,
     )
     if merged.get("status") != "success":
-        raise HTTPException(500, "; ".join(merged.get("errors", ["Merge failed"])))
+        errs = merged.get("errors", ["Merge failed"])
+        # Return a non-5xx response so UI can show a friendly message instead of hard failure.
+        return {
+            "status": "unavailable",
+            "message": "Merged PDF could not be generated in this environment.",
+            "errors": errs,
+        }
 
     fname = merged.get("filename")
     return {
@@ -1133,6 +1673,10 @@ async def merge_submission_pdf(t247_id: str):
         "page_count": merged.get("page_count", 0),
         "file_count": merged.get("file_count", 0),
     }
+
+@app.post("/tender/{t247_id}/merge-pdf")
+async def merge_submission_pdf_alias(t247_id: str):
+    return await merge_submission_pdf(t247_id)
 
 @app.post("/tender/{t247_id}/draft/generate")
 async def generate_tender_draft(t247_id: str, data: dict = Body(default={})):
@@ -1179,7 +1723,7 @@ async def chat_edit_tender_draft(t247_id: str, data: dict = Body(...)):
         content = draft.get("content", "")
 
     cfg = load_config()
-    keys = get_all_api_keys(cfg)
+    keys = get_all_api_keys()
     if not keys:
         raise HTTPException(400, "No AI API key configured in Settings")
 
@@ -1467,6 +2011,10 @@ async def get_win_loss():
 async def get_win_loss_alias():
     return get_win_loss_stats()
 
+@app.get("/analytics")
+async def get_analytics_alias():
+    return get_win_loss_stats()
+
 @app.post("/tender/{t247_id}/stage")
 async def update_stage(t247_id: str, data: dict = Body(...)):
     db = load_db()
@@ -1493,6 +2041,13 @@ async def save_bid_result(t247_id: str, data: dict = Body(...)):
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "saved"}
+
+@app.post("/bid-result")
+async def save_bid_result_without_path(data: dict = Body(...)):
+    t247_id = str(data.get("t247_id", "")).strip()
+    if not t247_id:
+        raise HTTPException(400, "t247_id is required")
+    return await save_bid_result(t247_id, data)
 
 # ══ PRE-BID ══════════════════════════════════════════════════════════════════
 @app.post("/prebid-sent/{t247_id}")
@@ -1697,6 +2252,10 @@ async def test_t247():
 async def auto_download_tender(t247_id: str):
     return {"status": "unavailable", "message": "Download manually from tender247.com — Playwright not available on Render free tier."}
 
+@app.post("/tender/{t247_id}/auto-download")
+async def auto_download_tender_alias(t247_id: str):
+    return await auto_download_tender(t247_id)
+
 
 # ── TENDER UPDATE (alias for status) ─────────────────────────
 @app.post("/tender/{t247_id}/update")
@@ -1767,6 +2326,10 @@ async def get_milestones(t247_id: str):
         t = db["tenders"].get(str(t247_id), {})
     return {"milestones": t.get("milestones", []), "invoices": t.get("invoices", [])}
 
+@app.get("/milestones/{t247_id}")
+async def get_milestones_alias(t247_id: str):
+    return await get_milestones(t247_id)
+
 @app.post("/post-award/{t247_id}/milestones")
 async def add_milestone(t247_id: str, body: dict = Body(...)):
     with db_lock:
@@ -1802,6 +2365,10 @@ async def setup_milestones(t247_id: str, body: dict = Body(...)):
         save_db(db)
     return {"status": "ok", "count": len(t["milestones"])}
 
+@app.post("/milestones/{t247_id}/setup")
+async def setup_milestones_alias(t247_id: str, body: dict = Body(default={})):
+    return await setup_milestones(t247_id, {"milestones": body.get("milestones", [])})
+
 @app.patch("/post-award/{t247_id}/milestones/{mid}")
 async def update_milestone(t247_id: str, mid: str, body: dict = Body(...)):
     with db_lock:
@@ -1817,6 +2384,10 @@ async def update_milestone(t247_id: str, mid: str, body: dict = Body(...)):
         db["tenders"][str(t247_id)] = t
         save_db(db)
     return {"status": "ok"}
+
+@app.post("/milestones/{t247_id}/{mid}/done")
+async def mark_milestone_done_alias(t247_id: str, mid: str):
+    return await update_milestone(t247_id, mid, {"status": "Done"})
 
 @app.post("/post-award/{t247_id}/invoice")
 async def add_invoice(t247_id: str, body: dict = Body(...)):
@@ -1841,6 +2412,10 @@ async def add_invoice(t247_id: str, body: dict = Body(...)):
         save_db(db)
     return {"status": "ok", "invoice": inv}
 
+@app.post("/tender/{t247_id}/invoice")
+async def add_invoice_alias(t247_id: str, body: dict = Body(...)):
+    return await add_invoice(t247_id, body)
+
 @app.post("/post-award/{t247_id}/{doc_type}")
 async def post_award_doc(t247_id: str, doc_type: str, body: dict = Body(...)):
     """Generic post-award doc save (amc, extension, etc.)"""
@@ -1854,3 +2429,9 @@ async def post_award_doc(t247_id: str, doc_type: str, body: dict = Body(...)):
         db["tenders"][str(t247_id)] = t
         save_db(db)
     return {"status": "ok", "type": doc_type}
+
+@app.post("/tender/{t247_id}/letter/{doc_type}")
+async def post_award_doc_alias(t247_id: str, doc_type: str, body: dict = Body(default={})):
+    if not body:
+        body = {"generated_at": datetime.now().isoformat()}
+    return await post_award_doc(t247_id, doc_type, body)

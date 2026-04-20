@@ -5,6 +5,7 @@ python-docx
 openpyxl
 xlrd
 PyPDF2
+reportlab
 pdfplumber
 beautifulsoup4
 lxml
@@ -13,3 +14,8 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
+sqlalchemy
+psycopg[binary]
+alembic
+passlib[bcrypt]
+python-jose[cryptography]
