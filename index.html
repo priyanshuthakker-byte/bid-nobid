@@ -1,348 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bid/No-Bid — Nascent Info Technologies</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e0e0e0;display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+#nav{width:215px;background:#13161f;padding:16px 10px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;border-right:1px solid #1a1d2a}
+#nav-brand{padding:4px 8px 18px;border-bottom:1px solid #1a1d2a;margin-bottom:12px}
+#nav-brand h2{font-size:14px;font-weight:800;color:#fff;letter-spacing:.5px}
+#nav-brand p{font-size:10px;color:#444;margin-top:3px}
+.nav-sec{font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1.2px;padding:10px 8px 4px}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;
+  color:#666;padding:7px 10px;cursor:pointer;border-radius:6px;font-size:12.5px;margin-bottom:1px;transition:all .12s}
+.nav-btn:hover{background:#1c1f2e;color:#bbb}
+.nav-btn.active{background:#1a2e50;color:#60a5fa}
+.nav-btn .icon{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:#1a2e50;color:#60a5fa;border-radius:10px;padding:1px 7px;font-size:10px}
+.nav-badge.red{background:#3d0808;color:#f87171}
+.nav-badge.green{background:#052e16;color:#4ade80}
+#nav-footer{margin-top:auto;padding-top:12px;border-top:1px solid #1a1d2a;font-size:11px;color:#3a3f55}
+.sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.sdot-green{background:#22c55e}.sdot-red{background:#ef4444}.sdot-gray{background:#333}
+
+/* ── MAIN ── */
+#main{flex:1;overflow-y:auto;background:#0f1117;display:flex;flex-direction:column}
+.page{display:none;flex:1;flex-direction:column}.page.active{display:flex}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;justify-content:space-between;align-items:center;
+  padding:14px 22px;border-bottom:1px solid #191c27;background:#111420;position:sticky;top:0;z-index:10;flex-shrink:0}
+.topbar h1{font-size:16px;font-weight:700;color:#fff}
+.topbar-actions{display:flex;gap:7px;align-items:center}
+
+/* ── PAGE BODY ── */
+.page-body{padding:20px 22px;flex:1;overflow-y:auto}
+
+/* ── STATS ── */
+.stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.stat{background:#13161f;border-radius:9px;padding:13px 16px;min-width:100px;cursor:pointer;
+  border:1px solid #1a1d2a;transition:border-color .15s,background .15s}
+.stat:hover{border-color:#3b82f6}
+.stat.active-filter{border-color:#3b82f6;background:#0d1f40}
+.stat-num{font-size:24px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;color:#444;margin-top:5px;text-transform:uppercase;letter-spacing:.3px}
+
+/* ── COLORS ── */
+.c-white{color:#fff}.c-green{color:#22c55e}.c-amber{color:#f59e0b}
+.c-red{color:#ef4444}.c-blue{color:#3b82f6}.c-purple{color:#a78bfa}.c-muted{color:#444}
+.c-urgent{color:#ef4444;font-weight:700}.c-warn{color:#f59e0b}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.fbtn{padding:4px 11px;border-radius:14px;border:1px solid #1e2230;background:none;
+  color:#555;cursor:pointer;font-size:11.5px;transition:all .12s}
+.fbtn:hover{border-color:#3b82f6;color:#60a5fa}
+.fbtn.active{background:#1a2e50;color:#60a5fa;border-color:#1a2e50}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;padding:9px 14px 9px 36px;background:#13161f;border:1px solid #1e2230;
+  color:#ccc;border-radius:7px;font-size:12.5px;outline:none}
+.search-wrap input:focus{border-color:#3b82f6}
+.search-wrap::before{content:"🔍";position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px}
+
+/* ── TABLE ── */
+.table-wrap{background:#13161f;border-radius:9px;overflow:hidden;border:1px solid #1a1d2a}
+table{width:100%;border-collapse:collapse}
+th{background:#111420;padding:9px 13px;text-align:left;font-size:10px;color:#444;
+  text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+td{padding:9px 13px;border-top:1px solid #141720;font-size:12.5px;vertical-align:middle}
+tr:hover td{background:#161923}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-BID{background:#052e16;color:#22c55e}
+.badge-NO-BID{background:#3d0808;color:#f87171}
+.badge-CONDITIONAL{background:#3d1f00;color:#f59e0b}
+.badge-REVIEW,.badge-{background:#0d1f40;color:#60a5fa}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:opacity .12s}
+.btn:hover{opacity:.85}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-success{background:#15803d;color:#fff}
+.btn-danger{background:#b91c1c;color:#fff}
+.btn-ghost{background:none;border:1px solid #1e2230;color:#777}
+.btn-ghost:hover{border-color:#3b82f6;color:#60a5fa}
+.btn-sm{padding:4px 10px;font-size:11.5px}
+
+/* ── ACTION BTNS in table ── */
+.actions-cell{display:flex;gap:4px;flex-wrap:wrap}
+.action-btn{padding:3px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:opacity .1s}
+.action-btn:hover{opacity:.8}
+.action-btn.blue{background:#0d1f40;color:#60a5fa}
+.action-btn.green{background:#052e16;color:#4ade80}
+.action-btn.red{background:#3d0808;color:#f87171}
+.action-btn.gray{background:#1a1d2a;color:#666}
+
+/* ── CARDS ── */
+.card{background:#13161f;border-radius:9px;padding:18px;margin-bottom:14px;border:1px solid #1a1d2a}
+.card-title{font-size:13.5px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+
+/* ── FORMS ── */
+label{font-size:10.5px;color:#555;display:block;margin-bottom:4px;margin-top:12px;text-transform:uppercase;letter-spacing:.3px}
+input[type=text],input[type=password],input[type=email],input[type=number],select,textarea{
+  background:#0f1117;border:1px solid #1e2230;color:#ccc;padding:8px 11px;border-radius:6px;font-size:12.5px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#3b82f6}
+.form-row{margin-bottom:4px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>.card{flex:1;min-width:200px}
+
+/* ── ALERTS ── */
+.alert-bar{padding:9px 13px;border-radius:7px;font-size:12px;margin-bottom:8px;border-left:3px solid #3b82f6;background:#0d1f40;color:#93c5fd}
+.alert-bar.red{background:#3d0808;border-color:#ef4444;color:#fca5a5}
+.alert-bar.amber{background:#3d1f00;border-color:#f59e0b;color:#fcd34d}
+
+/* ── BRIEF CELL ── */
+.brief-cell .brief{font-size:12.5px;color:#ddd;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brief-cell .org{font-size:11px;color:#444;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.mono{font-family:'Courier New',monospace;font-size:11px;color:#555}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed #1e2230;border-radius:7px;padding:26px;text-align:center;
+  cursor:pointer;color:#444;font-size:12.5px;transition:border-color .15s}
+.upload-zone:hover{border-color:#3b82f6;color:#60a5fa}
+
+/* ── TABS ── */
+.tab-row{display:flex;border-bottom:1px solid #1a1d2a;margin-bottom:18px}
+.tab{padding:8px 15px;cursor:pointer;font-size:12.5px;color:#555;border-bottom:2px solid transparent;transition:all .12s}
+.tab:hover{color:#aaa}
+.tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── CHECKLIST ── */
+.checklist-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #141720}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type=checkbox]{width:15px;height:15px;accent-color:#3b82f6;flex-shrink:0}
+.checklist-item.done .cl-label{color:#333;text-decoration:line-through}
+.cl-label{font-size:12.5px;flex:1}
+.cl-cat{font-size:10px;color:#333;background:#0f1117;padding:2px 6px;border-radius:4px}
+
+/* ── PROGRESS ── */
+.progress-bar{background:#0f1117;border-radius:4px;height:5px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:#3b82f6;border-radius:4px;transition:width .3s}
+
+/* ── ANALYTICS ── */
+.analytics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:18px}
+.analytic-card{background:#13161f;border-radius:9px;padding:14px;border:1px solid #1a1d2a;text-align:center}
+.analytic-num{font-size:22px;font-weight:700;color:#60a5fa}
+.analytic-lbl{font-size:10.5px;color:#444;margin-top:4px}
+
+/* ── MILESTONE ── */
+.milestone-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #141720}
+.milestone-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot-done{background:#22c55e}.dot-pending{background:#1e2230}.dot-late{background:#ef4444}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:18px;right:18px;background:#1a1d2a;border:1px solid #252830;
+  padding:11px 18px;border-radius:8px;font-size:12.5px;display:none;z-index:9999;max-width:280px;
+  box-shadow:0 4px 20px rgba(0,0,0,.6);border-left:3px solid #3b82f6}
+
+/* ── LOADING OVERLAY ── */
+#loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#loading-overlay.show{display:flex}
+.spinner{width:34px;height:34px;border:3px solid #1e2230;border-top-color:#3b82f6;
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── DETAIL PANEL ── */
+#detail-panel{position:fixed;top:0;right:0;width:460px;height:100vh;background:#111420;
+  border-left:1px solid #1a1d2a;z-index:500;overflow-y:auto;padding:22px;
+  transform:translateX(100%);transition:transform .25s}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:40px 20px;color:#333;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-text" style="font-size:12.5px;color:#666">Processing...</div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="nav">
+  <div id="nav-brand">
+    <h2>BID / NO-BID</h2>
+    <p>Nascent Info Technologies</p>
+  </div>
+
+  <div class="nav-sec">Main</div>
+  <button class="nav-btn active" onclick="showPage('dashboard')">
+    <span class="icon">📊</span>Dashboard<span class="nav-badge" id="nb-total">0</span>
+  </button>
+  <button class="nav-btn" onclick="showPage('tenders')">
+    <span class="icon">📋</span>All Tenders
+  </button>
+
+  <div class="nav-sec">Analysis</div>
+  <button class="nav-btn" onclick="showPage('analyse')"><span class="icon">🔍</span>Analyse Tender</button>
+  <button class="nav-btn" onclick="showPage('checklist')"><span class="icon">✅</span>Checklist</button>
+  <button class="nav-btn" onclick="showPage('documents')"><span class="icon">📄</span>Documents</button>
+  <button class="nav-btn" onclick="showPage('letterhead')"><span class="icon">🏢</span>Letterhead</button>
+
+  <div class="nav-sec">Reports</div>
+  <button class="nav-btn" onclick="showPage('reports')"><span class="icon">📑</span>Reports</button>
+  <button class="nav-btn" onclick="showPage('analytics')"><span class="icon">📈</span>Analytics</button>
+
+  <div class="nav-sec">Pipeline</div>
+  <button class="nav-btn" onclick="showPage('postaward')"><span class="icon">🏆</span>Post-Award</button>
+  <button class="nav-btn" onclick="showPage('skipped')"><span class="icon">🚫</span>Skipped</button>
+
+  <div class="nav-sec">System</div>
+  <button class="nav-btn" onclick="showPage('settings')"><span class="icon">⚙️</span>Settings</button>
+
+  <div id="nav-footer">
+    <div style="margin-bottom:5px">
+      <span class="sdot sdot-gray" id="drive-dot"></span>
+      <span id="drive-label">Drive: checking...</span>
+    </div>
+    <div id="api-quota">API: checking...</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="page-dashboard" class="page active">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Import Excel</button>
+        <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+        <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <div id="alert-container"></div>
+      <div class="stats">
+        <div class="stat" id="stat-all" onclick="setFilter('')"><div class="stat-num c-white" id="s-total">—</div><div class="stat-lbl">Total</div></div>
+        <div class="stat" onclick="setFilter('BID')"><div class="stat-num c-green" id="s-bid">—</div><div class="stat-lbl">BID</div></div>
+        <div class="stat" onclick="setFilter('CONDITIONAL')"><div class="stat-num c-amber" id="s-cond">—</div><div class="stat-lbl">Conditional</div></div>
+        <div class="stat" onclick="setFilter('NO-BID')"><div class="stat-num c-red" id="s-nobid">—</div><div class="stat-lbl">No-Bid</div></div>
+        <div class="stat" onclick="setFilter('REVIEW')"><div class="stat-num c-blue" id="s-review">—</div><div class="stat-lbl">Review</div></div>
+      </div>
+      <div class="filters">
+        <button class="fbtn active" onclick="setFilter('')">All</button>
+        <button class="fbtn" onclick="setFilter('BID')">✓ BID</button>
+        <button class="fbtn" onclick="setFilter('CONDITIONAL')">△ Conditional</button>
+        <button class="fbtn" onclick="setFilter('NO-BID')">✗ No-Bid</button>
+        <button class="fbtn" onclick="setFilter('REVIEW')">? Review</button>
+        <button class="fbtn" onclick="setFilter('urgent')">🔴 Urgent ≤7d</button>
+        <button class="fbtn" onclick="setFilter('analysed')">🔬 Analysed</button>
+      </div>
+      <div class="search-wrap">
+        <input id="dash-search" placeholder="Search by T247 ID, brief, org, location..." oninput="renderDash()">
+      </div>
+      <div id="dash-count" style="font-size:11px;color:#333;margin-bottom:8px"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Deadline</th><th>Days Left</th><th>Verdict</th><th>Actions</th></tr></thead>
+          <tbody id="dash-table"><tr><td colspan="6" class="empty-state">Loading tenders...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ALL TENDERS ═══ -->
+  <div id="page-tenders" class="page">
+    <div class="topbar">
+      <h1>All Tenders</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export Excel</button>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="search-wrap"><input id="tl-search" placeholder="Search tenders..." oninput="renderTenders()"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>Deadline</th><th>Verdict</th><th>Actions</th></tr></thead>
+          <tbody id="tenders-table"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYSE ═══ -->
+  <div id="page-analyse" class="page">
+    <div class="topbar"><h1>Analyse Tender</h1></div>
+    <div class="page-body">
+      <div id="ctx-banner" style="display:none;background:#0d1f40;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center">
+        <span>Active tender: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
+        <button class="btn btn-ghost btn-sm" onclick="clearCtx()">✕ Clear</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Upload Tender Documents</div>
+        <label>T247 ID (links result to dashboard)</label>
+        <input type="text" id="an-tid" placeholder="e.g. 97290989">
+        <label style="margin-top:12px">Documents (ZIP, PDF, DOCX — multiple allowed)</label>
+        <div class="upload-zone" onclick="document.getElementById('an-files').click()">
+          📦 Drop files here or click to browse<br>
+          <span style="font-size:11px;color:#333">ZIP · PDF · DOCX · DOC · TXT</span>
+        </div>
+        <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
+        <div id="an-filelist" style="font-size:11.5px;color:#444;margin-top:6px"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="analyseTender()">🔍 Analyse with AI</button>
+          <button class="btn btn-ghost" onclick="reanalyseDrive()">♻ Re-analyse from Drive</button>
+          <button class="btn btn-ghost" onclick="autoDownload('')">⬇ Auto-download from T247</button>
+        </div>
+      </div>
+      <div id="an-result"></div>
+      <div id="prebid-section" style="display:none" class="card">
+        <div class="card-title">Pre-bid Queries
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="loadPrebidQueries()">↺ Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="generatePrebidLetter()">📄 Generate Letter</button>
+          </div>
+        </div>
+        <div id="prebid-list"><div class="empty-state">Analyse a tender to generate pre-bid queries.</div></div>
+      </div>
+      <div id="compliance-section" style="display:none" class="card">
+        <div class="card-title">⚖ Compliance Check
+          <button class="btn btn-ghost btn-sm" onclick="runCompliance()">Analyse</button>
+        </div>
+        <div id="compliance-result"><div class="empty-state">Click Analyse to check RFP against Indian procurement laws.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CHECKLIST ═══ -->
+  <div id="page-checklist" class="page">
+    <div class="topbar"><h1>Submission Checklist</h1></div>
+    <div class="page-body">
+      <div class="card">
+        <div class="card-title">Select Tender</div>
+        <select id="cl-select" onchange="loadChecklist()"><option value="">-- Select a tender --</option></select>
+      </div>
+      <div id="cl-content"><div class="empty-state">Select a tender to view checklist.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ DOCUMENTS ═══ -->
+  <div id="page-documents" class="page">
+    <div class="topbar"><h1>Documents</h1></div>
+    <div class="page-body">
+      <div class="card">
+        <div class="card-title">Select Tender</div>
+        <select id="doc-select" onchange="loadDocs()"><option value="">-- Select a tender --</option></select>
+      </div>
+      <div class="tab-row">
+        <div class="tab active" onclick="switchDocTab('standard',event)">Standard Docs</div>
+        <div class="tab" onclick="switchDocTab('technical',event)">Technical Proposal</div>
+        <div class="tab" onclick="switchDocTab('merge',event)">Merge to PDF</div>
+      </div>
+      <div id="docs-tab-standard" class="tab-panel active">
+        <div class="card">
+          <div class="card-title">Submission Documents</div>
+          <p style="font-size:12.5px;color:#555;margin-bottom:14px">Generates Cover Letter, Non-Blacklisting, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
+          <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
+        </div>
+        <div id="docs-list"></div>
+      </div>
+      <div id="docs-tab-technical" class="tab-panel">
+        <div class="card">
+          <div class="card-title">Technical Proposal</div>
+          <button class="btn btn-primary" onclick="generateTechProposal()">📄 Generate Technical Proposal</button>
+          <div id="tech-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div id="docs-tab-merge" class="tab-panel">
+        <div class="card">
+          <div class="card-title">Merge All to Single PDF</div>
+          <p style="font-size:12.5px;color:#555;margin-bottom:14px">Merges all submission documents into one PDF with cover page.</p>
+          <button class="btn btn-primary" onclick="mergePDF()">🔗 Merge to PDF</button>
+          <div id="merge-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LETTERHEAD ═══ -->
+  <div id="page-letterhead" class="page">
+    <div class="topbar"><h1>Letterhead</h1></div>
+    <div class="page-body">
+      <div class="card">
+        <div class="card-title">Company Letterhead</div>
+        <div id="lh-status" style="font-size:12.5px;color:#555;margin-bottom:14px">Checking...</div>
+        <div class="upload-zone" onclick="document.getElementById('lh-file').click()">
+          📎 Upload letterhead DOCX<br>
+          <span style="font-size:11px;color:#333">Used as header/footer on all generated documents</span>
+        </div>
+        <input type="file" id="lh-file" accept=".docx" style="display:none" onchange="uploadLetterhead(this)">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REPORTS ═══ -->
+  <div id="page-reports" class="page">
+    <div class="topbar">
+      <h1>Reports</h1>
+      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadReports()">↺ Refresh</button></div>
+    </div>
+    <div class="page-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Filename</th><th>Tender</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
+          <tbody id="reports-table"><tr><td colspan="5" class="empty-state">No reports yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYTICS ═══ -->
+  <div id="page-analytics" class="page">
+    <div class="topbar">
+      <h1>Analytics & Win/Loss</h1>
+      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↺ Refresh</button></div>
+    </div>
+    <div class="page-body">
+      <div id="analytics-summary" class="analytics-grid"></div>
+      <div class="row">
+        <div class="card">
+          <div class="card-title">Record Bid Result</div>
+          <label>T247 ID</label><input type="text" id="res-tid" placeholder="T247 ID">
+          <label>Outcome</label>
+          <select id="res-outcome">
+            <option value="Won">Won</option>
+            <option value="Lost">Lost</option>
+            <option value="Submitted">Submitted — Awaiting Result</option>
+            <option value="Disqualified">Disqualified</option>
+          </select>
+          <label>Contract Value (Rs. Cr) if Won</label>
+          <input type="number" id="res-value" placeholder="0.00" step="0.01">
+          <label>Competitor (if known)</label>
+          <input type="text" id="res-competitor" placeholder="Competitor name">
+          <label>Notes</label>
+          <textarea id="res-notes" rows="2" placeholder="Any notes..."></textarea>
+          <button class="btn btn-primary" onclick="saveBidResult()" style="margin-top:14px;width:auto">Save Result</button>
+        </div>
+        <div class="card" style="flex:2">
+          <div class="card-title">Win/Loss History</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>T247 ID</th><th>Brief</th><th>Outcome</th><th>Value</th><th>Competitor</th></tr></thead>
+            <tbody id="winloss-table"><tr><td colspan="5" class="empty-state">No results yet.</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ POST-AWARD ═══ -->
+  <div id="page-postaward" class="page">
+    <div class="topbar"><h1>Post-Award Management</h1></div>
+    <div class="page-body">
+      <div class="card">
+        <div class="card-title">Select Won Tender</div>
+        <select id="pa-select" onchange="loadMilestones()"><option value="">-- Select a won tender --</option></select>
+      </div>
+      <div class="tab-row">
+        <div class="tab active" onclick="switchPATab('letters',event)">Letters</div>
+        <div class="tab" onclick="switchPATab('milestones',event)">Milestones</div>
+        <div class="tab" onclick="switchPATab('invoices',event)">Invoices</div>
+      </div>
+      <div id="pa-tab-letters" class="tab-panel active">
+        <div class="row">
+          <div class="card"><div class="card-title">LoA Acceptance</div><button class="btn btn-primary" onclick="genLetter('loa-acceptance')">Generate Letter</button></div>
+          <div class="card"><div class="card-title">Performance Security</div><button class="btn btn-primary" onclick="genLetter('perf-security-letter')">Generate Letter</button></div>
+          <div class="card"><div class="card-title">Completion Certificate</div><button class="btn btn-primary" onclick="genLetter('completion-cert-request')">Generate Letter</button></div>
+        </div>
+        <div id="pa-letter-result"></div>
+      </div>
+      <div id="pa-tab-milestones" class="tab-panel">
+        <div class="card">
+          <div class="card-title">Project Milestones
+            <button class="btn btn-ghost btn-sm" onclick="setupMilestones()">Setup Default</button>
+          </div>
+          <div id="milestones-list"><div class="empty-state">Select a tender and click Setup to create milestones.</div></div>
+        </div>
+      </div>
+      <div id="pa-tab-invoices" class="tab-panel">
+        <div class="card">
+          <div class="card-title">Generate RA Bill / Invoice</div>
+          <label>Milestone / Invoice Description</label>
+          <input type="text" id="inv-desc" placeholder="e.g. Phase 1 completion">
+          <label>Amount (Rs.)</label>
+          <input type="number" id="inv-amount" placeholder="0">
+          <button class="btn btn-primary" onclick="generateInvoice()" style="margin-top:14px;width:auto">Generate Invoice</button>
+          <div id="inv-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SKIPPED ═══ -->
+  <div id="page-skipped" class="page">
+    <div class="topbar">
+      <h1>Skipped / Not Interested</h1>
+      <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadSkipped()">↺ Refresh</button></div>
+    </div>
+    <div class="page-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>T247 ID</th><th>Brief</th><th>Reason</th><th>Skipped On</th><th>Action</th></tr></thead>
+          <tbody id="skipped-table"><tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SETTINGS ═══ -->
+  <div id="page-settings" class="page">
+    <div class="topbar"><h1>Settings</h1></div>
+    <div class="page-body">
+      <div class="row">
+        <div class="card">
+          <div class="card-title">Gemini AI Keys</div>
+          <p style="font-size:11.5px;color:#444;margin-bottom:8px">Get free keys at aistudio.google.com/apikey — add up to 4 for rotation</p>
+          <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
+          <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
+          <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
+          <label>Backup Key 4</label><input type="password" id="key4" placeholder="AIza...">
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn btn-primary btn-sm" onclick="saveKeys()">Save Keys</button>
+            <button class="btn btn-ghost btn-sm" onclick="testAI()">Test AI</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">T247 Credentials</div>
+          <p style="font-size:11.5px;color:#444;margin-bottom:8px">Your tender247.com login — used for auto-download</p>
+          <label>Email</label><input type="text" id="t247u" placeholder="user@company.com">
+          <label>Password</label><input type="password" id="t247p" placeholder="password">
+          <div style="display:flex;gap:8px;margin-top:14px">
+            <button class="btn btn-primary btn-sm" onclick="saveT247()">Save T247</button>
+            <button class="btn btn-ghost btn-sm" onclick="testT247()">Test Connection</button>
+          </div>
+          <div id="t247-test-result" style="font-size:11.5px;color:#444;margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">System Info</div>
+        <div style="font-size:12px;color:#555;display:flex;gap:20px;flex-wrap:wrap">
+          <span>Version: <b style="color:#ccc">7.0</b></span>
+          <span>Drive: <b id="sys-drive" style="color:#ccc">checking...</b></span>
+          <span>Tenders: <b id="sys-tenders" style="color:#ccc">—</b></span>
+          <span>API Quota: <b id="sys-quota" style="color:#ccc">—</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #main -->
+
+<!-- DETAIL PANEL -->
+<div id="detail-panel"></div>
+
+<div id="toast"></div>
+
 <script>
-// ═══════════════════════════════════════════════════════════════════════════
-// STABILIZED CORE SCRIPT — Fixes Navigation & State Conflicts
-// ═══════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════
+// GLOBALS
+// ════════════════════════════════════════
+var allTenders = [];
+var currentFilter = '';
+var currentTenderId = '';
+var currentTenderBrief = '';
 
-// ── GLOBAL STATE ────────────────────────────────────────────────────────────
-var _db = {};              // Local cache of tenders
-var _lastDb = {};          // Alias for compatibility
-var profileData = {};      // Company profile
-var currentTenderId = '';  // Currently selected tender
-var activePage = 'dashboard';
-
-// ── UTILITIES ──────────────────────────────────────────────────────────────
-function _sv(v) {
-  if (v === null || v === undefined || v === '') return '—';
-  if (typeof v === 'object') return v.value || v.text || JSON.stringify(v);
-  return String(v);
+// ════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  var page = document.getElementById('page-' + name);
+  if(page) page.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){
+    if((b.getAttribute('onclick')||'').includes("'"+name+"'")) b.classList.add('active');
+  });
+  if(name==='tenders') renderTenders();
+  if(name==='checklist') populateSelects();
+  if(name==='documents') populateSelects();
+  if(name==='postaward') populatePASelect();
+  if(name==='reports') loadReports();
+  if(name==='analytics') loadAnalytics();
+  if(name==='skipped') loadSkipped();
+  if(name==='letterhead') loadLetterheadStatus();
+  if(name==='settings') loadSettings();
 }
 
-function toast(msg, type='info', dur=3000) {
-  var wrap = document.getElementById('tw');
-  if(!wrap) return;
-  var div = document.createElement('div');
-  div.className = 'toast ' + (type==='error'?'err':type==='success'?'ok':'info');
-  div.textContent = msg;
-  wrap.appendChild(div);
-  setTimeout(function(){ if(div.parentNode) div.parentNode.removeChild(div); }, dur);
+function switchDocTab(tab, e) {
+  document.querySelectorAll('#page-documents .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('#page-documents .tab-panel').forEach(function(p){p.classList.remove('active');});
+  if(e&&e.target) e.target.classList.add('active');
+  var panel = document.getElementById('docs-tab-'+tab);
+  if(panel) panel.classList.add('active');
+}
+
+function switchPATab(tab, e) {
+  document.querySelectorAll('#page-postaward .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('#page-postaward .tab-panel').forEach(function(p){p.classList.remove('active');});
+  if(e&&e.target) e.target.classList.add('active');
+  var panel = document.getElementById('pa-tab-'+tab);
+  if(panel) panel.classList.add('active');
+}
+
+// ════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.borderLeftColor = type==='error'?'#ef4444':type==='success'?'#22c55e':'#3b82f6';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){el.style.display='none';}, 3500);
 }
 
 function showLoading(msg) {
-  var lov = document.getElementById('lov');
-  if(lov) { lov.classList.add('open'); document.getElementById('ltxt').textContent = msg||'Processing...'; }
+  document.getElementById('loading-text').textContent = msg||'Processing...';
+  document.getElementById('loading-overlay').classList.add('show');
 }
+
 function hideLoading() {
-  var lov = document.getElementById('lov');
-  if(lov) lov.classList.remove('open');
+  document.getElementById('loading-overlay').classList.remove('show');
 }
 
-// ── NAVIGATION (Unified) ──────────────────────────────────────────────────
-function go(pageName) {
-  // Hide all pages
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
-  document.querySelectorAll('.nav-i').forEach(function(n){ n.classList.remove('on'); });
-  
-  // Show target page
-  var target = document.getElementById('page-' + pageName);
-  if(target) {
-    target.classList.add('on');
-    activePage = pageName;
-    
-    // Update Sidebar Active State
-    var navItem = document.querySelector('.nav-i[onclick*="\' '+pageName+'\'"]');
-    if(navItem) navItem.classList.add('on');
-    
-    // Update Topbar Title
-    var titles = {
-      dashboard:'Dashboard', tenders:'All Tenders', analyse:'Analyse Tender',
-      boq:'BOQ / Costing', checklist:'Checklist', documents:'Documents',
-      vault:'Doc Vault', reports:'Reports', analytics:'Analytics',
-      postaward:'Post-Award', emd:'EMD Tracker', profile:'Company Profile',
-      settings:'Settings', diagnose:'Self-Diagnose'
-    };
-    var titleEl = document.getElementById('pg-title');
-    if(titleEl) titleEl.textContent = titles[pageName] || pageName;
-
-    // Trigger Page Loaders
-    if(pageName === 'dashboard') loadDashboard();
-    if(pageName === 'settings') loadSettings();
-    if(pageName === 'profile') loadProfile();
-    if(pageName === 'vault') vaultRefresh();
-    if(pageName === 'analytics') loadAnalytics();
-    if(pageName === 'reports') loadReports();
-    if(pageName === 'emd') loadEMDPage();
-    if(pageName === 'boq') populateSelects();
-    if(pageName === 'checklist') populateSelects();
-    if(pageName === 'documents') populateSelects();
-    if(pageName === 'postaward') populatePASelect();
-    if(pageName === 'analyse') {
-        // Clear analyse state
-        document.getElementById('an-res').style.display = 'none';
-        document.getElementById('an-tid').value = '';
-    }
-  }
-}
-
-// ── DASHBOARD LOGIC ───────────────────────────────────────────────────────
-async function loadDashboard() {
-  try {
-    var r = await fetch('/dashboard');
-    if(!r.ok) throw new Error('Server error');
-    var d = await r.json();
-    
-    // Update Global DB
-    _db = {};
-    (d.tenders || []).forEach(function(t){ _db[String(t.t247_id)] = t; });
-    _lastDb = _db;
-    
-    // Update Stats
-    var s = d.stats || {};
-    var nbTot = document.getElementById('nb-tot');
-    if(nbTot) nbTot.textContent = s.total || 0;
-    
-    // Render UI
-    renderDash();
-    renderStatCards(s);
-    
-    // Check Drive Status
-    checkDriveStatus();
-  } catch(e) {
-    console.error('Dashboard load failed:', e);
-    var tb = document.getElementById('dash-tb');
-    if(tb) tb.innerHTML = '<tr><td colspan="9" style="color:var(--red2);text-align:center;padding:20px">Error loading dashboard: '+e.message+'</td></tr>';
-  }
-}
-
-function renderStatCards(s) {
-  var el = document.getElementById('stat-cards');
-  if(!el) return;
-  var data = [
-    {n:s.total||0, l:'Total Tenders', accent:'var(--blue2)', flt:''},
-    {n:s.bid||0, l:'BID', accent:'var(--green)', flt:'BID'},
-    {n:s.conditional||0, l:'Conditional', accent:'var(--amber)', flt:'CONDITIONAL'},
-    {n:s.no_bid||0, l:'No-Bid', accent:'var(--red)', flt:'NO-BID'},
-  ];
-  el.innerHTML = data.map(function(d){
-    return '<div class="stat-c" style="--ac:'+d.accent+'" onclick="filterDash(\''+d.flt+'\')">'
-      +'<div class="stat-n" style="color:'+d.accent+'">'+d.n+'</div>'
-      +'<div class="stat-l">'+d.l+'</div>'
-      +'</div>';
-  }).join('');
-}
-
-function filterDash(flt) {
-  currentFilter = flt;
-  document.querySelectorAll('.fbt').forEach(function(b){ b.classList.remove('on'); });
-  // Find button that matches filter text roughly
-  var btns = Array.from(document.querySelectorAll('.fbt'));
-  var match = btns.find(function(b){ return b.textContent.includes(flt) || (flt==='' && b.textContent==='All'); });
-  if(match) match.classList.add('on');
-  renderDash();
-}
-
-function renderDash() {
-  var tenders = Object.values(_db || {});
-  var q = (document.getElementById('dash-q')||{value:''}).value.toLowerCase();
-  var flt = currentFilter || '';
-  
-  var arr = tenders.filter(function(t){
-    var v = (t.verdict || t.bid_no_bid || 'REVIEW').toUpperCase();
-    if(flt && v!==flt) return false;
-    if(q) {
-      var s = (t.brief||'')+(t.org_name||'')+(t.t247_id||'');
-      if(!s.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
-
-  var tbody = document.getElementById('dash-tb');
-  var empty = document.getElementById('dash-empty');
-  var cnt = document.getElementById('dash-cnt');
-  
-  if(!arr.length) {
-    if(tbody) tbody.innerHTML = '';
-    if(empty) empty.style.display = '';
-    if(cnt) cnt.textContent = '';
-    return;
-  }
-  if(empty) empty.style.display = 'none';
-  if(cnt) cnt.textContent = arr.length + ' tender(s)';
-
-  tbody.innerHTML = arr.map(function(t){
-    var v = (t.verdict || t.bid_no_bid || 'REVIEW').toUpperCase();
-    var vClass = v==='BID'?'vb-bid':v==='NO-BID'?'vb-no':v==='CONDITIONAL'?'vb-cond':'vb-rev';
-    var dl = getDaysLeft(t);
-    var dlClass = dl<=0?'dl-urg':dl<=3?'dl-soon':'dl-ok';
-    
-    return '<tr onclick="viewTenderDetail(\''+t.t247_id+'\')" style="cursor:pointer">'
-      +'<td class="mono">'+t.t247_id+'</td>'
-      +'<td><div class="brc">'+(t.brief||t.tender_name||'—')+'</div><div class="org">'+(t.org_name||'')+'</div></td>'
-      +'<td>'+(t.mode_of_selection||'—')+'</td>'
-      +'<td>'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'
-      +'<td class="mono">'+(t.emd||'—')+'</td>'
-      +'<td class="'+dlClass+'">'+daysDisplay(dl)+'</td>'
-      +'<td>'+(t.match_score||'—')+'</td>'
-      +'<td><span class="vb '+vClass+'">'+v+'</span></td>'
-      +'<td><span class="sb2 '+(t.status==='Won'?'st-won':t.status==='Lost'?'st-lst':'st-id')+'">'+(t.status||'Identified')+'</span></td>'
-      +'<td><button class="ract" onclick="event.stopPropagation();rowAnalyse(event,\''+t.t247_id+'\')">⚡</button></td>'
-      +'</tr>';
-  }).join('');
+function getVerdict(t) {
+  return t.verdict||t.bid_no_bid||t.recommendation||'REVIEW';
 }
 
 function getDaysLeft(t) {
-  if(!t.deadline && !t.bid_submission_date) return 999;
-  var s = t.deadline || t.bid_submission_date;
-  // Simple parse for DD-MM-YYYY or YYYY-MM-DD
-  var parts = s.split(/[-\/]/);
-  var d;
+  if(t.days_left!==undefined&&t.days_left!==null&&t.days_left!==999) return t.days_left;
+  if(!t.deadline) return 999;
   try {
-    if(parts[0].length === 4) d = new Date(+parts[0], +parts[1]-1, +parts[2]);
-    else d = new Date(+parts[2], +parts[1]-1, +parts[0]);
+    var s = t.deadline.split(' ')[0];
+    var parts = s.split(/[-\/]/);
+    var d = parts[0].length===4 ? new Date(+parts[0],+parts[1]-1,+parts[2]) : new Date(+parts[2],+parts[1]-1,+parts[0]);
     return Math.ceil((d - new Date()) / 86400000);
-  } catch(e) { return 999; }
+  } catch(e){return 999;}
 }
 
 function daysDisplay(dl) {
-  if(dl===999) return '—';
-  if(dl<0) return '<span style="color:var(--t4)">Expired</span>';
-  if(dl===0) return '<span style="color:var(--red2);font-weight:800">TODAY</span>';
-  if(dl<=3) return '<span style="color:var(--red2)">'+dl+'d</span>';
-  if(dl<=7) return '<span style="color:var(--amber2)">'+dl+'d</span>';
-  return dl+'d';
+  if(dl===999||dl===null||dl===undefined) return '<span class="c-muted">—</span>';
+  if(dl<0) return '<span class="c-muted">Expired</span>';
+  if(dl===0) return '<span class="c-urgent">TODAY</span>';
+  if(dl<=3) return '<span class="c-urgent">'+dl+'d</span>';
+  if(dl<=7) return '<span class="c-warn">'+dl+'d</span>';
+  return '<span>'+dl+'d</span>';
 }
 
-function viewTenderDetail(tid) {
-  currentTenderId = tid;
-  var t = _db[tid];
-  if(!t) return;
-  
-  var rp = document.getElementById('rp');
-  if(rp) rp.classList.add('open');
-  
-  var ttl = document.getElementById('rp-ttl');
-  if(ttl) ttl.textContent = t.brief || t.tender_name || tid;
-  
-  var body = document.getElementById('rp-body');
-  if(body) {
-    var v = (t.verdict || 'REVIEW').toUpperCase();
-    var vCol = v==='BID'?'var(--green)':v==='NO-BID'?'var(--red)':v==='CONDITIONAL'?'var(--amber)':'var(--blue3)';
-    body.innerHTML = 
-      '<div style="padding:9px 11px;margin-bottom:9px;background:rgba(255,255,255,.03);border-radius:var(--r)">'
-      +'<div style="font-size:18px;font-weight:900;color:'+vCol+';font-family:var(--fm)">'+v+'</div>'
-      +'<div style="font-size:10px;color:var(--t3);margin-top:3px">'+(t.reason||'').substring(0,100)+'</div></div>'
-      +'<div class="ir"><span class="il">T247 ID</span><span class="iv mono">'+tid+'</span></div>'
-      +'<div class="ir"><span class="il">Organisation</span><span class="iv">'+_sv(t.org_name)+'</span></div>'
-      +'<div class="ir"><span class="il">Value</span><span class="iv">'+_sv(t.estimated_cost)+'</span></div>'
-      +'<div class="ir"><span class="il">Deadline</span><span class="iv">'+_sv(t.bid_submission_date)+'</span></div>'
-      +'<div class="ir"><span class="il">EMD</span><span class="iv">'+_sv(t.emd)+'</span></div>';
-  }
-  
-  var acts = document.getElementById('rp-acts');
-  if(acts) {
-    acts.innerHTML = '<button class="btn btn-g btn-sm" onclick="rpAnalyse(\''+tid+'\')">⚡ Analyse</button>'
-      +'<button class="btn btn-g btn-sm" onclick="closeRP()">✕ Close</button>';
-  }
+function verdictBadge(v) {
+  return '<span class="badge badge-'+(v||'REVIEW')+'">'+(v||'REVIEW')+'</span>';
 }
 
-function closeRP() {
-  var rp = document.getElementById('rp');
-  if(rp) rp.classList.remove('open');
-}
-
-function rpAnalyse(tid) {
-  closeRP();
-  document.getElementById('an-tid').value = tid;
-  go('analyse');
-}
-
-function rowAnalyse(e, tid) {
-  e.stopPropagation();
-  rpAnalyse(tid);
-}
-
-// ── SETTINGS & PROFILE ────────────────────────────────────────────────────
-async function loadSettings() {
-  try {
-    var r = await fetch('/config');
-    if(!r.ok) return;
-    var d = await r.json();
-    ['key1','key2','key3','key4'].forEach(function(id,i){
-      var el=document.getElementById(id); 
-      if(el && d.gemini_api_keys && d.gemini_api_keys[i]) el.value=d.gemini_api_keys[i];
-      else if(el && d.gemini_api_key && i===0) el.value=d.gemini_api_key;
-    });
-    var sd=document.getElementById('sys-d'); 
-    if(sd) sd.textContent=d.drive_connected?'Connected':'—';
-  } catch(e) {}
-}
-
-async function loadProfile() {
-  try {
-    var r = await fetch('/profile');
-    if(!r.ok) return;
-    var d = await r.json();
-    profileData = d;
-    // Render profile forms (simplified for stability)
-    var basic = document.getElementById('profile-basic-form');
-    if(basic && d.company) {
-      basic.innerHTML = '<div class="card-title">Company Identity</div>'
-        +'<div class="fg"><label class="fl">Name</label><input class="fi" value="'+(d.company.name||'')+'" disabled></div>'
-        +'<div class="fg"><label class="fl">CIN</label><input class="fi mono" value="'+(d.company.cin||'')+'" disabled></div>'
-        +'<div class="fg"><label class="fl">GSTIN</label><input class="fi mono" value="'+(d.company.gstin||'')+'" disabled></div>'
-        +'<div class="fg"><label class="fl">MSME Udyam</label><input class="fi mono" value="'+(d.company.udyam||d.company.msme_udyam||'')+'" disabled></div>';
-    }
-  } catch(e) {}
-}
-
-// ── DRIVE STATUS ──────────────────────────────────────────────────────────
-function checkDriveStatus() {
-  fetch('/drive-status').then(function(r){return r.json();}).then(function(d){
-    var dot = document.getElementById('ds-dot');
-    var label = document.getElementById('ds-label');
-    if(dot) dot.className = 'ds-dot ' + (d.drive_connected ? 'on' : 'off');
-    if(label) label.textContent = d.drive_connected ? 'Drive: Connected' : 'Drive: Offline';
-  }).catch(function(){
-    var dot = document.getElementById('ds-dot');
-    if(dot) dot.className = 'ds-dot off';
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(function(b){
+    b.classList.remove('active');
+    var oc = b.getAttribute('onclick')||'';
+    var match = f==='' ? oc.includes("''") : oc.includes("'"+f+"'");
+    if(match) b.classList.add('active');
   });
+  renderDash();
 }
 
-// ── ANALYSE PAGE HELPERS ────────────────────────────────────────────────
-function updateFileList(input) {
-  var el = document.getElementById('an-fl');
-  if(el) el.textContent = Array.from(input.files).map(function(f){return f.name;}).join(', ');
-}
-
-function populateSelects() {
-  var tenders = Object.values(_db||{});
-  var ids = ['corr-sel','pbm-sel','doc-select','boq-sel','cl-sel','pa-select'];
-  ids.forEach(function(id){
-    var el = document.getElementById(id);
-    if(!el) return;
-    el.innerHTML = '<option value="">Select tender...</option>' + tenders.map(function(t){
-      return '<option value="'+t.t247_id+'">'+t.t247_id+' — '+(t.brief||t.org_name||'').substring(0,40)+'</option>';
-    }).join('');
+// ════════════════════════════════════════
+// DASHBOARD RENDER
+// ════════════════════════════════════════
+function renderDash() {
+  var q = (document.getElementById('dash-search').value||'').toLowerCase();
+  var arr = allTenders.filter(function(t){return t.status!=='Not Interested';});
+  if(currentFilter==='urgent') arr = arr.filter(function(t){var d=getDaysLeft(t);return d>=0&&d<=7;});
+  else if(currentFilter==='analysed') arr = arr.filter(function(t){return t.bid_no_bid_done;});
+  else if(currentFilter) arr = arr.filter(function(t){return getVerdict(t)===currentFilter;});
+  if(q) arr = arr.filter(function(t){
+    return (t.brief||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q)||
+           (t.t247_id||'').toLowerCase().includes(q)||(t.location||'').toLowerCase().includes(q)||
+           (t.ref_no||'').toLowerCase().includes(q);
   });
-}
-
-function populatePASelect() {
-  var tenders = Object.values(_db||{}).filter(function(t){ return t.status==='Won' || (t.verdict||'').toUpperCase()==='BID'; });
-  var el = document.getElementById('pa-select');
-  if(!el) return;
-  el.innerHTML = '<option value="">Select won tender...</option>' + tenders.map(function(t){
-    return '<option value="'+t.t247_id+'">'+t.t247_id+' — '+(t.brief||'').substring(0,40)+'</option>';
+  arr.sort(function(a,b){return getDaysLeft(a)-getDaysLeft(b);});
+  document.getElementById('dash-count').textContent = arr.length+' tender'+(arr.length!==1?'s':'')+(currentFilter?' · filtered':'');
+  var tbody = document.getElementById('dash-table');
+  if(!arr.length){
+    tbody.innerHTML='<tr><td colspan="6" class="empty-state">'+(allTenders.length?'No tenders match filter':'Import Excel to load tenders')+'</td></tr>';
+    return;
+  }
+  tbody.innerHTML = arr.map(function(t){
+    var v=getVerdict(t); var dl=getDaysLeft(t);
+    return '<tr>'+
+      '<td class="mono">'+(t.t247_id||'—')+'</td>'+
+      '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div></td>'+
+      '<td style="white-space:nowrap;color:#555;font-size:11.5px">'+(t.deadline||'—')+'</td>'+
+      '<td>'+daysDisplay(dl)+'</td>'+
+      '<td>'+verdictBadge(v)+'</td>'+
+      '<td class="actions-cell">'+
+        '<button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\''+encodeURIComponent((t.brief||'').substring(0,40))+'\');showPage(\'analyse\')">Analyse</button>'+
+        (t.bid_no_bid_done?'<button class="action-btn green" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'checklist\')">Checklist</button>':'')+
+        '<button class="action-btn blue" onclick="viewTenderDetail(\''+t.t247_id+'\')">View</button>'+
+        '<button class="action-btn gray" onclick="skipTender(\''+t.t247_id+'\')">Skip</button>'+
+      '</td>'+
+    '</tr>';
   }).join('');
 }
 
-// ── INITIALIZATION ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  // Set Date
-  var d = new Date();
-  var opts = {day:'2-digit',month:'short',year:'numeric'};
-  var todayEl = document.getElementById('today-d');
-  if(todayEl) todayEl.textContent = d.toLocaleDateString('en-IN', opts);
-  
-  // Start App
-  go('dashboard');
+function renderTenders() {
+  var q = (document.getElementById('tl-search').value||'').toLowerCase();
+  var arr = q ? allTenders.filter(function(t){
+    return (t.brief||'').toLowerCase().includes(q)||(t.t247_id||'').toLowerCase().includes(q)||(t.org_name||'').toLowerCase().includes(q);
+  }) : allTenders;
+  var tbody = document.getElementById('tenders-table');
+  if(!arr.length){tbody.innerHTML='<tr><td colspan="7" class="empty-state">No tenders</td></tr>';return;}
+  tbody.innerHTML = arr.map(function(t){
+    var v=getVerdict(t);
+    return '<tr>'+
+      '<td class="mono">'+(t.t247_id||'—')+'</td>'+
+      '<td class="mono" style="font-size:10.5px">'+(t.ref_no||'—')+'</td>'+
+      '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div><div class="org">'+(t.org_name||'')+'</div></td>'+
+      '<td style="color:#777">'+(t.estimated_cost_cr?'₹'+t.estimated_cost_cr+'Cr':'—')+'</td>'+
+      '<td style="color:#555;font-size:11.5px">'+(t.deadline||'—')+'</td>'+
+      '<td>'+verdictBadge(v)+'</td>'+
+      '<td class="actions-cell"><button class="action-btn blue" onclick="setActive(\''+t.t247_id+'\',\'\');showPage(\'analyse\')">Analyse</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function populateSelects() {
+  var opts = '<option value="">-- Select a tender --</option>'+allTenders.map(function(t){
+    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
+  }).join('');
+  ['cl-select','doc-select'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML=opts;});
+}
+
+function populatePASelect() {
+  var opts = '<option value="">-- Select a won tender --</option>'+allTenders.map(function(t){
+    return '<option value="'+t.t247_id+'">['+t.t247_id+'] '+(t.brief||'').substring(0,50)+'</option>';
+  }).join('');
+  var el=document.getElementById('pa-select');if(el)el.innerHTML=opts;
+  if(currentTenderId&&el) el.value=currentTenderId;
+}
+
+function setActive(tid, brief) {
+  currentTenderId = tid;
+  currentTenderBrief = decodeURIComponent(brief||'');
+  localStorage.setItem('activeTenderId', tid);
+  var banner = document.getElementById('ctx-banner');
+  if(banner){banner.style.display='flex';document.getElementById('ctx-id').textContent=tid;document.getElementById('ctx-brief').textContent=currentTenderBrief;}
+  document.getElementById('an-tid').value = tid;
+}
+
+function clearCtx() {
+  currentTenderId='';currentTenderBrief='';
+  localStorage.removeItem('activeTenderId');
+  var b=document.getElementById('ctx-banner');if(b)b.style.display='none';
+  document.getElementById('an-tid').value='';
+}
+
+// ════════════════════════════════════════
+// DETAIL PANEL
+// ════════════════════════════════════════
+function viewTenderDetail(tid) {
+  var t = allTenders.find(function(x){return x.t247_id===tid;});
+  if(!t){toast('Tender not found','error');return;}
+  var v=getVerdict(t);
+  var col = v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
+  var panel = document.getElementById('detail-panel');
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">'+
+    '<div style="font-size:15px;font-weight:700;color:#fff">Tender Details</div>'+
+    '<button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Close</button></div>'+
+    '<div style="display:inline-block;padding:3px 12px;border-radius:10px;font-size:12.5px;font-weight:700;color:'+col+';background:'+col+'22;margin-bottom:14px">'+v+'</div>'+
+    '<div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:4px">'+(t.brief||'—')+'</div>'+
+    '<div style="font-size:11.5px;color:#444;margin-bottom:18px">'+(t.org_name||'')+(t.location?' · '+t.location:'')+'</div>'+
+    '<table style="width:100%;font-size:12.5px"><tbody>'+
+    [['T247 ID',t.t247_id||'—'],['Ref No',t.ref_no||'—'],['Deadline',t.deadline||'—'],
+     ['Days Left',getDaysLeft(t)===999?'—':getDaysLeft(t)+'d'],
+     ['Est. Value',t.estimated_cost_cr?'₹'+t.estimated_cost_cr+' Cr':'—'],
+     ['EMD',t.emd||'—'],['Tender Fee',t.doc_fee||'—'],
+     ['Location',t.location||'—'],['State',t.state||'—'],['Category',t.category||'—'],
+    ].map(function(r){return '<tr><td style="color:#444;padding:5px 0;width:100px">'+r[0]+'</td><td style="color:#bbb">'+r[1]+'</td></tr>';}).join('')+
+    '</tbody></table>'+
+    (t.scope_summary?'<div style="margin-top:14px"><div style="font-size:10px;color:#333;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Scope</div><div style="font-size:12.5px;color:#888;line-height:1.6">'+t.scope_summary+'</div></div>':'')+
+    (t.concerns&&t.concerns.length?'<div style="margin-top:14px"><div style="font-size:10px;color:#f59e0b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">⚠ Concerns</div><div style="font-size:12.5px;color:#f59e0b">'+(Array.isArray(t.concerns)?t.concerns.join('<br>'):t.concerns)+'</div></div>':'')+
+    '<div style="margin-top:20px;display:flex;gap:7px;flex-wrap:wrap">'+
+    '<button class="btn btn-primary btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'analyse\')">🔍 Analyse</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'checklist\')">✅ Checklist</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'documents\')">📄 Documents</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="autoDownload(\''+tid+'\')">⬇ Auto-download</button>'+
+    '</div>';
+  panel.style.transform='translateX(0)';
+  setTimeout(function(){document.addEventListener('click',closeDetailOutside,{once:true});},100);
+}
+
+function closeDetailOutside(e) {
+  var panel=document.getElementById('detail-panel');
+  if(panel&&!panel.contains(e.target)) closeDetail();
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').style.transform='translateX(100%)';
+}
+
+// ════════════════════════════════════════
+// API CALLS
+// ════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    var r=await fetch('/dashboard'); var d=await r.json();
+    var s=d.stats||{};
+    document.getElementById('s-total').textContent=s.total||0;
+    document.getElementById('s-bid').textContent=s.bid||0;
+    document.getElementById('s-cond').textContent=s.conditional||0;
+    document.getElementById('s-nobid').textContent=s.no_bid||0;
+    document.getElementById('s-review').textContent=s.review||0;
+    document.getElementById('nb-total').textContent=s.total||0;
+    document.getElementById('sys-tenders').textContent=s.total||0;
+    allTenders=d.tenders||[];
+    renderDash();
+    var ac=document.getElementById('alert-container'); ac.innerHTML='';
+    if((s.deadline_today||0)>0) ac.innerHTML+='<div class="alert-bar red">🔴 '+s.deadline_today+' tender(s) due TODAY</div>';
+    if((s.deadline_3days||0)>0) ac.innerHTML+='<div class="alert-bar amber">⚠ '+s.deadline_3days+' tender(s) due within 3 days</div>';
+  } catch(e) {
+    document.getElementById('dash-table').innerHTML='<tr><td colspan="6" class="empty-state" style="color:#ef4444">Error: '+e.message+'</td></tr>';
+  }
+}
+
+async function checkDriveStatus() {
+  try {
+    var r=await fetch('/drive-status'); var d=await r.json();
+    var dot=document.getElementById('drive-dot'); var lbl=document.getElementById('drive-label'); var sys=document.getElementById('sys-drive');
+    if(d.drive_connected){dot.className='sdot sdot-green';lbl.textContent='Drive connected';if(sys)sys.textContent='Connected';}
+    else{dot.className='sdot sdot-red';lbl.textContent='Drive offline';if(sys)sys.textContent='Not connected';}
+  } catch(e){document.getElementById('drive-label').textContent='Drive: error';}
+}
+
+async function loadQuota() {
+  try {
+    var r=await fetch('/api-quota-status'); var d=await r.json();
+    var q=d.today_used!==undefined?d.today_used+'/'+d.daily_limit+' used':(d.status||'OK');
+    document.getElementById('api-quota').textContent='API: '+q;
+    document.getElementById('sys-quota').textContent=q;
+  } catch(e){}
+}
+
+async function importExcel(input) {
+  var file=input.files[0]; if(!file) return;
+  showLoading('Importing Excel...');
+  var fd=new FormData(); fd.append('file',file);
+  try {
+    var r=await fetch('/import-excel',{method:'POST',body:fd}); var d=await r.json();
+    hideLoading();
+    toast('Imported '+(d.imported||0)+' tenders · BID:'+(d.bid||0)+' NO-BID:'+(d.no_bid||0),'success');
+    loadDashboard();
+  } catch(e){hideLoading();toast('Import failed: '+e.message,'error');}
+  input.value='';
+}
+
+async function syncDrive() {
+  showLoading('Syncing with Google Drive...');
+  try {
+    var r=await fetch('/sync-drive',{method:'POST'}); var d=await r.json();
+    hideLoading(); toast(d.message||'Synced successfully','success'); loadDashboard();
+  } catch(e){hideLoading();toast('Sync failed: '+e.message,'error');}
+}
+
+async function exportTenders() {
+  toast('Preparing export...','info');
+  try {
+    var r=await fetch('/export-tenders'); var d=await r.json();
+    if(d.download_url) window.open(d.download_url);
+    else toast('Export ready: '+d.filename,'success');
+  } catch(e){toast('Export failed','error');}
+}
+
+async function skipTender(tid) {
+  var reason=prompt('Skip reason (optional):')||'Not interested';
+  try {
+    await fetch('/tender/'+tid+'/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason})});
+    toast('Tender skipped','success'); loadDashboard();
+  } catch(e){toast('Error','error');}
+}
+
+async function autoDownload(tid) {
+  if(!tid) tid=currentTenderId;
+  if(!tid){toast('Select a tender first','info');return;}
+  showLoading('Auto-downloading from T247...');
+  try {
+    var r=await fetch('/tender/'+tid+'/auto-download',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading();
+    if(d.status==='success') toast('Downloaded: '+d.filename+' ('+Math.round((d.file_size||0)/1024)+'KB)','success');
+    else toast('Download failed: '+(d.message||d.reason||''),'error');
+  } catch(e){hideLoading();toast('Error: '+e.message,'error');}
+}
+
+// ANALYSE
+function updateFileList(input) {
+  var el=document.getElementById('an-filelist');
+  if(el) el.textContent=Array.from(input.files).map(function(f){return f.name;}).join(', ');
+}
+
+async function analyseTender() {
+  var tid=document.getElementById('an-tid').value.trim();
+  var files=document.getElementById('an-files').files;
+  if(!files.length&&!tid){toast('Upload files or enter T247 ID','info');return;}
+  showLoading('Analysing tender with AI...');
+  var fd=new FormData();
+  if(tid) fd.append('t247_id',tid);
+  for(var i=0;i<files.length;i++) fd.append('files',files[i]);
+  try {
+    var r=await fetch('/process-files',{method:'POST',body:fd}); var d=await r.json();
+    hideLoading();
+    var v=d.bid_no_bid||d.verdict||'REVIEW';
+    var col=v==='BID'?'#22c55e':v==='NO-BID'?'#ef4444':v==='CONDITIONAL'?'#f59e0b':'#3b82f6';
+    document.getElementById('an-result').innerHTML=
+      '<div class="card" style="border-color:'+col+'">'+
+      '<div style="font-size:22px;font-weight:800;color:'+col+';margin-bottom:8px">'+v+'</div>'+
+      '<div style="font-size:12.5px;color:#777;margin-bottom:12px">'+(d.reason||d.scope_summary||'')+'</div>'+
+      (d.pq_criteria&&d.pq_criteria.length?'<div style="font-size:12px;color:#444;margin-bottom:8px"><b style="color:#999">PQ Criteria:</b> '+(Array.isArray(d.pq_criteria)?d.pq_criteria.join(' · '):d.pq_criteria)+'</div>':'')+
+      (d.concerns&&d.concerns.length?'<div style="font-size:12px;color:#f59e0b">⚠ '+d.concerns.join(' · ')+'</div>':'')+
+      '<div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">'+
+      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'checklist\')">→ Checklist</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="showPage(\'documents\')">→ Documents</button>'+
+      '<button class="btn btn-primary btn-sm" onclick="loadPrebidQueries()">Pre-bid Queries</button>'+
+      '</div></div>';
+    if(tid) setActive(tid,'');
+    document.getElementById('prebid-section').style.display='block';
+    document.getElementById('compliance-section').style.display='block';
+    loadPrebidQueries();
+    loadDashboard();
+    toast('Analysis complete: '+v,'success');
+  } catch(e){hideLoading();toast('Analysis failed: '+e.message,'error');}
+}
+
+async function reanalyseDrive() {
+  var tid=currentTenderId||document.getElementById('an-tid').value.trim();
+  if(!tid){toast('Enter T247 ID first','info');return;}
+  showLoading('Re-analysing from Drive...');
+  try {
+    var r=await fetch('/tender/'+tid+'/reanalyse',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading(); toast('Re-analysis complete','success');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+async function loadPrebidQueries() {
+  var tid=currentTenderId||document.getElementById('an-tid').value.trim();
+  var el=document.getElementById('prebid-list'); if(!el) return;
+  if(!tid){el.innerHTML='<div class="empty-state">Select a tender first.</div>';return;}
+  try {
+    var r=await fetch('/prebid-queries/'+tid); var d=await r.json();
+    var qs=d.queries||[];
+    if(!qs.length){el.innerHTML='<div class="empty-state">No queries yet. Analyse tender first.</div>';return;}
+    el.innerHTML=qs.map(function(q,i){
+      return '<div style="padding:10px 0;border-bottom:1px solid #141720"><div style="font-size:11.5px;font-weight:700;color:#60a5fa">Q'+(i+1)+(q.clause?' — '+q.clause:'')+'</div><div style="font-size:12.5px;color:#bbb;margin-top:4px">'+(q.query||q)+'</div></div>';
+    }).join('');
+  } catch(e){el.innerHTML='<div style="color:#ef4444;font-size:12px">Error loading queries</div>';}
+}
+
+async function generatePrebidLetter() {
+  var tid=currentTenderId||document.getElementById('an-tid').value.trim();
+  if(!tid){toast('Select a tender first','info');return;}
+  showLoading('Generating pre-bid letter...');
+  try {
+    var r=await fetch('/tender/'+tid+'/generate-prebid-letter',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading();
+    if(d.download_url) window.open(d.download_url);
+    toast('Pre-bid letter ready — '+(d.query_count||'')+' queries','success');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+async function runCompliance() {
+  var tid=currentTenderId||document.getElementById('an-tid').value.trim();
+  if(!tid){toast('Select a tender first','info');return;}
+  showLoading('Checking compliance...');
+  try {
+    var r=await fetch('/tender/'+tid+'/analyze-compliance',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading();
+    var res=document.getElementById('compliance-result');
+    if((d.violations_found||0)>0){
+      res.innerHTML='<div style="color:#f59e0b;font-size:12.5px;margin-bottom:8px">⚠ '+d.violations_found+' issues found</div>'+
+        ((d.analysis&&d.analysis.clause_violations)||[]).map(function(v){
+          return '<div style="padding:7px;background:#0f1117;border-radius:5px;margin-bottom:5px;font-size:11.5px;border-left:3px solid '+(v.severity==='HIGH'?'#ef4444':v.severity==='MEDIUM'?'#f59e0b':'#333')+'">'+
+            (v.clause_no||'')+' '+(v.issue_type||'')+'<br><span style="color:#444">'+(v.what_law_says||'').substring(0,120)+'</span></div>';
+        }).join('');
+    } else {
+      res.innerHTML='<div style="color:#22c55e;font-size:12.5px">✅ No compliance issues found</div>';
+    }
+    toast((d.violations_found||0)+' compliance issues','info');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+// CHECKLIST
+async function loadChecklist() {
+  var tid=document.getElementById('cl-select').value; if(!tid) return;
+  var el=document.getElementById('cl-content');
+  el.innerHTML='<div class="empty-state">Loading...</div>';
+  try {
+    var r=await fetch('/checklist/'+tid); var d=await r.json();
+    var items=d.checklist||[];
+    if(!items.length){el.innerHTML='<div class="empty-state">No checklist yet. Analyse the tender first.</div>';return;}
+    var done=items.filter(function(i){return i.done;}).length;
+    el.innerHTML='<div class="card">'+
+      '<div class="card-title">Checklist ('+done+'/'+items.length+')<button class="btn btn-ghost btn-sm" onclick="loadChecklist()">↺</button></div>'+
+      '<div class="progress-bar"><div class="progress-fill" style="width:'+(100*done/items.length)+'%"></div></div>'+
+      '<div style="margin-top:14px">'+
+      items.map(function(item){
+        return '<div class="checklist-item'+(item.done?' done':'')+'">'+
+          '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleChecklistItem(\''+tid+'\',\''+item.id+'\',this.checked)">'+
+          '<span class="cl-label">'+(item.label||item.title||item.description||'')+'</span>'+
+          '<span class="cl-cat">'+(item.category||'')+'</span></div>';
+      }).join('')+'</div></div>';
+  } catch(e){el.innerHTML='<div style="color:#ef4444">Error: '+e.message+'</div>';}
+}
+
+async function toggleChecklistItem(tid,itemId,done) {
+  try{await fetch('/checklist/'+tid+'/item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:itemId,done:done})});}catch(e){}
+}
+
+// DOCUMENTS
+function loadDocs(){var tid=document.getElementById('doc-select').value;if(!tid)return;setActive(tid,'');}
+
+async function generateDocs() {
+  var tid=document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  showLoading('Generating documents...');
+  try {
+    var r=await fetch('/generate-docs/'+tid,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d=await r.json();
+    hideLoading();
+    var el=document.getElementById('docs-list');
+    if(d.files&&d.files.length){
+      el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Document</th><th>Action</th></tr></thead><tbody>'+
+        d.files.map(function(f){
+          return '<tr><td style="font-size:12.5px">'+(f.name||f)+'</td>'+
+            '<td><a href="'+(f.url||f.download_url||'#')+'" target="_blank" class="action-btn blue" style="text-decoration:none">⬇ Download</a></td></tr>';
+        }).join('')+'</tbody></table></div>';
+    } else {
+      toast('Documents generated','success');
+    }
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+async function generateTechProposal() {
+  var tid=document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  showLoading('Generating technical proposal...');
+  try {
+    var r=await fetch('/tender/'+tid+'/technical-proposal',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading();
+    if(d.download_url) window.open(d.download_url);
+    toast('Technical proposal generated','success');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+async function mergePDF() {
+  var tid=document.getElementById('doc-select').value; if(!tid){toast('Select a tender','info');return;}
+  showLoading('Merging to PDF...');
+  try {
+    var r=await fetch('/tender/'+tid+'/merge-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading();
+    if(d.download_url){window.open(d.download_url);toast('PDF merged successfully','success');}
+    else toast('Merged: '+d.filename,'success');
+    document.getElementById('merge-result').innerHTML='<div style="color:#22c55e;font-size:12.5px">✅ Merged PDF ready</div>';
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+// LETTERHEAD
+async function loadLetterheadStatus() {
+  try {
+    var r=await fetch('/letterhead-status'); var d=await r.json();
+    var el=document.getElementById('lh-status');
+    if(el) el.textContent=d.exists?'✅ Letterhead uploaded: '+d.filename:'No letterhead uploaded yet.';
+    if(el) el.style.color=d.exists?'#22c55e':'#555';
+  } catch(e){}
+}
+
+async function uploadLetterhead(input) {
+  var file=input.files[0]; if(!file) return;
+  showLoading('Uploading letterhead...');
+  var fd=new FormData(); fd.append('file',file);
+  try {
+    var r=await fetch('/upload-letterhead',{method:'POST',body:fd}); var d=await r.json();
+    hideLoading(); toast('Letterhead uploaded successfully','success'); loadLetterheadStatus();
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+  input.value='';
+}
+
+// REPORTS
+async function loadReports() {
+  try {
+    var r=await fetch('/reports'); var d=await r.json();
+    var files=d.files||[];
+    var tbody=document.getElementById('reports-table');
+    if(!files.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No reports yet.</td></tr>';return;}
+    tbody.innerHTML=files.map(function(f){
+      return '<tr>'+
+        '<td style="font-size:12.5px">'+(f.filename||f.name||'')+'</td>'+
+        '<td class="mono">'+(f.tender_id||'—')+'</td>'+
+        '<td style="font-size:11.5px;color:#555">'+(f.created||f.modified||'—')+'</td>'+
+        '<td style="font-size:11.5px;color:#555">'+(f.size?Math.round(f.size/1024)+'KB':'—')+'</td>'+
+        '<td><a href="'+(f.url||f.download_url||'#')+'" target="_blank" class="action-btn blue" style="text-decoration:none">⬇ Download</a></td>'+
+      '</tr>';
+    }).join('');
+  } catch(e){}
+}
+
+// ANALYTICS
+async function loadAnalytics() {
+  try {
+    var r=await fetch('/analytics'); var d=await r.json();
+    var s=d.summary||{};
+    var grid=document.getElementById('analytics-summary');
+    grid.innerHTML=[
+      ['Win Rate', (s.win_rate||0)+'%'],
+      ['Won', s.won||0],
+      ['Lost', s.lost||0],
+      ['Submitted', s.submitted||0],
+      ['Revenue (Cr)', s.total_revenue_cr?'₹'+s.total_revenue_cr:'—'],
+      ['Avg Value (Cr)', s.avg_value_cr?'₹'+s.avg_value_cr:'—'],
+    ].map(function(item){
+      return '<div class="analytic-card"><div class="analytic-num">'+item[1]+'</div><div class="analytic-lbl">'+item[0]+'</div></div>';
+    }).join('');
+    var results=d.results||[];
+    var tbody=document.getElementById('winloss-table');
+    if(!results.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No results yet.</td></tr>';return;}
+    tbody.innerHTML=results.map(function(r){
+      var col=r.outcome==='Won'?'#22c55e':r.outcome==='Lost'?'#ef4444':'#f59e0b';
+      return '<tr>'+
+        '<td class="mono">'+(r.t247_id||'—')+'</td>'+
+        '<td class="brief-cell"><div class="brief">'+(r.brief||'—')+'</div></td>'+
+        '<td><span style="color:'+col+';font-weight:700">'+(r.outcome||'—')+'</span></td>'+
+        '<td>'+(r.value_cr?'₹'+r.value_cr+'Cr':'—')+'</td>'+
+        '<td style="color:#555;font-size:11.5px">'+(r.competitor||'—')+'</td>'+
+      '</tr>';
+    }).join('');
+  } catch(e){}
+}
+
+async function saveBidResult() {
+  var body={
+    t247_id:document.getElementById('res-tid').value,
+    outcome:document.getElementById('res-outcome').value,
+    value_cr:parseFloat(document.getElementById('res-value').value)||0,
+    competitor:document.getElementById('res-competitor').value,
+    notes:document.getElementById('res-notes').value
+  };
+  if(!body.t247_id){toast('Enter T247 ID','info');return;}
+  try {
+    await fetch('/bid-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast('Result saved','success'); loadAnalytics();
+    document.getElementById('res-tid').value=''; document.getElementById('res-notes').value='';
+  } catch(e){toast('Failed: '+e.message,'error');}
+}
+
+// POST-AWARD
+async function loadMilestones() {
+  var tid=document.getElementById('pa-select').value; if(!tid) return;
+  setActive(tid,'');
+  try {
+    var r=await fetch('/milestones/'+tid); var d=await r.json();
+    var items=d.milestones||[];
+    var el=document.getElementById('milestones-list');
+    if(!items.length){el.innerHTML='<div class="empty-state">No milestones. Click Setup to create defaults.</div>';return;}
+    el.innerHTML=items.map(function(m){
+      var cls=m.done?'dot-done':m.late?'dot-late':'dot-pending';
+      return '<div class="milestone-item">'+
+        '<div class="milestone-dot '+cls+'"></div>'+
+        '<div style="flex:1"><div style="font-size:12.5px;color:#ccc">'+(m.title||m.name||'')+'</div>'+
+        '<div style="font-size:11px;color:#444">'+(m.due_date||'')+'</div></div>'+
+        (m.done?'<span style="font-size:11px;color:#22c55e">✓ Done</span>':
+          '<button class="action-btn green" onclick="markMilestoneDone(\''+tid+'\',\''+m.id+'\')">Mark Done</button>')+
+      '</div>';
+    }).join('');
+  } catch(e){}
+}
+
+async function setupMilestones() {
+  var tid=document.getElementById('pa-select').value; if(!tid){toast('Select a tender','info');return;}
+  showLoading('Setting up milestones...');
+  try {
+    await fetch('/milestones/'+tid+'/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    hideLoading(); loadMilestones(); toast('Milestones created','success');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+async function markMilestoneDone(tid, milestoneId) {
+  try {
+    await fetch('/milestones/'+tid+'/'+milestoneId+'/done',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    loadMilestones(); toast('Milestone marked done','success');
+  } catch(e){toast('Error','error');}
+}
+
+async function genLetter(type) {
+  var tid=document.getElementById('pa-select').value; if(!tid){toast('Select a tender','info');return;}
+  showLoading('Generating letter...');
+  try {
+    var r=await fetch('/tender/'+tid+'/letter/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var d=await r.json(); hideLoading();
+    if(d.download_url) window.open(d.download_url);
+    document.getElementById('pa-letter-result').innerHTML='<div style="color:#22c55e;font-size:12.5px;margin-top:8px">✅ Letter generated</div>';
+    toast('Letter ready','success');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+async function generateInvoice() {
+  var tid=document.getElementById('pa-select').value; if(!tid){toast('Select a tender','info');return;}
+  var desc=document.getElementById('inv-desc').value; var amount=document.getElementById('inv-amount').value;
+  if(!desc||!amount){toast('Fill description and amount','info');return;}
+  showLoading('Generating invoice...');
+  try {
+    var r=await fetch('/tender/'+tid+'/invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:desc,amount:parseFloat(amount)})});
+    var d=await r.json(); hideLoading();
+    if(d.download_url) window.open(d.download_url);
+    document.getElementById('inv-result').innerHTML='<div style="color:#22c55e;font-size:12.5px">✅ Invoice generated</div>';
+    toast('Invoice ready','success');
+  } catch(e){hideLoading();toast('Failed: '+e.message,'error');}
+}
+
+// SKIPPED
+async function loadSkipped() {
+  try {
+    var r=await fetch('/skipped-tenders'); var d=await r.json();
+    var items=d.tenders||[];
+    var tbody=document.getElementById('skipped-table');
+    if(!items.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr>';return;}
+    tbody.innerHTML=items.map(function(t){
+      return '<tr>'+
+        '<td class="mono">'+(t.t247_id||'—')+'</td>'+
+        '<td class="brief-cell"><div class="brief">'+(t.brief||'—')+'</div></td>'+
+        '<td style="color:#555;font-size:11.5px">'+(t.reason||'—')+'</td>'+
+        '<td style="color:#444;font-size:11.5px">'+(t.skipped_on||'—')+'</td>'+
+        '<td><button class="action-btn blue" onclick="restoreTender(\''+t.t247_id+'\')">Restore</button></td>'+
+      '</tr>';
+    }).join('');
+  } catch(e){}
+}
+
+async function restoreTender(tid) {
+  try {
+    await fetch('/tender/'+tid+'/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    toast('Tender restored','success'); loadSkipped(); loadDashboard();
+  } catch(e){toast('Error','error');}
+}
+
+// SETTINGS
+async function loadSettings() {
+  try {
+    var r=await fetch('/config'); var d=await r.json();
+    if(d.gemini_api_key) document.getElementById('key1').value=d.gemini_api_key;
+    if(d.gemini_api_key_2) document.getElementById('key2').value=d.gemini_api_key_2;
+    if(d.gemini_api_key_3) document.getElementById('key3').value=d.gemini_api_key_3;
+    if(d.gemini_api_key_4) document.getElementById('key4').value=d.gemini_api_key_4;
+    if(d.t247_username) document.getElementById('t247u').value=d.t247_username;
+  } catch(e){}
+}
+
+async function saveKeys() {
+  var body={gemini_api_key:document.getElementById('key1').value,gemini_api_key_2:document.getElementById('key2').value,
+    gemini_api_key_3:document.getElementById('key3').value,gemini_api_key_4:document.getElementById('key4').value};
+  try{await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});toast('Keys saved','success');}catch(e){toast('Failed','error');}
+}
+
+async function saveT247() {
+  var body={t247_username:document.getElementById('t247u').value,t247_password:document.getElementById('t247p').value};
+  try{await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});toast('T247 credentials saved','success');}catch(e){toast('Failed','error');}
+}
+
+async function testAI() {
+  showLoading('Testing AI...');
+  try{var r=await fetch('/test-ai');var d=await r.json();hideLoading();toast(d.status==='ok'?'AI working — '+d.model:'AI error: '+(d.message||''),d.status==='ok'?'success':'error');}catch(e){hideLoading();toast('Test failed','error');}
+}
+
+async function testT247() {
+  var el=document.getElementById('t247-test-result'); if(el) el.textContent='Testing...';
+  try{var r=await fetch('/test-t247');var d=await r.json();
+    if(el){el.textContent=d.status==='ok'?'✅ Connected as '+d.username:'❌ '+(d.message||'Failed');el.style.color=d.status==='ok'?'#22c55e':'#ef4444';}
+  }catch(e){if(el) el.textContent='Error: '+e.message;}
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  loadDashboard();
+  checkDriveStatus();
+  loadQuota();
+  var saved = localStorage.getItem('activeTenderId');
+  if(saved) { currentTenderId=saved; document.getElementById('an-tid').value=saved; }
+  setInterval(loadDashboard, 120000);
+  setInterval(checkDriveStatus, 60000);
 });
 </script>
+</body>
+</html>
