@@ -1384,7 +1384,7 @@ async function pollAnalysisJob(jobId, tid) {
     if(d.status === 'done') {
       clearInterval(jobPollInterval); jobPollInterval = null;
       document.getElementById('analysis-progress').style.display='none';
-      var result = d.result || {};
+      var result = d.result || d {};
       showAnalysisResult(result, tid);
       if(tid) { setActive(tid,''); loadDashboard(); }
       // Download doc if available
@@ -1407,8 +1407,9 @@ function showAnalysisError(msg) {
 }
 
 function showAnalysisResult(result, tid) {
-  var td = result.tender_data || {};
-  var verdict = fieldVal(td.verdict || (td.overall_verdict||{}).verdict || result.bid_no_bid || 'REVIEW');
+  var td = result.tender_data || result || {};
+  if(td.result) td = td.result.tender_data || td.result || td;
+  var verdict = fieldVal(td.verdict || (td.overall_verdict||{}).verdict || td.bid_no_bid || result.bid_no_bid || 'REVIEW');
   var vClass = 'verdict-'+verdict;
   var reason = (td.overall_verdict||{}).reason || td.reason || '';
   var pq = td.pq_criteria || [];
