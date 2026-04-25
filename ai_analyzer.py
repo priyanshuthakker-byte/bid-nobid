@@ -146,6 +146,10 @@ def load_config() -> Dict:
         v = os.environ.get(key)
         if v:
             cfg[key.lower()] = v
+    for key in ["T247_USERNAME", "T247_PASSWORD"]:
+        v = os.environ.get(key)
+        if v:
+            cfg[key.lower()] = v
     extra = []
     for i in range(2, 6):
         k = os.environ.get(f"GEMINI_API_KEY_{i}")

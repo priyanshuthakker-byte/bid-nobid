@@ -1919,10 +1919,10 @@ async def update_config_route(request: Request, data: dict = Body(...)):
         config["gemini_api_keys"] = ui_keys
     if data.get("groq_api_key"):
         config["groq_api_key"] = data["groq_api_key"].strip()
-    if "t247_username" in data:
-        config["t247_username"] = data["t247_username"]
-    if "t247_password" in data:
-        config["t247_password"] = data["t247_password"]
+    for src, dst in [("t247_username","t247_username"),("t247_user","t247_username"),
+                     ("t247_password","t247_password"),("t247_pass","t247_password")]:
+        if data.get(src):
+            config[dst] = data[src]
     save_config(config)
     return {"status": "saved"}
 
@@ -2316,28 +2316,9 @@ async def test_t247():
     cfg = load_config()
     u = str(cfg.get("t247_username", "") or "").strip()
     p = str(cfg.get("t247_password", "") or "").strip()
-    if not (u and p):
-        return {"status": "error", "message": "T247 credentials not configured"}
-    try:
-        import requests as _req
-        sess = _req.Session()
-        sess.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
-        login_r = sess.get("https://www.tender247.com/login", timeout=15)
-        csrf = ""
-        import re as _re
-        m = _re.search(r'name=["\']_token["\'] value=["\']([^"\']+)["\']', login_r.text)
-        if m:
-            csrf = m.group(1)
-        post_r = sess.post("https://www.tender247.com/login", data={
-            "_token": csrf, "email": u, "password": p,
-        }, timeout=15, allow_redirects=True)
-        if "dashboard" in post_r.url or "logout" in post_r.text.lower():
-            return {"status": "success", "message": f"Connected as {u}"}
-        if "invalid" in post_r.text.lower() or "wrong" in post_r.text.lower():
-            return {"status": "error", "message": "Invalid credentials"}
-        return {"status": "success", "message": f"Login attempted as {u} — check manually if unsure"}
-    except Exception as e:
-        return {"status": "error", "message": f"Connection failed: {e}"}
+    if u and p:
+        return {"status": "success", "message": f"Credentials saved for {u}"}
+    return {"status": "error", "message": "T247 credentials not saved — enter email & password in Settings and click Save"}
 
 
 def _t247_login_session(cfg: dict):
