@@ -1874,6 +1874,7 @@ async def reports_list():
         return {"reports": [], "error": str(e)}
 
 # ══ CONFIG (admin-guarded) ════════════════════════════════════════════════════
+@app.get("/config-full")
 @app.get("/config")
 async def get_config_route(request: Request):
     check_admin(request)
