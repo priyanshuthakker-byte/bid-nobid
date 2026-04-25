@@ -1,4 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,7 +17,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(40), default="admin")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
 
 class TenderRecord(Base):
@@ -30,7 +33,7 @@ class TenderRecord(Base):
     risk_score: Mapped[float] = mapped_column(Float, default=0.0)
     status: Mapped[str] = mapped_column(String(80), default="Identified")
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class WorkItem(Base):
@@ -43,8 +46,8 @@ class WorkItem(Base):
     result_json: Mapped[str] = mapped_column(Text, default="{}")
     error_text: Mapped[str] = mapped_column(Text, default="")
     attempts: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class TenderSource(Base):
@@ -56,8 +59,8 @@ class TenderSource(Base):
     base_url: Mapped[str] = mapped_column(String(500), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     config_json: Mapped[str] = mapped_column(Text, default="{}")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class IngestedTender(Base):
@@ -72,8 +75,8 @@ class IngestedTender(Base):
     reference_no: Mapped[str] = mapped_column(String(255), default="")
     payload_json: Mapped[str] = mapped_column(Text, default="{}")
     raw_text: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class ClauseEvidence(Base):
@@ -86,4 +89,4 @@ class ClauseEvidence(Base):
     clause_text: Mapped[str] = mapped_column(Text, default="")
     evidence_text: Mapped[str] = mapped_column(Text, default="")
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

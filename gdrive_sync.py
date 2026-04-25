@@ -145,10 +145,7 @@ def save_to_drive(local_path, filename="tenders_db.json", content_bytes=None):
 
     folder_id = _get_folder_id()
     if not folder_id:
-        _log("ERROR: GDRIVE_FOLDER_ID not set - cannot save to Drive")
-        _log("Create a folder in Google Drive, share it with the service account,")
-        _log("and set GDRIVE_FOLDER_ID in Render env vars.")
-        return False
+        _log("WARNING: GDRIVE_FOLDER_ID not set - saving to Drive root (set GDRIVE_FOLDER_ID in Render for reliability)")
 
     for attempt in range(2):
         try:
@@ -159,18 +156,19 @@ def save_to_drive(local_path, filename="tenders_db.json", content_bytes=None):
             elif hasattr(local_path, 'read_bytes'):
                 content = local_path.read_bytes()
             else:
-                content = str(local_path).encode()
-            # Guard: never upload empty or trivially small content
+                from pathlib import Path as _P
+                content = _P(str(local_path)).read_bytes()
             if len(content) < 10:
                 _log(f"WARNING: Skipping Drive upload of {filename} - content too small ({len(content)} bytes)")
                 return False
-            # Guard: for tenders_db.json, verify it has tenders
             if filename == "tenders_db.json":
                 try:
                     parsed = json.loads(content)
-                    if not parsed.get("tenders"):
-                        _log("WARNING: Skipping Drive upload - tenders_db has 0 tenders (would overwrite good data)")
+                    tender_count = len(parsed.get("tenders") or {})
+                    if tender_count == 0:
+                        _log("WARNING: Skipping Drive upload - tenders_db has 0 tenders")
                         return False
+                    _log(f"Drive upload: {filename} ({len(content)//1024} KB, {tender_count} tenders, folder={folder_id or 'root'}, file_id={file_id})")
                 except Exception:
                     _log("WARNING: Skipping Drive upload - tenders_db is not valid JSON")
                     return False
@@ -186,13 +184,15 @@ def save_to_drive(local_path, filename="tenders_db.json", content_bytes=None):
                     supportsAllDrives=True
                 ).execute()
             else:
-                meta = {"name": filename, "parents": [folder_id]}
+                meta = {"name": filename}
+                if folder_id:
+                    meta["parents"] = [folder_id]
                 result = _drive_service.files().create(
                     body=meta, media_body=media, fields="id",
                     supportsAllDrives=True
                 ).execute()
                 _file_id_cache[filename] = result["id"]
-            _log(f"Saved {filename} to Drive ({len(content)//1024} KB)")
+            _log(f"OK: Saved {filename} to Drive ({len(content)//1024} KB)")
             return True
 
         except Exception as e:
@@ -200,19 +200,17 @@ def save_to_drive(local_path, filename="tenders_db.json", content_bytes=None):
             if "storageQuotaExceeded" in err_str or "storage quota" in err_str.lower():
                 sa_email = get_service_account_email()
                 _log("ERROR: Drive save failed: Service account has no storage quota.")
-                _log(f"FIX: Share your Google Drive folder with {sa_email}")
-                _log("Steps:")
-                _log("1. Open drive.google.com")
-                _log("2. Create folder 'NIT-BidNoBid'")
-                _log(f"3. Right-click -> Share -> add {sa_email} as Editor")
-                _log("4. Copy folder ID from URL and set as GDRIVE_FOLDER_ID in Render")
+                _log(f"FIX: Share your Google Drive folder with {sa_email} as Editor")
+                _log("Steps: 1) drive.google.com  2) Create folder 'NIT-BidNoBid'")
+                _log(f"3) Right-click -> Share -> add {sa_email} as Editor")
+                _log("4) Copy folder ID from URL -> set as GDRIVE_FOLDER_ID in Render")
                 return False
-            if attempt == 0 and ("pipe" in err_str.lower() or "connection" in err_str.lower()):
+            if attempt == 0 and ("pipe" in err_str.lower() or "connection" in err_str.lower() or "broken" in err_str.lower()):
                 _log(f"Drive connection error - reconnecting: {e}")
                 _file_id_cache.clear()
                 _reconnect()
             else:
-                _log(f"ERROR: Drive save failed: {e}")
+                _log(f"ERROR: Drive save failed for {filename}: {e}")
                 return False
     return False
 

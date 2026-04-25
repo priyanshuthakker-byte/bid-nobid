@@ -797,6 +797,16 @@ select option{background:var(--bg2)}
       </div>
     </div>
     <div class="card">
+      <div class="card-title">Admin Token</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Required only if ADMIN_TOKEN is set in Render env vars</p>
+      <label>Admin Token</label><input type="password" id="admin-token-input" placeholder="Enter admin token...">
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary btn-sm" onclick="saveAdminToken()">Save Token</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearAdminToken()">Clear</button>
+      </div>
+      <div id="admin-token-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+    </div>
+    <div class="card">
       <div class="card-title">System Info</div>
       <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px">
         <span>Version: <b style="color:#fff">7.0</b></span>
@@ -904,6 +914,7 @@ var currentTenderId = '';
 var currentTenderBrief = '';
 var lastAnalysisResult = null;
 var lastAnalysisFilename = '';
+var lastAnalysisTid = '';
 var editorTenderData = null;
 var editorChatHistory = [];
 
@@ -1241,7 +1252,7 @@ async function pollAnalysis(jobId) {
       var d = await r.json();
       if (d.step !== undefined && d.step > step) { step = d.step; setStep(step); }
       if (d.status === 'done') {
-        setTimeout(() => { document.getElementById('an-progress').style.display='none'; showAnalysisResult(d.result); }, 500);
+        setTimeout(() => { document.getElementById('an-progress').style.display='none'; showAnalysisResult(d.result || d || {}); }, 500);
         return;
       }
       if (d.status === 'error') { toast('Analysis error: ' + d.message, 'error'); document.getElementById('an-progress').style.display='none'; return; }
@@ -1255,6 +1266,7 @@ async function pollAnalysis(jobId) {
 function showAnalysisResult(d) {
   lastAnalysisResult = d;
   lastAnalysisFilename = d.download_file || '';
+  lastAnalysisTid = d.t247_id || (d.tender_data && d.tender_data.t247_id) || '';
   document.getElementById('an-result-wrap').style.display = 'block';
 
   var td = d.tender_data || d;
@@ -1313,7 +1325,7 @@ function showAnalysisResult(d) {
   document.getElementById('doc-preview-content').innerHTML = buildDocPreview(td, v);
 
   // Update download button
-  document.getElementById('dl-btn').onclick = () => downloadReport(lastAnalysisFilename);
+  document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);
 
   // Show prebid section
   if (td.prebid_queries && td.prebid_queries.length) {
@@ -1396,6 +1408,22 @@ function buildDocPreview(td, verdict) {
 function downloadReport(filename) {
   if (!filename) { toast('No report file available', 'error'); return; }
   window.location.href = '/download/' + filename;
+}
+
+async function downloadTenderDoc(tid) {
+  if (!tid) { toast('No tender selected', 'info'); return; }
+  try {
+    var r = await fetch('/tender/' + tid + '/doc-download');
+    if (!r.ok) { toast('Download failed: HTTP ' + r.status, 'error'); return; }
+    var blob = await r.blob();
+    var cd = r.headers.get('Content-Disposition') || '';
+    var fname = (cd.match(/filename="?([^";\n]+)"?/) || [])[1] || ('BidNoBid_' + tid + '.docx');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) { toast('Download error: ' + e.message, 'error'); }
 }
 
 function generatePrebidFromResult() {
@@ -2070,18 +2098,49 @@ async function searchBOQ() {
 }
 
 // ────────────────────────────────────────────
+// ADMIN TOKEN helpers
+// ────────────────────────────────────────────
+function getAdminToken() {
+  return localStorage.getItem('admin_token') || '';
+}
+function adminHeaders(extra) {
+  var h = Object.assign({'Content-Type': 'application/json'}, extra || {});
+  var tok = getAdminToken();
+  if (tok) h['X-Admin-Token'] = tok;
+  return h;
+}
+function saveAdminToken() {
+  var tok = document.getElementById('admin-token-input').value.trim();
+  if (!tok) { toast('Enter a token first', 'error'); return; }
+  localStorage.setItem('admin_token', tok);
+  document.getElementById('admin-token-input').value = '';
+  document.getElementById('admin-token-status').textContent = 'Token saved in browser';
+  toast('Admin token saved', 'success');
+}
+function clearAdminToken() {
+  localStorage.removeItem('admin_token');
+  document.getElementById('admin-token-input').value = '';
+  document.getElementById('admin-token-status').textContent = 'Token cleared';
+  toast('Admin token cleared', 'info');
+}
+
+// ────────────────────────────────────────────
 // SETTINGS
 // ────────────────────────────────────────────
 async function loadSettings() {
   try {
-    var r = await fetch('/config-full');
-    var d = await r.json();
-    var keys = d.gemini_api_keys || [];
-    ['key1','key2','key3','key4'].forEach((id, i) => {
-      var el = document.getElementById(id);
-      if (el) el.placeholder = keys[i] ? '●●●●' + keys[i].slice(-4) : 'AIza...';
-    });
-    document.getElementById('sys-keys').textContent = d.total_keys + ' key' + (d.total_keys !== 1 ? 's' : '') + (d.ai_active ? ' ✅' : ' ❌');
+    var r = await fetch('/config-full', { headers: adminHeaders({'Content-Type': undefined}) });
+    if (r.status === 403) {
+      document.getElementById('admin-token-status').textContent = '⚠ 403 — enter Admin Token above to access settings';
+    } else {
+      var d = await r.json();
+      var keys = d.gemini_api_keys || [];
+      ['key1','key2','key3','key4'].forEach((id, i) => {
+        var el = document.getElementById(id);
+        if (el) el.placeholder = keys[i] ? '●●●●' + keys[i].slice(-4) : 'AIza...';
+      });
+      document.getElementById('sys-keys').textContent = d.total_keys + ' key' + (d.total_keys !== 1 ? 's' : '') + (d.ai_active ? ' ✅' : ' ❌');
+    }
   } catch(e) {}
 
   try {
@@ -2090,13 +2149,17 @@ async function loadSettings() {
     document.getElementById('sys-drive').textContent = h.drive_sync ? '✅ Connected' : '❌ Not connected';
     document.getElementById('sys-tenders').textContent = h.tenders_loaded;
   } catch(e) {}
+
+  var tok = getAdminToken();
+  if (tok) document.getElementById('admin-token-status').textContent = 'Token stored in browser (ends …' + tok.slice(-4) + ')';
 }
 
 async function saveKeys() {
   var keys = ['key1','key2','key3','key4'].map(id => document.getElementById(id).value.trim()).filter(k => k && !k.startsWith('●'));
   if (!keys.length) { toast('Enter at least one key', 'error'); return; }
   try {
-    var r = await fetch('/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({gemini_api_keys: keys}) });
+    var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({gemini_api_keys: keys}) });
+    if (r.status === 403) { toast('❌ 403 — save Admin Token in settings first', 'error'); return; }
     var d = await r.json();
     toast('✅ Keys saved (' + d.keys_saved + ' keys)', 'success');
   } catch(e) { toast('Error: ' + e.message, 'error'); }
@@ -2114,7 +2177,8 @@ async function testAI() {
 async function saveT247() {
   var data = { t247_user: document.getElementById('t247u').value, t247_pass: document.getElementById('t247p').value };
   try {
-    await fetch('/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify(data) });
+    if (r.status === 403) { toast('❌ 403 — save Admin Token in settings first', 'error'); return; }
     toast('T247 credentials saved', 'success');
   } catch(e) { toast('Error', 'error'); }
 }

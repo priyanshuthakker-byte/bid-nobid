@@ -103,6 +103,8 @@ DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 # ── FIX 2: Threading lock for safe concurrent DB access ─────────────────────
 _db_lock = threading.RLock()
 db_lock = _db_lock
+import time as _time
+_last_drive_restore = 0.0  # rate-limit Drive calls in load_db to once per minute
 
 # ── Background Job Store — file-based (survives OOM restarts) ──────────────
 JOBS_DIR = OUTPUT_DIR / "jobs"
@@ -395,6 +397,22 @@ async def lifespan(app: FastAPI):
                     print("✅ Profile restored from Drive")
     except Exception:
         pass
+
+    # Background Drive sync every 5 minutes — safety net if a save_db call was skipped
+    def _periodic_drive_sync():
+        _time.sleep(90)  # wait for startup to settle
+        while True:
+            try:
+                if drive_available() and DB_FILE.exists():
+                    raw = DB_FILE.read_bytes()
+                    if len(raw) > 10 and json.loads(raw).get("tenders"):
+                        save_to_drive(DB_FILE)
+            except Exception as _pe:
+                print(f"⚠️ Periodic Drive sync error: {_pe}")
+            _time.sleep(300)
+
+    threading.Thread(target=_periodic_drive_sync, daemon=True, name="drive-sync").start()
+
     yield
     # Shutdown: nothing needed
     try:
@@ -415,37 +433,42 @@ app.add_middleware(
 
 # ── DB helpers ───────────────────────────────────────────────────────────────
 def load_db() -> dict:
+    global _last_drive_restore
+    # Fast path: local disk has data
     with _db_lock:
         if DB_FILE.exists():
             try:
                 raw = DB_FILE.read_text(encoding="utf-8")
                 parsed = json.loads(raw)
-                if parsed.get("tenders"):  # non-empty — good
+                if parsed.get("tenders"):
                     return parsed
-                # Empty local DB — fall through to try Drive
             except Exception:
                 pass
-        # Local missing or empty — try Drive restore
+    # Slow path: Drive restore — rate-limited to once per 60s to stop log spam
+    now = _time.time()
+    if drive_available() and (now - _last_drive_restore) > 60.0:
+        _last_drive_restore = now
         try:
-            if drive_available():
-                DB_FILE.parent.mkdir(exist_ok=True, parents=True)
-                if load_from_drive(DB_FILE):
-                    data = json.loads(DB_FILE.read_text(encoding="utf-8"))
-                    if data.get("tenders"):
-                        print(f"🔄 load_db: restored {len(data['tenders'])} tenders from Drive")
-                        return data
+            DB_FILE.parent.mkdir(exist_ok=True, parents=True)
+            if load_from_drive(DB_FILE):
+                data = json.loads(DB_FILE.read_text(encoding="utf-8"))
+                if data.get("tenders"):
+                    print(f"🔄 load_db: restored {len(data['tenders'])} tenders from Drive")
+                    return data
         except Exception:
             pass
-        return {"tenders": {}}
+    return {"tenders": {}}
 
 def save_db(db: dict):
     with _db_lock:
         DB_FILE.parent.mkdir(exist_ok=True, parents=True)
         DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
     try:
-        save_to_drive(DB_FILE)
+        ok = save_to_drive(DB_FILE)
+        if not ok and drive_available():
+            print(f"⚠️ Drive sync skipped/failed — {len(db.get('tenders', {}))} tenders on disk only")
     except Exception as _e:
-        print(f"⚠️ Drive sync failed: {_e}")
+        print(f"⚠️ Drive sync exception: {_e}")
 
 def get_tender(t247_id: str) -> dict:
     return load_db()["tenders"].get(str(t247_id), {})
