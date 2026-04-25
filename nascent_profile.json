@@ -1,0 +1,665 @@
+{
+  "company": {
+    "name": "Nascent Info Technologies Pvt. Ltd.",
+    "short_name": "NIT",
+    "cin": "U72200GJ2006PTC048723",
+    "pan": "AACCN3670J",
+    "gstin": "24AACCN3670J1ZG",
+    "msme_udyam": "UDYAM-GJ-01-0007420",
+    "msme_type": "MSME - Lifetime",
+    "legal_status": "Private Limited Company",
+    "incorporated": "23-Jun-2006",
+    "years_in_operation": 19,
+    "type": "IT / GIS / Smart City Solutions Provider",
+    "address": "AF-1, Shapath IV, Sarkhej-Gandhinagar Highway, opp. Karnavati Club Road, Prahlad Nagar, Ahmedabad, Gujarat 380015",
+    "city": "Ahmedabad",
+    "state": "Gujarat",
+    "pin": "380015",
+    "phone": "+91-79-40200400",
+    "email": "info@nascentinfo.com",
+    "tender_email": "nascent.tender@nascentinfo.com",
+    "website": "www.nascentinfo.com",
+    "md": "Maulik Bhagat",
+    "din_md": "01449881",
+    "din_director2": "01517867",
+    "authorised_signatory": "Hitesh Patel",
+    "poa_validity": "01/04/2026 - 31/03/2027",
+    "poa_alert": "POA renewed for FY 2026-27 — valid till 31-Mar-2027",
+    "gem_seller_id": "nascentinfo2",
+    "udyam": "UDYAM-GJ-01-0007420",
+    "msme": true
+  },
+  "managing_director": {
+    "name": "Maulik Bhagat",
+    "din": "01449881",
+    "mobile": "9825307127"
+  },
+  "authorised_signatory": {
+    "name": "Hitesh Patel",
+    "designation": "Chief Administrative Officer / Head - Administration & Accounts",
+    "email": "hitesh.patel@nascentinfo.com",
+    "mobile": "9099011792",
+    "poa_validity": "01/04/2026 - 31/03/2027",
+    "poa_alert": "Renewed FY 2026-27"
+  },
+  "finance": {
+    "turnover_by_year": {
+      "2019-20": 17.42,
+      "2020-21": 9.17,
+      "2021-22": 20.42,
+      "2022-23": 16.36,
+      "2023-24": 16.36,
+      "2024-25": 18.83
+    },
+    "avg_turnover_last_2_fy": 17.6,
+    "avg_turnover_last_3_fy": 17.18,
+    "avg_turnover_last_5_fy": 16.23,
+    "net_worth_cr": 26.09,
+    "net_worth_latest_cr": 26.09,
+    "solvency_amount_cr": 26.09,
+    "ca_name": "Anuj J. Sharedalal",
+    "ca_udin_2024_25": "25138022BMJAWK5861",
+    "ca_udin_2019_24": "24138022BKCJIO5093"
+  },
+  "employees": {
+    "total": 67,
+    "total_confirmed": 67,
+    "gis_staff": 11,
+    "gis_specialists": 11,
+    "it_dev_staff": 21,
+    "it_developers": 21,
+    "epf_registered": true,
+    "key_technical_staff": [
+      {
+        "name": "Prashant Persai",
+        "designation": "Head - GIS Operations",
+        "dept": "GIS",
+        "years": 7
+      },
+      {
+        "name": "Birendra Prasad",
+        "designation": "Team Lead - GIS Operations",
+        "dept": "GIS",
+        "years": 10
+      },
+      {
+        "name": "Satish Chaurasia",
+        "designation": "Java Tech Lead & Solution Architect",
+        "dept": "Software Dev",
+        "years": 0.11
+      },
+      {
+        "name": "Rahul Kumar Kanani",
+        "designation": "Tech Lead",
+        "dept": "Software Dev",
+        "years": 9
+      },
+      {
+        "name": "Devanshi Trivedi",
+        "designation": "Program Manager",
+        "dept": "Project Management",
+        "years": 6
+      }
+    ]
+  },
+  "certifications": {
+    "cmmi": {
+      "level": 3,
+      "version": "V2.0 (DEV)",
+      "benchmark_id": "68617",
+      "issued_by": "CUNIX Infotech Pvt. Ltd. (CMMI Institute Partner)",
+      "valid_from": "14-Dec-2023",
+      "valid_to": "19-Dec-2026",
+      "status": "ACTIVE",
+      "scope": "Software Solutions & GeoSolutions Departments"
+    },
+    "iso_9001": {
+      "cert_no": "25EQPE64",
+      "issued_by": "Assurance Quality Certification LLC",
+      "valid_from": "09-Sep-2025",
+      "valid_to": "08-Sep-2028",
+      "status": "ACTIVE"
+    },
+    "iso_27001": {
+      "cert_no": "25EQPG58",
+      "issued_by": "Assurance Quality Certification LLC",
+      "valid_from": "09-Sep-2025",
+      "valid_to": "08-Sep-2028",
+      "status": "ACTIVE"
+    },
+    "iso_20000": {
+      "cert_no": "25ZQZQ030409IT",
+      "issued_by": "International Quality Certification Services UK Ltd",
+      "valid_from": "09-Sep-2025",
+      "valid_to": "08-Sep-2028",
+      "status": "ACTIVE"
+    },
+    "ogc": {
+      "product": "CityLayers 2.0",
+      "pid": "1600",
+      "standard": "KML 2.2.0",
+      "status": "ACTIVE - Valid with live logo"
+    },
+    "msme": {
+      "udyam": "UDYAM-GJ-01-0007420",
+      "valid_from": "25-Aug-2020",
+      "valid_to": "Lifetime",
+      "status": "ACTIVE"
+    },
+    "cert_in": {
+      "status": "NOT HELD",
+      "note": "Required for cybersecurity audit tenders"
+    },
+    "stqc": {
+      "status": "NOT HELD",
+      "note": "Required for citizen portal tenders"
+    }
+  },
+  "bank_accounts": [
+    {
+      "type": "Cash Credit",
+      "account_no": "204030110000043",
+      "bank": "Bank of India",
+      "branch": "S.G. Highway Branch",
+      "ifsc": "BKID0002040",
+      "micr": "380013050",
+      "pan": "AACCN3670J"
+    },
+    {
+      "type": "Current Account",
+      "account_no": "204020110000312",
+      "bank": "Bank of India",
+      "branch": "S.G. Highway Branch",
+      "ifsc": "BKID0002040",
+      "pan": "AACCN3670J",
+      "email": "hitesh@nascentinfo.com"
+    }
+  ],
+  "key_contacts": [
+    {
+      "role": "Authorized Signatory",
+      "name": "Hitesh Patel",
+      "designation": "Chief Administrative Officer",
+      "email": "hitesh.patel@nascentinfo.com",
+      "mobile": "9099011792"
+    },
+    {
+      "role": "Managing Director",
+      "name": "Maulik Bhagat",
+      "designation": "Managing Director",
+      "mobile": "9825307127"
+    },
+    {
+      "role": "Bid Executive",
+      "name": "Parthav Thakkar",
+      "designation": "Bid Executive",
+      "email": "parthav.thakkar@nascentinfo.com",
+      "mobile": "8000100505"
+    },
+    {
+      "role": "Head of Presales & Bidding",
+      "name": "Krishnakant Kumar",
+      "designation": "Head of Presales and Bidding"
+    },
+    {
+      "role": "Program Manager",
+      "name": "Devanshi Trivedi",
+      "designation": "Program Manager",
+      "email": "devanshi.trivedi@nascentinfo.com",
+      "mobile": "9427585125"
+    },
+    {
+      "role": "Head - GIS Operations",
+      "name": "Prashant Persai",
+      "designation": "Head - GIS Operations"
+    },
+    {
+      "role": "HR",
+      "name": "Jyoti Dhanwani",
+      "designation": "Head - People Operations"
+    },
+    {
+      "role": "Accounts",
+      "name": "Premal Joshi",
+      "designation": "Manager - Accounts"
+    }
+  ],
+  "tender_portals": [
+    {
+      "name": "CPP / NIC eProcure",
+      "url": "https://eprocure.gov.in/eprocure/app",
+      "username": "nascent.tender@nascentinfo.com"
+    },
+    {
+      "name": "eTenders GePNIC",
+      "url": "https://etenders.gov.in/eprocure/app",
+      "username": "nascent.tender@nascentinfo.com"
+    },
+    {
+      "name": "GeM Portal",
+      "url": "https://gem.gov.in",
+      "username": "nascentinfo2"
+    },
+    {
+      "name": "MahaTenders",
+      "url": "https://mahatenders.gov.in/nicgep/app",
+      "username": "nascent.tender@nascentinfo.com"
+    },
+    {
+      "name": "Rajasthan eProcure",
+      "url": "https://eproc.rajasthan.gov.in/nicgep/app",
+      "username": "nascent.tender@nascentinfo.com"
+    },
+    {
+      "name": "Gujarat nProcure",
+      "url": "https://nprocure.com",
+      "username": "nascentinfo"
+    },
+    {
+      "name": "Karnataka eProcure",
+      "username": "S96176"
+    },
+    {
+      "name": "MP Tenders",
+      "url": "https://mptenders.gov.in/nicgep/app",
+      "username": "nascent.tender@nascentinfo.com"
+    }
+  ],
+  "technology_stack": [
+    {
+      "category": "GIS Platform",
+      "tech": "CityLayers Enterprise GIS Platform",
+      "proficiency": "Expert",
+      "notes": "Proprietary - primary platform in all ULB GIS projects"
+    },
+    {
+      "category": "GIS Platform",
+      "tech": "QGIS",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "GIS Platform",
+      "tech": "GeoServer",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "GIS Platform",
+      "tech": "PostGIS",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "GIS Platform",
+      "tech": "OpenLayers / Leaflet",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "Backend",
+      "tech": "Java / Spring Boot",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "Backend",
+      "tech": "Python",
+      "proficiency": "Good"
+    },
+    {
+      "category": "Frontend",
+      "tech": "React.js",
+      "proficiency": "Good"
+    },
+    {
+      "category": "Frontend",
+      "tech": "HTML5 / CSS3 / Bootstrap",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "Database",
+      "tech": "PostgreSQL / PostGIS",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "Mobile",
+      "tech": "Android (Native / Hybrid)",
+      "proficiency": "Good"
+    },
+    {
+      "category": "Cloud",
+      "tech": "AWS",
+      "proficiency": "Good"
+    },
+    {
+      "category": "Cloud",
+      "tech": "NIC / State Data Centre",
+      "proficiency": "Good"
+    },
+    {
+      "category": "Other",
+      "tech": "OGC Standards (WMS/WFS/WCS/KML)",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "Other",
+      "tech": "Satellite Imagery Processing",
+      "proficiency": "Expert"
+    },
+    {
+      "category": "GIS Survey",
+      "tech": "DGPS Survey",
+      "proficiency": "Expert"
+    }
+  ],
+  "bid_rules": {
+    "do_not_bid": [
+      "amc only",
+      "supply only",
+      "hardware only",
+      "manpower supply",
+      "staffing",
+      "koha",
+      "library management amc"
+    ],
+    "preferred_sectors": [
+      "gis",
+      "smart city",
+      "egovernance",
+      "urban",
+      "municipal",
+      "ulb",
+      "geospatial",
+      "web portal",
+      "mobile app",
+      "survey",
+      "mapping",
+      "property tax",
+      "tourism"
+    ],
+    "conditional": [
+      "office in state",
+      "50+ gis staff",
+      "100+ employees",
+      "cert-in",
+      "stqc",
+      "specific state experience",
+      "consortium restricted"
+    ],
+    "min_project_value_cr": 0.25,
+    "max_project_value_cr": 100
+  },
+  "domains": [
+    "GIS",
+    "Smart City",
+    "eGovernance",
+    "Web Portal",
+    "Mobile App",
+    "Property Survey",
+    "Utility Mapping",
+    "Analytics",
+    "Tourism",
+    "Software Development"
+  ],
+  "key_technologies": [
+    "GIS",
+    "Java",
+    "Python",
+    "React",
+    "PostGIS",
+    "GeoServer",
+    "CityLayers",
+    "Android",
+    "AWS"
+  ],
+  "emd_exemption": "Exempt under MSME Public Procurement Policy — Udyam: UDYAM-GJ-01-0007420",
+  "standard_documents": {
+    "has_letterhead": true,
+    "has_poa": true,
+    "has_incorporation_cert": true,
+    "has_pan": true,
+    "has_gstin": true,
+    "has_msme_cert": true,
+    "has_cmmi_cert": true,
+    "has_iso_9001": true,
+    "has_iso_27001": true,
+    "has_iso_20000": true,
+    "has_audited_financials": true
+  },
+  "metadata": {
+    "version": "2.0",
+    "last_updated": "2026-04-18",
+    "source": "Nascent_Tender_Master Google Sheet"
+  },
+  "projects": [
+    {
+      "id": 1,
+      "name": "JuMC GIS Project",
+      "client": "Junagadh Municipal Corporation",
+      "client_type": "Govt - ULB",
+      "state": "Gujarat",
+      "value_cr": 9.78,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "GIS Survey",
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Web GIS",
+        "Property Survey",
+        "O&M"
+      ],
+      "team_size": "20+",
+      "docs": [
+        "Work Order",
+        "Contract Agreement"
+      ],
+      "scope": "Procurement of satellite imagery, DGPS survey, Web GIS base map, door-to-door property survey 20000 batches, UAT, Go-Live, 5-year O&M. Total Rs.9.78Cr"
+    },
+    {
+      "id": 2,
+      "name": "VMC GIS & ERP Project",
+      "client": "Vadodara Municipal Corporation / VSCDL",
+      "client_type": "Govt - ULB",
+      "state": "Gujarat",
+      "value_cr": 20.5,
+      "status": "Completed",
+      "role": "Consortium Member",
+      "domain": "GIS Survey",
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Web GIS",
+        "ERP",
+        "Property Survey"
+      ],
+      "team_size": "30+",
+      "docs": [
+        "Work Order IT/15-16/551 dtd 24/09/2015",
+        "Completion Certificate VDCDL/2022-23/68 dtd 19/04/2022"
+      ],
+      "scope": "Property survey of ~7 Lakh properties, GIS base map (~160 Sq.Km), Web GIS with 16 department modules, ERP integration, utility mapping"
+    },
+    {
+      "id": 3,
+      "name": "BMC Utility Mapping",
+      "client": "Bhavnagar Municipal Corporation",
+      "client_type": "Govt - ULB",
+      "state": "Gujarat",
+      "value_cr": 4.2,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "GIS Survey",
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Utility Mapping",
+        "Mobile App"
+      ],
+      "docs": [
+        "Work Order"
+      ],
+      "scope": "Utility mapping, property tagging, GIS application deployment and O&M"
+    },
+    {
+      "id": 4,
+      "name": "AMC Heritage Mobile App",
+      "client": "Ahmedabad Municipal Corporation",
+      "client_type": "Govt - ULB",
+      "state": "Gujarat",
+      "value_cr": 4.72,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "Mobile App",
+      "tags": [
+        "Mobile App",
+        "Web Portal",
+        "Smart City",
+        "AR",
+        "QR"
+      ],
+      "docs": [
+        "Work Order",
+        "Completion Certificate"
+      ],
+      "scope": "Heritage mobile app, kiosks, QR plates, AR features and integration"
+    },
+    {
+      "id": 5,
+      "name": "Tourism Gujarat Portal",
+      "client": "TCGL / Gujarat Tourism",
+      "client_type": "Govt - PSU",
+      "state": "Gujarat",
+      "value_cr": 9.31,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "Web Portal",
+      "tags": [
+        "Web Portal",
+        "Mobile App",
+        "Tourism",
+        "GIS",
+        "Analytics",
+        "CMS",
+        "Chatbot"
+      ],
+      "team_size": "12+",
+      "docs": [
+        "Work Order"
+      ],
+      "scope": "Adobe Suite, Integrated Web Portal, CMS, Online Booking, Interactive Map, Grievance, Chatbot, Social Media, SEO, O&M with onsite team 3 years"
+    },
+    {
+      "id": 6,
+      "name": "PCSCL Smart City",
+      "client": "Pimpri Chinchwad Smart City Ltd",
+      "client_type": "Govt - Smart City SPV",
+      "state": "Maharashtra",
+      "value_cr": 61.19,
+      "status": "Completed",
+      "role": "Consortium Member",
+      "domain": "Smart City",
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "ERP",
+        "Smart City",
+        "Mobile App",
+        "Dashboard"
+      ],
+      "docs": [
+        "Work Order",
+        "Agreement"
+      ],
+      "scope": "GIS base mapping, ERP modules, smart addressing system, dashboards, mobile apps and O&M"
+    },
+    {
+      "id": 7,
+      "name": "CEICED Portal",
+      "client": "Chief Electrical Inspector to Govt of Gujarat (CEICED)",
+      "client_type": "Govt - State Dept",
+      "state": "Gujarat",
+      "value_cr": 3.59,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "eGovernance",
+      "tags": [
+        "eGovernance",
+        "Web Portal",
+        "Mobile App",
+        "O&M",
+        "Software Development"
+      ],
+      "docs": [
+        "Work Order"
+      ],
+      "scope": "Portal development, licensing system, training and long-term O&M"
+    },
+    {
+      "id": 8,
+      "name": "KVIC Geotagging Portal",
+      "client": "Khadi & Village Industries Commission",
+      "client_type": "Govt - Central PSU",
+      "state": "National",
+      "value_cr": 5.15,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "GIS Portal",
+      "tags": [
+        "GIS Portal",
+        "Mobile App",
+        "Geo-tagging",
+        "Web GIS"
+      ],
+      "team_size": "132 Man-Months",
+      "contact_email": "dit.kvic@gov.in",
+      "docs": [
+        "LOI DIT/Geotagging/2019-20 dtd 30/09/2019",
+        "Go-Live Certificate dtd 12/11/2020"
+      ],
+      "scope": "Public Geo Portal (CityLayers), GIS mobile app for PMEGP geo-tagging PAN India, KVIC properties, Khadi institutions, web inspection app, cloud hosting, 3-year support"
+    },
+    {
+      "id": 9,
+      "name": "ULB ERP Project",
+      "client": "Gujarat ULB",
+      "client_type": "Govt - ULB",
+      "state": "Gujarat",
+      "value_cr": 0,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "ERP",
+      "tags": [
+        "ERP"
+      ],
+      "scope": "ERP implementation for ULB"
+    },
+    {
+      "id": 10,
+      "name": "AMC GIS Platform",
+      "client": "Ahmedabad Municipal Corporation",
+      "client_type": "Govt - ULB",
+      "state": "Gujarat",
+      "value_cr": 10.55,
+      "status": "Completed",
+      "role": "Solo",
+      "domain": "GIS Survey",
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Web GIS",
+        "DGPS Survey",
+        "Property Survey",
+        "eGovernance"
+      ],
+      "team_size": "25+",
+      "docs": [
+        "Work Order 29/05/2015",
+        "Completion Certificate 25/10/2019"
+      ],
+      "scope": "CityLayers Platform for AMC, base map using HRSI, DGPS survey, property tagging 18.5 Lakh properties, utility layers, 5-year Annual Technical Support"
+    }
+  ],
+  "project_tabs": [
+    {
+      "name": "All Projects",
+      "projects": []
+    }
+  ]
+}

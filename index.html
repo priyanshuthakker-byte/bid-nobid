@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TenderIQ — Nascent Info Technologies</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080b12;--bg2:#0d1117;--bg3:#131822;--bg4:#1a2032;--bg5:#202840;
+  --border:#1e2840;--border2:#253050;
+  --text:#c9d1e0;--text2:#8892a4;--text3:#4a5568;
+  --blue:#3b82f6;--blue2:#1d4ed8;--blue-glow:rgba(59,130,246,.15);
+  --green:#22c55e;--green-bg:rgba(34,197,94,.1);
+  --red:#ef4444;--red-bg:rgba(239,68,68,.1);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,.1);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,.1);
+  --cyan:#06b6d4;
+  --font:'IBM Plex Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --radius:8px;--radius2:12px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;font-size:13px}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── SIDEBAR ── */
+#nav{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:16px 10px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+#nav-brand{padding:8px 10px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+#nav-brand h2{font-size:14px;font-weight:700;color:#fff;letter-spacing:.5px}
+#nav-brand p{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+.nav-section{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding:10px 10px 4px;font-weight:600}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:none;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:var(--radius);font-size:12.5px;font-family:var(--font);transition:all .15s;position:relative}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.nav-btn.active::before{content:'';position:absolute;left:0;top:20%;height:60%;width:2px;background:var(--blue);border-radius:0 2px 2px 0}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--bg4);color:var(--blue);border-radius:20px;padding:1px 7px;font-size:10px;font-family:var(--mono);font-weight:600}
+.nav-badge.red{background:var(--red-bg);color:var(--red)}
+.nav-badge.green{background:var(--green-bg);color:var(--green)}
+#nav-footer{margin-top:auto;padding:12px 10px 4px;border-top:1px solid var(--border)}
+.status-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-bottom:4px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green)}.dot-red{background:var(--red)}.dot-gray{background:var(--text3)}.dot-amber{background:var(--amber)}
+
+/* ── MAIN ── */
+#main{flex:1;overflow-y:auto;background:var(--bg);min-width:0}
+.page{display:none;min-height:100%}.page.active{display:block}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+.topbar h1{font-size:17px;font-weight:600;color:#fff}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.page-body{padding:20px 24px}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-size:12.5px;font-weight:500;font-family:var(--font);display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue2)}
+.btn-success{background:#16a34a;color:#fff}.btn-success:hover{background:#15803d}
+.btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-amber{background:#b45309;color:#fff}.btn-amber:hover{background:#92400e}
+.btn-ghost{background:none;border:1px solid var(--border2);color:var(--text2)}.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-icon{padding:6px;border-radius:var(--radius);background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s;font-size:13px}
+.btn-icon:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── CARDS ── */
+.card{background:var(--bg3);border-radius:var(--radius2);padding:18px 20px;margin-bottom:14px;border:1px solid var(--border)}
+.card-title{font-size:13.5px;font-weight:600;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.card-sm{padding:14px 16px}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row>.card{flex:1;min-width:220px}
+.col{display:flex;flex-direction:column;gap:14px;flex:1}
+
+/* ── STATS ── */
+.stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.stat{background:var(--bg3);border-radius:var(--radius2);padding:14px 18px;min-width:100px;cursor:pointer;border:1px solid var(--border);transition:all .15s;flex:1}
+.stat:hover,.stat.active-filter{border-color:var(--blue);background:var(--blue-glow)}
+.stat-num{font-size:24px;font-weight:700;line-height:1;font-family:var(--mono)}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+.stat-change{font-size:10px;margin-top:3px}
+
+/* ── COLORS ── */
+.c-white{color:#fff}.c-green{color:var(--green)}.c-amber{color:var(--amber)}
+.c-red{color:var(--red)}.c-blue{color:var(--blue)}.c-purple{color:var(--purple)}
+.c-cyan{color:var(--cyan)}.c-muted{color:var(--text3)}.c-text{color:var(--text2)}
+.c-urgent{color:var(--red);font-weight:600}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;gap:4px}
+.badge-BID{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.badge-NO-BID{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.badge-CONDITIONAL{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.badge-REVIEW,.badge-{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+.badge-purple{background:var(--purple-bg);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+
+/* ── RISK METER ── */
+.risk-meter{display:flex;gap:3px;align-items:center}
+.risk-bar{flex:1;height:4px;border-radius:2px;background:var(--bg4)}
+.risk-bar.filled-low{background:var(--green)}
+.risk-bar.filled-mid{background:var(--amber)}
+.risk-bar.filled-high{background:var(--red)}
+
+/* ── WIN PROBABILITY ── */
+.win-prob{display:flex;align-items:center;gap:8px}
+.win-prob-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--mono);flex-shrink:0;border:2px solid}
+.win-high{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.win-mid{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.win-low{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse}
+.table-wrap{background:var(--bg3);border-radius:var(--radius2);overflow:hidden;border:1px solid var(--border)}
+th{background:var(--bg2);padding:9px 14px;text-align:left;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:9px 14px;border-top:1px solid var(--border);font-size:12.5px;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.brief-cell .brief{font-size:12.5px;color:var(--text);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brief-cell .org{font-size:10.5px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+
+/* ── FORMS ── */
+label{font-size:10px;color:var(--text3);display:block;margin-bottom:4px;margin-top:12px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+input[type=text],input[type=password],input[type=email],input[type=number],select,textarea{
+  background:var(--bg2);border:1px solid var(--border2);color:var(--text);
+  padding:8px 11px;border-radius:var(--radius);font-size:12.5px;font-family:var(--font);width:100%;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+select option{background:var(--bg2)}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fbtn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;font-size:11.5px;font-family:var(--font);transition:all .15s}
+.fbtn:hover{border-color:var(--blue);color:var(--blue)}
+.fbtn.active{background:var(--blue-glow);color:var(--blue);border-color:rgba(59,130,246,.3)}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{padding-left:36px}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+
+/* ── UPLOAD ── */
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--radius2);padding:28px;text-align:center;cursor:pointer;color:var(--text3);font-size:13px;transition:all .15s;background:var(--bg2)}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--blue);color:var(--blue);background:var(--blue-glow)}
+
+/* ── TABS ── */
+.tab-row{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px}
+.tab{padding:8px 16px;cursor:pointer;font-size:12.5px;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── ALERTS ── */
+.alert-bar{padding:10px 14px;border-radius:var(--radius);font-size:12px;margin-bottom:8px;border-left:3px solid;display:flex;align-items:flex-start;gap:8px}
+.alert-bar.blue{background:var(--blue-glow);border-color:var(--blue);color:#93c5fd}
+.alert-bar.red{background:var(--red-bg);border-color:var(--red);color:#fca5a5}
+.alert-bar.amber{background:var(--amber-bg);border-color:var(--amber);color:#fcd34d}
+.alert-bar.green{background:var(--green-bg);border-color:var(--green);color:#86efac}
+
+/* ── PROGRESS ── */
+.progress-bar{background:var(--bg2);border-radius:4px;height:5px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:var(--blue);border-radius:4px;transition:width .4s ease}
+.progress-fill.green{background:var(--green)}
+.progress-fill.amber{background:var(--amber)}
+.progress-fill.red{background:var(--red)}
+
+/* ── CHECKLIST ── */
+.checklist-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);flex-shrink:0;cursor:pointer}
+.checklist-item.done .cl-label{color:var(--text3);text-decoration:line-through}
+.cl-label{font-size:12.5px;flex:1}
+.cl-cat{font-size:10px;color:var(--text3);background:var(--bg2);padding:2px 6px;border-radius:4px;white-space:nowrap}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--bg4);border:1px solid var(--border2);padding:11px 18px;border-radius:var(--radius);font-size:12.5px;display:none;z-index:9999;max-width:320px;box-shadow:var(--shadow);border-left:3px solid var(--blue)}
+
+/* ── LOADING ── */
+#loading-overlay{position:fixed;inset:0;background:rgba(8,11,18,.8);z-index:9998;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
+#loading-overlay.show{display:flex}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:13px;color:var(--text2)}
+
+/* ── ANALYSIS PROGRESS ── */
+#an-progress{display:none}
+.ap-step{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12.5px;color:var(--text3)}
+.ap-step.done{color:var(--green)}
+.ap-step.active{color:var(--blue)}
+.ap-step.pending{color:var(--text3)}
+.ap-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--bg4)}
+.ap-step.done .ap-dot{background:var(--green)}
+.ap-step.active .ap-dot{background:var(--blue);box-shadow:0 0 8px var(--blue);animation:pulse-dot 1s ease infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
+.ap-progress-bar{height:3px;background:var(--bg4);border-radius:2px;margin:6px 0 10px;overflow:hidden}
+.ap-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:2px;transition:width .5s ease}
+
+/* ── RESULT PANEL ── */
+#an-result-wrap{display:none;margin-top:16px}
+.result-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.result-split{grid-template-columns:1fr}}
+.result-left,.result-right{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2)}
+.result-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.result-body{padding:16px 18px;max-height:600px;overflow-y:auto}
+
+/* ── VERDICT BADGE ── */
+.verdict-hero{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--radius2);margin-bottom:14px}
+.verdict-hero.BID{background:var(--green-bg);border:1px solid rgba(34,197,94,.2)}
+.verdict-hero.NO-BID{background:var(--red-bg);border:1px solid rgba(239,68,68,.2)}
+.verdict-hero.CONDITIONAL{background:var(--amber-bg);border:1px solid rgba(245,158,11,.2)}
+.verdict-hero.REVIEW{background:var(--blue-glow);border:1px solid rgba(59,130,246,.2)}
+.verdict-label{font-size:20px;font-weight:700;font-family:var(--mono)}
+.verdict-label.BID{color:var(--green)}
+.verdict-label.NO-BID{color:var(--red)}
+.verdict-label.CONDITIONAL{color:var(--amber)}
+.verdict-label.REVIEW{color:var(--blue)}
+.verdict-conf{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── DOC PREVIEW ── */
+.doc-preview{font-family:'Times New Roman',serif;color:#1a1a1a;background:#fff;padding:32px 36px;font-size:12px;line-height:1.6;border-radius:var(--radius);overflow:auto;max-height:580px}
+.doc-preview h1{font-size:16px;text-align:center;color:#1F497D;margin-bottom:4px;text-transform:uppercase}
+.doc-preview h2{font-size:13px;color:#2E75B6;margin:14px 0 6px;text-transform:uppercase;border-bottom:2px solid #BDD7EE;padding-bottom:3px}
+.doc-preview h3{font-size:12px;color:#1F497D;margin:10px 0 4px}
+.doc-preview table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.5px}
+.doc-preview th{background:#1F497D;color:#fff;padding:5px 8px;text-align:left}
+.doc-preview td{padding:4px 8px;border:1px solid #BDD7EE}
+.doc-preview tr:nth-child(even) td{background:#F2F7FB}
+.doc-preview .verdict-stamp{font-size:22px;font-weight:700;text-align:center;padding:10px;border-radius:6px;margin:10px 0}
+.doc-preview .verdict-stamp.BID{color:#375623;background:#E2EFDA;border:2px solid #375623}
+.doc-preview .verdict-stamp.NO-BID{color:#C00000;background:#FCE4D6;border:2px solid #C00000}
+.doc-preview .verdict-stamp.CONDITIONAL{color:#7F6000;background:#FFF2CC;border:2px solid #7F6000}
+.doc-preview .crit{padding:3px 6px;margin:2px 0;display:flex;justify-content:space-between;font-size:11px}
+.doc-preview .crit-met{background:#E2EFDA;color:#375623}
+.doc-preview .crit-fail{background:#FCE4D6;color:#C00000}
+.doc-preview .crit-cond{background:#FFF2CC;color:#7F6000}
+
+/* ── DOC EDITOR ── */
+#editor-content{background:#fff;color:#1a1a1a;font-family:'Times New Roman',serif;font-size:13px;line-height:1.7;padding:32px 36px;border-radius:var(--radius);min-height:400px;max-height:500px;overflow-y:auto;border:1px solid var(--border);outline:none}
+#editor-content:focus{border-color:var(--blue)}
+.editor-toolbar{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;border-bottom:none}
+.editor-toolbar button{padding:4px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:11.5px;font-family:var(--font)}
+.editor-toolbar button:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;height:340px;background:var(--bg2);border-radius:var(--radius2);border:1px solid var(--border);overflow:hidden}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{max-width:85%;padding:9px 13px;border-radius:var(--radius);font-size:12.5px;line-height:1.5}
+.chat-msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-radius:var(--radius) var(--radius) 2px var(--radius)}
+.chat-msg.ai{background:var(--bg4);color:var(--text);align-self:flex-start;border-radius:var(--radius) var(--radius) var(--radius) 2px}
+.chat-msg.ai b{color:var(--blue)}
+.chat-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:var(--bg3)}
+.chat-input-row input{flex:1;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:8px 11px;border-radius:var(--radius);font-size:12.5px;font-family:var(--font);outline:none}
+.chat-input-row input:focus{border-color:var(--blue)}
+
+/* ── RISK CARDS ── */
+.risk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.risk-card{background:var(--bg2);border-radius:var(--radius);padding:12px 14px;border:1px solid var(--border)}
+.risk-card-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600}
+.risk-score{font-size:20px;font-weight:700;font-family:var(--mono);margin-bottom:4px}
+.risk-score.low{color:var(--green)}.risk-score.medium{color:var(--amber)}.risk-score.high{color:var(--red)}
+.risk-label{font-size:10px;color:var(--text3)}
+
+/* ── CLAUSE SCANNER ── */
+.clause-item{padding:10px 12px;border-radius:var(--radius);margin-bottom:8px;border-left:3px solid;font-size:12.5px}
+.clause-high{background:var(--red-bg);border-color:var(--red)}
+.clause-med{background:var(--amber-bg);border-color:var(--amber)}
+.clause-low{background:var(--blue-glow);border-color:var(--blue)}
+.clause-title{font-weight:600;margin-bottom:3px}
+.clause-text{color:var(--text2);font-size:12px}
+
+/* ── PIPELINE ── */
+.pipeline-stage{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;margin-bottom:10px}
+.pipeline-stage-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.stage-name{font-size:13px;font-weight:600;color:#fff}
+.stage-count{font-family:var(--mono);color:var(--blue);font-size:12px}
+
+/* ── ANALYTICS ── */
+.analytics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.analytic-card{background:var(--bg3);border-radius:var(--radius2);padding:16px;border:1px solid var(--border);text-align:center}
+.analytic-num{font-size:22px;font-weight:700;color:var(--blue);font-family:var(--mono)}
+.analytic-lbl{font-size:10px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── MILESTONE ── */
+.milestone-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.milestone-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot-done{background:var(--green)}.dot-pending{background:var(--border2)}.dot-late{background:var(--red)}
+
+/* ── EMPTY ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
+.empty-icon{font-size:32px;margin-bottom:10px}
+
+/* ── MONO ── */
+.mono{font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* ── ACTION BTNS ── */
+.actions-cell{display:flex;gap:4px;flex-wrap:wrap}
+.action-btn{padding:3px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:500;font-family:var(--font);transition:all .15s}
+.action-btn.blue{background:var(--blue-glow);color:var(--blue)}.action-btn.blue:hover{background:var(--blue);color:#fff}
+.action-btn.green{background:var(--green-bg);color:var(--green)}.action-btn.green:hover{background:var(--green);color:#fff}
+.action-btn.red{background:var(--red-bg);color:var(--red)}.action-btn.red:hover{background:var(--red);color:#fff}
+.action-btn.gray{background:var(--bg4);color:var(--text2)}.action-btn.gray:hover{background:var(--border2)}
+.action-btn.amber{background:var(--amber-bg);color:var(--amber)}.action-btn.amber:hover{background:var(--amber);color:#fff}
+
+/* ── GEM TAG ── */
+.gem-tag{font-size:9px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:.3px}
+
+/* ── PROJECT MATCH TAGS ── */
+.match-tag{display:inline-block;font-size:9px;background:var(--purple-bg);color:var(--purple);border:1px solid rgba(167,139,250,.25);padding:1px 5px;border-radius:3px;margin:1px;font-weight:600}
+
+/* ── TOKEN METER ── */
+.token-bar-row{margin-bottom:5px}
+.token-bar-label{font-size:9px;color:var(--text3);margin-bottom:2px;display:flex;justify-content:space-between}
+.token-bar-track{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.token-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+.token-bar-fill.ok{background:var(--green)}
+.token-bar-fill.warn{background:var(--amber)}
+.token-bar-fill.crit{background:var(--red)}
+
+/* ── BREADCRUMB ── */
+#breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);padding:6px 24px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+#breadcrumb .bc-sep{color:var(--border2)}
+#breadcrumb .bc-link{cursor:pointer;color:var(--text2)}
+#breadcrumb .bc-link:hover{color:var(--blue)}
+#breadcrumb .bc-current{color:var(--text)}
+
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  #nav{width:56px;padding:10px 6px}
+  #nav-brand p,#nav-brand h2,.nav-section,.nav-badge,.nav-btn>span:not(.nav-icon){display:none}
+  .nav-btn{padding:8px;justify-content:center}
+  .nav-icon{width:auto;font-size:16px}
+  #nav-footer{display:none}
+  body{font-size:12px}
+  .topbar{padding:10px 14px}
+  .topbar h1{font-size:14px}
+  .page-body{padding:12px 14px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:6px}
+  .stat{padding:8px 10px}
+  .stat-num{font-size:20px}
+  .filters{gap:4px}
+  .fbtn{padding:4px 8px;font-size:11px}
+  #side-panel{display:none !important}
+  .table-wrap{overflow-x:auto}
+  table th,table td{padding:7px 8px;font-size:11px}
+  .topbar-actions{gap:4px}
+  .btn-sm{padding:4px 8px;font-size:11px}
+  .result-split{grid-template-columns:1fr}
+  .card{padding:14px}
+  #dash-table-wrap{min-width:0;overflow-x:auto}
+}
+@media(max-width:480px){
+  #nav{width:0;overflow:hidden;padding:0}
+  #main{width:100vw}
+  .topbar-actions .btn-ghost{display:none}
+  .topbar-actions .btn-primary{display:inline-flex}
+}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay"><div class="spinner"></div><div class="loading-msg" id="loading-text">Loading...</div></div>
+
+<!-- ══════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════ -->
+<div id="nav">
+  <div id="nav-brand">
+    <h2>TENDER<span style="color:var(--blue)">IQ</span></h2>
+    <p>Nascent Info Technologies</p>
+  </div>
+
+  <div class="nav-section">Main</div>
+  <button class="nav-btn active" onclick="showPage('dashboard')"><span class="nav-icon">⬛</span>Dashboard<span class="nav-badge" id="nb-total">0</span></button>
+  <button class="nav-btn" onclick="showPage('tenders')"><span class="nav-icon">📋</span>All Tenders</button>
+  <button class="nav-btn" onclick="showPage('pipeline')"><span class="nav-icon">⟶</span>Pipeline</button>
+
+  <div class="nav-section">Analysis</div>
+  <button class="nav-btn" onclick="showPage('analyse')"><span class="nav-icon">🔍</span>Analyse Tender</button>
+  <button class="nav-btn" onclick="showPage('doc-editor')"><span class="nav-icon">✏️</span>Doc Editor</button>
+  <button class="nav-btn" onclick="showPage('checklist')"><span class="nav-icon">✅</span>Checklist</button>
+  <button class="nav-btn" onclick="showPage('documents')"><span class="nav-icon">📄</span>Documents</button>
+
+  <div class="nav-section">Intelligence</div>
+  <button class="nav-btn" onclick="showPage('risk')"><span class="nav-icon">⚠</span>Risk Scanner</button>
+  <button class="nav-btn" onclick="showPage('assistant')"><span class="nav-icon">💬</span>Bid Assistant</button>
+  <button class="nav-btn" onclick="showPage('boq')"><span class="nav-icon">💰</span>BOQ</button>
+
+  <div class="nav-section">Reports</div>
+  <button class="nav-btn" onclick="showPage('reports')"><span class="nav-icon">📑</span>Reports</button>
+  <button class="nav-btn" onclick="showPage('analytics')"><span class="nav-icon">📈</span>Analytics</button>
+
+  <div class="nav-section">Post-Award</div>
+  <button class="nav-btn" onclick="showPage('postaward')"><span class="nav-icon">🏆</span>Post-Award</button>
+  <button class="nav-btn" onclick="showPage('skipped')"><span class="nav-icon">🚫</span>Skipped</button>
+  <button class="nav-btn" onclick="showPage('letterhead')"><span class="nav-icon">🏢</span>Letterhead</button>
+
+  <div class="nav-section">System</div>
+  <button class="nav-btn" onclick="showPage('settings')"><span class="nav-icon">⚙</span>Settings</button>
+
+  <div id="nav-footer">
+    <div class="status-row"><span class="dot dot-gray" id="drive-dot"></span><span id="drive-label">Drive: checking...</span></div>
+    <div class="status-row"><span class="dot dot-gray" id="ai-dot"></span><span id="ai-label">AI: checking...</span></div>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)" id="api-quota">—</div>
+    <div id="token-meter" style="margin-top:8px;display:none">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Gemini Quota</div>
+      <div id="token-bars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════ -->
+<div id="main">
+
+<!-- BREADCRUMB -->
+<div id="breadcrumb" style="display:none">
+  <span class="bc-link" onclick="showPage('dashboard')">Dashboard</span>
+  <span class="bc-sep" id="bc-sep-2" style="display:none">›</span>
+  <span class="bc-link" id="bc-page" style="display:none"></span>
+  <span class="bc-sep" id="bc-sep-3" style="display:none">›</span>
+  <span class="bc-current" id="bc-item" style="display:none"></span>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <h1>Dashboard</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" id="t247-fetch-btn" onclick="autoFetchT247()">⚡ Fetch T247</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Excel</button>
+      <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+      <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export</button>
+      <button class="btn btn-ghost btn-sm" onclick="reclassifyAll()">↺ Reclassify</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div id="alert-container"></div>
+    <div class="stats">
+      <div class="stat" id="stat-all" onclick="setFilter('')"><div class="stat-num c-white" id="s-total">—</div><div class="stat-lbl">Total</div></div>
+      <div class="stat" onclick="setFilter('BID')"><div class="stat-num c-green" id="s-bid">—</div><div class="stat-lbl">BID</div></div>
+      <div class="stat" onclick="setFilter('CONDITIONAL')"><div class="stat-num c-amber" id="s-cond">—</div><div class="stat-lbl">Conditional</div></div>
+      <div class="stat" onclick="setFilter('NO-BID')"><div class="stat-num c-red" id="s-nobid">—</div><div class="stat-lbl">No-Bid</div></div>
+      <div class="stat" onclick="setFilter('REVIEW')"><div class="stat-num c-blue" id="s-review">—</div><div class="stat-lbl">Review</div></div>
+      <div class="stat" onclick="setFilter('analysed')"><div class="stat-num c-purple" id="s-analysed">—</div><div class="stat-lbl">Analysed</div></div>
+    </div>
+    <div class="filters">
+      <button class="fbtn active" onclick="setFilter('')">All</button>
+      <button class="fbtn" onclick="setFilter('BID')">✓ BID</button>
+      <button class="fbtn" onclick="setFilter('CONDITIONAL')">△ Conditional</button>
+      <button class="fbtn" onclick="setFilter('NO-BID')">✗ No-Bid</button>
+      <button class="fbtn" onclick="setFilter('REVIEW')">? Review</button>
+      <button class="fbtn" onclick="setFilter('urgent')">🔴 Urgent ≤7d</button>
+      <button class="fbtn" onclick="setFilter('analysed')">🔬 Analysed</button>
+      <button class="fbtn" onclick="setFilter('gem')">💎 GeM</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input id="dash-search" placeholder="Search by T247 ID, brief, org, location..." oninput="renderDash()">
+    </div>
+    <div id="dash-count" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
+    <div style="display:flex;gap:14px;min-width:0">
+      <div class="table-wrap" id="dash-table-wrap" style="flex:1;min-width:0">
+        <table>
+          <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Value</th><th>Deadline</th><th>Days</th><th>Verdict</th><th>Win%</th><th>Actions</th></tr></thead>
+          <tbody id="dash-table"><tr><td colspan="8" class="empty-state"><div class="empty-icon">📋</div>Loading tenders...</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Side Panel -->
+      <div id="side-panel" style="width:340px;flex-shrink:0;display:none;overflow-y:auto;max-height:calc(100vh - 200px);position:sticky;top:0">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-size:13px;font-weight:600;color:#fff">Tender Detail</span>
+            <button class="btn-icon" onclick="closeSidePanel()" title="Close">✕</button>
+          </div>
+          <div id="side-panel-content"><div class="empty-state" style="padding:20px 0">Click a row to preview</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ALL TENDERS ═══ -->
+<div id="page-tenders" class="page">
+  <div class="topbar"><h1>All Tenders</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export Excel</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="search-wrap"><span class="search-icon">🔍</span><input id="tl-search" placeholder="Search..." oninput="renderTenders()"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>EMD</th><th>Deadline</th><th>Verdict</th><th>Actions</th></tr></thead>
+        <tbody id="tenders-table"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PIPELINE ═══ -->
+<div id="page-pipeline" class="page">
+  <div class="topbar"><h1>Pipeline</h1></div>
+  <div class="page-body">
+    <div id="pipeline-board"></div>
+  </div>
+</div>
+
+<!-- ═══ ANALYSE ═══ -->
+<div id="page-analyse" class="page">
+  <div class="topbar"><h1>Analyse Tender</h1></div>
+  <div class="page-body">
+    <!-- Context Banner -->
+    <div id="ctx-banner" style="display:none" class="alert-bar blue" style="margin-bottom:14px;justify-content:space-between">
+      <span>Active tender: <b id="ctx-id"></b> — <span id="ctx-brief"></span></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearCtx()">✕ Clear</button>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="card">
+      <div class="card-title">Upload Tender Documents</div>
+      <div class="row">
+        <div>
+          <label>T247 ID (links result to dashboard)</label>
+          <input type="text" id="an-tid" placeholder="e.g. 97290989">
+        </div>
+      </div>
+      <label style="margin-top:12px">Documents (ZIP, PDF, DOCX — multiple allowed)</label>
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('an-files').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFiles(event)">
+        <div style="font-size:24px;margin-bottom:8px">📦</div>
+        Drop files here or click to browse<br>
+        <span style="font-size:11px;color:var(--text3)">ZIP · PDF · DOCX · DOC · TXT — includes Corrigendum auto-detection</span>
+      </div>
+      <input type="file" id="an-files" multiple accept=".zip,.pdf,.docx,.doc,.txt" style="display:none" onchange="updateFileList(this)">
+      <div id="an-filelist" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="analyseTender()">🔍 Analyse with AI</button>
+        <button class="btn btn-ghost" onclick="reanalyseDrive()">♻ Re-analyse from Drive</button>
+      </div>
+    </div>
+
+    <!-- Analysis Progress -->
+    <div id="an-progress" class="card">
+      <div class="card-title">AI Analysis Running <span id="ap-step-label" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+      <div class="ap-progress-bar"><div class="ap-progress-fill" id="ap-bar" style="width:0%"></div></div>
+      <div id="ap-steps"></div>
+    </div>
+
+    <!-- Result: Split Preview -->
+    <div id="an-result-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="color:#fff;font-size:14px">Analysis Result</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success btn-sm" id="dl-btn" onclick="downloadReport('')">⬇ Download .docx</button>
+          <button class="btn btn-ghost btn-sm" onclick="openDocEditor()">✏️ Edit in Doc Editor</button>
+          <button class="btn btn-ghost btn-sm" onclick="generatePrebidFromResult()">📝 Pre-bid Queries</button>
+        </div>
+      </div>
+      <div class="result-split">
+        <!-- Left: Analysis Data -->
+        <div class="result-left">
+          <div class="result-header">
+            <span style="font-size:13px;font-weight:600;color:#fff">AI Assessment</span>
+            <span id="res-ai-badge" class="badge badge-purple"></span>
+          </div>
+          <div class="result-body" id="res-left-body"></div>
+        </div>
+        <!-- Right: Document Preview -->
+        <div class="result-right">
+          <div class="result-header">
+            <span style="font-size:13px;font-weight:600;color:#fff">Report Preview</span>
+            <button class="btn-icon btn-xs" onclick="togglePreviewSize()" title="Expand">⤢</button>
+          </div>
+          <div class="result-body" id="res-preview-body">
+            <div class="doc-preview" id="doc-preview-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pre-bid -->
+    <div id="prebid-section" style="display:none" class="card">
+      <div class="card-title">Pre-bid Queries
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="loadPrebidQueries()">↺ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="generatePrebidLetter()">📄 Generate Letter</button>
+          <button class="btn btn-ghost btn-sm" onclick="copyPrebidEmail()">📧 Copy Email</button>
+        </div>
+      </div>
+      <div id="prebid-list"><div class="empty-state">Analyse a tender to generate pre-bid queries.</div></div>
+    </div>
+
+    <!-- Compliance -->
+    <div id="compliance-section" style="display:none" class="card">
+      <div class="card-title">⚖ Compliance Check <button class="btn btn-ghost btn-sm" onclick="runCompliance()">Analyse</button></div>
+      <div id="compliance-result"><div class="empty-state">Click Analyse to check RFP against Indian procurement laws.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DOC EDITOR ═══ -->
+<div id="page-doc-editor" class="page">
+  <div class="topbar">
+    <h1>Doc Editor</h1>
+    <div class="topbar-actions">
+      <select id="de-tender-select" onchange="loadTenderForEditor(this.value)" style="width:220px;padding:6px 10px">
+        <option value="">— Select analysed tender —</option>
+      </select>
+      <button class="btn btn-success btn-sm" onclick="downloadEditorDoc()">⬇ Download .docx</button>
+      <button class="btn btn-ghost btn-sm" onclick="regenerateDoc()">↺ Regenerate</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="row" style="align-items:flex-start">
+      <!-- Editor Panel -->
+      <div style="flex:1.3;min-width:0">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:600;color:#fff">Report Document</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn-icon btn-xs" onclick="execFmt('bold')" title="Bold"><b>B</b></button>
+              <button class="btn-icon btn-xs" onclick="execFmt('italic')" title="Italic"><i>I</i></button>
+              <button class="btn-icon btn-xs" onclick="execFmt('underline')" title="Underline"><u>U</u></button>
+              <button class="btn-icon btn-xs" onclick="execFmt('insertUnorderedList')" title="List">≡</button>
+            </div>
+          </div>
+          <div id="editor-content" contenteditable="true" spellcheck="false">
+            <div style="text-align:center;padding:60px;color:#888;font-family:sans-serif">Select an analysed tender from the dropdown above to load its report here for editing.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Chat Panel -->
+      <div style="flex:0.7;min-width:280px">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-weight:600;color:#fff">AI Edit Assistant</span>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">Tell AI what to change in the document</div>
+          </div>
+          <div class="chat-msgs" id="editor-chat-msgs">
+            <div class="chat-msg ai">Hello! I can help you edit this report. Try:<br><b>• "Change verdict to CONDITIONAL"</b><br><b>• "Add more detail to scope section"</b><br><b>• "Update EMD amount to ₹5 lakhs"</b><br><b>• "Make the risk section stronger"</b></div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="editor-chat-input" placeholder="What to change..." onkeydown="if(event.key==='Enter')sendEditorChat()">
+            <button class="btn btn-primary btn-sm" onclick="sendEditorChat()">Send</button>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card card-sm">
+          <div class="card-title" style="font-size:12px">Quick Edits</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="quickEdit('Change verdict to BID')">✅ Set Verdict: BID</button>
+            <button class="btn btn-ghost btn-sm" onclick="quickEdit('Change verdict to NO-BID')">❌ Set Verdict: NO-BID</button>
+            <button class="btn btn-ghost btn-sm" onclick="quickEdit('Change verdict to CONDITIONAL')">⚠ Set Verdict: CONDITIONAL</button>
+            <button class="btn btn-ghost btn-sm" onclick="quickEdit('Expand the scope of work section with more detail')">📝 Expand Scope</button>
+            <button class="btn btn-ghost btn-sm" onclick="quickEdit('Add a risk mitigation section')">⚠ Add Risk Section</button>
+            <button class="btn btn-ghost btn-sm" onclick="quickEdit('Make executive summary more concise')">✂ Shorten Summary</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHECKLIST ═══ -->
+<div id="page-checklist" class="page">
+  <div class="topbar"><h1>Submission Checklist</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Select Tender</div>
+      <select id="cl-select" onchange="loadChecklist()"><option value="">-- Select a tender --</option></select>
+    </div>
+    <div id="cl-content"><div class="empty-state"><div class="empty-icon">✅</div>Select a tender to view checklist.</div></div>
+  </div>
+</div>
+
+<!-- ═══ DOCUMENTS ═══ -->
+<div id="page-documents" class="page">
+  <div class="topbar"><h1>Documents</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Select Tender</div>
+      <select id="doc-select" onchange="loadDocs()"><option value="">-- Select a tender --</option></select>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchTab('docs','standard',event)">Standard Docs</div>
+      <div class="tab" onclick="switchTab('docs','technical',event)">Technical Proposal</div>
+      <div class="tab" onclick="switchTab('docs','merge',event)">Merge to PDF</div>
+    </div>
+    <div id="docs-tab-standard" class="tab-panel active">
+      <div class="card">
+        <div class="card-title">Submission Documents</div>
+        <p style="font-size:12.5px;color:var(--text2);margin-bottom:14px">Generate all standard documents — Cover Letter, Non-Blacklisting, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
+        <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
+      </div>
+      <div id="docs-list"></div>
+    </div>
+    <div id="docs-tab-technical" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Technical Proposal</div>
+        <button class="btn btn-primary" onclick="generateTechProposal()">📄 Generate Technical Proposal</button>
+        <div id="tech-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div id="docs-tab-merge" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Merge All to Single PDF</div>
+        <p style="font-size:12.5px;color:var(--text2);margin-bottom:14px">Merges all submission documents into one PDF with cover page.</p>
+        <button class="btn btn-primary" onclick="mergePDF()">🔗 Merge to PDF</button>
+        <div id="merge-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RISK SCANNER ═══ -->
+<div id="page-risk" class="page">
+  <div class="topbar"><h1>Risk Scanner</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Select Tender for Risk Analysis</div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1"><select id="risk-select"><option value="">-- Select a tender --</option></select></div>
+        <button class="btn btn-primary" onclick="runRiskScan()">🔍 Scan Risks</button>
+      </div>
+    </div>
+    <div id="risk-content">
+      <div class="empty-state"><div class="empty-icon">⚠</div>Select a tender and click Scan Risks</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BID ASSISTANT ═══ -->
+<div id="page-assistant" class="page">
+  <div class="topbar"><h1>Bid Assistant</h1></div>
+  <div class="page-body">
+    <div class="row" style="align-items:flex-start">
+      <div style="flex:1">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-weight:600;color:#fff">AI Bid Assistant</span>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">Ask anything about tenders, bidding strategy, compliance</div>
+          </div>
+          <div class="chat-msgs" id="assistant-msgs" style="height:420px">
+            <div class="chat-msg ai">Hi! I'm your Bid Assistant. I know your company profile and all your tenders. Ask me anything:<br><br>
+            <b>• "Which tenders should I prioritise this week?"</b><br>
+            <b>• "What is the EMD for tender T247-98765?"</b><br>
+            <b>• "Draft a cover letter for the GIS mapping tender"</b><br>
+            <b>• "What are the PQ criteria for this tender?"</b></div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="assistant-input" placeholder="Ask about tenders, strategy, documents..." onkeydown="if(event.key==='Enter')sendAssistantMsg()">
+            <button class="btn btn-primary" onclick="sendAssistantMsg()">Send</button>
+          </div>
+        </div>
+      </div>
+      <div style="flex:0 0 240px">
+        <div class="card card-sm">
+          <div class="card-title" style="font-size:12px">Quick Questions</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="askAssistant('Which BID tenders have deadlines in the next 7 days?')">📅 Urgent BID tenders</button>
+            <button class="btn btn-ghost btn-sm" onclick="askAssistant('What is Nascent\'s total pipeline value?')">💰 Pipeline value</button>
+            <button class="btn btn-ghost btn-sm" onclick="askAssistant('Which tenders are CONDITIONAL that I should review?')">⚠ Review CONDITIONALs</button>
+            <button class="btn btn-ghost btn-sm" onclick="askAssistant('Summarise our win rate this year')">📊 Win rate summary</button>
+            <button class="btn btn-ghost btn-sm" onclick="askAssistant('What GeM tenders are open right now?')">💎 Open GeM tenders</button>
+          </div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title" style="font-size:12px">Context</div>
+          <div style="font-size:11.5px;color:var(--text2)">
+            <div style="margin-bottom:6px">Tenders loaded: <b id="ast-total" style="color:#fff">—</b></div>
+            <div style="margin-bottom:6px">BID: <b class="c-green" id="ast-bid">—</b></div>
+            <div>Deadline alerts: <b class="c-red" id="ast-alerts">—</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BOQ ═══ -->
+<div id="page-boq" class="page">
+  <div class="topbar"><h1>BOQ Price History</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Search BOQ Items</div>
+      <div class="search-wrap"><span class="search-icon">🔍</span><input id="boq-search" placeholder="Search item, category..." oninput="searchBOQ()"></div>
+    </div>
+    <div id="boq-results"><div class="empty-state"><div class="empty-icon">💰</div>Search for BOQ items to see price history</div></div>
+  </div>
+</div>
+
+<!-- ═══ REPORTS ═══ -->
+<div id="page-reports" class="page">
+  <div class="topbar"><h1>Reports</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadReports()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Filename</th><th>Tender</th><th>Org</th><th>Verdict</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
+        <tbody id="reports-table"><tr><td colspan="7" class="empty-state">No reports yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ANALYTICS ═══ -->
+<div id="page-analytics" class="page">
+  <div class="topbar"><h1>Analytics & Win/Loss</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div id="analytics-summary" class="analytics-grid"></div>
+    <div class="row">
+      <div class="card">
+        <div class="card-title">Record Bid Result</div>
+        <label>T247 ID</label><input type="text" id="res-tid" placeholder="T247 ID">
+        <label>Outcome</label>
+        <select id="res-outcome">
+          <option value="Won">Won</option><option value="Lost">Lost</option>
+          <option value="Submitted">Submitted — Awaiting</option><option value="Disqualified">Disqualified</option>
+        </select>
+        <label>Contract Value (Rs. Cr) if Won</label><input type="number" id="res-value" placeholder="0.00" step="0.01">
+        <label>L1 Price (if available)</label><input type="number" id="res-l1" placeholder="L1 bid value">
+        <label>Our Price</label><input type="number" id="res-ourprice" placeholder="Our bid value">
+        <label>Competitor</label><input type="text" id="res-competitor" placeholder="Competitor name">
+        <label>Notes</label><textarea id="res-notes" rows="2"></textarea>
+        <button class="btn btn-primary" onclick="saveBidResult()" style="margin-top:14px;width:auto">Save Result</button>
+      </div>
+      <div class="card" style="flex:2">
+        <div class="card-title">Win/Loss History</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>T247 ID</th><th>Brief</th><th>Outcome</th><th>Value</th><th>L1 Gap</th><th>Competitor</th></tr></thead>
+          <tbody id="winloss-table"><tr><td colspan="6" class="empty-state">No results yet.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div id="page-settings" class="page">
+  <div class="topbar"><h1>Settings</h1></div>
+  <div class="page-body">
+    <div class="row">
+      <div class="card">
+        <div class="card-title">Gemini AI Keys</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Get free keys at aistudio.google.com — add up to 4 for rotation</p>
+        <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
+        <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
+        <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
+        <label>Backup Key 4</label><input type="password" id="key4" placeholder="AIza...">
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-primary" onclick="saveKeys()">Save Keys</button>
+          <button class="btn btn-ghost" onclick="testAI()">Test AI</button>
+        </div>
+        <div id="ai-test-result" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">T247 Credentials</div>
+        <label>Email</label><input type="text" id="t247u" placeholder="your@email.com">
+        <label>Password</label><input type="password" id="t247p" placeholder="password">
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button class="btn btn-primary" onclick="saveT247()">Save</button>
+          <button class="btn btn-ghost" onclick="testT247()">Test</button>
+        </div>
+        <div id="t247-test-result" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Admin Token</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Required only if ADMIN_TOKEN is set in Render env vars</p>
+      <label>Admin Token</label><input type="password" id="admin-token-input" placeholder="Enter admin token...">
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary btn-sm" onclick="saveAdminToken()">Save Token</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearAdminToken()">Clear</button>
+      </div>
+      <div id="admin-token-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">System Info</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px">
+        <span>Version: <b style="color:#fff">7.0</b></span>
+        <span>Drive: <b id="sys-drive" style="color:#fff">checking...</b></span>
+        <span>Tenders: <b id="sys-tenders" style="color:#fff">—</b></span>
+        <span>AI Keys: <b id="sys-keys" style="color:#fff">—</b></span>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
+        <button class="btn btn-ghost btn-sm" onclick="checkHealth()">🏥 Health Check</button>
+      </div>
+      <div id="health-result" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ POST-AWARD ═══ -->
+<div id="page-postaward" class="page">
+  <div class="topbar"><h1>Post-Award Management</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Select Won Tender</div>
+      <select id="pa-select" onchange="loadMilestones()">
+        <option value="">-- Select a won tender --</option>
+      </select>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchTab('pa','letters',event)">Letters</div>
+      <div class="tab" onclick="switchTab('pa','milestones',event)">Milestones</div>
+      <div class="tab" onclick="switchTab('pa','invoices',event)">Invoices</div>
+    </div>
+    <div id="pa-tab-letters" class="tab-panel active">
+      <div class="row">
+        <div class="card"><div class="card-title">LoA Acceptance</div><button class="btn btn-primary" onclick="genLetter('loa-acceptance')">Generate Letter</button></div>
+        <div class="card"><div class="card-title">Performance Security</div><button class="btn btn-primary" onclick="genLetter('perf-security-letter')">Generate Letter</button></div>
+        <div class="card"><div class="card-title">Completion Certificate</div><button class="btn btn-primary" onclick="genLetter('completion-cert-request')">Generate Letter</button></div>
+      </div>
+      <div id="pa-letter-result"></div>
+    </div>
+    <div id="pa-tab-milestones" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Project Milestones <button class="btn btn-ghost btn-sm" onclick="setupMilestones()">Setup Default</button></div>
+        <div id="milestones-list"><div class="empty-state"><div class="empty-icon">📅</div>Select a tender and click Setup to create milestones.</div></div>
+      </div>
+    </div>
+    <div id="pa-tab-invoices" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Generate RA Bill / Invoice</div>
+        <label>Milestone / Description</label><input type="text" id="inv-desc" placeholder="e.g. Phase 1 completion">
+        <label>Amount (Rs.)</label><input type="number" id="inv-amount" placeholder="0">
+        <button class="btn btn-primary" onclick="generateInvoice()" style="margin-top:14px;width:auto">Generate Invoice</button>
+        <div id="inv-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SKIPPED ═══ -->
+<div id="page-skipped" class="page">
+  <div class="topbar"><h1>Skipped / Not Interested</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadSkipped()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Brief</th><th>Reason</th><th>Skipped On</th><th>Action</th></tr></thead>
+        <tbody id="skipped-table"><tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LETTERHEAD ═══ -->
+<div id="page-letterhead" class="page">
+  <div class="topbar"><h1>Company Letterhead</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Letterhead Status</div>
+      <div id="lh-status" style="font-size:13px;color:var(--text2);margin-bottom:14px">Checking...</div>
+      <div class="upload-zone" onclick="document.getElementById('lh-file').click()">
+        <div style="font-size:24px;margin-bottom:8px">🏢</div>
+        Upload letterhead DOCX<br>
+        <span style="font-size:11px;color:var(--text3)">Used as header/footer on all generated documents</span>
+      </div>
+      <input type="file" id="lh-file" accept=".docx" style="display:none" onchange="uploadLetterhead(this)">
+    </div>
+  </div>
+</div>
+
+</div><!-- end #main -->
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+'use strict';
+// ────────────────────────────────────────────
+// GLOBALS
+// ────────────────────────────────────────────
+var allTenders = [];
+var currentFilter = '';
+var currentTenderId = '';
+var currentTenderBrief = '';
+var lastAnalysisResult = null;
+var lastAnalysisFilename = '';
+var lastAnalysisTid = '';
+var editorTenderData = null;
+var editorChatHistory = [];
+
+var AP_STEPS = [
+  'Extracting documents',
+  'Snapshot — dates, EMD, fees',
+  'Scope of Work',
+  'PQ / Eligibility Criteria',
+  'TQ / Marking Criteria',
+  'Payment Schedule',
+  'Bid/No-Bid Assessment',
+  'Pre-bid Queries',
+  'Generating Word Report'
+];
+
+// ────────────────────────────────────────────
+// NAVIGATION
+// ────────────────────────────────────────────
+var _pageNames = {
+  'dashboard':'Dashboard','tenders':'All Tenders','pipeline':'Pipeline',
+  'analyse':'Analyse Tender','doc-editor':'Doc Editor','checklist':'Checklist',
+  'documents':'Documents','risk':'Risk Scanner','assistant':'Bid Assistant',
+  'boq':'BOQ','reports':'Reports','analytics':'Analytics',
+  'postaward':'Post-Award','skipped':'Skipped','letterhead':'Letterhead','settings':'Settings'
+};
+
+function showPage(name, opts) {
+  opts = opts || {};
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  var page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if ((b.getAttribute('onclick') || '').includes("'" + name + "'")) b.classList.add('active');
+  });
+  // URL routing
+  if (!opts.fromPopState) {
+    var url = name === 'dashboard' ? '/' : '/?p=' + encodeURIComponent(name);
+    if (opts.tid) url += '&tid=' + encodeURIComponent(opts.tid);
+    history.pushState({page: name, tid: opts.tid || ''}, '', url);
+  }
+  // Breadcrumb
+  var bc = document.getElementById('breadcrumb');
+  var bcPage = document.getElementById('bc-page');
+  var bcItem = document.getElementById('bc-item');
+  var bcSep2 = document.getElementById('bc-sep-2');
+  var bcSep3 = document.getElementById('bc-sep-3');
+  if (name === 'dashboard') {
+    bc.style.display = 'none';
+  } else {
+    bc.style.display = 'flex';
+    bcSep2.style.display = 'inline';
+    bcPage.style.display = 'inline';
+    bcPage.textContent = _pageNames[name] || name;
+    bcPage.onclick = null;
+    bcItem.style.display = 'none';
+    bcSep3.style.display = 'none';
+    if (opts.tid) {
+      bcPage.textContent = _pageNames[name] || name;
+      bcPage.style.cursor = 'pointer';
+      bcPage.onclick = () => showPage(name);
+      bcSep3.style.display = 'inline';
+      bcItem.style.display = 'inline';
+      bcItem.textContent = opts.tid;
+    }
+  }
+  if (name !== 'dashboard') closeSidePanel();
+  if (name === 'tenders') renderTenders();
+  if (name === 'checklist') populateSelects();
+  if (name === 'documents') populateSelects();
+  if (name === 'risk') populateRiskSelect();
+  if (name === 'pipeline') loadPipeline();
+  if (name === 'reports') loadReports();
+  if (name === 'analytics') loadAnalytics();
+  if (name === 'settings') loadSettings();
+  if (name === 'doc-editor') populateEditorSelect();
+  if (name === 'assistant') updateAssistantContext();
+  if (name === 'boq') initBOQ();
+}
+
+window.addEventListener('popstate', function(e) {
+  var st = e.state;
+  if (st && st.page) showPage(st.page, {fromPopState: true, tid: st.tid});
+  else showPage('dashboard', {fromPopState: true});
+});
+
+function switchTab(group, tab, e) {
+  var pageId = group === 'docs' ? 'page-documents' : 'page-postaward';
+  var prefix = group === 'docs' ? 'docs' : 'pa';
+  document.querySelectorAll('#' + pageId + ' .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#' + pageId + ' .tab-panel').forEach(p => p.classList.remove('active'));
+  if (e && e.target) e.target.classList.add('active');
+  var panel = document.getElementById(prefix + '-tab-' + tab);
+  if (panel) panel.classList.add('active');
+}
+
+// ────────────────────────────────────────────
+// UTILITIES
+// ────────────────────────────────────────────
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.borderLeftColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--blue)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', 3500);
+}
+function showLoading(msg) {
+  document.getElementById('loading-text').textContent = msg || 'Processing...';
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() { document.getElementById('loading-overlay').classList.remove('show'); }
+
+function getVerdict(t) { return t.verdict || t.bid_no_bid || 'REVIEW'; }
+
+function getDaysLeft(t) {
+  if (t.days_left !== undefined && t.days_left !== null && t.days_left !== 999) return t.days_left;
+  if (!t.deadline) return 999;
+  try {
+    var s = t.deadline.split(' ')[0];
+    var parts = s.split(/[-\/]/);
+    var d = parts[0].length === 4 ? new Date(+parts[0], +parts[1]-1, +parts[2]) : new Date(+parts[2], +parts[1]-1, +parts[0]);
+    return Math.ceil((d - new Date()) / 86400000);
+  } catch(e) { return 999; }
+}
+
+function daysDisplay(dl) {
+  if (dl === 999 || dl == null) return '<span class="c-muted">—</span>';
+  if (dl < 0) return '<span class="c-muted">Expired</span>';
+  if (dl === 0) return '<span class="c-urgent">TODAY</span>';
+  if (dl <= 3) return '<span class="c-urgent">' + dl + 'd</span>';
+  if (dl <= 7) return '<span class="c-amber">' + dl + 'd</span>';
+  return '<span>' + dl + 'd</span>';
+}
+
+function winProbHTML(t) {
+  var v = getVerdict(t);
+  var score = t.win_probability;
+  if (!score) {
+    score = v === 'BID' ? Math.floor(55 + Math.random()*30) :
+            v === 'CONDITIONAL' ? Math.floor(30 + Math.random()*25) :
+            v === 'NO-BID' ? Math.floor(5 + Math.random()*20) : Math.floor(20 + Math.random()*40);
+  }
+  var cls = score >= 60 ? 'win-high' : score >= 35 ? 'win-mid' : 'win-low';
+  return '<span class="win-prob-circle ' + cls + '">' + score + '%</span>';
+}
+
+function riskHTML(t) {
+  var v = getVerdict(t);
+  var risk = t.risk_level || (v === 'NO-BID' ? 'high' : v === 'CONDITIONAL' ? 'medium' : 'low');
+  var color = risk === 'high' ? 'var(--red)' : risk === 'medium' ? 'var(--amber)' : 'var(--green)';
+  var bars = risk === 'high' ? 3 : risk === 'medium' ? 2 : 1;
+  var html = '<div class="risk-meter">';
+  for (var i = 1; i <= 3; i++) {
+    html += '<div class="risk-bar' + (i <= bars ? ' filled-' + (bars === 1 ? 'low' : bars === 2 ? 'mid' : 'high') : '') + '" style="' + (i <= bars ? 'background:' + color : '') + '"></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function fmtCr(v) {
+  if (!v && v !== 0) return '—';
+  var n = parseFloat(v);
+  if (isNaN(n)) return v;
+  if (n >= 100) return '₹' + Math.round(n) + ' Cr';
+  return '₹' + n.toFixed(2) + ' Cr';
+}
+
+// ────────────────────────────────────────────
+// DASHBOARD
+// ────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    var r = await fetch('/dashboard');
+    var d = await r.json();
+    allTenders = d.tenders || [];
+    var s = d.stats || {};
+    document.getElementById('s-total').textContent = s.total || 0;
+    document.getElementById('s-bid').textContent = s.bid || 0;
+    document.getElementById('s-cond').textContent = s.conditional || 0;
+    document.getElementById('s-nobid').textContent = s.no_bid || 0;
+    document.getElementById('s-review').textContent = s.review || 0;
+    document.getElementById('s-analysed').textContent = s.analysed || 0;
+    document.getElementById('nb-total').textContent = s.total || 0;
+    renderDash();
+    renderAlerts(s);
+    updateStatusBar();
+  } catch(e) { console.error(e); }
+}
+
+function renderAlerts(s) {
+  var c = document.getElementById('alert-container');
+  c.innerHTML = '';
+  if (s.deadline_today > 0) c.innerHTML += '<div class="alert-bar red">🔴 <b>' + s.deadline_today + ' tender(s)</b> due TODAY — act immediately!</div>';
+  if (s.deadline_3days > 0) c.innerHTML += '<div class="alert-bar amber">⚠ <b>' + s.deadline_3days + ' tender(s)</b> due within 3 days</div>';
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-filter'));
+  var btns = document.querySelectorAll('.fbtn');
+  btns.forEach(b => { if ((b.getAttribute('onclick')||'').includes("'" + f + "'")) b.classList.add('active'); });
+  renderDash();
+}
+
+function renderDash() {
+  var search = (document.getElementById('dash-search').value || '').toLowerCase();
+  var list = allTenders.filter(t => {
+    if (currentFilter === 'urgent') return getDaysLeft(t) <= 7 && getDaysLeft(t) >= 0;
+    if (currentFilter === 'analysed') return t.bid_no_bid_done;
+    if (currentFilter === 'gem') return t.is_gem;
+    if (currentFilter) return getVerdict(t) === currentFilter;
+    return true;
+  }).filter(t => {
+    if (!search) return true;
+    return ['t247_id','brief','org_name','location','ref_no','verdict'].some(k => (t[k]||'').toLowerCase().includes(search));
+  });
+
+  document.getElementById('dash-count').textContent = list.length + ' tender' + (list.length !== 1 ? 's' : '');
+
+  var rows = list.slice(0, 200).map(t => {
+    var v = getVerdict(t);
+    var dl = getDaysLeft(t);
+    var matchTags = buildMatchTags(t);
+    return '<tr style="cursor:pointer" onclick="openSidePanel(\'' + t.t247_id + '\')">' +
+      '<td class="mono" onclick="event.stopPropagation()">' + (t.t247_id || '—') + (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') + '</td>' +
+      '<td class="brief-cell"><div class="brief">' + (t.brief || '—') + '</div><div class="org">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>' +
+        (matchTags ? '<div style="margin-top:3px">' + matchTags + '</div>' : '') +
+      '</td>' +
+      '<td>' + fmtCr(t.estimated_cost_cr) + '</td>' +
+      '<td>' + (t.deadline || '—') + '</td>' +
+      '<td>' + daysDisplay(dl) + '</td>' +
+      '<td><span class="badge badge-' + v + '">' + v + '</span></td>' +
+      '<td>' + winProbHTML(t) + '</td>' +
+      '<td class="actions-cell" onclick="event.stopPropagation()">' +
+        '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
+        (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadReport(\'' + (t.report_file||'') + '\')">Report</button>' : '') +
+        (t.bid_no_bid_done ? '<button class="action-btn amber" onclick="openEditorForTender(\'' + t.t247_id + '\')">Edit</button>' : '') +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  document.getElementById('dash-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders match</td></tr>';
+}
+
+function renderTenders() {
+  var search = (document.getElementById('tl-search').value || '').toLowerCase();
+  var list = allTenders.filter(t => {
+    if (!search) return true;
+    return ['t247_id','brief','org_name','ref_no','verdict','location'].some(k => (t[k]||'').toLowerCase().includes(search));
+  });
+  var rows = list.slice(0, 500).map(t => {
+    var v = getVerdict(t);
+    return '<tr>' +
+      '<td class="mono">' + (t.t247_id||'—') + '</td>' +
+      '<td class="mono" style="font-size:11px">' + (t.ref_no||'—') + '</td>' +
+      '<td class="brief-cell"><div class="brief">' + (t.brief||'—') + '</div><div class="org">' + (t.org_name||'') + '</div></td>' +
+      '<td>' + fmtCr(t.estimated_cost_cr) + '</td>' +
+      '<td style="font-size:12px">' + (t.emd||'—') + '</td>' +
+      '<td>' + (t.deadline||'—') + '</td>' +
+      '<td><span class="badge badge-' + v + '">' + v + '</span></td>' +
+      '<td class="actions-cell">' +
+        '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
+        (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadReport(\'' + (t.report_file||'') + '\')">Report</button>' : '') +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('tenders-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders</td></tr>';
+}
+
+function esc(s) { return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;').substring(0,80); }
+
+// ────────────────────────────────────────────
+// CONTEXT
+// ────────────────────────────────────────────
+function setCtxAndAnalyse(tid, brief) {
+  currentTenderId = tid;
+  currentTenderBrief = brief;
+  showPage('analyse');
+  document.getElementById('an-tid').value = tid;
+  var banner = document.getElementById('ctx-banner');
+  banner.style.display = 'flex';
+  document.getElementById('ctx-id').textContent = tid;
+  document.getElementById('ctx-brief').textContent = brief;
+}
+function clearCtx() {
+  currentTenderId = '';
+  document.getElementById('ctx-banner').style.display = 'none';
+  document.getElementById('an-tid').value = '';
+}
+
+// ────────────────────────────────────────────
+// FILE UPLOAD
+// ────────────────────────────────────────────
+function updateFileList(input) {
+  var files = Array.from(input.files);
+  document.getElementById('an-filelist').textContent = files.length ? '📎 ' + files.map(f => f.name).join(', ') : '';
+}
+function dragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function dragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function dropFiles(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  var dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+  document.getElementById('an-files').files = dt.files;
+  updateFileList(document.getElementById('an-files'));
+}
+
+// ────────────────────────────────────────────
+// ANALYSIS PROGRESS
+// ────────────────────────────────────────────
+function showProgress() {
+  document.getElementById('an-progress').style.display = 'block';
+  document.getElementById('an-result-wrap').style.display = 'none';
+  var stepsHTML = AP_STEPS.map((s, i) =>
+    '<div class="ap-step pending" id="ap-s-' + i + '"><div class="ap-dot"></div><span>' + s + '</span></div>'
+  ).join('');
+  document.getElementById('ap-steps').innerHTML = stepsHTML;
+  document.getElementById('ap-bar').style.width = '0%';
+}
+function setStep(i) {
+  AP_STEPS.forEach((_, j) => {
+    var el = document.getElementById('ap-s-' + j);
+    if (!el) return;
+    el.className = 'ap-step ' + (j < i ? 'done' : j === i ? 'active' : 'pending');
+    var dot = el.querySelector('.ap-dot');
+    if (dot) dot.className = 'ap-dot';
+  });
+  document.getElementById('ap-bar').style.width = Math.round((i / AP_STEPS.length) * 100) + '%';
+  document.getElementById('ap-step-label').textContent = AP_STEPS[i] ? '· ' + AP_STEPS[i] : '';
+}
+
+// ────────────────────────────────────────────
+// ANALYSE TENDER
+// ────────────────────────────────────────────
+async function analyseTender() {
+  var files = document.getElementById('an-files').files;
+  if (!files.length) { toast('Please select files to analyse', 'error'); return; }
+  var tid = document.getElementById('an-tid').value.trim();
+
+  showProgress();
+  var stepTimer = 0;
+  function advanceStep(i, delay) { setTimeout(() => setStep(i), delay); }
+  advanceStep(0, 100); advanceStep(1, 800); advanceStep(2, 1600);
+
+  var fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  if (tid) fd.append('t247_id', tid);
+
+  try {
+    var r = await fetch('/process-files', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    var d = await r.json();
+
+    // Poll analyse-status if async
+    if (d.job_id) {
+      await pollAnalysis(d.job_id);
+      return;
+    }
+
+    advanceStep(5, 0); advanceStep(6, 300); advanceStep(7, 600); advanceStep(8, 900);
+
+    setTimeout(() => {
+      document.getElementById('an-progress').style.display = 'none';
+      showAnalysisResult(d);
+      if (tid) { loadDashboard(); }
+    }, 1200);
+
+  } catch(e) {
+    document.getElementById('an-progress').style.display = 'none';
+    toast('Analysis failed: ' + e.message, 'error');
+  }
+}
+
+async function pollAnalysis(jobId) {
+  var step = 2;
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      var r = await fetch('/analyse-status/' + jobId);
+      if (r.status === 404) { toast('Analysis job lost — please retry', 'error'); document.getElementById('an-progress').style.display='none'; return; }
+      var d = await r.json();
+      if (d.step !== undefined && d.step > step) { step = d.step; setStep(step); }
+      if (d.status === 'done') {
+        setTimeout(() => { document.getElementById('an-progress').style.display='none'; showAnalysisResult(d.result || d || {}); }, 500);
+        return;
+      }
+      if (d.status === 'error') { toast('Analysis error: ' + d.message, 'error'); document.getElementById('an-progress').style.display='none'; return; }
+    } catch(e) { /* continue */ }
+  }
+}
+
+// ────────────────────────────────────────────
+// SHOW ANALYSIS RESULT
+// ────────────────────────────────────────────
+function showAnalysisResult(d) {
+  lastAnalysisResult = d;
+  lastAnalysisFilename = d.download_file || '';
+  lastAnalysisTid = d.t247_id || (d.tender_data && d.tender_data.t247_id) || '';
+  document.getElementById('an-result-wrap').style.display = 'block';
+
+  var td = d.tender_data || d;
+  var v = (td.overall_verdict || {}).verdict || td.verdict || 'REVIEW';
+  var conf = (td.overall_verdict || {}).confidence || td.confidence || '';
+  var reason = (td.overall_verdict || {}).reason || td.reason || '';
+
+  // ── Left Panel ──
+  var pq = td.pq_criteria || [];
+  var tq = td.tq_criteria || [];
+  var pqMet = pq.filter(c => c.status === 'MET').length;
+  var tqMet = tq.filter(c => c.status === 'MET').length;
+
+  var leftHTML = '<div class="verdict-hero ' + v + '">' +
+    '<div>' +
+      '<div class="verdict-label ' + v + '">' + v + '</div>' +
+      (conf ? '<div class="verdict-conf">Confidence: ' + conf + '</div>' : '') +
+    '</div>' +
+    (d.ai_used ? '<span class="badge badge-purple" style="margin-left:auto">AI</span>' : '') +
+  '</div>';
+
+  if (reason) leftHTML += '<div style="font-size:12.5px;color:var(--text2);margin-bottom:14px;line-height:1.6">' + reason + '</div>';
+
+  // Key info table
+  leftHTML += '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px">';
+  var rows2 = [
+    ['Tender No', td.tender_no || '—'],
+    ['Organisation', td.org_name || '—'],
+    ['EMD', td.emd || '—'],
+    ['Est. Cost', td.estimated_cost || '—'],
+    ['Deadline', td.bid_submission_date || td.deadline || '—'],
+    ['Pre-bid Date', td.prebid_query_date || '—'],
+    ['Corrigendum', td.has_corrigendum ? '⚠ Yes — ' + (td.corrigendum_files||[]).join(', ') : 'No'],
+  ];
+  rows2.forEach(([k,v2]) => {
+    leftHTML += '<tr><td style="padding:4px 8px;color:var(--text3);width:40%">' + k + '</td><td style="padding:4px 8px;color:var(--text)">' + v2 + '</td></tr>';
+  });
+  leftHTML += '</table>';
+
+  // PQ Summary
+  if (pq.length) {
+    leftHTML += '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">PQ Criteria (' + pqMet + '/' + pq.length + ' Met)</div>';
+    pq.slice(0,5).forEach(c => {
+      var cls = c.status === 'MET' ? 'c-green' : c.status === 'CONDITIONAL' ? 'c-amber' : 'c-red';
+      leftHTML += '<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">' +
+        '<span class="' + cls + '" style="width:60px;display:inline-block">' + (c.status||'?') + '</span>' +
+        '<span style="color:var(--text2)">' + (c.criterion||'').substring(0,60) + '</span></div>';
+    });
+    if (pq.length > 5) leftHTML += '<div style="font-size:11px;color:var(--text3);margin-top:4px">+ ' + (pq.length-5) + ' more criteria</div>';
+  }
+
+  document.getElementById('res-left-body').innerHTML = leftHTML;
+  document.getElementById('res-ai-badge').textContent = d.ai_used ? 'AI Analysed' : 'Basic Extract';
+
+  // ── Right Panel: Doc Preview ──
+  document.getElementById('doc-preview-content').innerHTML = buildDocPreview(td, v);
+
+  // Update download button
+  document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);
+
+  // Show prebid section
+  if (td.prebid_queries && td.prebid_queries.length) {
+    document.getElementById('prebid-section').style.display = 'block';
+    renderPrebidList(td.prebid_queries);
+  }
+
+  toast('Analysis complete — Verdict: ' + v, 'success');
+}
+
+// ────────────────────────────────────────────
+// DOC PREVIEW BUILDER
+// ────────────────────────────────────────────
+function buildDocPreview(td, verdict) {
+  var v = verdict || 'REVIEW';
+  var pq = td.pq_criteria || [];
+  var tq = td.tq_criteria || [];
+  var pqMet = pq.filter(c => c.status === 'MET').length;
+  var tqMet = tq.filter(c => c.status === 'MET').length;
+
+  var html = '<h1>BID / NO-BID ANALYSIS REPORT</h1>' +
+    '<p style="text-align:center;font-size:11px;color:#555;margin-bottom:12px">Nascent Info Technologies Pvt. Ltd. | Confidential</p>' +
+    '<div class="verdict-stamp ' + v + '">' + v + '</div>';
+
+  // Snapshot
+  html += '<h2>1. Tender Snapshot</h2>';
+  html += '<table><tr><th>Field</th><th>Details</th></tr>';
+  [['Tender No', td.tender_no],['Organisation', td.org_name],['Tender Name', td.tender_name],
+   ['Est. Cost', td.estimated_cost],['EMD', td.emd],['Tender Fee', td.tender_fee],
+   ['Submission Date', td.bid_submission_date||td.deadline],['Opening Date', td.bid_opening_date],
+   ['Pre-bid Date', td.prebid_query_date]].forEach(([k,v2]) => {
+    if (v2 && v2 !== '—' && v2 !== 'Not specified') html += '<tr><td>' + k + '</td><td>' + v2 + '</td></tr>';
+  });
+  html += '</table>';
+
+  // Scope
+  if (td.scope_of_work) {
+    html += '<h2>2. Scope of Work</h2><p style="font-size:11px">' + (td.scope_of_work||'').substring(0,600) + '...</p>';
+  }
+
+  // PQ Criteria
+  if (pq.length) {
+    html += '<h2>3. PQ Eligibility (' + pqMet + '/' + pq.length + ' Met)</h2>';
+    pq.forEach(c => {
+      var cls = c.status === 'MET' ? 'crit-met' : c.status === 'CONDITIONAL' ? 'crit-cond' : 'crit-fail';
+      html += '<div class="crit ' + cls + '"><span>' + (c.criterion||'').substring(0,80) + '</span><b>' + (c.status||'') + '</b></div>';
+    });
+  }
+
+  // TQ Criteria
+  if (tq.length) {
+    html += '<h2>4. Technical Criteria (' + tqMet + '/' + tq.length + ' Met)</h2>';
+    tq.slice(0,6).forEach(c => {
+      var cls = c.status === 'MET' ? 'crit-met' : c.status === 'CONDITIONAL' ? 'crit-cond' : 'crit-fail';
+      html += '<div class="crit ' + cls + '"><span>' + (c.criterion||'').substring(0,80) + '</span><b>' + (c.status||'') + '</b></div>';
+    });
+  }
+
+  // Verdict reason
+  var reason = (td.overall_verdict || {}).reason || td.reason || '';
+  if (reason) {
+    html += '<h2>5. Assessment</h2><p style="font-size:11px">' + reason + '</p>';
+  }
+
+  // Pre-bid
+  if (td.prebid_queries && td.prebid_queries.length) {
+    html += '<h2>6. Pre-bid Queries (' + td.prebid_queries.length + ')</h2>';
+    td.prebid_queries.slice(0,3).forEach((q,i) => {
+      html += '<p style="font-size:11px;margin-bottom:4px"><b>' + (i+1) + '.</b> ' + (typeof q === 'string' ? q : q.query || JSON.stringify(q)).substring(0,120) + '</p>';
+    });
+  }
+
+  html += '<p style="font-size:10px;color:#888;text-align:center;margin-top:16px">Generated by TenderIQ — ' + new Date().toLocaleDateString('en-IN') + '</p>';
+  return html;
+}
+
+// ────────────────────────────────────────────
+// DOWNLOAD REPORT
+// ────────────────────────────────────────────
+function downloadReport(filename) {
+  if (!filename) { toast('No report file available', 'error'); return; }
+  window.location.href = '/download/' + filename;
+}
+
+async function downloadTenderDoc(tid) {
+  if (!tid) { toast('No tender selected', 'info'); return; }
+  try {
+    var r = await fetch('/tender/' + tid + '/doc-download');
+    if (!r.ok) { toast('Download failed: HTTP ' + r.status, 'error'); return; }
+    var blob = await r.blob();
+    var cd = r.headers.get('Content-Disposition') || '';
+    var fname = (cd.match(/filename="?([^";\n]+)"?/) || [])[1] || ('BidNoBid_' + tid + '.docx');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) { toast('Download error: ' + e.message, 'error'); }
+}
+
+function generatePrebidFromResult() {
+  if (!lastAnalysisResult) { toast('Analyse a tender first', 'error'); return; }
+  document.getElementById('prebid-section').style.display = 'block';
+  document.getElementById('prebid-section').scrollIntoView({behavior:'smooth'});
+}
+
+function togglePreviewSize() {
+  var body = document.getElementById('res-preview-body');
+  body.style.maxHeight = body.style.maxHeight === 'none' ? '580px' : 'none';
+}
+
+// ────────────────────────────────────────────
+// RE-ANALYSE FROM DRIVE
+// ────────────────────────────────────────────
+async function reanalyseDrive() {
+  var tid = document.getElementById('an-tid').value.trim();
+  if (!tid) { toast('Enter T247 ID first', 'error'); return; }
+  showLoading('Loading from Drive...');
+  try {
+    var r = await fetch('/reanalyse-drive/' + tid, { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    if (d.tender_data) showAnalysisResult(d);
+    else toast(d.message || 'Not found on Drive', 'error');
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// PRE-BID
+// ────────────────────────────────────────────
+async function loadPrebidQueries() {
+  var tid = document.getElementById('an-tid').value.trim();
+  if (!tid) return;
+  try {
+    var r = await fetch('/prebid-queries/' + tid);
+    var d = await r.json();
+    renderPrebidList(d.queries || []);
+  } catch(e) {}
+}
+
+function renderPrebidList(queries) {
+  if (!queries.length) { document.getElementById('prebid-list').innerHTML = '<div class="empty-state">No queries generated.</div>'; return; }
+  document.getElementById('prebid-list').innerHTML = queries.map((q, i) => {
+    var text = typeof q === 'string' ? q : q.query || JSON.stringify(q);
+    var cat = typeof q === 'object' ? q.category || '' : '';
+    return '<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start">' +
+      '<span style="font-family:var(--mono);color:var(--text3);font-size:11px;min-width:20px">' + (i+1) + '</span>' +
+      '<div style="flex:1"><div style="font-size:12.5px">' + text + '</div>' + (cat ? '<span style="font-size:10px;color:var(--text3)">' + cat + '</span>' : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function generatePrebidLetter() {
+  var tid = document.getElementById('an-tid').value.trim();
+  if (!tid) { toast('Enter T247 ID first', 'error'); return; }
+  showLoading('Generating pre-bid letter...');
+  try {
+    var r = await fetch('/generate-prebid-letter/' + tid, { method: 'POST' });
+    if (r.ok) {
+      var blob = await r.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = 'PreBid_' + tid + '.docx'; a.click();
+    } else toast('Letter generation failed', 'error');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
+function copyPrebidEmail() {
+  var items = document.querySelectorAll('#prebid-list > div');
+  var text = 'Subject: Pre-Bid Queries\n\nDear Sir/Madam,\n\nKindly clarify the following queries:\n\n';
+  items.forEach((el, i) => {
+    var q = el.querySelector('div div');
+    if (q) text += (i+1) + '. ' + q.textContent + '\n';
+  });
+  navigator.clipboard.writeText(text).then(() => toast('Email copied to clipboard!', 'success'));
+}
+
+async function runCompliance() {
+  var tid = document.getElementById('an-tid').value.trim();
+  if (!tid && !lastAnalysisResult) { toast('Analyse a tender first', 'error'); return; }
+  showLoading('Running compliance check...');
+  try {
+    var r = await fetch('/compliance-check', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({t247_id: tid}) });
+    var d = await r.json();
+    hideLoading();
+    document.getElementById('compliance-section').style.display = 'block';
+    document.getElementById('compliance-result').innerHTML = d.html || d.result || '<div class="empty-state">No issues found.</div>';
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// DOC EDITOR
+// ────────────────────────────────────────────
+function populateEditorSelect() {
+  var sel = document.getElementById('de-tender-select');
+  var analysed = allTenders.filter(t => t.bid_no_bid_done && t.report_file);
+  sel.innerHTML = '<option value="">— Select analysed tender —</option>' +
+    analysed.map(t => '<option value="' + t.t247_id + '">' + t.t247_id + ' — ' + (t.brief||'').substring(0,50) + '</option>').join('');
+}
+
+async function loadTenderForEditor(tid) {
+  if (!tid) return;
+  showLoading('Loading report...');
+  try {
+    var r = await fetch('/tender/' + tid);
+    var t = await r.json();
+    editorTenderData = t;
+    // Build preview in editor
+    var v = t.verdict || 'REVIEW';
+    var html = buildDocPreview(t, v);
+    document.getElementById('editor-content').innerHTML = html;
+    hideLoading();
+    toast('Report loaded — edit freely or use AI chat', 'success');
+  } catch(e) { hideLoading(); toast('Error loading: ' + e.message, 'error'); }
+}
+
+function openDocEditor() {
+  if (lastAnalysisResult) {
+    var td = lastAnalysisResult.tender_data || lastAnalysisResult;
+    var v = (td.overall_verdict || {}).verdict || td.verdict || 'REVIEW';
+    editorTenderData = td;
+    document.getElementById('editor-content').innerHTML = buildDocPreview(td, v);
+  }
+  showPage('doc-editor');
+  populateEditorSelect();
+}
+
+function openEditorForTender(tid) {
+  showPage('doc-editor');
+  populateEditorSelect();
+  setTimeout(() => {
+    document.getElementById('de-tender-select').value = tid;
+    loadTenderForEditor(tid);
+  }, 100);
+}
+
+function execFmt(cmd) { document.execCommand(cmd, false, null); document.getElementById('editor-content').focus(); }
+
+async function sendEditorChat() {
+  var input = document.getElementById('editor-chat-input');
+  var msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  appendEditorMsg(msg, 'user');
+
+  var currentContent = document.getElementById('editor-content').innerText.substring(0, 3000);
+  var thinkingEl = appendEditorMsg('Thinking...', 'ai');
+
+  try {
+    var r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'You are a bid document editor assistant for Nascent Info Technologies, an IT company in India that bids on government tenders. The user will ask you to modify sections of a Bid/No-Bid analysis report. Respond with the specific text changes to make, clearly and concisely. When changing verdict, explain the new verdict with reasoning. Keep responses focused and actionable.',
+        messages: [
+          { role: 'user', content: 'Current report content (excerpt):\n\n' + currentContent + '\n\nUser request: ' + msg }
+        ]
+      })
+    });
+    var d = await r.json();
+    var reply = d.content && d.content[0] ? d.content[0].text : 'Sorry, could not process that.';
+    thinkingEl.innerHTML = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+    // Apply changes if verdict change detected
+    applyEditorChange(msg, reply);
+  } catch(e) {
+    thinkingEl.innerHTML = 'Error: ' + e.message;
+  }
+}
+
+function quickEdit(msg) {
+  document.getElementById('editor-chat-input').value = msg;
+  sendEditorChat();
+}
+
+function applyEditorChange(request, aiReply) {
+  var content = document.getElementById('editor-content');
+  var html = content.innerHTML;
+  // Auto-apply verdict changes
+  if (request.toLowerCase().includes('verdict') && request.toLowerCase().includes('bid')) {
+    var newVerdict = request.toLowerCase().includes('no-bid') ? 'NO-BID' :
+                     request.toLowerCase().includes('conditional') ? 'CONDITIONAL' : 'BID';
+    html = html.replace(/class="verdict-stamp (BID|NO-BID|CONDITIONAL|REVIEW)"/g, 'class="verdict-stamp ' + newVerdict + '"');
+    html = html.replace(/(>)(BID|NO-BID|CONDITIONAL|REVIEW)(<\/div>)/g, '$1' + newVerdict + '$3');
+    content.innerHTML = html;
+  }
+}
+
+function appendEditorMsg(text, who) {
+  var msgs = document.getElementById('editor-chat-msgs');
+  var el = document.createElement('div');
+  el.className = 'chat-msg ' + who;
+  el.innerHTML = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+async function downloadEditorDoc() {
+  var tid = document.getElementById('de-tender-select').value;
+  if (!tid) { toast('Select a tender first', 'error'); return; }
+  var t = allTenders.find(t => t.t247_id === tid);
+  if (t && t.report_file) {
+    downloadReport(t.report_file);
+  } else {
+    toast('No report file found — analyse first', 'error');
+  }
+}
+
+async function regenerateDoc() {
+  var tid = document.getElementById('de-tender-select').value;
+  if (!tid) { toast('Select a tender first', 'error'); return; }
+  showLoading('Regenerating...');
+  try {
+    var r = await fetch('/regenerate-report/' + tid, { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    if (d.download_file) { toast('Report regenerated!', 'success'); downloadReport(d.download_file); }
+    else toast(d.message || 'Regeneration failed', 'error');
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// RISK SCANNER
+// ────────────────────────────────────────────
+function populateRiskSelect() {
+  var sel = document.getElementById('risk-select');
+  sel.innerHTML = '<option value="">-- Select a tender --</option>' +
+    allTenders.map(t => '<option value="' + t.t247_id + '">' + t.t247_id + ' — ' + (t.brief||'').substring(0,50) + '</option>').join('');
+}
+
+async function runRiskScan() {
+  var tid = document.getElementById('risk-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  var t = allTenders.find(x => x.t247_id === tid);
+  if (!t) { toast('Tender not found', 'error'); return; }
+  showLoading('Scanning risks...');
+
+  try {
+    // Try server risk scan first, fall back to local computation
+    var r = await fetch('/risk-scan/' + tid);
+    var d = r.ok ? await r.json() : null;
+    hideLoading();
+    renderRiskContent(t, d);
+  } catch(e) {
+    hideLoading();
+    renderRiskContent(t, null);
+  }
+}
+
+function renderRiskContent(t, serverData) {
+  var v = getVerdict(t);
+  var dl = getDaysLeft(t);
+
+  // Compute risk scores
+  var timelineRisk = dl < 7 ? 90 : dl < 15 ? 65 : dl < 30 ? 35 : 20;
+  var financialRisk = v === 'NO-BID' ? 80 : v === 'CONDITIONAL' ? 55 : 25;
+  var techRisk = (t.pq_criteria || []).filter(c => c.status === 'NOT MET').length > 2 ? 80 :
+                 (t.pq_criteria || []).filter(c => c.status === 'CONDITIONAL').length > 0 ? 55 : 20;
+  var competitionRisk = parseFloat(t.estimated_cost_cr || 0) > 10 ? 70 : 40;
+
+  var overallRisk = Math.round((timelineRisk + financialRisk + techRisk + competitionRisk) / 4);
+  var overallClass = overallRisk >= 65 ? 'high' : overallRisk >= 40 ? 'medium' : 'low';
+  var overallColor = overallRisk >= 65 ? 'var(--red)' : overallRisk >= 40 ? 'var(--amber)' : 'var(--green)';
+
+  var html = '<div class="card">' +
+    '<div class="card-title">Risk Assessment — ' + t.t247_id + '</div>' +
+    '<div class="risk-grid">' +
+    riskCard('Timeline Risk', timelineRisk, 'Deadline in ' + (dl < 0 ? 'EXPIRED' : dl + ' days')) +
+    riskCard('Financial Risk', financialRisk, 'Est. value: ' + fmtCr(t.estimated_cost_cr)) +
+    riskCard('Technical Risk', techRisk, 'PQ/TQ criteria compliance') +
+    riskCard('Competition Risk', competitionRisk, 'Market competition estimate') +
+    '</div>' +
+    '<div style="padding:14px;background:var(--bg2);border-radius:var(--radius);display:flex;align-items:center;gap:14px">' +
+      '<div style="font-size:32px;font-weight:700;color:' + overallColor + ';font-family:var(--mono)">' + overallRisk + '</div>' +
+      '<div><div style="font-size:13px;font-weight:600;color:#fff">Overall Risk: <span style="color:' + overallColor + '">' + overallClass.toUpperCase() + '</span></div>' +
+        '<div style="font-size:12px;color:var(--text2);margin-top:3px">Score out of 100</div></div>' +
+    '</div>' +
+  '</div>';
+
+  // Clause scanner (simulated if no server data)
+  html += '<div class="card"><div class="card-title">⚠ Clause Risk Scanner</div>';
+  var clauses = serverData ? serverData.clauses : getSimulatedClauses(t);
+  if (clauses && clauses.length) {
+    html += clauses.map(c =>
+      '<div class="clause-item clause-' + (c.severity||'low') + '">' +
+        '<div class="clause-title">' + c.title + ' <span style="font-size:10px;opacity:.7">' + (c.severity||'').toUpperCase() + ' RISK</span></div>' +
+        '<div class="clause-text">' + (c.description||'') + '</div>' +
+      '</div>'
+    ).join('');
+  } else {
+    html += '<div class="alert-bar green">✅ No high-risk clauses detected</div>';
+  }
+  html += '</div>';
+
+  document.getElementById('risk-content').innerHTML = html;
+}
+
+function riskCard(title, score, subtitle) {
+  var cls = score >= 65 ? 'high' : score >= 40 ? 'medium' : 'low';
+  return '<div class="risk-card">' +
+    '<div class="risk-card-title">' + title + '</div>' +
+    '<div class="risk-score ' + cls + '">' + score + '/100</div>' +
+    '<div class="risk-label">' + subtitle + '</div>' +
+    '<div class="progress-bar" style="margin-top:8px"><div class="progress-fill ' + (cls === 'high' ? 'red' : cls === 'medium' ? 'amber' : 'green') + '" style="width:' + score + '%"></div></div>' +
+  '</div>';
+}
+
+function getSimulatedClauses(t) {
+  var clauses = [];
+  var emdStr = (t.emd || '').toLowerCase();
+  if (emdStr.includes('lakh') || emdStr.includes('crore')) {
+    var emdNum = parseFloat(emdStr.match(/[\d.]+/) || 0);
+    if (emdNum > 5) clauses.push({ title: 'High EMD Amount', severity: 'medium', description: 'EMD of ' + t.emd + ' is significant. Verify MSME exemption eligibility.' });
+  }
+  if (getDaysLeft(t) < 10 && getDaysLeft(t) >= 0) clauses.push({ title: 'Tight Deadline', severity: 'high', description: 'Only ' + getDaysLeft(t) + ' days left. Document preparation time may be insufficient.' });
+  if ((t.eligibility || '').toLowerCase().includes('turnover')) clauses.push({ title: 'Turnover Requirement', severity: 'medium', description: 'Financial turnover criteria present — verify CA certificate availability.' });
+  return clauses;
+}
+
+// ────────────────────────────────────────────
+// BID ASSISTANT
+// ────────────────────────────────────────────
+function updateAssistantContext() {
+  var total = allTenders.length;
+  var bid = allTenders.filter(t => getVerdict(t) === 'BID').length;
+  var urgent = allTenders.filter(t => { var d = getDaysLeft(t); return d >= 0 && d <= 7; }).length;
+  document.getElementById('ast-total').textContent = total;
+  document.getElementById('ast-bid').textContent = bid;
+  document.getElementById('ast-alerts').textContent = urgent;
+}
+
+function askAssistant(msg) {
+  document.getElementById('assistant-input').value = msg;
+  sendAssistantMsg();
+}
+
+async function sendAssistantMsg() {
+  var input = document.getElementById('assistant-input');
+  var msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  appendAssistantMsg(msg, 'user');
+  var thinkingEl = appendAssistantMsg('Thinking...', 'ai');
+
+  // Build context
+  var total = allTenders.length;
+  var bid = allTenders.filter(t => getVerdict(t) === 'BID').length;
+  var nobid = allTenders.filter(t => getVerdict(t) === 'NO-BID').length;
+  var urgent = allTenders.filter(t => { var d = getDaysLeft(t); return d >= 0 && d <= 7 && getVerdict(t) === 'BID'; });
+  var urgentStr = urgent.map(t => t.t247_id + ' (' + getDaysLeft(t) + 'd, ' + fmtCr(t.estimated_cost_cr) + ')').join(', ');
+
+  var context = 'You are a bid management assistant for Nascent Info Technologies Pvt. Ltd., an IT company in Ahmedabad, India specialising in GIS, software development, and e-governance.\n\n' +
+    'Current tender database: ' + total + ' total, ' + bid + ' BID, ' + nobid + ' NO-BID.\n' +
+    'Urgent BID tenders (≤7 days): ' + (urgentStr || 'None') + '\n\n' +
+    'Answer concisely and practically. If asked about specific tenders, use the data provided.';
+
+  try {
+    var r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: context,
+        messages: [{ role: 'user', content: msg }]
+      })
+    });
+    var d = await r.json();
+    var reply = d.content && d.content[0] ? d.content[0].text : 'Sorry, could not process.';
+    thinkingEl.innerHTML = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  } catch(e) {
+    thinkingEl.innerHTML = 'Error connecting to AI: ' + e.message;
+  }
+}
+
+function appendAssistantMsg(text, who) {
+  var msgs = document.getElementById('assistant-msgs');
+  var el = document.createElement('div');
+  el.className = 'chat-msg ' + who;
+  el.innerHTML = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+// ────────────────────────────────────────────
+// PIPELINE
+// ────────────────────────────────────────────
+async function loadPipeline() {
+  try {
+    var r = await fetch('/pipeline');
+    var d = await r.json();
+    var stages = d.stages || {};
+    var stageList = d.stage_list || ['Identified','Pre-bid Sent','Bid Submitted','L1 Awaited','Won','Lost'];
+    var colors = d.stage_colors || {};
+
+    var html = '';
+    stageList.forEach(stage => {
+      var count = stages[stage] || 0;
+      var tlist = allTenders.filter(t => (t.status || 'Identified') === stage);
+      var color = colors[stage] || 'var(--blue)';
+      html += '<div class="pipeline-stage">' +
+        '<div class="pipeline-stage-header">' +
+          '<span class="stage-name" style="border-left:3px solid ' + color + ';padding-left:8px">' + stage + '</span>' +
+          '<span class="stage-count">' + count + ' tenders</span>' +
+        '</div>';
+      if (tlist.length) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+        tlist.slice(0,8).forEach(t => {
+          var v = getVerdict(t);
+          html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px">' +
+            '<div class="mono" style="font-size:10px;color:var(--text3)">' + t.t247_id + '</div>' +
+            '<div style="color:var(--text);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.brief||'—').substring(0,40) + '</div>' +
+            '<span class="badge badge-' + v + '" style="font-size:10px;margin-top:3px">' + v + '</span>' +
+          '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div style="font-size:12px;color:var(--text3);padding:6px 0">No tenders in this stage</div>';
+      }
+      html += '</div>';
+    });
+    document.getElementById('pipeline-board').innerHTML = html || '<div class="empty-state">No pipeline data</div>';
+  } catch(e) { document.getElementById('pipeline-board').innerHTML = '<div class="empty-state">Failed to load pipeline</div>'; }
+}
+
+// ────────────────────────────────────────────
+// CHECKLIST
+// ────────────────────────────────────────────
+function populateSelects() {
+  var opts = '<option value="">-- Select a tender --</option>' +
+    allTenders.map(t => '<option value="' + t.t247_id + '">' + (t.t247_id||'?') + ' — ' + (t.brief||'').substring(0,50) + '</option>').join('');
+  ['cl-select','doc-select'].forEach(id => { var el = document.getElementById(id); if (el) el.innerHTML = opts; });
+}
+
+async function loadChecklist() {
+  var tid = document.getElementById('cl-select').value;
+  if (!tid) return;
+  showLoading('Loading checklist...');
+  try {
+    var r = await fetch('/checklist/' + tid);
+    var d = await r.json();
+    hideLoading();
+    var items = d.checklist || [];
+    var done = items.filter(i => i.done).length;
+    var pct = items.length ? Math.round(done / items.length * 100) : 0;
+    var html = '<div class="card">' +
+      '<div class="card-title">Submission Checklist <span style="font-size:12px;color:var(--text2)">' + done + '/' + items.length + ' Complete</span></div>' +
+      '<div class="progress-bar"><div class="progress-fill ' + (pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'red') + '" style="width:' + pct + '%"></div></div>' +
+      '<div style="font-size:11px;color:var(--text3);margin:6px 0 12px">' + pct + '% complete</div>';
+    items.forEach((item, i) => {
+      html += '<div class="checklist-item ' + (item.done ? 'done' : '') + '" id="cli-' + i + '">' +
+        '<input type="checkbox" ' + (item.done ? 'checked' : '') + ' onchange="toggleChecklist(\'' + tid + '\',' + i + ',this.checked)">' +
+        '<span class="cl-label">' + (item.document || item.label || item) + '</span>' +
+        (item.category ? '<span class="cl-cat">' + item.category + '</span>' : '') +
+      '</div>';
+    });
+    html += '<button class="btn btn-primary btn-sm" onclick="saveChecklist(\'' + tid + '\')" style="margin-top:12px">Save Checklist</button></div>';
+    document.getElementById('cl-content').innerHTML = html;
+    window._checklistItems = items;
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+function toggleChecklist(tid, i, val) {
+  if (window._checklistItems) window._checklistItems[i].done = val;
+  var el = document.getElementById('cli-' + i);
+  if (el) el.classList.toggle('done', val);
+}
+
+async function saveChecklist(tid) {
+  try {
+    await fetch('/checklist/' + tid, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({checklist: window._checklistItems || []}) });
+    toast('Checklist saved!', 'success');
+  } catch(e) { toast('Save failed', 'error'); }
+}
+
+// ────────────────────────────────────────────
+// DOCUMENTS
+// ────────────────────────────────────────────
+async function loadDocs() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) return;
+  document.getElementById('docs-list').innerHTML = '<div style="font-size:13px;color:var(--text2)">Select document type and generate.</div>';
+}
+
+async function generateDocs() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  showLoading('Generating documents...');
+  try {
+    var r = await fetch('/generate-docs/' + tid, { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    var html = (d.files || []).map(f =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg2);border-radius:var(--radius);margin-bottom:8px">' +
+        '<span style="font-size:13px">' + f.name + '</span>' +
+        '<button class="btn btn-ghost btn-sm" onclick="downloadReport(\'' + f.filename + '\')">⬇ Download</button>' +
+      '</div>'
+    ).join('');
+    document.getElementById('docs-list').innerHTML = html || '<div class="empty-state">No files generated</div>';
+    toast('Documents generated!', 'success');
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function generateTechProposal() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  showLoading('Generating technical proposal...');
+  try {
+    var r = await fetch('/generate-tech-proposal/' + tid, { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    if (d.filename) { downloadReport(d.filename); toast('Technical proposal ready!', 'success'); }
+    else toast(d.message || 'Failed', 'error');
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function mergePDF() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  showLoading('Merging to PDF...');
+  try {
+    var r = await fetch('/merge-pdf/' + tid, { method: 'POST' });
+    if (r.ok) { var blob = await r.blob(); var url = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = url; a.download = 'Submission_' + tid + '.pdf'; a.click(); toast('PDF merged!', 'success'); }
+    else toast('Merge failed', 'error');
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
+// ────────────────────────────────────────────
+// EXCEL IMPORT
+// ────────────────────────────────────────────
+async function importExcel(input) {
+  var file = input.files[0];
+  if (!file) return;
+  showLoading('Importing ' + file.name + '...');
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/import-excel', { method: 'POST', body: fd });
+    var d = await r.json();
+    hideLoading();
+    if (d.status === 'success') {
+      toast('✅ Imported ' + d.total + ' tenders (' + d.added + ' new, ' + d.updated + ' updated)', 'success');
+      await loadDashboard();
+    } else toast(d.detail || 'Import failed', 'error');
+  } catch(e) { hideLoading(); toast('Import error: ' + e.message, 'error'); }
+  input.value = '';
+}
+
+// ────────────────────────────────────────────
+// T247 AUTO-FETCH
+// ────────────────────────────────────────────
+async function autoFetchT247() {
+  var btn = document.getElementById('t247-fetch-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching...'; }
+  showLoading('Connecting to Tender247 and downloading latest tenders...');
+  try {
+    var r = await fetch('/fetch-t247-excel', { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
+    if (d.status === 'success') {
+      toast('✅ T247 fetched: ' + d.total + ' tenders (' + d.added + ' new, ' + d.updated + ' updated)', 'success');
+      await loadDashboard();
+    } else {
+      var msg = d.detail || d.message || 'Fetch failed';
+      toast('❌ ' + msg, 'error');
+    }
+  } catch(e) {
+    hideLoading();
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
+    toast('T247 error: ' + e.message, 'error');
+  }
+}
+
+// ────────────────────────────────────────────
+// SIDE PANEL
+// ────────────────────────────────────────────
+var _sidePanelTid = '';
+
+function openSidePanel(tid) {
+  var t = allTenders.find(x => x.t247_id === tid);
+  if (!t) return;
+  _sidePanelTid = tid;
+  var panel = document.getElementById('side-panel');
+  var content = document.getElementById('side-panel-content');
+  panel.style.display = 'block';
+  document.getElementById('dash-table-wrap').style.maxWidth = 'calc(100% - 354px)';
+  content.innerHTML = buildSidePanelContent(t);
+}
+
+function closeSidePanel() {
+  _sidePanelTid = '';
+  var panel = document.getElementById('side-panel');
+  if (panel) panel.style.display = 'none';
+  var wrap = document.getElementById('dash-table-wrap');
+  if (wrap) wrap.style.maxWidth = '';
+}
+
+function buildSidePanelContent(t) {
+  var v = getVerdict(t);
+  var dl = getDaysLeft(t);
+  var matchTags = buildMatchTags(t);
+  var html = '<div style="margin-bottom:10px">' +
+    '<span class="badge badge-' + v + '" style="font-size:12px;padding:4px 10px">' + v + '</span>' +
+    (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
+  '</div>' +
+  '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;line-height:1.4">' + (t.brief || '—') + '</div>' +
+  '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>';
+
+  if (matchTags) html += '<div style="margin-bottom:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Project Match</div>' + matchTags + '</div>';
+
+  html += '<table style="width:100%;font-size:11.5px;border-collapse:collapse">';
+  var rows = [
+    ['T247 ID', t.t247_id || '—'],
+    ['Ref No', t.ref_no || '—'],
+    ['Value', t.estimated_cost_cr ? '₹' + t.estimated_cost_cr + ' Cr' : '—'],
+    ['EMD', t.emd || '—'],
+    ['Deadline', t.deadline || '—'],
+    ['Days Left', daysDisplay(dl)],
+    ['Status', t.status || '—'],
+    ['Win %', t.win_probability ? t.win_probability.toFixed(1) + '%' : '—'],
+  ];
+  rows.forEach(function(r) {
+    html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">' + r[0] + '</td><td style="padding:5px 0;color:var(--text)">' + r[1] + '</td></tr>';
+  });
+  html += '</table>';
+
+  if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
+
+  html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
+    '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">🔍 Analyse with AI</button>' +
+    '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">⬇ Download Docs</button>' +
+  '</div>';
+
+  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
+
+  return html;
+}
+
+// ────────────────────────────────────────────
+// PROJECT MATCH TAGS
+// ────────────────────────────────────────────
+var _profileKeywords = null;
+
+function _loadProfileKeywords() {
+  if (_profileKeywords !== null) return _profileKeywords;
+  try {
+    var raw = localStorage.getItem('nascent_profile_keywords');
+    _profileKeywords = raw ? JSON.parse(raw) : [];
+  } catch(e) { _profileKeywords = []; }
+  return _profileKeywords;
+}
+
+function buildMatchTags(t) {
+  var kws = _loadProfileKeywords();
+  if (!kws || !kws.length) return '';
+  var text = [(t.brief||''), (t.org_name||''), (t.eligibility||'')].join(' ').toLowerCase();
+  var matched = kws.filter(k => text.includes(k.toLowerCase()));
+  if (!matched.length) return '';
+  return matched.slice(0, 4).map(k => '<span class="match-tag">' + k + '</span>').join('');
+}
+
+async function refreshProfileKeywords() {
+  try {
+    var r = await fetch('/profile');
+    var p = await r.json();
+    var kws = [];
+    var rules = p.bid_rules || {};
+    (rules.preferred_sectors || []).forEach(k => kws.push(k));
+    (rules.bid || []).forEach(k => { if (!kws.includes(k)) kws.push(k); });
+    _profileKeywords = kws;
+    localStorage.setItem('nascent_profile_keywords', JSON.stringify(kws));
+  } catch(e) {}
+}
+
+// ────────────────────────────────────────────
+// GEMINI TOKEN METER
+// ────────────────────────────────────────────
+async function updateTokenMeter() {
+  try {
+    var r = await fetch('/platform/analyst-capacity');
+    var d = await r.json();
+    if (d.status !== 'ok' || !d.api_keys_configured) return;
+    var meter = document.getElementById('token-meter');
+    var bars = document.getElementById('token-bars');
+    if (!meter || !bars) return;
+    meter.style.display = 'block';
+    var cap = d.theoretical_daily_capacity || 0;
+    var maxCap = (d.api_keys_configured || 1) * 155; // ~155 tenders/key/day
+    var pct = Math.min(100, Math.round((cap / Math.max(maxCap, 1)) * 100));
+    var cls = pct > 60 ? 'ok' : pct > 25 ? 'warn' : 'crit';
+    bars.innerHTML = '<div class="token-bar-row">' +
+      '<div class="token-bar-label"><span>Capacity</span><span>' + cap + ' tenders</span></div>' +
+      '<div class="token-bar-track"><div class="token-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+    '</div>' +
+    '<div style="font-size:9px;color:var(--text3);margin-top:2px">' + (d.api_keys_configured || 0) + ' key' + (d.api_keys_configured !== 1 ? 's' : '') + ' · ' + (d.concurrent_slots || '—') + ' slots</div>';
+    document.getElementById('api-quota').textContent = cap + ' tenders/day remaining';
+  } catch(e) {}
+}
+
+// ────────────────────────────────────────────
+// SYNC / EXPORT
+// ────────────────────────────────────────────
+async function syncDrive() {
+  toast('Syncing to Drive...', 'info');
+  try {
+    var r = await fetch('/sync-drive', { method: 'POST' });
+    var d = await r.json();
+    toast(d.message || (d.status === 'ok' ? '✅ Drive synced' : '❌ Sync failed'), d.status === 'ok' ? 'success' : 'error');
+  } catch(e) { toast('Sync error: ' + e.message, 'error'); }
+}
+
+async function exportTenders() {
+  window.location.href = '/export-tenders';
+}
+
+async function reclassifyAll() {
+  showLoading('Reclassifying...');
+  try {
+    var r = await fetch('/reclassify-all', { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    toast(d.message || 'Reclassified', 'success');
+    await loadDashboard();
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// REPORTS
+// ────────────────────────────────────────────
+async function loadReports() {
+  try {
+    var r = await fetch('/reports-list');
+    var d = await r.json();
+    var rows = (d.reports || []).map(f =>
+      '<tr>' +
+        '<td class="mono" style="font-size:11px">' + f.filename + '</td>' +
+        '<td>' + (f.tender_name || '—').substring(0,50) + '</td>' +
+        '<td style="font-size:12px">' + (f.org || '—') + '</td>' +
+        '<td><span class="badge badge-' + (f.verdict||'REVIEW') + '">' + (f.verdict||'—') + '</span></td>' +
+        '<td class="mono" style="font-size:11px">' + f.created + '</td>' +
+        '<td class="c-muted">' + f.size_kb + ' KB</td>' +
+        '<td><button class="action-btn blue" onclick="downloadReport(\'' + f.filename + '\')">⬇ Download</button></td>' +
+      '</tr>'
+    ).join('');
+    document.getElementById('reports-table').innerHTML = rows || '<tr><td colspan="7" class="empty-state">No reports yet</td></tr>';
+  } catch(e) {}
+}
+
+// ────────────────────────────────────────────
+// ANALYTICS
+// ────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    var r = await fetch('/win-loss');
+    var d = await r.json();
+    var stats = d.stats || d || {};
+    document.getElementById('analytics-summary').innerHTML = [
+      ['Total Bid', stats.total_bid || 0, ''],
+      ['Won', stats.won || 0, 'c-green'],
+      ['Lost', stats.lost || 0, 'c-red'],
+      ['Win Rate', (stats.win_rate || 0) + '%', 'c-blue'],
+      ['Total Value Won', '₹' + (stats.total_value_cr || 0) + ' Cr', 'c-amber'],
+      ['Avg L1 Gap', (stats.avg_gap || '—'), ''],
+    ].map(([lbl, val, cls]) =>
+      '<div class="analytic-card"><div class="analytic-num ' + cls + '">' + val + '</div><div class="analytic-lbl">' + lbl + '</div></div>'
+    ).join('');
+
+    var rows = (d.history || []).map(h =>
+      '<tr><td class="mono">' + h.t247_id + '</td><td>' + (h.brief||'—').substring(0,50) + '</td><td><span class="badge badge-' + (h.outcome==='Won'?'BID':h.outcome==='Lost'?'NO-BID':'REVIEW') + '">' + h.outcome + '</span></td><td>' + (h.value_cr ? '₹'+h.value_cr+' Cr' : '—') + '</td><td>' + (h.l1_gap || '—') + '</td><td>' + (h.competitor||'—') + '</td></tr>'
+    ).join('');
+    document.getElementById('winloss-table').innerHTML = rows || '<tr><td colspan="6" class="empty-state">No results recorded</td></tr>';
+  } catch(e) {}
+}
+
+async function saveBidResult() {
+  var data = {
+    t247_id: document.getElementById('res-tid').value,
+    outcome: document.getElementById('res-outcome').value,
+    value_cr: document.getElementById('res-value').value,
+    l1_price: document.getElementById('res-l1').value,
+    our_price: document.getElementById('res-ourprice').value,
+    competitor: document.getElementById('res-competitor').value,
+    notes: document.getElementById('res-notes').value,
+  };
+  try {
+    var r = await fetch('/bid-result', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    var d = await r.json();
+    toast(d.status === 'ok' ? '✅ Result saved!' : 'Error saving', d.status === 'ok' ? 'success' : 'error');
+    if (d.status === 'ok') loadAnalytics();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// BOQ
+// ────────────────────────────────────────────
+async function initBOQ() {
+  document.getElementById('boq-results').innerHTML = '<div class="empty-state"><div class="empty-icon">💰</div>Search for BOQ items above</div>';
+}
+async function searchBOQ() {
+  var q = document.getElementById('boq-search').value.trim();
+  if (q.length < 2) return;
+  try {
+    var r = await fetch('/boq-search?q=' + encodeURIComponent(q));
+    var d = await r.json();
+    var items = d.results || d.items || [];
+    if (!items.length) { document.getElementById('boq-results').innerHTML = '<div class="empty-state">No items found for "' + q + '"</div>'; return; }
+    var html = '<div class="table-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Unit</th><th>Min Price</th><th>Max Price</th><th>Avg Price</th><th>Last Updated</th></tr></thead><tbody>';
+    html += items.map(i =>
+      '<tr><td>' + (i.item||i.name||'—') + '</td><td>' + (i.category||'—') + '</td><td>' + (i.unit||'—') + '</td>' +
+      '<td class="c-green">₹' + (i.min_price||'—') + '</td><td class="c-red">₹' + (i.max_price||'—') + '</td>' +
+      '<td class="c-amber font-bold">₹' + (i.avg_price||'—') + '</td><td class="mono">' + (i.last_updated||'—') + '</td></tr>'
+    ).join('');
+    html += '</tbody></table></div>';
+    document.getElementById('boq-results').innerHTML = html;
+  } catch(e) { document.getElementById('boq-results').innerHTML = '<div class="empty-state">BOQ data unavailable</div>'; }
+}
+
+// ────────────────────────────────────────────
+// ADMIN TOKEN helpers
+// ────────────────────────────────────────────
+function getAdminToken() {
+  return localStorage.getItem('admin_token') || '';
+}
+function adminHeaders(extra) {
+  var h = Object.assign({'Content-Type': 'application/json'}, extra || {});
+  var tok = getAdminToken();
+  if (tok) h['X-Admin-Token'] = tok;
+  return h;
+}
+function saveAdminToken() {
+  var tok = document.getElementById('admin-token-input').value.trim();
+  if (!tok) { toast('Enter a token first', 'error'); return; }
+  localStorage.setItem('admin_token', tok);
+  document.getElementById('admin-token-input').value = '';
+  document.getElementById('admin-token-status').textContent = 'Token saved in browser';
+  toast('Admin token saved', 'success');
+}
+function clearAdminToken() {
+  localStorage.removeItem('admin_token');
+  document.getElementById('admin-token-input').value = '';
+  document.getElementById('admin-token-status').textContent = 'Token cleared';
+  toast('Admin token cleared', 'info');
+}
+
+// ────────────────────────────────────────────
+// SETTINGS
+// ────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    var r = await fetch('/config-full', { headers: adminHeaders({'Content-Type': undefined}) });
+    if (r.status === 403) {
+      document.getElementById('admin-token-status').textContent = '⚠ 403 — enter Admin Token above to access settings';
+    } else {
+      var d = await r.json();
+      var keys = d.gemini_api_keys || [];
+      ['key1','key2','key3','key4'].forEach((id, i) => {
+        var el = document.getElementById(id);
+        if (el) el.placeholder = keys[i] ? '●●●●' + keys[i].slice(-4) : 'AIza...';
+      });
+      document.getElementById('sys-keys').textContent = d.total_keys + ' key' + (d.total_keys !== 1 ? 's' : '') + (d.ai_active ? ' ✅' : ' ❌');
+    }
+  } catch(e) {}
+
+  try {
+    var r2 = await fetch('/health');
+    var h = await r2.json();
+    document.getElementById('sys-drive').textContent = h.drive_sync ? '✅ Connected' : '❌ Not connected';
+    document.getElementById('sys-tenders').textContent = h.tenders_loaded;
+  } catch(e) {}
+
+  var tok = getAdminToken();
+  if (tok) document.getElementById('admin-token-status').textContent = 'Token stored in browser (ends …' + tok.slice(-4) + ')';
+}
+
+async function saveKeys() {
+  var keys = ['key1','key2','key3','key4'].map(id => document.getElementById(id).value.trim()).filter(k => k && !k.startsWith('●'));
+  if (!keys.length) { toast('Enter at least one key', 'error'); return; }
+  try {
+    var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({gemini_api_keys: keys}) });
+    if (r.status === 403) { toast('❌ 403 — save Admin Token in settings first', 'error'); return; }
+    var d = await r.json();
+    toast('✅ Keys saved (' + d.keys_saved + ' keys)', 'success');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function testAI() {
+  document.getElementById('ai-test-result').textContent = 'Testing...';
+  try {
+    var r = await fetch('/test-ai');
+    var d = await r.json();
+    document.getElementById('ai-test-result').textContent = d.status === 'success' ? '✅ AI working!' : '❌ ' + d.error;
+  } catch(e) { document.getElementById('ai-test-result').textContent = '❌ ' + e.message; }
+}
+
+async function saveT247() {
+  var data = { t247_user: document.getElementById('t247u').value, t247_pass: document.getElementById('t247p').value };
+  try {
+    var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify(data) });
+    if (r.status === 403) { toast('❌ 403 — save Admin Token in settings first', 'error'); return; }
+    toast('T247 credentials saved', 'success');
+  } catch(e) { toast('Error', 'error'); }
+}
+
+async function testT247() {
+  document.getElementById('t247-test-result').textContent = 'Testing...';
+  try {
+    var r = await fetch('/test-t247');
+    var d = await r.json();
+    document.getElementById('t247-test-result').textContent = d.status === 'success' ? '✅ Connected!' : '❌ ' + (d.message||d.error||'Failed');
+  } catch(e) { document.getElementById('t247-test-result').textContent = '❌ ' + e.message; }
+}
+
+async function checkHealth() {
+  try {
+    var r = await fetch('/health');
+    var d = await r.json();
+    document.getElementById('health-result').innerHTML =
+      '✅ Version: ' + d.version + ' | ' +
+      'AI: ' + (d.ai_configured ? '✅ ' + d.ai_keys_count + ' keys' : '❌') + ' | ' +
+      'Drive: ' + (d.drive_sync ? '✅' : '❌') + ' | ' +
+      'Tenders: ' + d.tenders_loaded + ' | ' +
+      'BOQ: ' + (d.boq_available ? '✅' : '❌');
+  } catch(e) { document.getElementById('health-result').textContent = '❌ Health check failed'; }
+}
+
+// ────────────────────────────────────────────
+// STATUS BAR
+// ────────────────────────────────────────────
+async function updateStatusBar() {
+  try {
+    var r = await fetch('/health');
+    var d = await r.json();
+    var dd = document.getElementById('drive-dot');
+    var dl = document.getElementById('drive-label');
+    if (d.drive_sync) { dd.className = 'dot dot-green'; dl.textContent = 'Drive: ✅'; }
+    else { dd.className = 'dot dot-red'; dl.textContent = 'Drive: ❌'; }
+    var ad = document.getElementById('ai-dot');
+    var al = document.getElementById('ai-label');
+    if (d.ai_configured) { ad.className = 'dot dot-green'; al.textContent = 'AI: ' + d.ai_keys_count + ' keys'; }
+    else { ad.className = 'dot dot-red'; al.textContent = 'AI: not configured'; }
+  } catch(e) {}
+  try {
+    var r2 = await fetch('/api-quota-status');
+    var q = await r2.json();
+    document.getElementById('api-quota').textContent = q.summary || '';
+  } catch(e) {}
+}
+
+// ────────────────────────────────────────────
+// DEADLINE NOTIFICATIONS
+// ────────────────────────────────────────────
+function checkDeadlineNotifications() {
+  if (!('Notification' in window)) return;
+  var urgent = allTenders.filter(t => { var d = getDaysLeft(t); return d === 0 && getVerdict(t) === 'BID'; });
+  if (urgent.length && Notification.permission === 'granted') {
+    urgent.forEach(t => new Notification('TenderIQ Alert: Deadline TODAY!', { body: t.brief + ' (' + t.t247_id + ')' }));
+  } else if (urgent.length && Notification.permission !== 'denied') {
+    Notification.requestPermission().then(p => { if (p === 'granted') checkDeadlineNotifications(); });
+  }
+}
+
+// ────────────────────────────────────────────
+// POST-AWARD
+// ────────────────────────────────────────────
+function populatePASelect() {
+  var sel = document.getElementById('pa-select');
+  if (!sel) return;
+  var won = allTenders.filter(t => (t.outcome||'') === 'Won' || (t.status||'') === 'Won');
+  sel.innerHTML = '<option value="">-- Select a won tender --</option>' +
+    won.map(t => '<option value="' + t.t247_id + '">' + (t.t247_id||'?') + ' — ' + (t.brief||'').substring(0,50) + '</option>').join('');
+}
+
+async function genLetter(type) {
+  var tid = document.getElementById('pa-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  showLoading('Generating letter...');
+  try {
+    var r = await fetch('/generate-letter/' + type + '?t247_id=' + tid, { method: 'POST' });
+    if (r.ok) {
+      var blob = await r.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = type + '_' + tid + '.docx'; a.click();
+      toast('Letter generated!', 'success');
+    } else toast('Generation failed', 'error');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
+async function loadMilestones() {
+  var tid = document.getElementById('pa-select').value;
+  if (!tid) return;
+  try {
+    var r = await fetch('/milestones/' + tid);
+    var d = await r.json();
+    var items = d.milestones || [];
+    if (!items.length) {
+      document.getElementById('milestones-list').innerHTML = '<div class="empty-state">No milestones set. Click Setup Default.</div>';
+      return;
+    }
+    var html = items.map(m =>
+      '<div class="milestone-item">' +
+        '<div class="milestone-dot ' + (m.done ? 'dot-done' : m.late ? 'dot-late' : 'dot-pending') + '"></div>' +
+        '<div style="flex:1"><div style="font-size:13px">' + m.name + '</div><div style="font-size:11px;color:var(--text3)">' + (m.date||'No date') + '</div></div>' +
+        '<span class="badge ' + (m.done ? 'badge-BID' : m.late ? 'badge-NO-BID' : 'badge-REVIEW') + '">' + (m.done ? 'Done' : m.late ? 'Late' : 'Pending') + '</span>' +
+      '</div>'
+    ).join('');
+    document.getElementById('milestones-list').innerHTML = html;
+  } catch(e) {}
+}
+
+async function setupMilestones() {
+  var tid = document.getElementById('pa-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  showLoading('Setting up milestones...');
+  try {
+    var r = await fetch('/setup-milestones/' + tid, { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    toast('Milestones created!', 'success');
+    loadMilestones();
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+async function generateInvoice() {
+  var tid = document.getElementById('pa-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  var desc = document.getElementById('inv-desc').value;
+  var amount = document.getElementById('inv-amount').value;
+  showLoading('Generating invoice...');
+  try {
+    var r = await fetch('/generate-invoice', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({t247_id: tid, description: desc, amount: amount}) });
+    if (r.ok) {
+      var blob = await r.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = 'Invoice_' + tid + '.docx'; a.click();
+      toast('Invoice generated!', 'success');
+    } else toast('Failed', 'error');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
+// ────────────────────────────────────────────
+// SKIPPED
+// ────────────────────────────────────────────
+async function loadSkipped() {
+  try {
+    var r = await fetch('/skipped');
+    var d = await r.json();
+    var rows = (d.tenders || []).map(t =>
+      '<tr>' +
+        '<td class="mono">' + (t.t247_id||'—') + '</td>' +
+        '<td>' + (t.brief||'—').substring(0,60) + '</td>' +
+        '<td style="color:var(--text2)">' + (t.reason||'—') + '</td>' +
+        '<td class="mono" style="font-size:11px">' + (t.skipped_on||'—') + '</td>' +
+        '<td><button class="action-btn blue" onclick="restoreTender(\'' + t.t247_id + '\')">Restore</button></td>' +
+      '</tr>'
+    ).join('');
+    document.getElementById('skipped-table').innerHTML = rows || '<tr><td colspan="5" class="empty-state">No skipped tenders.</td></tr>';
+  } catch(e) {}
+}
+
+async function restoreTender(tid) {
+  try {
+    await fetch('/restore-tender/' + tid, { method: 'POST' });
+    toast('Tender restored', 'success');
+    loadSkipped();
+    loadDashboard();
+  } catch(e) { toast('Error', 'error'); }
+}
+
+// ────────────────────────────────────────────
+// LETTERHEAD
+// ────────────────────────────────────────────
+async function loadLetterheadStatus() {
+  try {
+    var r = await fetch('/letterhead-status');
+    var d = await r.json();
+    document.getElementById('lh-status').innerHTML = d.exists
+      ? '✅ Letterhead uploaded: <b>' + d.filename + '</b> (' + d.size_kb + ' KB) — <span style="color:var(--text3)">' + d.updated + '</span>'
+      : '⚠ No letterhead uploaded yet. Documents will use default header.';
+  } catch(e) { document.getElementById('lh-status').textContent = 'Status unavailable.'; }
+}
+
+async function uploadLetterhead(input) {
+  var file = input.files[0];
+  if (!file) return;
+  showLoading('Uploading letterhead...');
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/upload-letterhead', { method: 'POST', body: fd });
+    var d = await r.json();
+    hideLoading();
+    toast(d.status === 'ok' ? '✅ Letterhead uploaded!' : (d.message||'Upload failed'), d.status === 'ok' ? 'success' : 'error');
+    loadLetterheadStatus();
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+  input.value = '';
+}
+
+// ────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadDashboard();
+  refreshProfileKeywords();
+  updateTokenMeter();
+  setInterval(updateStatusBar, 30000);
+  setInterval(checkDeadlineNotifications, 60000);
+  setInterval(updateTokenMeter, 120000);
+  // Restore page from URL on load
+  var params = new URLSearchParams(window.location.search);
+  var initPage = params.get('p');
+  if (initPage) {
+    showPage(initPage, {fromPopState: true, tid: params.get('tid') || ''});
+  } else {
+    history.replaceState({page: 'dashboard', tid: ''}, '', '/');
+  }
+  // Keyboard shortcut: Ctrl+K = search
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      var s = document.getElementById('dash-search');
+      if (s) { showPage('dashboard'); s.focus(); }
+    }
+  });
+});
+</script>
+</body>
+</html>
