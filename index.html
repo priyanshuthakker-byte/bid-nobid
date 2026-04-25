@@ -855,6 +855,16 @@ input:focus,select:focus,textarea:focus{border-color:#3b82f6}
       <div id="settings-tab-keys" class="tab-panel active">
         <div class="col2">
           <div class="card">
+            <div class="card-title">Admin Token</div>
+            <p style="font-size:11.5px;color:#f59e0b;margin-bottom:8px">⚠ If ADMIN_TOKEN is set in Render env vars, enter it here once — stored in your browser only.</p>
+            <label>Admin Token</label><input type="password" id="admin-token-input" placeholder="Your ADMIN_TOKEN from Render">
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-primary btn-sm" onclick="saveAdminToken()">Save Token</button>
+              <button class="btn btn-ghost btn-sm" onclick="clearAdminToken()">Clear</button>
+            </div>
+            <div id="admin-token-status" style="font-size:11.5px;color:#555;margin-top:8px"></div>
+          </div>
+          <div class="card">
             <div class="card-title">Gemini AI Keys</div>
             <p style="font-size:11.5px;color:#444;margin-bottom:8px">Get free keys at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#60a5fa">aistudio.google.com</a> — add up to 4 for rotation</p>
             <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
@@ -2281,11 +2291,54 @@ async function saveRules() {
 }
 
 // ════════════════════════════════════════════════════════════
-// SETTINGS — FIXED letterhead check
+// ADMIN TOKEN — stored in localStorage, sent with /config calls
+// ════════════════════════════════════════════════════════════
+function getAdminToken() {
+  return localStorage.getItem('adminToken') || '';
+}
+
+function adminHeaders(extra) {
+  var h = Object.assign({'Content-Type': 'application/json'}, extra || {});
+  var tok = getAdminToken();
+  if(tok) h['X-Admin-Token'] = tok;
+  return h;
+}
+
+function saveAdminToken() {
+  var val = document.getElementById('admin-token-input').value.trim();
+  if(!val) { toast('Enter a token first', 'info'); return; }
+  localStorage.setItem('adminToken', val);
+  document.getElementById('admin-token-status').textContent = 'Token saved in browser.';
+  document.getElementById('admin-token-status').style.color = '#22c55e';
+  toast('Admin token saved', 'success');
+}
+
+function clearAdminToken() {
+  localStorage.removeItem('adminToken');
+  document.getElementById('admin-token-input').value = '';
+  document.getElementById('admin-token-status').textContent = 'Token cleared.';
+  document.getElementById('admin-token-status').style.color = '#ef4444';
+  toast('Admin token cleared', 'info');
+}
+
+// ════════════════════════════════════════════════════════════
+// SETTINGS
 // ════════════════════════════════════════════════════════════
 async function loadSettings() {
+  // Show saved token status
+  var tok = getAdminToken();
+  var statusEl = document.getElementById('admin-token-status');
+  var inputEl = document.getElementById('admin-token-input');
+  if(statusEl) statusEl.textContent = tok ? 'Token is saved in browser.' : 'No token saved yet.';
+  if(statusEl) statusEl.style.color = tok ? '#22c55e' : '#555';
+
   try {
-    var r=await fetch('/config'); var d=await r.json();
+    var r=await fetch('/config', {headers: adminHeaders({'Content-Type': undefined})});
+    if(r.status === 403) {
+      if(statusEl) { statusEl.textContent = 'Token missing or wrong — enter ADMIN_TOKEN from Render and click Save Token.'; statusEl.style.color='#ef4444'; }
+      return;
+    }
+    var d=await r.json();
     if(d.gemini_api_key) document.getElementById('key1').value=d.gemini_api_key;
     if(d.gemini_api_key_2) document.getElementById('key2').value=d.gemini_api_key_2;
     if(d.gemini_api_key_3) document.getElementById('key3').value=d.gemini_api_key_3;
@@ -2308,14 +2361,20 @@ async function saveKeys() {
     gemini_api_key_2:document.getElementById('key2').value,
     gemini_api_key_3:document.getElementById('key3').value,
     gemini_api_key_4:document.getElementById('key4').value};
-  try{await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});toast('Keys saved','success');}
-  catch(e){toast('Failed','error');}
+  try{
+    var r=await fetch('/config',{method:'POST',headers:adminHeaders(),body:JSON.stringify(body)});
+    if(r.status===403){toast('403 — enter Admin Token in Settings first','error');return;}
+    toast('Keys saved','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
 }
 
 async function saveT247() {
   var body={t247_username:document.getElementById('t247u').value,t247_password:document.getElementById('t247p').value};
-  try{await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});toast('T247 credentials saved','success');}
-  catch(e){toast('Failed','error');}
+  try{
+    var r=await fetch('/config',{method:'POST',headers:adminHeaders(),body:JSON.stringify(body)});
+    if(r.status===403){toast('403 — enter Admin Token in Settings first','error');return;}
+    toast('T247 credentials saved','success');
+  }catch(e){toast('Failed: '+e.message,'error');}
 }
 
 async function testAI() {
