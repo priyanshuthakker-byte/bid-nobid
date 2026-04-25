@@ -29,6 +29,23 @@ from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini
+try:
+    from ai_analyzer import analyze_with_gemini_parallel
+    PARALLEL_ANALYST_AVAILABLE = True
+except ImportError:
+    PARALLEL_ANALYST_AVAILABLE = False
+    analyze_with_gemini_parallel = None
+try:
+    from core.api_pool import get_pool, get_slots, refresh_pool
+    API_POOL_AVAILABLE = True
+except ImportError:
+    API_POOL_AVAILABLE = False
+try:
+    import doc_editor
+    DOC_EDITOR_AVAILABLE = True
+except ImportError:
+    DOC_EDITOR_AVAILABLE = False
+    doc_editor = None
 from excel_processor import process_excel
 from prebid_generator import generate_prebid_queries
 from chatbot import process_message, load_history
@@ -1385,8 +1402,23 @@ async def analyse_status(job_id: str):
 
 
 def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
-    """Runs in background thread — full analysis pipeline."""
+    """Runs in background thread — full analysis pipeline.
+    Acquires a JobSlot so Render stays within RAM ceiling while
+    multiple tenders are analyzed concurrently."""
+    slot_held = False
+    if API_POOL_AVAILABLE:
+        try:
+            slots = get_slots()
+            _set_job(job_id, progress=f"Queued (active={slots.snapshot()['active']}/{slots.max})…")
+            if slots.acquire(timeout=900.0):
+                slot_held = True
+            else:
+                _set_job(job_id, status="error", error="Analyst queue busy — try again in a minute.")
+                return
+        except Exception:
+            slot_held = False
     tmp_dir = tempfile.mkdtemp(prefix="tender_", dir=str(TEMP_DIR))
+    job_ok = False
     try:
         extract_dir = Path(tmp_dir) / "extracted"
         extract_dir.mkdir()
@@ -1451,9 +1483,16 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
         if api_key and all_text.strip():
-            _set_job(job_id, progress="AI: Snapshot · Dates · EMD…")
-            _set_job(job_id, progress="AI pipeline running (this takes 2-5 min)…")
-            ai_result = analyze_with_gemini(all_text, passed)
+            _set_job(job_id, progress="AI pipeline starting (parallel 9 segments)…")
+            def _seg_progress(stage, done, total):
+                try:
+                    _set_job(job_id, progress=f"AI · {stage} · {done}/{total}")
+                except Exception:
+                    pass
+            if PARALLEL_ANALYST_AVAILABLE:
+                ai_result = analyze_with_gemini_parallel(all_text, passed, progress_cb=_seg_progress)
+            else:
+                ai_result = analyze_with_gemini(all_text, passed)
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
                 ai_used = True
@@ -1541,12 +1580,18 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 "doc_filename": output_filename,
             }
         )
+        job_ok = True
 
     except Exception as e:
         import traceback
         _set_job(job_id, status="error", error=str(e), traceback=traceback.format_exc())
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+        if slot_held and API_POOL_AVAILABLE:
+            try:
+                get_slots().release(job_ok)
+            except Exception:
+                pass
 
 
 
@@ -2435,3 +2480,180 @@ async def post_award_doc_alias(t247_id: str, doc_type: str, body: dict = Body(de
     if not body:
         body = {"generated_at": datetime.now().isoformat()}
     return await post_award_doc(t247_id, doc_type, body)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# v8.1 — DOC PREVIEW + AI-EDIT + LOCAL DOWNLOAD + VERSIONS + RISK + COMPLIANCE
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _locate_tender_docx(t247_id: str) -> Path:
+    """Find latest BidNoBid_*.docx for given tender id; fallback to report_file field."""
+    tender = get_tender(t247_id) or {}
+    rf = tender.get("report_file")
+    if rf:
+        p = (OUTPUT_DIR / Path(rf).name)
+        if p.exists():
+            return p
+    candidates = list(OUTPUT_DIR.glob(f"BidNoBid_*{t247_id}*.docx"))
+    if not candidates:
+        candidates = sorted(OUTPUT_DIR.glob("BidNoBid_*.docx"),
+                            key=lambda f: f.stat().st_mtime, reverse=True)
+        if tender.get("tender_no"):
+            tn = re.sub(r'[^\w\-]', '_', str(tender.get("tender_no")))[:50]
+            matched = [p for p in candidates if tn in p.stem]
+            if matched:
+                return matched[0]
+    if candidates:
+        return candidates[0]
+    raise HTTPException(404, f"No report found for {t247_id}. Run Analyse first.")
+
+
+@app.get("/tender/{t247_id}/doc-html")
+async def tender_doc_html(t247_id: str):
+    """Render current report docx as HTML for in-browser preview."""
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    docx_path = _locate_tender_docx(t247_id)
+    html = doc_editor.docx_to_html(docx_path)
+    return {"status": "ok", "html": html, "filename": docx_path.name,
+            "modified": datetime.fromtimestamp(docx_path.stat().st_mtime).isoformat(),
+            "size_kb": round(docx_path.stat().st_size / 1024, 1)}
+
+
+@app.post("/tender/{t247_id}/ai-edit")
+async def tender_ai_edit(t247_id: str, body: dict = Body(...)):
+    """Apply chatbot instruction to current doc HTML. Returns edited HTML (not saved)."""
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    html = (body.get("html") or "").strip()
+    instruction = (body.get("instruction") or "").strip()
+    if not instruction:
+        raise HTTPException(400, "instruction required")
+    if not html:
+        docx_path = _locate_tender_docx(t247_id)
+        html = doc_editor.docx_to_html(docx_path)
+    result = doc_editor.ai_edit_html(html, instruction)
+    if "error" in result:
+        raise HTTPException(502, result["error"])
+    return {"status": "ok", "html": result["html"], "chars": result["chars"]}
+
+
+@app.post("/tender/{t247_id}/doc-save")
+async def tender_doc_save(t247_id: str, body: dict = Body(...)):
+    """Save HTML back to docx. Creates a version snapshot first."""
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    html = body.get("html") or ""
+    note = body.get("note") or "manual edit"
+    if len(html) < 20:
+        raise HTTPException(400, "HTML content empty")
+    docx_path = _locate_tender_docx(t247_id)
+    try:
+        doc_editor.snapshot_version(docx_path, note="auto-snapshot before save")
+    except Exception as e:
+        print(f"[doc-save] snapshot skipped: {e}")
+    try:
+        doc_editor.html_to_docx(html, docx_path)
+    except Exception as e:
+        raise HTTPException(500, f"Save failed: {e}")
+    import base64
+    b64 = base64.b64encode(docx_path.read_bytes()).decode()
+    return {"status": "ok", "filename": docx_path.name,
+            "size_kb": round(docx_path.stat().st_size / 1024, 1),
+            "doc_b64": b64, "note": note,
+            "saved_at": datetime.now().isoformat()}
+
+
+@app.get("/tender/{t247_id}/doc-download")
+async def tender_doc_download_local(t247_id: str):
+    """Explicit local-download button endpoint — streams docx with correct filename."""
+    docx_path = _locate_tender_docx(t247_id)
+    return FileResponse(
+        path=str(docx_path),
+        filename=docx_path.name,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+
+@app.get("/tender/{t247_id}/doc-versions")
+async def tender_doc_versions(t247_id: str):
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    docx_path = _locate_tender_docx(t247_id)
+    return {"status": "ok", "filename": docx_path.name,
+            "versions": doc_editor.list_versions(docx_path)}
+
+
+@app.post("/tender/{t247_id}/doc-restore/{version_id}")
+async def tender_doc_restore(t247_id: str, version_id: str):
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    docx_path = _locate_tender_docx(t247_id)
+    result = doc_editor.restore_version(docx_path, version_id)
+    if "error" in result:
+        raise HTTPException(404, result["error"])
+    return {"status": "ok", **result}
+
+
+@app.get("/tender/{t247_id}/risk-score")
+async def tender_risk_score(t247_id: str):
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    return {"status": "ok", **doc_editor.compute_risk_score(tender)}
+
+
+@app.get("/tender/{t247_id}/compliance-matrix")
+async def tender_compliance_matrix(t247_id: str):
+    if not DOC_EDITOR_AVAILABLE:
+        raise HTTPException(500, "doc_editor not available")
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    matrix = doc_editor.build_compliance_matrix(tender)
+    covered = sum(1 for m in matrix if m.get("color") == "GREEN")
+    partial = sum(1 for m in matrix if m.get("color") == "AMBER")
+    gap     = sum(1 for m in matrix if m.get("color") == "RED")
+    return {"status": "ok", "total": len(matrix), "covered": covered,
+            "partial": partial, "gap": gap, "matrix": matrix}
+
+
+@app.get("/platform/api-pool-stats")
+async def api_pool_stats():
+    """Observability for key-pool + analyst slots."""
+    if not API_POOL_AVAILABLE:
+        return {"status": "unavailable"}
+    try:
+        refresh_pool()
+        return {
+            "status": "ok",
+            "slots": get_slots().snapshot(),
+            "keys": get_pool().stats(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/platform/analyst-capacity")
+async def analyst_capacity():
+    """Quick sanity check — how many analysts can run today?"""
+    if not API_POOL_AVAILABLE:
+        return {"status": "unavailable", "hint": "core.api_pool import failed"}
+    refresh_pool()
+    stats = get_pool().stats()
+    slots = get_slots().snapshot()
+    total_rpd = sum(max(0, 1400 - s.get("rpd_used", 0)) for s in stats)  # 1400 cap per key
+    per_tender_calls = 9  # 9 segments
+    max_today = max(0, int(total_rpd / per_tender_calls))
+    return {
+        "status": "ok",
+        "api_keys_configured": len(stats),
+        "concurrent_slots": slots.get("max"),
+        "active_now": slots.get("active"),
+        "completed_today": slots.get("completed_today"),
+        "theoretical_daily_capacity": max_today,
+        "recommendation": "Add more GEMINI_API_KEY_2..5 env vars to increase throughput"
+            if len(stats) < 3 else "Capacity is sufficient for 10+ tenders/day.",
+    }

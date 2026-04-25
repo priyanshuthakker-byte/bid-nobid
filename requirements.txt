@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 python-docx
+mammoth
 openpyxl
 xlrd
 PyPDF2

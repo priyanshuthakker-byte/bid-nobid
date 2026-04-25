@@ -1058,6 +1058,24 @@ function triggerDownload(b64, filename, mime) {
   setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);}, 200);
 }
 
+// Direct local-drive download — fetches latest server copy of the analyse Word doc.
+async function downloadTenderDoc(tid) {
+  if(!tid) { toast('No tender selected','info'); return; }
+  try {
+    var r = await fetch('/tender/'+tid+'/doc-download');
+    if(!r.ok) { toast('Download failed: HTTP '+r.status,'error'); return; }
+    var blob = await r.blob();
+    var cd = r.headers.get('Content-Disposition')||'';
+    var m = cd.match(/filename="?([^"]+)"?/);
+    var name = m ? m[1] : ('BidNoBid_'+tid+'.docx');
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+    toast('Saved to local drive: '+name,'success');
+  } catch(e){ toast('Download error: '+e.message,'error'); }
+}
+
 // ════════════════════════════════════════════════════════════
 // DASHBOARD RENDER
 // ════════════════════════════════════════════════════════════
@@ -1384,7 +1402,7 @@ async function pollAnalysisJob(jobId, tid) {
     if(d.status === 'done') {
       clearInterval(jobPollInterval); jobPollInterval = null;
       document.getElementById('analysis-progress').style.display='none';
-      var result = d.result || d {};
+      var result = d.result || d || {};
       showAnalysisResult(result, tid);
       if(tid) { setActive(tid,''); loadDashboard(); }
       // Download doc if available
@@ -1485,8 +1503,9 @@ function showAnalysisResult(result, tid) {
         '<div style="font-size:12.5px;color:#777;max-width:500px">'+reason.substring(0,200)+'</div>'+
         '<div style="font-size:11px;color:#444;margin-top:4px">PQ: <span class="c-green">'+green+' Met</span> · <span class="c-amber">'+amber+' Conditional</span> · <span class="c-red">'+red+' Not Met</span>'+(confLevel?' · Confidence: '+confLevel:'')+'</div>'+
       '</div>'+
-      '<div style="display:flex;gap:6px;margin-left:auto">'+
-        (result.doc_b64?'<button class="btn btn-ghost btn-sm" onclick="triggerDownload(lastAnalysisB64,lastAnalysisFname)">⬇ Re-download Report</button>':'')+
+      '<div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap">'+
+        (tid?'<button class="btn btn-primary btn-sm" onclick="window.openDocEditor(\''+tid+'\')">📝 Preview &amp; Edit Word</button>':'')+
+        (tid?'<button class="btn btn-ghost btn-sm" onclick="downloadTenderDoc(\''+tid+'\')">⬇ Download .docx</button>':(result.doc_b64?'<button class="btn btn-ghost btn-sm" onclick="triggerDownload(lastAnalysisB64,lastAnalysisFname)">⬇ Re-download Report</button>':''))+
         (tid?'<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'checklist\')">✅ Checklist</button>':'')+
         (tid?'<button class="btn btn-ghost btn-sm" onclick="setActive(\''+tid+'\',\'\');showPage(\'documents\')">📄 Docs</button>':'')+
       '</div>'+
@@ -2422,5 +2441,349 @@ window.addEventListener('DOMContentLoaded', function() {
   setInterval(checkDriveStatus, 60000);
 });
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- v8.1 ADD-ON: Doc Preview + Chat-Edit + Local Download + Risk/Compliance -->
+<!-- Self-contained floating panel. Activate via toolbar button or JS API.   -->
+<!-- Call window.openDocEditor('T247_ID') from anywhere to open.             -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<style>
+  #de-fab{position:fixed;right:20px;bottom:20px;z-index:9998;background:#2563eb;color:#fff;border:0;padding:12px 18px;border-radius:999px;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.2);cursor:pointer;font-size:13px}
+  #de-fab:hover{background:#1d4ed8}
+  #de-overlay{position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:9999;display:none;align-items:stretch;justify-content:stretch}
+  #de-overlay.show{display:flex}
+  #de-modal{flex:1;margin:24px;background:#f8fafc;border-radius:12px;display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:auto 1fr;gap:0;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  #de-header{grid-column:1/3;padding:10px 16px;background:#0f172a;color:#fff;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  #de-header .de-id{font-weight:600;font-size:13px}
+  #de-header button{background:#1e293b;color:#fff;border:1px solid #334155;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+  #de-header button:hover{background:#334155}
+  #de-header .de-close{margin-left:auto;background:#dc2626;border-color:#dc2626}
+  #de-preview{padding:0;overflow:auto;background:#e5e7eb;border-right:2px solid #cbd5e1}
+  #de-preview-inner{min-height:100%;margin:20px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12);outline:none}
+  #de-preview-inner[contenteditable=true]{outline:2px dashed #2563eb}
+  #de-side{display:flex;flex-direction:column;background:#fff;overflow:hidden}
+  #de-tabs{display:flex;border-bottom:1px solid #e2e8f0;background:#f1f5f9}
+  #de-tabs button{flex:1;padding:10px;border:0;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#64748b;border-bottom:2px solid transparent}
+  #de-tabs button.active{color:#2563eb;border-color:#2563eb;background:#fff}
+  .de-pane{display:none;flex:1;overflow:auto;padding:12px}
+  .de-pane.active{display:flex;flex-direction:column}
+  #de-chat-log{flex:1;overflow:auto;background:#f8fafc;padding:10px;border-radius:8px;font-size:13px;min-height:200px;border:1px solid #e2e8f0}
+  .de-msg{padding:8px 10px;border-radius:8px;margin:6px 0;line-height:1.4}
+  .de-msg.user{background:#dbeafe;color:#1e3a8a;margin-left:30px}
+  .de-msg.ai{background:#fef3c7;color:#78350f;margin-right:30px}
+  .de-msg.sys{background:#e2e8f0;color:#475569;font-style:italic;font-size:12px;text-align:center}
+  #de-chat-input{display:flex;gap:6px;margin-top:8px}
+  #de-chat-input textarea{flex:1;min-height:52px;padding:8px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical;font-family:inherit;font-size:13px}
+  #de-chat-input button{padding:8px 14px;background:#2563eb;color:#fff;border:0;border-radius:6px;cursor:pointer;font-weight:600}
+  #de-chat-input button:disabled{background:#94a3b8;cursor:not-allowed}
+  .de-row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .de-card{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin:6px 0;font-size:12px}
+  .de-chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:4px}
+  .de-chip.green{background:#dcfce7;color:#166534}
+  .de-chip.amber{background:#fef3c7;color:#92400e}
+  .de-chip.red{background:#fee2e2;color:#991b1b}
+  .de-chip.blue{background:#dbeafe;color:#1e40af}
+  #de-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:8px;z-index:10001;display:none;font-size:13px}
+  #de-toast.show{display:block}
+</style>
+
+<button id="de-fab" title="Open Doc Editor" onclick="window.openDocEditor()">📝 Doc Editor</button>
+
+<div id="de-overlay" onclick="if(event.target===this)window.closeDocEditor()">
+  <div id="de-modal">
+    <div id="de-header">
+      <span class="de-id" id="de-id-label">—</span>
+      <button onclick="window.deReload()" title="Reload from server">🔄 Reload</button>
+      <button onclick="window.deToggleEdit()" id="de-edit-btn">✏️ Enable Edit</button>
+      <button onclick="window.deSave()">💾 Save to Server</button>
+      <button onclick="window.deDownload()">⬇️ Download to Local</button>
+      <button onclick="window.deVersions()" title="Version history">🕑 Versions</button>
+      <button class="de-close" onclick="window.closeDocEditor()">✕ Close</button>
+    </div>
+    <div id="de-preview"><div id="de-preview-inner">Load a tender to preview…</div></div>
+    <div id="de-side">
+      <div id="de-tabs">
+        <button class="active" data-tab="chat" onclick="window.deTab('chat')">💬 Chat-Edit</button>
+        <button data-tab="risk" onclick="window.deTab('risk')">⚠️ Risk</button>
+        <button data-tab="comp" onclick="window.deTab('comp')">✓ Compliance</button>
+        <button data-tab="pool" onclick="window.deTab('pool')">⚡ API Pool</button>
+      </div>
+      <div class="de-pane active" data-pane="chat">
+        <div id="de-chat-log">
+          <div class="de-msg sys">Tell me what to fix. Examples: "Change PBG from 10% to 5%." "Remove the last paragraph." "Rewrite section 3 to emphasize GIS expertise."</div>
+        </div>
+        <div id="de-chat-input">
+          <textarea id="de-chat-text" placeholder="Type your edit instruction…"></textarea>
+          <button onclick="window.deAiEdit()" id="de-send-btn">Send</button>
+        </div>
+      </div>
+      <div class="de-pane" data-pane="risk"><div id="de-risk-box">Loading…</div></div>
+      <div class="de-pane" data-pane="comp"><div id="de-comp-box">Loading…</div></div>
+      <div class="de-pane" data-pane="pool"><div id="de-pool-box">Loading…</div></div>
+    </div>
+  </div>
+</div>
+<div id="de-toast"></div>
+
+<script>
+(function(){
+  const API = (window.API_BASE || '');
+  let currentId = null;
+  let originalHtml = '';
+
+  function toast(msg, ms){
+    const t = document.getElementById('de-toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), ms||2400);
+  }
+
+  function currentTenderId(){
+    if(currentId) return currentId;
+    const saved = localStorage.getItem('activeTenderId')
+      || localStorage.getItem('currentT247Id')
+      || (document.getElementById('ctx-id')||{}).textContent;
+    return saved && saved !== '—' ? saved.trim() : null;
+  }
+
+  window.openDocEditor = async function(tid){
+    currentId = tid || currentTenderId();
+    if(!currentId){
+      const ask = prompt('Enter Tender ID (t247_id) to open:');
+      if(!ask) return;
+      currentId = ask.trim();
+    }
+    document.getElementById('de-id-label').textContent = '📄 ' + currentId;
+    document.getElementById('de-overlay').classList.add('show');
+    await window.deReload();
+  };
+
+  window.closeDocEditor = function(){
+    document.getElementById('de-overlay').classList.remove('show');
+  };
+
+  window.deReload = async function(){
+    if(!currentId) return;
+    const box = document.getElementById('de-preview-inner');
+    box.innerHTML = '<p style="padding:40px;text-align:center;color:#64748b">Loading document…</p>';
+    try{
+      const r = await fetch(API + '/tender/' + currentId + '/doc-html');
+      if(!r.ok){
+        const err = await r.text();
+        box.innerHTML = '<p style="padding:40px;color:#b91c1c">Failed: ' + err + '</p>';
+        return;
+      }
+      const data = await r.json();
+      box.innerHTML = data.html || '<p>No content</p>';
+      originalHtml = data.html || '';
+      toast('Loaded: ' + data.filename);
+    }catch(e){
+      box.innerHTML = '<p style="padding:40px;color:#b91c1c">Error: ' + e.message + '</p>';
+    }
+  };
+
+  window.deToggleEdit = function(){
+    const box = document.getElementById('de-preview-inner');
+    const btn = document.getElementById('de-edit-btn');
+    const on = box.getAttribute('contenteditable') === 'true';
+    box.setAttribute('contenteditable', on ? 'false' : 'true');
+    btn.textContent = on ? '✏️ Enable Edit' : '🔒 Lock';
+    if(!on) box.focus();
+  };
+
+  window.deSave = async function(){
+    if(!currentId) return;
+    const html = document.getElementById('de-preview-inner').innerHTML;
+    if(html.length < 20){ toast('Nothing to save'); return; }
+    toast('Saving…');
+    try{
+      const r = await fetch(API + '/tender/' + currentId + '/doc-save', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({html: html, note: 'inline edit'})
+      });
+      const d = await r.json();
+      if(r.ok){
+        toast('Saved ✓ ' + d.filename + ' (' + d.size_kb + ' KB)');
+        originalHtml = html;
+      } else {
+        toast('Save failed: ' + (d.detail || d.error || r.status), 4000);
+      }
+    }catch(e){ toast('Save error: ' + e.message, 4000); }
+  };
+
+  window.deDownload = async function(){
+    if(!currentId) return;
+    const url = API + '/tender/' + currentId + '/doc-download';
+    try{
+      const r = await fetch(url);
+      if(!r.ok){ toast('Download failed: ' + r.status, 4000); return; }
+      const blob = await r.blob();
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="?([^"]+)"?/);
+      const name = m ? m[1] : (currentId + '.docx');
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = name;
+      document.body.appendChild(link); link.click();
+      document.body.removeChild(link);
+      setTimeout(()=>URL.revokeObjectURL(link.href), 2000);
+      toast('Downloaded: ' + name);
+    }catch(e){ toast('Download error: ' + e.message, 4000); }
+  };
+
+  window.deAiEdit = async function(){
+    const ta = document.getElementById('de-chat-text');
+    const instruction = ta.value.trim();
+    if(!instruction){ toast('Type an instruction first'); return; }
+    const log = document.getElementById('de-chat-log');
+    const btn = document.getElementById('de-send-btn');
+    log.innerHTML += '<div class="de-msg user">' + escapeHtml(instruction) + '</div>';
+    ta.value = ''; btn.disabled = true;
+    log.innerHTML += '<div class="de-msg sys" id="de-thinking">Analysing & editing…</div>';
+    log.scrollTop = log.scrollHeight;
+    const currentHtml = document.getElementById('de-preview-inner').innerHTML;
+    try{
+      const r = await fetch(API + '/tender/' + currentId + '/ai-edit', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({html: currentHtml, instruction: instruction})
+      });
+      const d = await r.json();
+      const th = document.getElementById('de-thinking'); if(th) th.remove();
+      if(r.ok && d.html){
+        document.getElementById('de-preview-inner').innerHTML = d.html;
+        log.innerHTML += '<div class="de-msg ai">✓ Applied. Review the preview, then click 💾 Save.</div>';
+      } else {
+        log.innerHTML += '<div class="de-msg ai" style="background:#fecaca;color:#7f1d1d">Failed: ' + escapeHtml(d.detail || d.error || ('HTTP '+r.status)) + '</div>';
+      }
+    }catch(e){
+      const th = document.getElementById('de-thinking'); if(th) th.remove();
+      log.innerHTML += '<div class="de-msg ai" style="background:#fecaca;color:#7f1d1d">Error: ' + escapeHtml(e.message) + '</div>';
+    }
+    btn.disabled = false;
+    log.scrollTop = log.scrollHeight;
+  };
+
+  window.deVersions = async function(){
+    if(!currentId) return;
+    try{
+      const r = await fetch(API + '/tender/' + currentId + '/doc-versions');
+      const d = await r.json();
+      const vs = d.versions || [];
+      if(!vs.length){ toast('No versions yet'); return; }
+      const pick = prompt('Versions (latest first):\n' +
+        vs.map((v,i)=>`${i+1}. ${v.version_id} — ${v.note||''}`).join('\n') +
+        '\n\nEnter number to restore (blank to cancel):');
+      if(!pick) return;
+      const idx = parseInt(pick,10) - 1;
+      if(isNaN(idx) || !vs[idx]){ toast('Invalid selection'); return; }
+      const vid = vs[idx].version_id;
+      if(!confirm('Restore version ' + vid + '? Current doc will be snapshotted first.')) return;
+      const rr = await fetch(API + '/tender/' + currentId + '/doc-restore/' + vid, {method:'POST'});
+      const rd = await rr.json();
+      if(rr.ok){ toast('Restored: ' + vid); await window.deReload(); }
+      else toast('Restore failed: ' + (rd.detail||rd.error));
+    }catch(e){ toast('Versions error: ' + e.message, 4000); }
+  };
+
+  window.deTab = async function(tab){
+    document.querySelectorAll('#de-tabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+    document.querySelectorAll('.de-pane').forEach(p=>p.classList.toggle('active', p.dataset.pane===tab));
+    if(tab==='risk') await loadRisk();
+    else if(tab==='comp') await loadCompliance();
+    else if(tab==='pool') await loadPool();
+  };
+
+  async function loadRisk(){
+    const box = document.getElementById('de-risk-box');
+    box.innerHTML = 'Loading…';
+    if(!currentId){ box.innerHTML = 'Open a tender first.'; return; }
+    try{
+      const r = await fetch(API + '/tender/' + currentId + '/risk-score');
+      const d = await r.json();
+      if(!r.ok){ box.innerHTML = 'Failed: ' + (d.detail||d.error); return; }
+      const factors = (d.factors||[]).map(f=>'<li>'+escapeHtml(f)+'</li>').join('');
+      box.innerHTML = `
+        <div class="de-card" style="border-left:6px solid ${d.color}">
+          <div style="font-size:28px;font-weight:700;color:${d.color}">${d.score}/100 — ${d.grade}</div>
+          <div style="font-size:12px;color:#64748b">Aligned verdict: ${escapeHtml(d.verdict_align||'—')}</div>
+        </div>
+        <div class="de-card"><b>Risk factors</b><ul style="margin:6px 0 0 16px;padding:0">${factors}</ul></div>`;
+    }catch(e){ box.innerHTML = 'Error: ' + e.message; }
+  }
+
+  async function loadCompliance(){
+    const box = document.getElementById('de-comp-box');
+    box.innerHTML = 'Loading…';
+    if(!currentId){ box.innerHTML = 'Open a tender first.'; return; }
+    try{
+      const r = await fetch(API + '/tender/' + currentId + '/compliance-matrix');
+      const d = await r.json();
+      if(!r.ok){ box.innerHTML = 'Failed: ' + (d.detail||d.error); return; }
+      const rows = (d.matrix||[]).map(m=>{
+        const clr = (m.color||'blue').toLowerCase();
+        return `<tr>
+          <td style="padding:4px 6px"><span class="de-chip ${clr}">${m.category}</span></td>
+          <td style="padding:4px 6px;font-size:11px">${escapeHtml(m.clause_ref||'—')}</td>
+          <td style="padding:4px 6px">${escapeHtml((m.criteria||'').slice(0,80))}</td>
+          <td style="padding:4px 6px;font-weight:600">${escapeHtml(m.status||'—')}</td>
+        </tr>`;
+      }).join('');
+      box.innerHTML = `
+        <div class="de-card">
+          <div class="de-chip green">Covered ${d.covered}</div>
+          <div class="de-chip amber">Partial ${d.partial}</div>
+          <div class="de-chip red">Gap ${d.gap}</div>
+          <div class="de-chip blue">Total ${d.total}</div>
+        </div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead><tr style="background:#f1f5f9"><th style="padding:6px;text-align:left">Cat</th><th style="padding:6px;text-align:left">Clause</th><th style="padding:6px;text-align:left">Criteria</th><th style="padding:6px;text-align:left">Status</th></tr></thead>
+          <tbody>${rows||'<tr><td colspan=4 style="padding:10px;text-align:center;color:#64748b">No clauses</td></tr>'}</tbody>
+        </table>`;
+    }catch(e){ box.innerHTML = 'Error: ' + e.message; }
+  }
+
+  async function loadPool(){
+    const box = document.getElementById('de-pool-box');
+    box.innerHTML = 'Loading…';
+    try{
+      const [p, c] = await Promise.all([
+        fetch(API + '/platform/api-pool-stats').then(r=>r.json()),
+        fetch(API + '/platform/analyst-capacity').then(r=>r.json()),
+      ]);
+      if(p.status !== 'ok'){ box.innerHTML = 'Pool unavailable.'; return; }
+      const keys = (p.keys||[]).map(k=>`
+        <tr>
+          <td style="padding:4px 6px;font-family:monospace">…${k.key_tail}</td>
+          <td style="padding:4px 6px">${k.rpm_used}/14 rpm</td>
+          <td style="padding:4px 6px">${k.rpd_used}/1400 rpd</td>
+          <td style="padding:4px 6px">${k.in_use}</td>
+          <td style="padding:4px 6px">${k.cooldown_s>0?('⏸ '+k.cooldown_s+'s'):'✓'}</td>
+        </tr>`).join('');
+      box.innerHTML = `
+        <div class="de-card">
+          <b>Analyst slots:</b> ${p.slots.active}/${p.slots.max} active · ${p.slots.completed_today} completed today<br>
+          <b>Today capacity:</b> ~${c.theoretical_daily_capacity} tenders<br>
+          <i style="color:#64748b">${escapeHtml(c.recommendation||'')}</i>
+        </div>
+        <table style="width:100%;font-size:11px;border-collapse:collapse">
+          <thead><tr style="background:#f1f5f9"><th style="padding:6px;text-align:left">Key</th><th style="padding:6px;text-align:left">RPM</th><th style="padding:6px;text-align:left">RPD</th><th style="padding:6px;text-align:left">Active</th><th style="padding:6px;text-align:left">Cooldown</th></tr></thead>
+          <tbody>${keys||'<tr><td colspan=5 style="padding:10px">No keys configured</td></tr>'}</tbody>
+        </table>`;
+    }catch(e){ box.innerHTML = 'Error: ' + e.message; }
+  }
+
+  function escapeHtml(s){
+    return (s||'').toString()
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('de-chat-text').addEventListener('keydown', e=>{
+    if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); window.deAiEdit(); }
+  });
+})();
+</script>
+
 </body>
 </html>

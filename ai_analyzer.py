@@ -215,19 +215,7 @@ def call_gemini(prompt: str, api_key: str, max_tokens: int = 8192) -> str:
             all_429 = False
             continue
 
-    # Pass 2: if all 429, wait 65s for rate limit window to reset, retry best model
-    if all_429:
-        logger.warning("All models 429 — waiting 65s for rate limit reset...")
-        _time.sleep(65)
-        for model in GEMINI_MODELS[:2]:  # only try top 2 after wait
-            try:
-                text = _try_model(model, api_key)
-                logger.info(f"Gemini OK after wait: {model}")
-                return text
-            except Exception as e:
-                last_error = str(e)
-                continue
-
+    # Legacy single-key path: fail fast (pool handles cross-key rotation)
     raise Exception(f"All Gemini models failed: {last_error}")
 
 def call_groq(prompt: str, groq_key: str) -> str:
@@ -259,8 +247,73 @@ def call_groq(prompt: str, groq_key: str) -> str:
             continue
     raise Exception(f"All Groq models failed: {last_error}")
 
+def _call_single_model(prompt: str, api_key: str, model: str, max_tokens: int) -> str:
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent?key={api_key}"
+    )
+    payload = json.dumps({
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": max_tokens},
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=payload,
+        headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        return result["candidates"][0]["content"]["parts"][0]["text"]
+
+
 def _call(prompt: str, api_key: str, all_keys: List[str],
           groq_key: str = "", max_tokens: int = 8192) -> str:
+    """
+    Pool-aware call. Uses KeyPool from core.api_pool when available so
+    concurrent analysts share keys without stepping on each other.
+    Falls back to legacy sequential retry if pool unavailable.
+    """
+    try:
+        from core.api_pool import get_pool, refresh_pool
+        refresh_pool()
+        pool = get_pool()
+        if pool.size() > 0:
+            last_err = None
+            attempts = max(pool.size() * 2, 3)
+            for _ in range(attempts):
+                key = pool.acquire(timeout=120.0)
+                if not key:
+                    break
+                rate_limited = False
+                try:
+                    for model in GEMINI_MODELS:
+                        try:
+                            text = _call_single_model(prompt, key, model, max_tokens)
+                            pool.release(key, success=True)
+                            return text
+                        except urllib.error.HTTPError as e:
+                            body = e.read().decode("utf-8", errors="ignore")
+                            if e.code == 429:
+                                rate_limited = True
+                                last_err = f"HTTP 429 {model}"
+                                continue
+                            if e.code in (500, 503):
+                                last_err = f"HTTP {e.code} {model}"
+                                continue
+                            raise Exception(f"Gemini HTTP {e.code}: {body[:160]}")
+                        except Exception as e:
+                            last_err = f"{model}: {str(e)[:120]}"
+                            continue
+                    pool.release(key, success=False, rate_limited=rate_limited)
+                except Exception as outer:
+                    pool.release(key, success=False, rate_limited=rate_limited)
+                    last_err = str(outer)
+            if groq_key:
+                try:
+                    return call_groq(prompt, groq_key)
+                except Exception as e:
+                    last_err = f"groq: {e}"
+            raise Exception(f"Pool exhausted: {last_err}")
+    except ImportError:
+        pass
+
     last_err = None
     for key in all_keys:
         try:
@@ -1583,3 +1636,273 @@ def merge_results(regex_data: Dict, ai_data: Dict, prebid_passed: bool = False) 
         # AI result is already complete — just return it
         return ai_data
     return regex_data
+
+
+# ═══════════════════════════════════════════════════════
+# PARALLEL PIPELINE — 10+ tenders/day throughput
+# Runs independent segments concurrently via ThreadPool.
+# Pool handles per-key RPM, so no two threads hit same key.
+# ═══════════════════════════════════════════════════════
+
+def analyze_with_gemini_parallel(full_text: str, prebid_passed_flag: bool = False,
+                                  progress_cb=None) -> Dict[str, Any]:
+    """
+    Parallel 9-segment pipeline. Drop-in replacement for analyze_with_gemini.
+    Independent segments (1,2,3,4,5,5B,6) run concurrently.
+    Dependent segments (7,8,9) run sequentially after.
+
+    progress_cb: optional callable(stage_name:str, done:int, total:int)
+    """
+    import concurrent.futures as _cf
+
+    global NASCENT
+    NASCENT = _load_nascent_profile_text()
+
+    all_keys = get_all_api_keys()
+    if not all_keys:
+        return {"error": "No Gemini API key configured. Go to Settings → Gemini AI Keys."}
+
+    try:
+        from core.api_pool import refresh_pool
+        refresh_pool()
+    except Exception:
+        pass
+
+    cfg = load_config()
+    groq_key = cfg.get("groq_api_key", cfg.get("groq_key", ""))
+    api_key = all_keys[0]
+
+    print(f"[AI-Parallel] start — text={len(full_text)} keys={len(all_keys)}")
+
+    main_text, corrigendum_texts = build_text_corpus(full_text)
+
+    if len(main_text) > 50000:
+        quarter = len(main_text) // 4
+        if main_text[:500] == main_text[quarter:quarter+500]:
+            main_text = main_text[:quarter]
+
+    MAX_MAIN = 300_000
+    if len(main_text) > MAX_MAIN:
+        keep_head = int(MAX_MAIN * 0.8)
+        keep_tail = MAX_MAIN - keep_head
+        main_text = main_text[:keep_head] + "\n\n[... TRUNCATED ...]\n\n" + main_text[-keep_tail:]
+
+    result = regex_extract_snapshot(full_text)
+
+    def _run(label, fn, *args):
+        try:
+            return label, fn(*args), None
+        except Exception as e:
+            return label, None, str(e)[:160]
+
+    tasks = [
+        ("snapshot",  lambda: step1_snapshot(main_text, api_key, all_keys, groq_key)),
+        ("scope",     lambda: step3_scope(main_text, api_key, all_keys, groq_key)),
+        ("pq",        lambda: step4_pq(main_text, api_key, all_keys, groq_key)),
+        ("tq",        lambda: step5_tq(main_text, api_key, all_keys, groq_key)),
+        ("workshed",  lambda: step5b_work_schedule(main_text, api_key, all_keys, groq_key)),
+        ("payment",   lambda: step6_payment(main_text, api_key, all_keys, groq_key)),
+    ]
+    if corrigendum_texts:
+        tasks.append(("corrig",
+                      lambda: step2_corrigendums(corrigendum_texts, api_key, all_keys, groq_key)))
+
+    outputs: Dict[str, Dict] = {}
+    errors: Dict[str, str] = {}
+    total = len(tasks) + 3  # +7,+8,+9
+    done_count = 0
+
+    try:
+        import os as _os
+        max_workers = int(_os.environ.get("ANALYST_SEGMENT_WORKERS", "4"))
+    except Exception:
+        max_workers = 4
+
+    with _cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(lambda fn=fn: fn()): label for label, fn in tasks}
+        for fut in _cf.as_completed(futs):
+            label = futs[fut]
+            try:
+                outputs[label] = fut.result() or {}
+            except Exception as e:
+                errors[label] = str(e)[:160]
+                outputs[label] = {}
+            done_count += 1
+            if progress_cb:
+                try:
+                    progress_cb(label, done_count, total)
+                except Exception:
+                    pass
+
+    # Merge snapshot
+    snapshot = outputs.get("snapshot", {})
+    if snapshot and len(snapshot) > 3:
+        for k, v in snapshot.items():
+            val = v.get("value","") if isinstance(v, dict) else str(v or "")
+            if val and str(val).strip() not in ("—","null","None",""):
+                result[k] = v
+
+    # Merge corrigendum
+    corr = outputs.get("corrig", {})
+    if corr:
+        for field in ["bid_submission_date","bid_opening_date","prebid_meeting","prebid_query_date"]:
+            if corr.get(field) and corr[field] not in ("null","—",""):
+                result[field] = {"value": corr[field], "clause_ref": "Corrigendum", "page_no": "—"}
+        if corr.get("corrigendum_note"):
+            result["corrigendum_note"] = corr["corrigendum_note"]
+        result["has_corrigendum"] = True
+
+    # Merge scope
+    scope = outputs.get("scope", {})
+    if scope.get("scope_background"):
+        result["scope_background"] = scope["scope_background"]
+    if scope.get("scope_sections"):
+        result["scope_sections"] = scope["scope_sections"]
+        result["scope_items"] = [{"title": s.get("section_title",""), "description": s.get("prose",""),
+                                   "section_no": s.get("section_no",""), "page_no": s.get("page_no",""),
+                                   "deliverables": s.get("deliverables",[]),
+                                   "tech_specified": s.get("tech_specified","—"),
+                                   "phase": s.get("phase","—")}
+                                  for s in scope.get("scope_sections",[]) if isinstance(s, dict)]
+    if scope.get("key_integrations"):
+        result["key_integrations"] = scope["key_integrations"]
+
+    # Merge PQ
+    pq = outputs.get("pq", {})
+    if pq.get("pq_criteria"):
+        normalized = []
+        for item in pq["pq_criteria"]:
+            if not isinstance(item, dict):
+                continue
+            status, color = normalize_status(item.get("nascent_status","Review"))
+            normalized.append({
+                "sl_no": str(item.get("sl_no","") or ""),
+                "clause_ref": str(item.get("clause_ref","—") or "—"),
+                "clause_header": str(item.get("clause_header","") or ""),
+                "page_no": str(item.get("page_no","—") or "—"),
+                "criteria": str(item.get("criteria","") or ""),
+                "details": str(item.get("documents_required","") or ""),
+                "documents_required": str(item.get("documents_required","") or ""),
+                "nascent_status": status,
+                "nascent_color": color,
+                "nascent_remark": str(item.get("nascent_remark","") or ""),
+                "calculation_shown": str(item.get("calculation_shown","—") or "—"),
+                "evidence_projects": str(item.get("evidence_projects","—") or "—"),
+                "raises_query": str(item.get("raises_query","NO") or "NO"),
+            })
+        result["pq_criteria"] = normalized
+        pq["pq_criteria"] = normalized
+
+    # Merge TQ
+    tq = outputs.get("tq", {})
+    if tq.get("tq_criteria"):
+        normalized_tq = []
+        for item in tq["tq_criteria"]:
+            if not isinstance(item, dict):
+                continue
+            status, color = normalize_status(item.get("nascent_status","Review"))
+            normalized_tq.append({
+                "sl_no": str(item.get("sl_no","") or ""),
+                "clause_ref": str(item.get("clause_ref","—") or "—"),
+                "page_no": str(item.get("page_no","—") or "—"),
+                "criteria": str(item.get("criteria","") or ""),
+                "eval_criteria": str(item.get("eval_criteria","") or ""),
+                "details": str(item.get("details","") or ""),
+                "max_marks": str(item.get("max_marks","") or ""),
+                "nascent_score": str(item.get("nascent_score","") or ""),
+                "slab_calculation": str(item.get("slab_calculation","") or ""),
+                "documents_required": str(item.get("documents_required","") or ""),
+                "nascent_status": status,
+                "nascent_color": color,
+                "nascent_remark": str(item.get("nascent_remark","") or ""),
+                "raises_query": str(item.get("raises_query","NO") or "NO"),
+            })
+        result["tq_criteria"] = normalized_tq
+        result["tq_min_qualifying_score"] = tq.get("tq_min_qualifying_score","")
+        result["tq_total_marks"] = tq.get("tq_total_marks","")
+        result["tq_nascent_estimated_total"] = tq.get("tq_nascent_estimated_total","")
+        result["key_personnel"] = tq.get("key_personnel",[])
+        tq["tq_criteria"] = normalized_tq
+
+    # Merge work schedule
+    ws = outputs.get("workshed", {})
+    if ws.get("work_schedule"):
+        result["work_schedule"] = ws["work_schedule"]
+        result["total_project_duration"] = ws.get("total_project_duration","")
+        result["phase_a_duration"] = ws.get("phase_a_duration","")
+        result["phase_b_duration"] = ws.get("phase_b_duration","")
+        result["ld_rate"] = ws.get("ld_rate","")
+        result["go_live_deadline"] = ws.get("go_live_deadline","")
+
+    # Merge payment
+    payment = outputs.get("payment", {})
+    if payment.get("payment_schedule"):
+        result["payment_schedule"] = payment["payment_schedule"]
+        result["payment_terms"] = payment["payment_schedule"]
+    if payment.get("penalty_clauses"):
+        result["penalty_clauses"] = payment["penalty_clauses"]
+    for f in ["advance_payment","retention_money","pbg_details","ip_ownership","exit_clause",
+              "phase_a_total_percent","phase_b_total_percent"]:
+        if payment.get(f):
+            result[f] = payment[f]
+
+    # Segment 7: Assessment (depends on PQ+TQ+scope)
+    assessment = {}
+    try:
+        assessment = step7_assessment(result, pq, tq, scope, api_key, all_keys, groq_key)
+        for f in ["project_matches","action_items","key_strengths","key_risks",
+                  "hard_disqualifiers","confidence_level","confidence_reason"]:
+            if assessment.get(f):
+                result[f] = assessment[f]
+    except Exception as e:
+        errors["assessment"] = str(e)[:160]
+    done_count += 1
+    if progress_cb:
+        try: progress_cb("assessment", done_count, total)
+        except Exception: pass
+
+    rec = assessment.get("overall_recommendation","CONDITIONAL") if assessment else "CONDITIONAL"
+    reason = assessment.get("recommendation_reason","") if assessment else ""
+    verdict, color = normalize_verdict(rec)
+    result["verdict"] = verdict
+    pq_list = result.get("pq_criteria",[])
+    result["overall_verdict"] = {
+        "verdict": verdict, "reason": reason, "color": color,
+        "green": sum(1 for p in pq_list if p.get("nascent_color") == "GREEN"),
+        "amber": sum(1 for p in pq_list if p.get("nascent_color") == "AMBER"),
+        "red":   sum(1 for p in pq_list if p.get("nascent_color") == "RED"),
+    }
+
+    # Segment 8: Notes + Checklist
+    try:
+        notes = step8_notes_checklist(result, pq, api_key, all_keys, groq_key)
+        if notes.get("notes"):
+            result["notes"] = notes["notes"]
+        if notes.get("submission_checklist"):
+            result["submission_checklist"] = notes["submission_checklist"]
+    except Exception as e:
+        errors["notes"] = str(e)[:160]
+    done_count += 1
+    if progress_cb:
+        try: progress_cb("notes", done_count, total)
+        except Exception: pass
+
+    # Segment 9: Pre-bid queries
+    try:
+        prebid = step9_prebid_queries(result, pq, tq, api_key, all_keys, groq_key)
+        if prebid.get("queries"):
+            result["prebid_queries"] = prebid["queries"]
+            result["prebid_query_count"] = prebid.get("total_queries", len(prebid["queries"]))
+            result["prebid_email_subject"] = prebid.get("email_subject","")
+            result["prebid_query_format_used"] = prebid.get("query_format_used","Standard letter format")
+    except Exception as e:
+        errors["prebid"] = str(e)[:160]
+    done_count += 1
+    if progress_cb:
+        try: progress_cb("prebid", done_count, total)
+        except Exception: pass
+
+    if errors:
+        result["ai_segment_errors"] = errors
+    print(f"[AI-Parallel] done verdict={verdict} errs={list(errors.keys())}")
+    return result
