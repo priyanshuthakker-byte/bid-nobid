@@ -1271,7 +1271,10 @@ async def update_status(t247_id: str, data: dict = Body(...)):
 
 @app.get("/tender/{t247_id}")
 async def get_tender_detail(t247_id: str):
-    return get_tender(t247_id)
+    t = get_tender(t247_id)
+    if not t:
+        raise HTTPException(404, f"Tender {t247_id} not found")
+    return t
 
 @app.post("/tender/{t247_id}/reanalyse")
 async def reanalyse_tender(t247_id: str):
@@ -1558,7 +1561,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 "overall_verdict": tender_data.get("overall_verdict", {}),
                 "prebid_queries": tender_data.get("prebid_queries", []),
                 "raw_text": raw_text_preview,
-                "prebid_passed": passed if "passed" in dir() else False,
+                "prebid_passed": passed,
                 "scope_sections": tender_data.get("scope_sections", []),
                 "tq_total_marks": tender_data.get("tq_total_marks"),
                 "tq_nascent_estimated_total": tender_data.get("tq_nascent_estimated_total"),
@@ -2321,17 +2324,35 @@ async def update_tender_fields(t247_id: str, body: dict = Body(...)):
     return {"status": "ok", "t247_id": t247_id}
 
 
-# ── VAULT (doc storage) ───────────────────────────────────────
-_vault: list = []
+# ── VAULT (doc storage — disk-backed so it survives restarts) ────
+_VAULT_FILE = OUTPUT_DIR / "vault_index.json"
+_vault_lock = threading.Lock()
+
+def _load_vault() -> list:
+    with _vault_lock:
+        try:
+            if _VAULT_FILE.exists():
+                return json.loads(_VAULT_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+        return []
+
+def _save_vault(vault: list):
+    with _vault_lock:
+        _VAULT_FILE.parent.mkdir(exist_ok=True, parents=True)
+        _VAULT_FILE.write_text(json.dumps(vault, indent=2), encoding="utf-8")
 
 @app.get("/vault/list")
 async def vault_list():
-    return {"files": _vault}
+    vault = _load_vault()
+    return {"files": [{k: v for k, v in f.items() if k != "b64"} for f in vault]}
 
 @app.post("/vault/upload")
 async def vault_upload(file: UploadFile = File(...), category: str = "general"):
     import base64
     data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "File too large (max 50MB)")
     entry = {
         "id": str(uuid.uuid4()),
         "name": file.filename,
@@ -2341,21 +2362,25 @@ async def vault_upload(file: UploadFile = File(...), category: str = "general"):
         "b64": base64.b64encode(data).decode(),
         "mime": file.content_type or "application/octet-stream",
     }
-    _vault.append(entry)
+    vault = _load_vault()
+    vault.append(entry)
+    _save_vault(vault)
     return {"status": "ok", "file": {k: v for k, v in entry.items() if k != "b64"}}
 
 @app.delete("/vault/delete/{file_id}")
 async def vault_delete(file_id: str):
-    global _vault
-    before = len(_vault)
-    _vault = [f for f in _vault if f.get("id") != file_id]
-    return {"status": "ok", "deleted": before - len(_vault)}
+    vault = _load_vault()
+    before = len(vault)
+    vault = [f for f in vault if f.get("id") != file_id]
+    _save_vault(vault)
+    return {"status": "ok", "deleted": before - len(vault)}
 
 @app.get("/vault/download/{file_id}")
 async def vault_download(file_id: str):
     import base64
     from fastapi.responses import Response
-    f = next((x for x in _vault if x.get("id") == file_id), None)
+    vault = _load_vault()
+    f = next((x for x in vault if x.get("id") == file_id), None)
     if not f:
         raise HTTPException(404, "File not found")
     return Response(content=base64.b64decode(f["b64"]),
