@@ -306,6 +306,57 @@ select option{background:var(--bg2)}
 
 /* ── GEM TAG ── */
 .gem-tag{font-size:9px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:.3px}
+
+/* ── PROJECT MATCH TAGS ── */
+.match-tag{display:inline-block;font-size:9px;background:var(--purple-bg);color:var(--purple);border:1px solid rgba(167,139,250,.25);padding:1px 5px;border-radius:3px;margin:1px;font-weight:600}
+
+/* ── TOKEN METER ── */
+.token-bar-row{margin-bottom:5px}
+.token-bar-label{font-size:9px;color:var(--text3);margin-bottom:2px;display:flex;justify-content:space-between}
+.token-bar-track{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.token-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+.token-bar-fill.ok{background:var(--green)}
+.token-bar-fill.warn{background:var(--amber)}
+.token-bar-fill.crit{background:var(--red)}
+
+/* ── BREADCRUMB ── */
+#breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);padding:6px 24px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+#breadcrumb .bc-sep{color:var(--border2)}
+#breadcrumb .bc-link{cursor:pointer;color:var(--text2)}
+#breadcrumb .bc-link:hover{color:var(--blue)}
+#breadcrumb .bc-current{color:var(--text)}
+
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  #nav{width:56px;padding:10px 6px}
+  #nav-brand p,#nav-brand h2,.nav-section,.nav-badge,.nav-btn>span:not(.nav-icon){display:none}
+  .nav-btn{padding:8px;justify-content:center}
+  .nav-icon{width:auto;font-size:16px}
+  #nav-footer{display:none}
+  body{font-size:12px}
+  .topbar{padding:10px 14px}
+  .topbar h1{font-size:14px}
+  .page-body{padding:12px 14px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:6px}
+  .stat{padding:8px 10px}
+  .stat-num{font-size:20px}
+  .filters{gap:4px}
+  .fbtn{padding:4px 8px;font-size:11px}
+  #side-panel{display:none !important}
+  .table-wrap{overflow-x:auto}
+  table th,table td{padding:7px 8px;font-size:11px}
+  .topbar-actions{gap:4px}
+  .btn-sm{padding:4px 8px;font-size:11px}
+  .result-split{grid-template-columns:1fr}
+  .card{padding:14px}
+  #dash-table-wrap{min-width:0;overflow-x:auto}
+}
+@media(max-width:480px){
+  #nav{width:0;overflow:hidden;padding:0}
+  #main{width:100vw}
+  .topbar-actions .btn-ghost{display:none}
+  .topbar-actions .btn-primary{display:inline-flex}
+}
 </style>
 </head>
 <body>
@@ -352,7 +403,11 @@ select option{background:var(--bg2)}
   <div id="nav-footer">
     <div class="status-row"><span class="dot dot-gray" id="drive-dot"></span><span id="drive-label">Drive: checking...</span></div>
     <div class="status-row"><span class="dot dot-gray" id="ai-dot"></span><span id="ai-label">AI: checking...</span></div>
-    <div style="font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono)" id="api-quota">—</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)" id="api-quota">—</div>
+    <div id="token-meter" style="margin-top:8px;display:none">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Gemini Quota</div>
+      <div id="token-bars"></div>
+    </div>
   </div>
 </div>
 
@@ -361,14 +416,24 @@ select option{background:var(--bg2)}
 ══════════════════════════════════════════════ -->
 <div id="main">
 
+<!-- BREADCRUMB -->
+<div id="breadcrumb" style="display:none">
+  <span class="bc-link" onclick="showPage('dashboard')">Dashboard</span>
+  <span class="bc-sep" id="bc-sep-2" style="display:none">›</span>
+  <span class="bc-link" id="bc-page" style="display:none"></span>
+  <span class="bc-sep" id="bc-sep-3" style="display:none">›</span>
+  <span class="bc-current" id="bc-item" style="display:none"></span>
+</div>
+
 <!-- ═══ DASHBOARD ═══ -->
 <div id="page-dashboard" class="page active">
   <div class="topbar">
     <h1>Dashboard</h1>
     <div class="topbar-actions">
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Import Excel</button>
+      <button class="btn btn-primary btn-sm" id="t247-fetch-btn" onclick="autoFetchT247()">⚡ Fetch T247</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Excel</button>
       <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
-      <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
+      <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync</button>
       <button class="btn btn-ghost btn-sm" onclick="exportTenders()">⬇ Export</button>
       <button class="btn btn-ghost btn-sm" onclick="reclassifyAll()">↺ Reclassify</button>
     </div>
@@ -398,11 +463,23 @@ select option{background:var(--bg2)}
       <input id="dash-search" placeholder="Search by T247 ID, brief, org, location..." oninput="renderDash()">
     </div>
     <div id="dash-count" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Value</th><th>Deadline</th><th>Days</th><th>Verdict</th><th>Win%</th><th>Risk</th><th>Actions</th></tr></thead>
-        <tbody id="dash-table"><tr><td colspan="9" class="empty-state"><div class="empty-icon">📋</div>Loading tenders...</td></tr></tbody>
-      </table>
+    <div style="display:flex;gap:14px;min-width:0">
+      <div class="table-wrap" id="dash-table-wrap" style="flex:1;min-width:0">
+        <table>
+          <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Value</th><th>Deadline</th><th>Days</th><th>Verdict</th><th>Win%</th><th>Actions</th></tr></thead>
+          <tbody id="dash-table"><tr><td colspan="8" class="empty-state"><div class="empty-icon">📋</div>Loading tenders...</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Side Panel -->
+      <div id="side-panel" style="width:340px;flex-shrink:0;display:none;overflow-y:auto;max-height:calc(100vh - 200px);position:sticky;top:0">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-size:13px;font-weight:600;color:#fff">Tender Detail</span>
+            <button class="btn-icon" onclick="closeSidePanel()" title="Close">✕</button>
+          </div>
+          <div id="side-panel-content"><div class="empty-state" style="padding:20px 0">Click a row to preview</div></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -933,7 +1010,16 @@ var AP_STEPS = [
 // ────────────────────────────────────────────
 // NAVIGATION
 // ────────────────────────────────────────────
-function showPage(name) {
+var _pageNames = {
+  'dashboard':'Dashboard','tenders':'All Tenders','pipeline':'Pipeline',
+  'analyse':'Analyse Tender','doc-editor':'Doc Editor','checklist':'Checklist',
+  'documents':'Documents','risk':'Risk Scanner','assistant':'Bid Assistant',
+  'boq':'BOQ','reports':'Reports','analytics':'Analytics',
+  'postaward':'Post-Award','skipped':'Skipped','letterhead':'Letterhead','settings':'Settings'
+};
+
+function showPage(name, opts) {
+  opts = opts || {};
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   var page = document.getElementById('page-' + name);
@@ -941,6 +1027,38 @@ function showPage(name) {
   document.querySelectorAll('.nav-btn').forEach(b => {
     if ((b.getAttribute('onclick') || '').includes("'" + name + "'")) b.classList.add('active');
   });
+  // URL routing
+  if (!opts.fromPopState) {
+    var url = name === 'dashboard' ? '/' : '/?p=' + encodeURIComponent(name);
+    if (opts.tid) url += '&tid=' + encodeURIComponent(opts.tid);
+    history.pushState({page: name, tid: opts.tid || ''}, '', url);
+  }
+  // Breadcrumb
+  var bc = document.getElementById('breadcrumb');
+  var bcPage = document.getElementById('bc-page');
+  var bcItem = document.getElementById('bc-item');
+  var bcSep2 = document.getElementById('bc-sep-2');
+  var bcSep3 = document.getElementById('bc-sep-3');
+  if (name === 'dashboard') {
+    bc.style.display = 'none';
+  } else {
+    bc.style.display = 'flex';
+    bcSep2.style.display = 'inline';
+    bcPage.style.display = 'inline';
+    bcPage.textContent = _pageNames[name] || name;
+    bcPage.onclick = null;
+    bcItem.style.display = 'none';
+    bcSep3.style.display = 'none';
+    if (opts.tid) {
+      bcPage.textContent = _pageNames[name] || name;
+      bcPage.style.cursor = 'pointer';
+      bcPage.onclick = () => showPage(name);
+      bcSep3.style.display = 'inline';
+      bcItem.style.display = 'inline';
+      bcItem.textContent = opts.tid;
+    }
+  }
+  if (name !== 'dashboard') closeSidePanel();
   if (name === 'tenders') renderTenders();
   if (name === 'checklist') populateSelects();
   if (name === 'documents') populateSelects();
@@ -953,6 +1071,12 @@ function showPage(name) {
   if (name === 'assistant') updateAssistantContext();
   if (name === 'boq') initBOQ();
 }
+
+window.addEventListener('popstate', function(e) {
+  var st = e.state;
+  if (st && st.page) showPage(st.page, {fromPopState: true, tid: st.tid});
+  else showPage('dashboard', {fromPopState: true});
+});
 
 function switchTab(group, tab, e) {
   var pageId = group === 'docs' ? 'page-documents' : 'page-postaward';
@@ -1092,16 +1216,18 @@ function renderDash() {
   var rows = list.slice(0, 200).map(t => {
     var v = getVerdict(t);
     var dl = getDaysLeft(t);
-    return '<tr>' +
-      '<td class="mono">' + (t.t247_id || '—') + (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') + '</td>' +
-      '<td class="brief-cell"><div class="brief">' + (t.brief || '—') + '</div><div class="org">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div></td>' +
+    var matchTags = buildMatchTags(t);
+    return '<tr style="cursor:pointer" onclick="openSidePanel(\'' + t.t247_id + '\')">' +
+      '<td class="mono" onclick="event.stopPropagation()">' + (t.t247_id || '—') + (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') + '</td>' +
+      '<td class="brief-cell"><div class="brief">' + (t.brief || '—') + '</div><div class="org">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>' +
+        (matchTags ? '<div style="margin-top:3px">' + matchTags + '</div>' : '') +
+      '</td>' +
       '<td>' + fmtCr(t.estimated_cost_cr) + '</td>' +
       '<td>' + (t.deadline || '—') + '</td>' +
       '<td>' + daysDisplay(dl) + '</td>' +
       '<td><span class="badge badge-' + v + '">' + v + '</span></td>' +
       '<td>' + winProbHTML(t) + '</td>' +
-      '<td>' + riskHTML(t) + '</td>' +
-      '<td class="actions-cell">' +
+      '<td class="actions-cell" onclick="event.stopPropagation()">' +
         '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
         (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadReport(\'' + (t.report_file||'') + '\')">Report</button>' : '') +
         (t.bid_no_bid_done ? '<button class="action-btn amber" onclick="openEditorForTender(\'' + t.t247_id + '\')">Edit</button>' : '') +
@@ -1109,7 +1235,7 @@ function renderDash() {
     '</tr>';
   }).join('');
 
-  document.getElementById('dash-table').innerHTML = rows || '<tr><td colspan="9" class="empty-state">No tenders match</td></tr>';
+  document.getElementById('dash-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders match</td></tr>';
 }
 
 function renderTenders() {
@@ -1980,6 +2106,158 @@ async function importExcel(input) {
 }
 
 // ────────────────────────────────────────────
+// T247 AUTO-FETCH
+// ────────────────────────────────────────────
+async function autoFetchT247() {
+  var btn = document.getElementById('t247-fetch-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching...'; }
+  showLoading('Connecting to Tender247 and downloading latest tenders...');
+  try {
+    var r = await fetch('/fetch-t247-excel', { method: 'POST' });
+    var d = await r.json();
+    hideLoading();
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
+    if (d.status === 'success') {
+      toast('✅ T247 fetched: ' + d.total + ' tenders (' + d.added + ' new, ' + d.updated + ' updated)', 'success');
+      await loadDashboard();
+    } else {
+      var msg = d.detail || d.message || 'Fetch failed';
+      toast('❌ ' + msg, 'error');
+    }
+  } catch(e) {
+    hideLoading();
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
+    toast('T247 error: ' + e.message, 'error');
+  }
+}
+
+// ────────────────────────────────────────────
+// SIDE PANEL
+// ────────────────────────────────────────────
+var _sidePanelTid = '';
+
+function openSidePanel(tid) {
+  var t = allTenders.find(x => x.t247_id === tid);
+  if (!t) return;
+  _sidePanelTid = tid;
+  var panel = document.getElementById('side-panel');
+  var content = document.getElementById('side-panel-content');
+  panel.style.display = 'block';
+  document.getElementById('dash-table-wrap').style.maxWidth = 'calc(100% - 354px)';
+  content.innerHTML = buildSidePanelContent(t);
+}
+
+function closeSidePanel() {
+  _sidePanelTid = '';
+  var panel = document.getElementById('side-panel');
+  if (panel) panel.style.display = 'none';
+  var wrap = document.getElementById('dash-table-wrap');
+  if (wrap) wrap.style.maxWidth = '';
+}
+
+function buildSidePanelContent(t) {
+  var v = getVerdict(t);
+  var dl = getDaysLeft(t);
+  var matchTags = buildMatchTags(t);
+  var html = '<div style="margin-bottom:10px">' +
+    '<span class="badge badge-' + v + '" style="font-size:12px;padding:4px 10px">' + v + '</span>' +
+    (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
+  '</div>' +
+  '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;line-height:1.4">' + (t.brief || '—') + '</div>' +
+  '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>';
+
+  if (matchTags) html += '<div style="margin-bottom:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Project Match</div>' + matchTags + '</div>';
+
+  html += '<table style="width:100%;font-size:11.5px;border-collapse:collapse">';
+  var rows = [
+    ['T247 ID', t.t247_id || '—'],
+    ['Ref No', t.ref_no || '—'],
+    ['Value', t.estimated_cost_cr ? '₹' + t.estimated_cost_cr + ' Cr' : '—'],
+    ['EMD', t.emd || '—'],
+    ['Deadline', t.deadline || '—'],
+    ['Days Left', daysDisplay(dl)],
+    ['Status', t.status || '—'],
+    ['Win %', t.win_probability ? t.win_probability.toFixed(1) + '%' : '—'],
+  ];
+  rows.forEach(function(r) {
+    html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">' + r[0] + '</td><td style="padding:5px 0;color:var(--text)">' + r[1] + '</td></tr>';
+  });
+  html += '</table>';
+
+  if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
+
+  html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
+    '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">🔍 Analyse with AI</button>' +
+    '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">⬇ Download Docs</button>' +
+  '</div>';
+
+  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
+
+  return html;
+}
+
+// ────────────────────────────────────────────
+// PROJECT MATCH TAGS
+// ────────────────────────────────────────────
+var _profileKeywords = null;
+
+function _loadProfileKeywords() {
+  if (_profileKeywords !== null) return _profileKeywords;
+  try {
+    var raw = localStorage.getItem('nascent_profile_keywords');
+    _profileKeywords = raw ? JSON.parse(raw) : [];
+  } catch(e) { _profileKeywords = []; }
+  return _profileKeywords;
+}
+
+function buildMatchTags(t) {
+  var kws = _loadProfileKeywords();
+  if (!kws || !kws.length) return '';
+  var text = [(t.brief||''), (t.org_name||''), (t.eligibility||'')].join(' ').toLowerCase();
+  var matched = kws.filter(k => text.includes(k.toLowerCase()));
+  if (!matched.length) return '';
+  return matched.slice(0, 4).map(k => '<span class="match-tag">' + k + '</span>').join('');
+}
+
+async function refreshProfileKeywords() {
+  try {
+    var r = await fetch('/profile');
+    var p = await r.json();
+    var kws = [];
+    var rules = p.bid_rules || {};
+    (rules.preferred_sectors || []).forEach(k => kws.push(k));
+    (rules.bid || []).forEach(k => { if (!kws.includes(k)) kws.push(k); });
+    _profileKeywords = kws;
+    localStorage.setItem('nascent_profile_keywords', JSON.stringify(kws));
+  } catch(e) {}
+}
+
+// ────────────────────────────────────────────
+// GEMINI TOKEN METER
+// ────────────────────────────────────────────
+async function updateTokenMeter() {
+  try {
+    var r = await fetch('/platform/analyst-capacity');
+    var d = await r.json();
+    if (d.status !== 'ok' || !d.api_keys_configured) return;
+    var meter = document.getElementById('token-meter');
+    var bars = document.getElementById('token-bars');
+    if (!meter || !bars) return;
+    meter.style.display = 'block';
+    var cap = d.theoretical_daily_capacity || 0;
+    var maxCap = (d.api_keys_configured || 1) * 155; // ~155 tenders/key/day
+    var pct = Math.min(100, Math.round((cap / Math.max(maxCap, 1)) * 100));
+    var cls = pct > 60 ? 'ok' : pct > 25 ? 'warn' : 'crit';
+    bars.innerHTML = '<div class="token-bar-row">' +
+      '<div class="token-bar-label"><span>Capacity</span><span>' + cap + ' tenders</span></div>' +
+      '<div class="token-bar-track"><div class="token-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+    '</div>' +
+    '<div style="font-size:9px;color:var(--text3);margin-top:2px">' + (d.api_keys_configured || 0) + ' key' + (d.api_keys_configured !== 1 ? 's' : '') + ' · ' + (d.concurrent_slots || '—') + ' slots</div>';
+    document.getElementById('api-quota').textContent = cap + ' tenders/day remaining';
+  } catch(e) {}
+}
+
+// ────────────────────────────────────────────
 // SYNC / EXPORT
 // ────────────────────────────────────────────
 async function syncDrive() {
@@ -2384,8 +2662,19 @@ async function uploadLetterhead(input) {
 // ────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
   await loadDashboard();
+  refreshProfileKeywords();
+  updateTokenMeter();
   setInterval(updateStatusBar, 30000);
   setInterval(checkDeadlineNotifications, 60000);
+  setInterval(updateTokenMeter, 120000);
+  // Restore page from URL on load
+  var params = new URLSearchParams(window.location.search);
+  var initPage = params.get('p');
+  if (initPage) {
+    showPage(initPage, {fromPopState: true, tid: params.get('tid') || ''});
+  } else {
+    history.replaceState({page: 'dashboard', tid: ''}, '', '/');
+  }
   // Keyboard shortcut: Ctrl+K = search
   document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
