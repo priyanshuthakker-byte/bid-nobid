@@ -2691,43 +2691,40 @@ async def download_tender_docs(t247_id: str):
     doc_hash = (tender.get("t247_doc_hash") or tender.get("doc_hash")
                 or tender.get("document_hash") or "").strip()
 
-    # Step 2: if no hash, try fetching from T247 details API
+    # Step 2: fetch document list from T247 API — no Bearer needed, empty body
     if not doc_hash:
-        cfg = load_config()
+        t_id_num = t247_id if str(t247_id).isdigit() else re.sub(r"\D", "", str(t247_id))
+        doc_list_url = f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/tender-document-list/{t_id_num}"
+        doc_list_headers = {
+            "accept": "application/json",
+            "content-length": "0",
+            "origin": "https://www.tender247.com",
+            "referer": "https://www.tender247.com/",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        }
         try:
-            token = _t247_get_token(cfg)
-            jwt_payload = _t247_decode_jwt(token)
-            user_id = int(jwt_payload.get("UserId") or 0)
-            headers_api = _t247_api_headers(token)
-            # Try tender detail endpoints (numeric T247 IDs only)
-            t_id_num = int(t247_id) if str(t247_id).isdigit() else 0
-            detail_payloads = [
-                {"tender_id": t_id_num, "user_id": user_id},
-                {"t247_id": t247_id, "user_id": user_id},
-            ]
-            detail_urls = [
-                "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-detail",
-                f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-detail/{t247_id}",
-                "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/get-tender-detail",
-            ]
-            for url in detail_urls:
-                for body in detail_payloads:
-                    try:
-                        r = _req.post(url, headers=headers_api, json=body, timeout=20)
-                        if r.status_code == 200:
-                            data = r.json() if "json" in r.headers.get("Content-Type","") else {}
-                            doc_hash = (str(data.get("doc_hash","") or data.get("document_hash","")
-                                        or data.get("download_hash","") or data.get("hash",""))
-                                        .strip())
-                            if doc_hash and len(doc_hash) >= 32:
-                                tender["t247_doc_hash"] = doc_hash
-                                db["tenders"][t247_id] = tender
-                                save_db(db)
-                                break
-                    except Exception:
+            r_list = _req.post(doc_list_url, headers=doc_list_headers, timeout=30)
+            if r_list.status_code == 200:
+                d = r_list.json()
+                # response may be a list or dict with a data/result key
+                items = d if isinstance(d, list) else (
+                    d.get("data") or d.get("result") or d.get("documents") or d.get("list") or []
+                )
+                if isinstance(items, dict):
+                    items = [items]
+                for item in (items or []):
+                    if not isinstance(item, dict):
                         continue
-                if doc_hash:
-                    break
+                    h = (str(item.get("document_hash","") or item.get("doc_hash","")
+                             or item.get("download_hash","") or item.get("hash","")
+                             or item.get("documentHash","") or item.get("downloadHash",""))
+                         .strip())
+                    if h and len(h) >= 32:
+                        doc_hash = h
+                        tender["t247_doc_hash"] = doc_hash
+                        db["tenders"][t247_id] = tender
+                        save_db(db)
+                        break
         except Exception:
             pass
 
