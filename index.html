@@ -984,14 +984,22 @@ select option{background:var(--bg2)}
         <div id="ai-test-result" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
       </div>
       <div class="card">
-        <div class="card-title">T247 Credentials</div>
-        <label>Email</label><input type="text" id="t247u" placeholder="your@email.com">
-        <label>Password</label><input type="password" id="t247p" placeholder="password">
-        <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn btn-primary" onclick="saveT247()">Save</button>
-          <button class="btn btn-ghost" onclick="testT247()">Test</button>
+        <div class="card-title">T247 Bearer Token</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:8px">
+          How to get: Log into <b>tender247.com</b> → open DevTools (F12) → Network tab → click any page → find a request to <code>t247_api.tender247.com</code> → copy the <b>Authorization</b> header value (starts with <code>Bearer eyJ...</code>)
+        </p>
+        <label>Bearer Token</label>
+        <textarea id="t247-token-input" rows="4" placeholder="Bearer eyJhbGciOiJIUzI1NiIs..." style="font-family:var(--mono);font-size:10px;resize:vertical"></textarea>
+        <div id="t247-token-decoded" style="font-size:11px;color:var(--text3);margin-top:6px;padding:6px;background:var(--bg4);border-radius:4px;display:none"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary" onclick="saveT247Token()">💾 Save Token</button>
+          <button class="btn btn-ghost" onclick="testT247()">🔍 Test</button>
         </div>
         <div id="t247-test-result" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">
+          ⚠ Token expires ~16h after login. When expired, log in again and paste a new token.<br>
+          ⏰ For daily auto-fetch: paste a fresh token each morning after opening tender247.com.
+        </div>
       </div>
     </div>
     <div class="card">
@@ -2831,13 +2839,54 @@ async function testAI() {
   } catch(e) { document.getElementById('ai-test-result').textContent = '❌ ' + e.message; }
 }
 
-async function saveT247() {
-  var data = { t247_username: document.getElementById('t247u').value, t247_password: document.getElementById('t247p').value };
+function _decodeJwtPayload(token) {
+  try {
+    var raw = token.replace(/^Bearer\s+/i, '').split('.')[1];
+    raw = raw.replace(/-/g,'+').replace(/_/g,'/');
+    while (raw.length % 4) raw += '=';
+    return JSON.parse(atob(raw));
+  } catch(e) { return null; }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var inp = document.getElementById('t247-token-input');
+  if (inp) inp.addEventListener('input', function() {
+    var p = _decodeJwtPayload(this.value.trim());
+    var dec = document.getElementById('t247-token-decoded');
+    if (!p || !dec) return;
+    var exp = p.exp ? new Date(p.exp * 1000) : null;
+    var now = Date.now() / 1000;
+    var valid = p.exp && p.exp > now;
+    var remaining = p.exp ? Math.round((p.exp - now) / 3600 * 10) / 10 : 0;
+    dec.style.display = 'block';
+    dec.style.color = valid ? 'var(--green)' : 'var(--red)';
+    dec.innerHTML =
+      '👤 ' + (p.bidder_name || p.PersonName || 'Unknown') +
+      ' &nbsp;|&nbsp; 🆔 User: ' + (p.UserId || '?') +
+      ' &nbsp;|&nbsp; ⏱ ' + (valid ? remaining + 'h remaining' : '❌ EXPIRED') +
+      (exp ? ' (expires ' + exp.toLocaleString('en-IN') + ')' : '');
+  });
+});
+
+async function saveT247Token() {
+  var raw = (document.getElementById('t247-token-input').value || '').trim();
+  if (!raw) { toast('Paste the Bearer token first', 'error'); return; }
+  var token = raw.replace(/^Bearer\s+/i, '').trim();
+  var p = _decodeJwtPayload(token);
+  if (!p) { toast('❌ Invalid token format — paste the full eyJ... value', 'error'); return; }
+  var now = Date.now() / 1000;
+  if (p.exp && p.exp < now) { toast('❌ This token is already expired — log into T247 again and copy a fresh one', 'error'); return; }
+  var data = {
+    t247_bearer_token: token,
+    t247_user_id: String(p.UserId || ''),
+    t247_query_id: String(p.user_email_service_query_id || '328890'),
+  };
   try {
     var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify(data) });
-    if (r.status === 403) { toast('❌ 403 — save Admin Token in settings first', 'error'); return; }
-    toast('T247 credentials saved', 'success');
-  } catch(e) { toast('Error', 'error'); }
+    if (r.status === 403) { toast('❌ 403 — save Admin Token in Settings first', 'error'); return; }
+    toast('✅ T247 token saved — valid for ' + (p.exp ? Math.round((p.exp - now)/3600*10)/10 + 'h' : '?'), 'success');
+    document.getElementById('t247-test-result').textContent = '✅ Saved. Click Test to verify.';
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 async function testT247() {
@@ -2845,8 +2894,17 @@ async function testT247() {
   try {
     var r = await fetch('/test-t247');
     var d = await r.json();
-    document.getElementById('t247-test-result').textContent = d.status === 'success' ? '✅ Connected!' : '❌ ' + (d.message||d.error||'Failed');
-  } catch(e) { document.getElementById('t247-test-result').textContent = '❌ ' + e.message; }
+    var el = document.getElementById('t247-test-result');
+    if (d.status === 'success') {
+      el.style.color = 'var(--green)';
+      el.textContent = d.message;
+    } else {
+      el.style.color = 'var(--red)';
+      el.textContent = '❌ ' + (d.message || d.error || 'Failed');
+    }
+  } catch(e) {
+    document.getElementById('t247-test-result').textContent = '❌ ' + e.message;
+  }
 }
 
 async function checkHealth() {

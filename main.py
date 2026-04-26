@@ -2490,180 +2490,243 @@ async def test_ai():
     except Exception as e:
         return {"status": "error", "api_key_present": True, "error": str(e)}
 
+def _t247_decode_jwt(token: str) -> dict:
+    """Decode JWT payload (no signature check — we trust T247's server)."""
+    try:
+        import base64 as _b64
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * (4 - len(payload_b64) % 4)
+        return json.loads(_b64.b64decode(payload_b64).decode("utf-8"))
+    except Exception:
+        return {}
+
+def _t247_api_headers(token: str) -> dict:
+    return {
+        "accept": "*/*",
+        "authorization": f"Bearer {token}",
+        "content-type": "application/json",
+        "origin": "https://www.tender247.com",
+        "referer": "https://www.tender247.com/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    }
+
+def _t247_get_token(cfg: dict) -> str:
+    token = str(cfg.get("t247_bearer_token", "") or "").strip()
+    if not token:
+        raise ValueError("T247 Bearer token not saved. Log into tender247.com, open DevTools → Network, find any API request and copy the Authorization header value. Paste it in Settings → T247 Token.")
+    # Check expiry
+    payload = _t247_decode_jwt(token)
+    exp = payload.get("exp", 0)
+    import time as _t
+    if exp and _t.time() > exp:
+        raise ValueError(f"T247 Bearer token expired at {datetime.fromtimestamp(exp).strftime('%d %b %Y %H:%M')}. Log into tender247.com again and paste a fresh token in Settings.")
+    return token
+
+def _t247_merge_tenders(tenders: list) -> dict:
+    """Merge tender list into DB. Returns {added, updated}."""
+    db = load_db()
+    added = updated = 0
+    for t in tenders:
+        tid = str(t.get("t247_id", "")).strip()
+        if not tid:
+            continue
+        if tid in db["tenders"]:
+            existing = db["tenders"][tid]
+            for field in ["ref_no","brief","org_name","location","estimated_cost_raw","estimated_cost_cr",
+                          "deadline","days_left","deadline_status","doc_fee","emd","msme_exemption",
+                          "eligibility","checklist","is_gem","tender_name"]:
+                if t.get(field) is not None:
+                    existing[field] = t[field]
+            db["tenders"][tid] = existing
+            updated += 1
+        else:
+            db["tenders"][tid] = t
+            added += 1
+    save_db(db)
+    return {"added": added, "updated": updated}
+
 @app.get("/test-t247")
 async def test_t247():
     cfg = load_config()
-    u = str(cfg.get("t247_username", "") or "").strip()
-    p = str(cfg.get("t247_password", "") or "").strip()
-    if u and p:
-        return {"status": "success", "message": f"Credentials saved for {u}"}
-    return {"status": "error", "message": "T247 credentials not saved — enter email & password in Settings and click Save"}
+    token = str(cfg.get("t247_bearer_token", "") or "").strip()
+    if not token:
+        return {"status": "error", "message": "No Bearer token saved. Paste it in Settings → T247 Token."}
+    payload = _t247_decode_jwt(token)
+    if not payload:
+        return {"status": "error", "message": "Invalid token format. Paste the full Bearer token from DevTools."}
+    import time as _t
+    exp = payload.get("exp", 0)
+    remaining_hrs = round((exp - _t.time()) / 3600, 1) if exp else 0
+    if exp and _t.time() > exp:
+        return {"status": "error", "message": f"Token expired {abs(remaining_hrs):.1f}h ago. Log into tender247.com and paste a fresh token."}
+    return {
+        "status": "success",
+        "message": f"✅ Token valid for {remaining_hrs}h | User: {payload.get('bidder_name','?')} | ID: {payload.get('UserId','?')}",
+        "user_id": payload.get("UserId"),
+        "bidder_name": payload.get("bidder_name"),
+        "expires_in_hours": remaining_hrs,
+        "keywords": payload.get("WordHighlight", "").split(",")[:5],
+    }
 
-
-def _t247_login_session(cfg: dict):
-    """Return an authenticated requests.Session for tender247.com or raise."""
-    import requests as _req, re as _re
-    u = str(cfg.get("t247_username", "") or "").strip()
-    p = str(cfg.get("t247_password", "") or "").strip()
-    if not (u and p):
-        raise ValueError("T247 credentials not configured. Add them in Settings.")
-    sess = _req.Session()
-    sess.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
-    login_page = sess.get("https://tender247.com/auth/tender", timeout=20)
-    csrf = ""
-    m = _re.search(r'name=["\']_token["\'] value=["\']([^"\']+)["\']', login_page.text)
-    if m:
-        csrf = m.group(1)
-    post_r = sess.post("https://tender247.com/login", data={
-        "_token": csrf, "email": u, "password": p,
-    }, timeout=20, allow_redirects=True)
-    if "invalid" in post_r.text.lower() or ("login" in post_r.url and "dashboard" not in post_r.url):
-        raise ValueError("T247 login failed — check credentials in Settings.")
-    return sess
-
+@app.get("/t247-token-status")
+async def t247_token_status():
+    return await test_t247()
 
 @app.post("/fetch-t247-excel")
 async def fetch_t247_excel(background_tasks: BackgroundTasks):
-    """Auto-download today's tender list from tender247.com and import it."""
+    """Download today's tender calendar Excel from T247 real API and merge."""
     cfg = load_config()
     try:
-        sess = _t247_login_session(cfg)
+        token = _t247_get_token(cfg)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    try:
-        import requests as _req
-        # Try common T247 Excel export URLs
-        export_urls = [
-            "https://tender247.com/tenders/export",
-            "https://tender247.com/export/tenders",
-            "https://tender247.com/tenders/download-excel",
-            "https://tender247.com/dashboard/export",
-            "https://tender247.com/auth/tender/export",
-        ]
-        xl_bytes = None
-        used_url = ""
-        for url in export_urls:
-            try:
-                r = sess.get(url, timeout=60, stream=True)
-                ct = r.headers.get("Content-Type", "")
-                cd = r.headers.get("Content-Disposition", "")
-                if r.status_code == 200 and ("spreadsheet" in ct or "excel" in ct or ".xlsx" in cd or ".xls" in cd or len(r.content) > 5000):
-                    xl_bytes = r.content
-                    used_url = url
-                    break
-            except Exception:
-                continue
-        if not xl_bytes:
-            # Try scraping dashboard for a download link
-            dash = sess.get("https://tender247.com/dashboard", timeout=20)
-            import re as _re
-            links = _re.findall(r'href=["\']([^"\']*(?:export|excel|download)[^"\']*)["\']', dash.text, _re.I)
-            for link in links[:5]:
-                if not link.startswith("http"):
-                    link = "https://tender247.com" + link
-                try:
-                    r = sess.get(link, timeout=60)
-                    if r.status_code == 200 and len(r.content) > 5000:
-                        xl_bytes = r.content
-                        used_url = link
-                        break
-                except Exception:
-                    continue
-        if not xl_bytes:
-            raise HTTPException(502, "Could not locate Excel export on tender247.com. Try importing Excel manually.")
-        # Save and process
-        LATEST_EXCEL_FILE.write_bytes(xl_bytes)
-        import tempfile as _tmp
-        tmp = Path(_tmp.mktemp(suffix=".xlsx", dir=str(TEMP_DIR)))
-        tmp.write_bytes(xl_bytes)
-        tenders = process_excel(str(tmp))
-        try:
-            tmp.unlink()
-        except Exception:
-            pass
-        db = load_db()
-        added = updated = 0
-        for t in tenders:
-            tid = str(t.get("t247_id", ""))
-            if not tid:
-                continue
-            existing = db["tenders"].get(tid, {})
-            if existing:
-                for field in ["ref_no","brief","org_name","location","estimated_cost_raw","estimated_cost_cr","deadline","days_left","deadline_status","doc_fee","emd","msme_exemption","eligibility","checklist","is_gem"]:
-                    if t.get(field) is not None:
-                        existing[field] = t[field]
-                existing["days_left"] = t.get("days_left", existing.get("days_left", 999))
-                existing["deadline_status"] = t.get("deadline_status", existing.get("deadline_status","OK"))
-                db["tenders"][tid] = existing
-                updated += 1
-            else:
-                db["tenders"][tid] = t
-                added += 1
-        save_db(db)
-        return {"status": "success", "total": len(tenders), "added": added, "updated": updated,
-                "source_url": used_url, "file_size_kb": len(xl_bytes) // 1024}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(500, f"T247 fetch failed: {e}")
 
+    payload = _t247_decode_jwt(token)
+    user_id = int(payload.get("UserId") or cfg.get("t247_user_id") or 0)
+    query_id = int(cfg.get("t247_query_id") or 328890)
+
+    import requests as _req
+    headers = _t247_api_headers(token)
+
+    request_body = {
+        "tab_id": 2, "tender_id": 0, "tender_number": "", "search_text": "",
+        "refine_search_text": "", "tender_value_operator": 0,
+        "tender_value_from": 0, "tender_value_to": 0,
+        "publication_date_from": "", "publication_date_to": "",
+        "closing_date_from": "", "closing_date_to": "",
+        "search_by_location": False, "statezone_ids": "", "city_ids": "",
+        "state_ids": "", "organization_ids": "", "organization_name": "",
+        "sort_by": 1, "sort_type": 2, "page_no": 1, "record_per_page": 500,
+        "keyword_id": "", "mfa": "", "nameof_website": "",
+        "tender_typeid": 0, "is_tender_doc_uploaded": False,
+        "user_id": user_id, "user_email_service_query_id": query_id,
+        "exact_search": False, "exact_search_text": False,
+        "search_by_split_word": False, "product_id": "",
+        "organization_type_id": "", "sub_industry_id": "",
+        "search_by": 0, "guest_user_id": 0, "quantity": "",
+        "quantity_operator": 0, "msme_exemption": 0,
+        "startup_exemption": 0, "gem": 0, "mail_date": "",
+        "tab_status": 0, "is_ai_summary": False, "boq": 0,
+        "is_grace": False, "surety_bond": False, "limited_tender": False,
+    }
+
+    try:
+        r = _req.post(
+            "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-excel-download",
+            headers=headers, json=request_body, timeout=120,
+        )
+    except Exception as e:
+        raise HTTPException(502, f"T247 API request failed: {e}")
+
+    if r.status_code == 401:
+        raise HTTPException(401, "T247 Bearer token expired. Log into tender247.com and paste a fresh token in Settings.")
+    if r.status_code == 403:
+        raise HTTPException(403, "T247 access denied. Check your subscription is active.")
+    if r.status_code != 200:
+        raise HTTPException(502, f"T247 API returned HTTP {r.status_code}: {r.text[:300]}")
+
+    ct = r.headers.get("Content-Type", "")
+    xl_bytes = r.content
+
+    # If API returned JSON (e.g. error or URL), handle it
+    if "json" in ct:
+        try:
+            resp_json = r.json()
+            # Maybe it contains a download URL
+            dl_url = resp_json.get("url") or resp_json.get("file_url") or resp_json.get("download_url")
+            if dl_url:
+                r2 = _req.get(dl_url, headers=headers, timeout=120)
+                xl_bytes = r2.content
+            else:
+                raise HTTPException(502, f"T247 returned JSON (not Excel): {str(resp_json)[:300]}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(502, f"T247 JSON response parse error: {e}")
+
+    if len(xl_bytes) < 100:
+        raise HTTPException(502, f"T247 returned empty file ({len(xl_bytes)} bytes). Token may be expired.")
+
+    # Save raw Excel
+    LATEST_EXCEL_FILE.write_bytes(xl_bytes)
+    tmp = Path(tempfile.mktemp(suffix=".xlsx", dir=str(TEMP_DIR)))
+    tmp.write_bytes(xl_bytes)
+    try:
+        tenders = process_excel(str(tmp))
+    except Exception as e:
+        raise HTTPException(500, f"Excel parse failed: {e}")
+    finally:
+        try: tmp.unlink()
+        except Exception: pass
+
+    result = _t247_merge_tenders(tenders)
+    return {
+        "status": "success",
+        "total": len(tenders),
+        "added": result["added"],
+        "updated": result["updated"],
+        "file_size_kb": len(xl_bytes) // 1024,
+        "source": "T247 API (real-time)",
+    }
 
 @app.get("/tender/{t247_id}/doc-download")
 async def download_tender_docs(t247_id: str):
-    """Download tender documents from tender247.com as zip, return as file."""
+    """Download tender documents from T247 using Bearer token API."""
     cfg = load_config()
     try:
-        sess = _t247_login_session(cfg)
+        token = _t247_get_token(cfg)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    try:
-        import requests as _req, re as _re, io as _io
-        safe_tid = re.sub(r"[^\w\-]", "_", str(t247_id))[:40]
-        # Try direct zip download URLs for this tender
-        download_urls = [
-            f"https://tender247.com/auth/tender/{t247_id}/download",
-            f"https://tender247.com/auth/tender/{t247_id}/documents",
-            f"https://tender247.com/tenders/{t247_id}/download",
-            f"https://tender247.com/download-documents/{t247_id}",
-        ]
-        zip_bytes = None
-        for url in download_urls:
-            try:
-                r = sess.get(url, timeout=60)
-                ct = r.headers.get("Content-Type", "")
-                if r.status_code == 200 and ("zip" in ct or "octet" in ct or len(r.content) > 1000):
-                    zip_bytes = r.content
-                    break
-            except Exception:
-                continue
-        if not zip_bytes:
-            # Try tender detail page to find download link
-            detail_r = sess.get(f"https://tender247.com/auth/tender/{t247_id}", timeout=20)
-            links = _re.findall(r'href=["\']([^"\']*(?:download|document|zip)[^"\']*)["\']', detail_r.text, _re.I)
-            for link in links[:5]:
-                if not link.startswith("http"):
-                    link = "https://tender247.com" + link
-                try:
-                    r = sess.get(link, timeout=60)
-                    if r.status_code == 200 and len(r.content) > 1000:
-                        zip_bytes = r.content
+
+    import requests as _req, io as _io
+    headers = _t247_api_headers(token)
+    safe_tid = re.sub(r"[^\w\-]", "_", str(t247_id))[:40]
+
+    # T247 API patterns for document download
+    api_urls = [
+        f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/download-tender-document/{t247_id}",
+        f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-document/{t247_id}",
+        f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/documents/{t247_id}",
+    ]
+    zip_bytes = None
+    for url in api_urls:
+        try:
+            r = _req.get(url, headers=headers, timeout=60)
+            ct = r.headers.get("Content-Type", "")
+            if r.status_code == 200 and ("zip" in ct or "octet" in ct or "pdf" in ct or len(r.content) > 2000):
+                zip_bytes = r.content
+                break
+            if r.status_code == 200 and "json" in ct:
+                data = r.json()
+                dl_url = data.get("url") or data.get("file_url") or data.get("download_url")
+                if dl_url:
+                    r2 = _req.get(dl_url, headers=headers, timeout=60)
+                    if r2.status_code == 200 and len(r2.content) > 1000:
+                        zip_bytes = r2.content
                         break
-                except Exception:
-                    continue
-        if not zip_bytes:
-            raise HTTPException(404, f"No documents found for T247 ID {t247_id} — download manually from tender247.com")
-        from fastapi.responses import Response
-        ct = "application/zip"
-        fname = f"T247_{safe_tid}_docs.zip"
+        except Exception:
+            continue
+
+    if not zip_bytes:
+        raise HTTPException(
+            404,
+            f"Documents not found for T247 ID {t247_id}. "
+            "Share the document download cURL from DevTools so the correct API endpoint can be added."
+        )
+
+    from fastapi.responses import Response
+    ct_out = "application/zip"
+    fname = f"T247_{safe_tid}_docs.zip"
+    try:
         if not zipfile.is_zipfile(_io.BytesIO(zip_bytes)):
-            ct = "application/octet-stream"
+            ct_out = "application/octet-stream"
             fname = f"T247_{safe_tid}_docs.bin"
-        return Response(content=zip_bytes, media_type=ct,
-                        headers={"Content-Disposition": f'attachment; filename="{fname}"'})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(500, f"Document download failed: {e}")
+    except Exception:
+        pass
+    return Response(
+        content=zip_bytes, media_type=ct_out,
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 
 @app.post("/auto-download/{t247_id}")
