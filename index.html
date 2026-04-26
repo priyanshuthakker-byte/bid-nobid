@@ -404,6 +404,10 @@ select option{background:var(--bg2)}
   <div id="nav-footer">
     <div class="status-row"><span class="dot dot-gray" id="drive-dot"></span><span id="drive-label">Drive: checking...</span></div>
     <div class="status-row"><span class="dot dot-gray" id="ai-dot"></span><span id="ai-label">AI: checking...</span></div>
+    <div class="status-row" style="cursor:pointer" onclick="showPage('settings')" title="T247 Connection">
+      <span class="dot dot-gray" id="t247-nav-dot"></span>
+      <span id="t247-side-status" style="font-size:11px;color:var(--text3)">T247: checking...</span>
+    </div>
     <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)" id="api-quota">—</div>
     <div id="token-meter" style="margin-top:8px;display:none">
       <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Gemini Quota</div>
@@ -989,24 +993,34 @@ select option{background:var(--bg2)}
         <div id="ai-test-result" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
       </div>
       <div class="card">
-        <div class="card-title">T247 Bearer Token</div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:8px">
-          How to get: Log into <b>tender247.com</b> → open DevTools (F12) → Network tab → click any page → find a request to <code>t247_api.tender247.com</code> → copy the <b>Authorization</b> header value (starts with <code>Bearer eyJ...</code>)
+        <div class="card-title">T247 Connection
+          <span id="t247-conn-badge" class="badge badge-REVIEW" style="font-size:11px">Checking...</span>
+        </div>
+        <!-- Connection Status Bar -->
+        <div id="t247-status-bar" style="padding:10px 14px;border-radius:8px;background:var(--bg4);margin-bottom:14px;font-size:12.5px;color:var(--text2);border-left:3px solid var(--border2)" id="t247-status-bar">
+          Checking connection...
+        </div>
+        <!-- Email + Password -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label>T247 Email</label>
+            <input type="email" id="t247-email-input" placeholder="your@email.com" autocomplete="username">
+          </div>
+          <div>
+            <label>T247 Password</label>
+            <input type="password" id="t247-password-input" placeholder="Your T247 password" autocomplete="current-password">
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">
+          Enter your <b>tender247.com</b> login credentials once. The app will auto-login and keep the token fresh — no DevTools, no manual paste ever.
         </p>
-        <label>Bearer Token</label>
-        <textarea id="t247-token-input" rows="4" placeholder="Bearer eyJhbGciOiJIUzI1NiIs..." style="font-family:var(--mono);font-size:10px;resize:vertical"></textarea>
-        <div id="t247-token-decoded" style="font-size:11px;color:var(--text3);margin-top:6px;padding:6px;background:var(--bg4);border-radius:4px;display:none"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary" onclick="saveT247Token()">💾 Save Token</button>
-          <button class="btn btn-ghost" onclick="testT247()">🔍 Test</button>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" id="t247-connect-btn" onclick="connectT247()">⚡ Connect to T247</button>
+          <button class="btn btn-ghost" onclick="loadT247ConnectionStatus()">↺ Refresh Status</button>
         </div>
-        <div id="t247-test-result" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">
-          ⚠ Token expires ~16h after login. When expired, log in again and paste a new token.<br>
-          ⏰ For daily auto-fetch: paste a fresh token each morning after opening tender247.com.
-        </div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-        <div class="card-title" style="margin-bottom:6px">Sync Settings</div>
+        <div id="t247-connect-result" style="font-size:12px;margin-top:10px"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+        <div class="card-title" style="margin-bottom:8px">Sync Settings</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end">
           <div>
             <label>Auto Sync</label>
@@ -1025,8 +1039,8 @@ select option{background:var(--bg2)}
           <button class="btn btn-ghost btn-sm" onclick="loadT247SyncStatus()">Refresh Status</button>
         </div>
         <div id="t247-sync-settings-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-        <div class="card-title" style="margin-bottom:6px">Daily Digest Automation</div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+        <div class="card-title" style="margin-bottom:8px">Daily Digest Automation</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
           <div>
             <label>Digest Auto</label>
@@ -1238,7 +1252,7 @@ function showPage(name, opts) {
   if (name === 'pipeline') loadPipeline();
   if (name === 'reports') loadReports();
   if (name === 'analytics') loadAnalytics();
-  if (name === 'settings') loadSettings();
+  if (name === 'settings') { loadSettings(); loadT247ConnectionStatus(); }
   if (name === 'profile') loadProfile();
   if (name === 'doc-editor') populateEditorSelect();
   if (name === 'assistant') updateAssistantContext();
@@ -3012,26 +3026,92 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-async function saveT247Token() {
-  var raw = (document.getElementById('t247-token-input').value || '').trim();
-  if (!raw) { toast('Paste the Bearer token first', 'error'); return; }
-  var token = raw.replace(/^Bearer\s+/i, '').trim();
-  var p = _decodeJwtPayload(token);
-  if (!p) { toast('❌ Invalid token format — paste the full eyJ... value', 'error'); return; }
-  var now = Date.now() / 1000;
-  if (p.exp && p.exp < now) { toast('❌ This token is already expired — log into T247 again and copy a fresh one', 'error'); return; }
-  var data = {
-    t247_bearer_token: token,
-    t247_user_id: String(p.UserId || ''),
-    t247_query_id: String(p.user_email_service_query_id || '328890'),
-  };
+async function connectT247() {
+  var email = (document.getElementById('t247-email-input').value || '').trim();
+  var password = (document.getElementById('t247-password-input').value || '').trim();
+  var resultEl = document.getElementById('t247-connect-result');
+  var btn = document.getElementById('t247-connect-btn');
+  if (!email || !password) { toast('Enter email and password', 'error'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Connecting...';
+  resultEl.textContent = 'Connecting to Tender247...';
+  resultEl.style.color = 'var(--text3)';
   try {
-    var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify(data) });
-    if (r.status === 403) { toast('❌ 403 — save Admin Token in Settings first', 'error'); return; }
-    toast('✅ T247 token saved — valid for ' + (p.exp ? Math.round((p.exp - now)/3600*10)/10 + 'h' : '?'), 'success');
-    document.getElementById('t247-test-result').textContent = '✅ Saved. Click Test to verify.';
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+    var r = await fetch('/t247/connect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, password: password})
+    });
+    var d = await r.json();
+    if (r.ok && d.status === 'connected') {
+      resultEl.style.color = 'var(--green)';
+      resultEl.textContent = '✅ ' + d.message + (d.email ? ' | ' + d.email : '');
+      toast('✅ T247 Connected!', 'success');
+      loadT247ConnectionStatus();
+      loadT247SyncStatus();
+    } else {
+      resultEl.style.color = 'var(--red)';
+      resultEl.textContent = '❌ ' + (d.detail || d.message || 'Connection failed. Check credentials.');
+      toast('T247 connection failed', 'error');
+    }
+  } catch(e) {
+    resultEl.style.color = 'var(--red)';
+    resultEl.textContent = '❌ Error: ' + e.message;
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '⚡ Connect to T247';
+  }
 }
+
+async function loadT247ConnectionStatus() {
+  try {
+    var r = await fetch('/t247/connection-status');
+    var d = await r.json();
+    var badge = document.getElementById('t247-conn-badge');
+    var bar = document.getElementById('t247-status-bar');
+    var sideT247 = document.getElementById('t247-side-status');
+
+    if (d.status === 'connected') {
+      if (badge) { badge.className = 'badge badge-BID'; badge.textContent = '✅ Connected'; }
+      if (bar) {
+        bar.style.borderLeftColor = 'var(--green)';
+        bar.style.background = 'var(--green-bg)';
+        bar.style.color = 'var(--green)';
+        bar.innerHTML = '✅ Connected — <b>' + (d.email||'') + '</b> | Token valid for <b>' + Math.floor(d.expires_in_hours||0) + 'h</b> | Expires: ' + (d.expires_at||'');
+      }
+      if (sideT247) { sideT247.textContent = 'T247: Connected'; sideT247.style.color = 'var(--green)'; }
+      var navDot = document.getElementById('t247-nav-dot');
+      if (navDot) { navDot.className = 'dot dot-green'; }
+      // Pre-fill email so user can see it's saved
+      var emailEl = document.getElementById('t247-email-input');
+      if (emailEl && !emailEl.value && d.email) emailEl.value = d.email;
+    } else if (d.status === 'expired') {
+      if (badge) { badge.className = 'badge badge-CONDITIONAL'; badge.textContent = '⚠ Expired'; }
+      if (bar) {
+        bar.style.borderLeftColor = 'var(--amber)';
+        bar.style.background = 'var(--amber-bg)';
+        bar.style.color = 'var(--amber)';
+        bar.innerHTML = '⚠ Token expired — ' + (d.message||'') + (d.has_credentials ? ' Will auto-refresh on next sync.' : ' Re-enter credentials below.');
+      }
+      if (sideT247) { sideT247.textContent = 'T247: Expired'; sideT247.style.color = 'var(--amber)'; }
+      var navDot = document.getElementById('t247-nav-dot');
+      if (navDot) { navDot.className = 'dot dot-amber'; }
+      if (d.email) { var emailEl2 = document.getElementById('t247-email-input'); if (emailEl2 && !emailEl2.value) emailEl2.value = d.email; }
+    } else {
+      if (badge) { badge.className = 'badge badge-NO-BID'; badge.textContent = '❌ Not connected'; }
+      if (bar) {
+        bar.style.borderLeftColor = 'var(--red)';
+        bar.style.background = 'var(--red-bg)';
+        bar.style.color = 'var(--red)';
+        bar.textContent = '❌ ' + (d.message || 'Not connected. Enter credentials below and click Connect.');
+      }
+      if (sideT247) { sideT247.textContent = 'T247: Not connected'; sideT247.style.color = 'var(--red)'; }
+      var navDot = document.getElementById('t247-nav-dot');
+      if (navDot) { navDot.className = 'dot dot-red'; }
+    }
+  } catch(e) {}
+}
+
+async function saveT247Token() { /* legacy — replaced by connectT247 */ }
 
 async function saveSyncSettings() {
   var en = document.getElementById('t247-auto-sync-enabled');
@@ -3133,21 +3213,7 @@ function downloadDailyDigestText() {
 }
 
 async function testT247() {
-  document.getElementById('t247-test-result').textContent = 'Testing...';
-  try {
-    var r = await fetch('/test-t247');
-    var d = await r.json();
-    var el = document.getElementById('t247-test-result');
-    if (d.status === 'success') {
-      el.style.color = 'var(--green)';
-      el.textContent = d.message;
-    } else {
-      el.style.color = 'var(--red)';
-      el.textContent = '❌ ' + (d.message || d.error || 'Failed');
-    }
-  } catch(e) {
-    document.getElementById('t247-test-result').textContent = '❌ ' + e.message;
-  }
+  await loadT247ConnectionStatus();
 }
 
 async function checkHealth() {
@@ -3343,6 +3409,7 @@ async function uploadLetterhead(input) {
 document.addEventListener('DOMContentLoaded', async function() {
   await loadDashboard();
   await loadT247SyncStatus();
+  await loadT247ConnectionStatus();
   await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
@@ -3350,6 +3417,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(checkDeadlineNotifications, 60000);
   setInterval(updateTokenMeter, 120000);
   setInterval(loadT247SyncStatus, 60000);
+  setInterval(loadT247ConnectionStatus, 300000);
   setInterval(loadOpsDailyReport, 120000);
   // Restore page from URL on load
   var params = new URLSearchParams(window.location.search);

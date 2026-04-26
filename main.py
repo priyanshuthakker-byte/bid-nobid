@@ -2666,17 +2666,112 @@ def _t247_api_headers(token: str) -> dict:
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     }
 
+_T247_LOGIN_ENDPOINTS = [
+    "https://t247_api.tender247.com/apigateway/T247User/api/user/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Account/api/account/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247User/api/user/login",
+]
+
+def _t247_auto_login(cfg: dict) -> str:
+    """Login to T247 with stored email+password, store fresh JWT, return token string."""
+    import requests as _req
+    email = str(cfg.get("t247_email", "") or cfg.get("t247_username", "") or "").strip()
+    password = str(cfg.get("t247_password", "") or "").strip()
+    if not email or not password:
+        raise ValueError("T247 credentials not saved. Go to Settings → T247 Connection and enter your email + password.")
+
+    login_headers = {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "origin": "https://www.tender247.com",
+        "referer": "https://www.tender247.com/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    }
+    bodies = [
+        {"email": email, "password": password},
+        {"emailId": email, "password": password},
+        {"username": email, "password": password},
+        {"email": email, "password": password, "deviceType": "web"},
+    ]
+
+    last_err = None
+    for url in _T247_LOGIN_ENDPOINTS:
+        for body in bodies:
+            try:
+                resp = _req.post(url, json=body, headers=login_headers, timeout=30)
+                if resp.status_code in (404, 405):
+                    break  # wrong endpoint, try next
+                if resp.status_code != 200:
+                    last_err = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                    continue
+                data = resp.json()
+                # Extract token from various response shapes
+                token = (
+                    data.get("token") or data.get("accessToken") or data.get("access_token")
+                    or data.get("jwtToken") or data.get("jwt")
+                    or (data.get("data") or {}).get("token")
+                    or (data.get("data") or {}).get("accessToken")
+                    or (data.get("result") or {}).get("token")
+                    or ""
+                )
+                if not token and isinstance(data.get("data"), str):
+                    token = data["data"]
+                token = str(token).strip()
+                if token.startswith("Bearer "):
+                    token = token[7:].strip()
+                if not token or len(token) < 20:
+                    last_err = f"Login succeeded but no token in response: {str(data)[:200]}"
+                    continue
+                # Store token + metadata back to config
+                fresh_cfg = load_config()
+                fresh_cfg["t247_bearer_token"] = token
+                fresh_cfg["t247_email"] = email
+                fresh_cfg["t247_password"] = password
+                jwt_payload = _t247_decode_jwt(token)
+                if jwt_payload.get("UserId"):
+                    fresh_cfg["t247_user_id"] = jwt_payload["UserId"]
+                if jwt_payload.get("user_email_service_query_id") or data.get("queryId"):
+                    fresh_cfg["t247_query_id"] = jwt_payload.get("user_email_service_query_id") or data.get("queryId")
+                save_config(fresh_cfg)
+                print(f"✅ T247 auto-login OK — user {jwt_payload.get('UserId','?')} | exp {datetime.fromtimestamp(jwt_payload.get('exp',0)).strftime('%d %b %H:%M') if jwt_payload.get('exp') else '?'}")
+                return token
+            except _req.exceptions.ConnectionError:
+                last_err = f"Cannot reach {url}"
+                break
+            except Exception as e:
+                last_err = str(e)
+                continue
+
+    raise ValueError(f"T247 login failed. Check credentials in Settings. Last error: {last_err}")
+
+
 def _t247_get_token(cfg: dict) -> str:
-    token = str(cfg.get("t247_bearer_token", "") or "").strip()
-    if not token:
-        raise ValueError("T247 Bearer token not saved. Log into tender247.com, open DevTools → Network, find any API request and copy the Authorization header value. Paste it in Settings → T247 Token.")
-    # Check expiry
-    payload = _t247_decode_jwt(token)
-    exp = payload.get("exp", 0)
+    """Return valid T247 JWT — auto-login if missing or expired."""
     import time as _t
-    if exp and _t.time() > exp:
-        raise ValueError(f"T247 Bearer token expired at {datetime.fromtimestamp(exp).strftime('%d %b %Y %H:%M')}. Log into tender247.com again and paste a fresh token in Settings.")
-    return token
+    token = str(cfg.get("t247_bearer_token", "") or "").strip()
+    if token:
+        payload = _t247_decode_jwt(token)
+        exp = payload.get("exp", 0)
+        # If token valid for >5 more minutes, use it
+        if not exp or _t.time() < (exp - 300):
+            return token
+        # Token expiring soon or expired — try auto-refresh if credentials present
+        has_creds = bool(
+            (cfg.get("t247_email") or cfg.get("t247_username"))
+            and cfg.get("t247_password")
+        )
+        if not has_creds:
+            exp_str = datetime.fromtimestamp(exp).strftime('%d %b %Y %H:%M') if exp else "unknown"
+            raise ValueError(f"T247 token expired at {exp_str}. Enter your email + password in Settings → T247 Connection to enable auto-refresh.")
+    else:
+        has_creds = bool(
+            (cfg.get("t247_email") or cfg.get("t247_username"))
+            and cfg.get("t247_password")
+        )
+        if not has_creds:
+            raise ValueError("T247 not connected. Go to Settings → T247 Connection and enter your email + password.")
+    # Auto-login with stored credentials
+    return _t247_auto_login(cfg)
 
 def _t247_merge_tenders(tenders: list) -> dict:
     """Merge tender list into DB. Returns {added, updated}."""
@@ -2956,32 +3051,77 @@ def _run_daily_digest_scheduler():
                 _digest_state["error"] = str(e)
         _t247_sync_stop.wait(55)
 
-@app.get("/test-t247")
-async def test_t247():
+@app.post("/t247/connect")
+async def t247_connect(data: dict = Body(...)):
+    """Save T247 email+password and immediately login to verify + store token."""
+    email = str(data.get("email", "") or "").strip()
+    password = str(data.get("password", "") or "").strip()
+    if not email or not password:
+        raise HTTPException(400, "Email and password are required.")
     cfg = load_config()
+    cfg["t247_email"] = email
+    cfg["t247_password"] = password
+    cfg["t247_bearer_token"] = ""  # force fresh login
+    save_config(cfg)
+    try:
+        token = _t247_auto_login(cfg)
+        payload = _t247_decode_jwt(token)
+        import time as _t
+        exp = payload.get("exp", 0)
+        remaining_hrs = round((exp - _t.time()) / 3600, 1) if exp else 0
+        return {
+            "status": "connected",
+            "message": f"Connected — token valid for {remaining_hrs:.0f}h",
+            "user_id": payload.get("UserId"),
+            "bidder_name": payload.get("bidder_name", ""),
+            "email": email,
+            "expires_in_hours": remaining_hrs,
+            "expires_at": datetime.fromtimestamp(exp).strftime("%d %b %Y %H:%M") if exp else "",
+        }
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"T247 login error: {e}")
+
+
+@app.get("/t247/connection-status")
+async def t247_connection_status():
+    """Return current T247 connection state without triggering a login."""
+    import time as _t
+    cfg = load_config()
+    email = str(cfg.get("t247_email", "") or cfg.get("t247_username", "") or "").strip()
+    has_creds = bool(email and cfg.get("t247_password"))
     token = str(cfg.get("t247_bearer_token", "") or "").strip()
     if not token:
-        return {"status": "error", "message": "No Bearer token saved. Paste it in Settings → T247 Token."}
+        return {"status": "disconnected", "has_credentials": has_creds, "email": email,
+                "message": "Not connected." + (" Enter credentials in Settings." if not has_creds else " Click Connect.")}
     payload = _t247_decode_jwt(token)
-    if not payload:
-        return {"status": "error", "message": "Invalid token format. Paste the full Bearer token from DevTools."}
-    import time as _t
     exp = payload.get("exp", 0)
-    remaining_hrs = round((exp - _t.time()) / 3600, 1) if exp else 0
     if exp and _t.time() > exp:
-        return {"status": "error", "message": f"Token expired {abs(remaining_hrs):.1f}h ago. Log into tender247.com and paste a fresh token."}
+        remaining = round((_t.time() - exp) / 3600, 1)
+        return {"status": "expired", "has_credentials": has_creds, "email": email,
+                "message": f"Token expired {remaining:.1f}h ago. {'Auto-refresh on next sync.' if has_creds else 'Re-enter credentials.'}",
+                "expired_at": datetime.fromtimestamp(exp).strftime("%d %b %Y %H:%M")}
+    remaining_hrs = round((exp - _t.time()) / 3600, 1) if exp else 0
     return {
-        "status": "success",
-        "message": f"✅ Token valid for {remaining_hrs}h | User: {payload.get('bidder_name','?')} | ID: {payload.get('UserId','?')}",
+        "status": "connected",
+        "has_credentials": has_creds,
+        "email": email,
         "user_id": payload.get("UserId"),
-        "bidder_name": payload.get("bidder_name"),
+        "bidder_name": payload.get("bidder_name", ""),
         "expires_in_hours": remaining_hrs,
-        "keywords": payload.get("WordHighlight", "").split(",")[:5],
+        "expires_at": datetime.fromtimestamp(exp).strftime("%d %b %Y %H:%M") if exp else "",
+        "message": f"Connected — {remaining_hrs:.0f}h remaining",
     }
+
+
+@app.get("/test-t247")
+async def test_t247():
+    return await t247_connection_status()
 
 @app.get("/t247-token-status")
 async def t247_token_status():
-    return await test_t247()
+    return await t247_connection_status()
 
 @app.post("/fetch-t247-excel")
 async def fetch_t247_excel(background_tasks: BackgroundTasks):
@@ -3050,14 +3190,17 @@ async def t247_sync_status():
         **_t247_sync_state,
     }
 
-def _t247_doc_download_headers() -> dict:
-    """Headers for documents.tender247.com — no Bearer needed, hash is the key."""
-    return {
+def _t247_doc_download_headers(token: str = "") -> dict:
+    """Headers for documents.tender247.com — include Bearer if available."""
+    h = {
         "accept": "application/json, text/plain, */*",
         "origin": "https://www.tender247.com",
         "referer": "https://www.tender247.com/",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     }
+    if token:
+        h["authorization"] = f"Bearer {token}"
+    return h
 
 def _save_tender_doc_to_vault(t247_id: str, filename: str, content: bytes, mime: str, doc_hash: str = "") -> dict:
     """Persist downloaded Tender247 document bundle in vault and link to tender."""
@@ -3108,10 +3251,19 @@ def _save_tender_doc_to_vault(t247_id: str, filename: str, content: bytes, mime:
 
 @app.get("/tender/{t247_id}/doc-download")
 async def download_tender_docs(t247_id: str):
-    """Download tender documents from documents.tender247.com using stored doc hash."""
+    """Download tender documents from T247 using auto-login token."""
     import requests as _req, io as _io
 
     safe_tid = re.sub(r"[^\w\-]", "_", str(t247_id))[:40]
+
+    # Get valid auth token (auto-login if needed)
+    cfg = load_config()
+    try:
+        token = _t247_get_token(cfg)
+    except ValueError as e:
+        raise HTTPException(401, str(e))
+
+    t_id_num = t247_id if str(t247_id).isdigit() else re.sub(r"\D", "", str(t247_id))
 
     # Step 1: find stored doc hash for this tender
     db = load_db()
@@ -3119,22 +3271,24 @@ async def download_tender_docs(t247_id: str):
     doc_hash = (tender.get("t247_doc_hash") or tender.get("doc_hash")
                 or tender.get("document_hash") or "").strip()
 
-    # Step 2: fetch document list from T247 API — no Bearer needed, empty body
+    # Step 2: fetch document list with auth token to get hash
     if not doc_hash:
-        t_id_num = t247_id if str(t247_id).isdigit() else re.sub(r"\D", "", str(t247_id))
         doc_list_url = f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/tender-document-list/{t_id_num}"
-        doc_list_headers = {
-            "accept": "application/json",
-            "content-length": "0",
-            "origin": "https://www.tender247.com",
-            "referer": "https://www.tender247.com/",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        }
         try:
-            r_list = _req.post(doc_list_url, headers=doc_list_headers, timeout=30)
+            r_list = _req.post(
+                doc_list_url,
+                headers=_t247_api_headers(token),
+                timeout=30,
+            )
+            if r_list.status_code == 401:
+                # Token rejected — force re-login once
+                try:
+                    token = _t247_auto_login(cfg)
+                    r_list = _req.post(doc_list_url, headers=_t247_api_headers(token), timeout=30)
+                except Exception:
+                    pass
             if r_list.status_code == 200:
                 d = r_list.json()
-                # response may be a list or dict with a data/result key
                 items = d if isinstance(d, list) else (
                     d.get("data") or d.get("result") or d.get("documents") or d.get("list") or []
                 )
@@ -3143,31 +3297,38 @@ async def download_tender_docs(t247_id: str):
                 for item in (items or []):
                     if not isinstance(item, dict):
                         continue
-                    h = (str(item.get("document_hash","") or item.get("doc_hash","")
-                             or item.get("download_hash","") or item.get("hash","")
-                             or item.get("documentHash","") or item.get("downloadHash",""))
-                         .strip())
-                    if h and len(h) >= 32:
+                    h = (str(
+                        item.get("document_hash","") or item.get("doc_hash","")
+                        or item.get("download_hash","") or item.get("hash","")
+                        or item.get("documentHash","") or item.get("downloadHash","")
+                    ).strip())
+                    if h and len(h) >= 20:
                         doc_hash = h
                         tender["t247_doc_hash"] = doc_hash
                         db["tenders"][t247_id] = tender
                         save_db(db)
                         break
-        except Exception:
-            pass
+        except Exception as ex:
+            print(f"⚠️ Doc list fetch error for {t247_id}: {ex}")
 
     if not doc_hash:
         raise HTTPException(
             404,
-            f"Document hash not found for tender {t247_id}. "
-            "Open the tender on tender247.com, copy the document download request from DevTools "
-            "(same way you got the Excel cURL), and the hash will be added to the system."
+            f"No documents found for tender {t247_id}. "
+            "The tender may not have uploaded documents on T247 yet."
         )
 
-    # Step 3: download from documents.tender247.com using the hash
+    # Step 3: download ZIP from documents.tender247.com using hash + auth
     download_url = f"https://documents.tender247.com/tender/download-document-all/{doc_hash}"
     try:
-        r = _req.get(download_url, headers=_t247_doc_download_headers(), timeout=120)
+        r = _req.get(download_url, headers=_t247_doc_download_headers(token), timeout=120)
+        if r.status_code == 401:
+            # Retry once with fresh login
+            try:
+                token = _t247_auto_login(cfg)
+                r = _req.get(download_url, headers=_t247_doc_download_headers(token), timeout=120)
+            except Exception:
+                pass
     except Exception as e:
         raise HTTPException(502, f"Document server unreachable: {e}")
 
