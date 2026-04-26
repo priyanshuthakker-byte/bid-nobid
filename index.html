@@ -206,7 +206,26 @@ select option{background:var(--bg2)}
 .result-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .result-body{padding:16px 18px;max-height:600px;overflow-y:auto}
 
-/* ── VERDICT BADGE ── */
+/* ── VERDICT BAR ── */
+.verdict-bar{border-radius:var(--radius2);padding:20px 24px;margin-bottom:16px;display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.verdict-bar.BID{background:rgba(34,197,94,.12);border:1.5px solid rgba(34,197,94,.35)}
+.verdict-bar.NO-BID{background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.35)}
+.verdict-bar.CONDITIONAL{background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.35)}
+.verdict-bar.REVIEW{background:var(--blue-glow);border:1.5px solid rgba(59,130,246,.25)}
+.verdict-stamp-big{font-size:28px;font-weight:800;font-family:var(--mono);letter-spacing:1px;white-space:nowrap}
+.verdict-stamp-big.BID{color:var(--green)}
+.verdict-stamp-big.NO-BID{color:var(--red)}
+.verdict-stamp-big.CONDITIONAL{color:var(--amber)}
+.verdict-stamp-big.REVIEW{color:var(--blue)}
+.verdict-meta{flex:1;min-width:200px}
+.verdict-conf{font-size:11.5px;color:var(--text3);margin-bottom:4px}
+.verdict-reason{font-size:13px;color:var(--text2);line-height:1.55}
+.verdict-kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.verdict-kpi{background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 16px;min-width:120px;text-align:center}
+.verdict-kpi .kv{font-size:13px;font-weight:600;color:#fff;margin-bottom:2px}
+.verdict-kpi .kl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+
+/* ── VERDICT BADGE (old, keep for cards) ── */
 .verdict-hero{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--radius2);margin-bottom:14px}
 .verdict-hero.BID{background:var(--green-bg);border:1px solid rgba(34,197,94,.2)}
 .verdict-hero.NO-BID{background:var(--red-bg);border:1px solid rgba(239,68,68,.2)}
@@ -218,6 +237,38 @@ select option{background:var(--bg2)}
 .verdict-label.CONDITIONAL{color:var(--amber)}
 .verdict-label.REVIEW{color:var(--blue)}
 .verdict-conf{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── ANALYST TABS ── */
+.an-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:0;overflow-x:auto}
+.an-tab{padding:10px 18px;font-size:12.5px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s}
+.an-tab:hover{color:var(--text)}
+.an-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.an-tab-badge{display:inline-block;background:var(--bg4);border-radius:10px;font-size:10px;padding:1px 6px;margin-left:5px;color:var(--text3)}
+.an-tab.active .an-tab-badge{background:rgba(59,130,246,.2);color:var(--blue)}
+.an-tabpanel{display:none;padding:16px 0 0}
+.an-tabpanel.active{display:block}
+
+/* ── CRITERIA TABLE ── */
+.crit-table{width:100%;border-collapse:collapse;font-size:12px}
+.crit-table th{background:var(--bg4);color:var(--text3);padding:7px 10px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border)}
+.crit-table td{padding:8px 10px;border-bottom:1px solid var(--border2);vertical-align:top;color:var(--text2)}
+.crit-table tr:last-child td{border-bottom:none}
+.crit-table tr:hover td{background:var(--bg4)}
+.crit-pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.crit-pill.MET{background:rgba(34,197,94,.15);color:#4ade80}
+.crit-pill.NOT-MET{background:rgba(239,68,68,.15);color:#f87171}
+.crit-pill.CONDITIONAL{background:rgba(245,158,11,.15);color:#fbbf24}
+.crit-pill.REVIEW{background:rgba(59,130,246,.15);color:#60a5fa}
+.crit-pill.QUERY{background:rgba(168,85,247,.15);color:#c084fc}
+.crit-remark{font-size:11px;color:var(--text3);margin-top:3px}
+.crit-docs{font-size:10.5px;color:var(--blue);margin-top:2px}
+.crit-clause{font-size:10px;color:var(--text3);font-family:var(--mono)}
+
+/* ── SCOPE SECTION ── */
+.scope-item{padding:12px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--bg4)}
+.scope-item-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:4px}
+.scope-item-body{font-size:12px;color:var(--text2);line-height:1.55}
+.scope-deliverable{font-size:11.5px;color:var(--text3);padding:2px 0}
 
 /* ── DOC PREVIEW ── */
 .doc-preview{font-family:'Times New Roman',serif;color:#1a1a1a;background:#fff;padding:32px 36px;font-size:12px;line-height:1.6;border-radius:var(--radius);overflow:auto;max-height:580px}
@@ -560,33 +611,85 @@ select option{background:var(--bg2)}
       <div id="ap-steps"></div>
     </div>
 
-    <!-- Result: Split Preview -->
+    <!-- Result Panel -->
     <div id="an-result-wrap">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="color:#fff;font-size:14px">Analysis Result</h3>
-        <div style="display:flex;gap:8px">
+      <!-- Verdict Bar -->
+      <div id="res-verdict-bar" class="verdict-bar REVIEW">
+        <div>
+          <div id="res-verdict-stamp" class="verdict-stamp-big REVIEW">—</div>
+          <div id="res-ai-badge" class="badge badge-purple" style="margin-top:6px"></div>
+        </div>
+        <div class="verdict-meta">
+          <div id="res-conf" class="verdict-conf"></div>
+          <div id="res-reason" class="verdict-reason"></div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
           <button class="btn btn-success btn-sm" id="dl-btn" onclick="downloadReport('')">⬇ Download .docx</button>
-          <button class="btn btn-ghost btn-sm" onclick="openDocEditor()">✏️ Edit in Doc Editor</button>
-          <button class="btn btn-ghost btn-sm" onclick="generatePrebidFromResult()">📝 Pre-bid Queries</button>
+          <button class="btn btn-ghost btn-sm" onclick="openDocEditor()">✏ Edit Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="generatePrebidFromResult()">📝 Pre-bid</button>
         </div>
       </div>
-      <div class="result-split">
-        <!-- Left: Analysis Data -->
-        <div class="result-left">
-          <div class="result-header">
-            <span style="font-size:13px;font-weight:600;color:#fff">AI Assessment</span>
-            <span id="res-ai-badge" class="badge badge-purple"></span>
-          </div>
-          <div class="result-body" id="res-left-body"></div>
+      <!-- KPI Row -->
+      <div id="res-kpi-row" class="verdict-kpi-row" style="margin-bottom:16px"></div>
+      <!-- Tabs -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="an-tabs" id="res-tabs">
+          <div class="an-tab active" onclick="switchAnTab('pq')">PQ Eligibility <span class="an-tab-badge" id="tab-badge-pq">0</span></div>
+          <div class="an-tab" onclick="switchAnTab('tq')">Technical Criteria <span class="an-tab-badge" id="tab-badge-tq">0</span></div>
+          <div class="an-tab" onclick="switchAnTab('scope')">Scope of Work</div>
+          <div class="an-tab" onclick="switchAnTab('snapshot')">Tender Details</div>
+          <div class="an-tab" onclick="switchAnTab('report')">Report Preview</div>
         </div>
-        <!-- Right: Document Preview -->
-        <div class="result-right">
-          <div class="result-header">
-            <span style="font-size:13px;font-weight:600;color:#fff">Report Preview</span>
-            <button class="btn-icon btn-xs" onclick="togglePreviewSize()" title="Expand">⤢</button>
+        <div style="padding:0 16px 16px">
+          <!-- PQ Tab -->
+          <div class="an-tabpanel active" id="anpanel-pq">
+            <div id="res-pq-summary" style="display:flex;gap:16px;padding:12px 0;font-size:12px;color:var(--text3)"></div>
+            <div style="overflow-x:auto">
+              <table class="crit-table" id="res-pq-table">
+                <thead><tr>
+                  <th style="width:36px">#</th>
+                  <th>Criterion</th>
+                  <th style="width:80px">Clause</th>
+                  <th>Documents Required</th>
+                  <th style="width:110px">Status</th>
+                  <th>Nascent Remark</th>
+                </tr></thead>
+                <tbody id="res-pq-body"><tr><td colspan="6" class="empty-state">Run analysis to see PQ criteria.</td></tr></tbody>
+              </table>
+            </div>
           </div>
-          <div class="result-body" id="res-preview-body">
-            <div class="doc-preview" id="doc-preview-content"></div>
+          <!-- TQ Tab -->
+          <div class="an-tabpanel" id="anpanel-tq">
+            <div id="res-tq-summary" style="display:flex;gap:16px;padding:12px 0;font-size:12px;color:var(--text3)"></div>
+            <div style="overflow-x:auto">
+              <table class="crit-table" id="res-tq-table">
+                <thead><tr>
+                  <th style="width:36px">#</th>
+                  <th>Criterion</th>
+                  <th style="width:80px">Clause</th>
+                  <th>Documents Required</th>
+                  <th style="width:110px">Status</th>
+                  <th>Remark</th>
+                </tr></thead>
+                <tbody id="res-tq-body"><tr><td colspan="6" class="empty-state">Run analysis to see TQ criteria.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Scope Tab -->
+          <div class="an-tabpanel" id="anpanel-scope">
+            <div id="res-scope-bg" style="font-size:13px;color:var(--text2);padding:12px 0 10px;line-height:1.6"></div>
+            <div id="res-scope-body"></div>
+          </div>
+          <!-- Snapshot Tab -->
+          <div class="an-tabpanel" id="anpanel-snapshot">
+            <table class="crit-table" style="margin-top:12px">
+              <thead><tr><th style="width:40%">Field</th><th>Value</th></tr></thead>
+              <tbody id="res-snapshot-body"></tbody>
+            </table>
+          </div>
+          <!-- Report Tab -->
+          <div class="an-tabpanel" id="anpanel-report">
+            <div class="doc-preview" id="doc-preview-content" style="margin-top:12px"></div>
           </div>
         </div>
       </div>
@@ -1579,6 +1682,19 @@ async function pollAnalysis(jobId) {
 }
 
 // ────────────────────────────────────────────
+// ANALYST TABS
+// ────────────────────────────────────────────
+function switchAnTab(name) {
+  document.querySelectorAll('.an-tab').forEach((el, i) => {
+    var names = ['pq','tq','scope','snapshot','report'];
+    el.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.an-tabpanel').forEach(el => {
+    el.classList.toggle('active', el.id === 'anpanel-' + name);
+  });
+}
+
+// ────────────────────────────────────────────
 // SHOW ANALYSIS RESULT
 // ────────────────────────────────────────────
 function showAnalysisResult(d) {
@@ -1591,67 +1707,133 @@ function showAnalysisResult(d) {
   var v = (td.overall_verdict || {}).verdict || td.verdict || 'REVIEW';
   var conf = (td.overall_verdict || {}).confidence || td.confidence || '';
   var reason = (td.overall_verdict || {}).reason || td.reason || '';
-
-  // ── Left Panel ──
   var pq = td.pq_criteria || [];
   var tq = td.tq_criteria || [];
-  var pqMet = pq.filter(c => c.status === 'MET').length;
-  var tqMet = tq.filter(c => c.status === 'MET').length;
 
-  var leftHTML = '<div class="verdict-hero ' + v + '">' +
-    '<div>' +
-      '<div class="verdict-label ' + v + '">' + v + '</div>' +
-      (conf ? '<div class="verdict-conf">Confidence: ' + conf + '</div>' : '') +
-    '</div>' +
-    (d.ai_used ? '<span class="badge badge-purple" style="margin-left:auto">AI</span>' : '') +
-  '</div>';
-
-  if (reason) leftHTML += '<div style="font-size:12.5px;color:var(--text2);margin-bottom:14px;line-height:1.6">' + reason + '</div>';
-
-  // Key info table
-  leftHTML += '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px">';
-  var rows2 = [
-    ['Tender No', str(td.tender_no)],
-    ['Organisation', str(td.org_name)],
-    ['EMD', str(td.emd)],
-    ['Est. Cost', str(td.estimated_cost)],
-    ['Deadline', str(td.bid_submission_date || td.deadline)],
-    ['Pre-bid Date', str(td.prebid_query_date)],
-    ['Corrigendum', td.has_corrigendum ? '⚠ Yes — ' + (td.corrigendum_files||[]).join(', ') : 'No'],
-  ];
-  rows2.forEach(([k,v2]) => {
-    leftHTML += '<tr><td style="padding:4px 8px;color:var(--text3);width:40%">' + k + '</td><td style="padding:4px 8px;color:var(--text)">' + v2 + '</td></tr>';
-  });
-  leftHTML += '</table>';
-
-  // PQ Summary
-  if (pq.length) {
-    leftHTML += '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">PQ Criteria (' + pqMet + '/' + pq.length + ' Met)</div>';
-    pq.slice(0,5).forEach(c => {
-      var cls = c.status === 'MET' ? 'c-green' : c.status === 'CONDITIONAL' ? 'c-amber' : 'c-red';
-      leftHTML += '<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--border)">' +
-        '<span class="' + cls + '" style="width:60px;display:inline-block">' + (c.status||'?') + '</span>' +
-        '<span style="color:var(--text2)">' + (c.criterion||'').substring(0,60) + '</span></div>';
-    });
-    if (pq.length > 5) leftHTML += '<div style="font-size:11px;color:var(--text3);margin-top:4px">+ ' + (pq.length-5) + ' more criteria</div>';
-  }
-
-  document.getElementById('res-left-body').innerHTML = leftHTML;
+  // ── Verdict Bar ──
+  var bar = document.getElementById('res-verdict-bar');
+  bar.className = 'verdict-bar ' + v;
+  var stamp = document.getElementById('res-verdict-stamp');
+  stamp.className = 'verdict-stamp-big ' + v;
+  stamp.textContent = v;
+  document.getElementById('res-conf').textContent = conf ? 'Confidence: ' + conf : '';
+  document.getElementById('res-reason').textContent = reason;
   document.getElementById('res-ai-badge').textContent = d.ai_used ? 'AI Analysed' : 'Basic Extract';
-
-  // ── Right Panel: Doc Preview ──
-  document.getElementById('doc-preview-content').innerHTML = buildDocPreview(td, v);
-
-  // Update download button
   document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);
 
-  // Show prebid section
+  // ── KPI Row ──
+  var kpis = [
+    [_fv(td.estimated_cost), 'Est. Cost'],
+    [_fv(td.emd), 'EMD'],
+    [_fv(td.bid_submission_date || td.deadline), 'Deadline'],
+    [_fv(td.prebid_query_date), 'Pre-bid Date'],
+    [td.has_corrigendum ? '⚠ Yes' : 'No', 'Corrigendum'],
+  ].filter(([val]) => val && val !== '—');
+  document.getElementById('res-kpi-row').innerHTML = kpis.map(([val,lbl]) =>
+    '<div class="verdict-kpi"><div class="kv">' + val + '</div><div class="kl">' + lbl + '</div></div>'
+  ).join('');
+
+  // ── PQ Tab ──
+  var pqMet = pq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
+  var pqCond = pq.filter(c => (c.nascent_status||c.status||'') === 'CONDITIONAL').length;
+  var pqFail = pq.filter(c => ['NOT MET','NOT-MET','FAIL','NO'].includes((c.nascent_status||c.status||'').toUpperCase())).length;
+  document.getElementById('tab-badge-pq').textContent = pq.length;
+  document.getElementById('res-pq-summary').innerHTML =
+    '<span style="color:var(--green)">✓ ' + pqMet + ' Met</span>' +
+    '<span style="color:var(--amber)">⚠ ' + pqCond + ' Conditional</span>' +
+    '<span style="color:var(--red)">✗ ' + pqFail + ' Not Met</span>' +
+    '<span>' + (pq.length - pqMet - pqCond - pqFail) + ' Under Review</span>';
+  document.getElementById('res-pq-body').innerHTML = pq.length
+    ? pq.map((c, i) => _critRow(i+1, c)).join('')
+    : '<tr><td colspan="6" class="empty-state">No PQ criteria extracted.</td></tr>';
+
+  // ── TQ Tab ──
+  var tqMet = tq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
+  var tqCond = tq.filter(c => (c.nascent_status||c.status||'') === 'CONDITIONAL').length;
+  document.getElementById('tab-badge-tq').textContent = tq.length;
+  document.getElementById('res-tq-summary').innerHTML =
+    '<span style="color:var(--green)">✓ ' + tqMet + ' Met</span>' +
+    '<span style="color:var(--amber)">⚠ ' + tqCond + ' Conditional</span>';
+  document.getElementById('res-tq-body').innerHTML = tq.length
+    ? tq.map((c, i) => _critRow(i+1, c)).join('')
+    : '<tr><td colspan="6" class="empty-state">No TQ criteria extracted.</td></tr>';
+
+  // ── Scope Tab ──
+  var scopeBg = td.scope_background || td.scope_of_work || '';
+  document.getElementById('res-scope-bg').textContent = scopeBg ? scopeBg.substring(0, 800) : '';
+  var sections = td.scope_sections || td.scope_items || [];
+  document.getElementById('res-scope-body').innerHTML = sections.length
+    ? sections.map(s => {
+        var delivs = (s.deliverables || []).map(d2 => '<div class="scope-deliverable">• ' + d2 + '</div>').join('');
+        return '<div class="scope-item">' +
+          '<div class="scope-item-title">' + (s.section_title || s.title || 'Section') +
+            (s.section_no ? ' <span style="font-size:10px;color:var(--text3);font-weight:400">§' + s.section_no + '</span>' : '') +
+          '</div>' +
+          '<div class="scope-item-body">' + (s.prose || s.description || '') + '</div>' +
+          (delivs ? '<div style="margin-top:6px">' + delivs + '</div>' : '') +
+        '</div>';
+      }).join('')
+    : (scopeBg ? '' : '<div class="empty-state">No scope sections extracted.</div>');
+
+  // ── Snapshot Tab ──
+  var snapRows = [
+    ['Tender No', td.tender_no], ['Tender Name', td.tender_name],
+    ['Organisation', td.org_name], ['Est. Cost', td.estimated_cost],
+    ['EMD', td.emd], ['Tender Fee', td.tender_fee],
+    ['Submission Date', td.bid_submission_date || td.deadline],
+    ['Opening Date', td.bid_opening_date],
+    ['Pre-bid Date', td.prebid_query_date],
+    ['JV Allowed', td.jv_allowed], ['MSME Exempt', td.msme_exempt],
+    ['Corrigendum', td.has_corrigendum ? 'Yes — ' + (td.corrigendum_files||[]).join(', ') : 'No'],
+    ['Work Location', td.work_location], ['Project Duration', td.project_duration],
+  ];
+  document.getElementById('res-snapshot-body').innerHTML = snapRows
+    .filter(([,val]) => { var s = _fv(val); return s && s !== '—'; })
+    .map(([k,val]) => '<tr><td style="color:var(--text3);white-space:nowrap">' + k + '</td><td style="color:#fff">' + _fv(val) + '</td></tr>')
+    .join('');
+
+  // ── Report Tab ──
+  document.getElementById('doc-preview-content').innerHTML = buildDocPreview(td, v);
+
+  // Show prebid section if queries exist
   if (td.prebid_queries && td.prebid_queries.length) {
     document.getElementById('prebid-section').style.display = 'block';
     renderPrebidList(td.prebid_queries);
   }
 
-  toast('Analysis complete — Verdict: ' + v, 'success');
+  switchAnTab('pq');
+  toast('Analysis complete — Verdict: ' + v, v === 'BID' ? 'success' : v === 'NO-BID' ? 'error' : 'info');
+}
+
+function _fv(val) {
+  if (val === null || val === undefined) return '—';
+  if (typeof val === 'object' && val.value !== undefined) val = val.value;
+  var s = String(val || '').trim();
+  return (s === '' || s === 'null' || s === 'None' || s === 'Not specified') ? '—' : s;
+}
+
+function _critRow(idx, c) {
+  var status = (c.nascent_status || c.status || 'REVIEW').toUpperCase().replace(' ','-');
+  var pillMap = {'MET':'MET','NOT-MET':'NOT-MET','NOT MET':'NOT-MET','CONDITIONAL':'CONDITIONAL','REVIEW':'REVIEW','QUERY':'QUERY','YES':'MET','NO':'NOT-MET'};
+  var pillClass = pillMap[status] || 'REVIEW';
+  var pillText = status === 'NOT-MET' ? 'NOT MET' : status;
+  var criterion = c.criteria || c.criterion || '';
+  var docs = c.documents_required || c.details || '';
+  var remark = c.nascent_remark || c.remark || '';
+  var clause = c.clause_ref || '';
+  var page = c.page_no || '';
+  var clauseStr = [clause, page ? 'p.' + page : ''].filter(Boolean).join(' ');
+  var queryIcon = (c.raises_query === 'YES' || c.raises_query === true) ? ' <span style="color:var(--amber);font-size:10px" title="Raises pre-bid query">⚑</span>' : '';
+  return '<tr>' +
+    '<td style="color:var(--text3);font-size:11px">' + idx + '</td>' +
+    '<td><div style="color:#fff;font-size:12.5px">' + criterion + queryIcon + '</div>' +
+      (clauseStr ? '<div class="crit-clause">' + clauseStr + '</div>' : '') +
+    '</td>' +
+    '<td><span class="crit-clause">' + (clause||'—') + '</span></td>' +
+    '<td><div class="crit-docs">' + (docs || '—') + '</div></td>' +
+    '<td><span class="crit-pill ' + pillClass + '">' + pillText + '</span></td>' +
+    '<td><div style="font-size:12px;color:var(--text2)">' + remark + '</div></td>' +
+  '</tr>';
 }
 
 // ────────────────────────────────────────────
@@ -1661,63 +1843,70 @@ function buildDocPreview(td, verdict) {
   var v = verdict || 'REVIEW';
   var pq = td.pq_criteria || [];
   var tq = td.tq_criteria || [];
-  var pqMet = pq.filter(c => c.status === 'MET').length;
-  var tqMet = tq.filter(c => c.status === 'MET').length;
+  var pqMet = pq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
+  var tqMet = tq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
+  var reason = (td.overall_verdict || {}).reason || td.reason || '';
+  var conf = (td.overall_verdict || {}).confidence || td.confidence || '';
 
   var html = '<h1>BID / NO-BID ANALYSIS REPORT</h1>' +
     '<p style="text-align:center;font-size:11px;color:#555;margin-bottom:12px">Nascent Info Technologies Pvt. Ltd. | Confidential</p>' +
-    '<div class="verdict-stamp ' + v + '">' + v + '</div>';
+    '<div class="verdict-stamp ' + v + '">' + v + (conf ? ' · ' + conf : '') + '</div>';
+  if (reason) html += '<p style="font-size:11px;color:#444;margin:8px 0 14px;line-height:1.5">' + reason + '</p>';
 
-  // Snapshot
-  html += '<h2>1. Tender Snapshot</h2>';
-  html += '<table><tr><th>Field</th><th>Details</th></tr>';
+  // 1. Snapshot
+  html += '<h2>1. Tender Snapshot</h2><table><tr><th>Field</th><th>Details</th></tr>';
   [['Tender No', td.tender_no],['Organisation', td.org_name],['Tender Name', td.tender_name],
    ['Est. Cost', td.estimated_cost],['EMD', td.emd],['Tender Fee', td.tender_fee],
    ['Submission Date', td.bid_submission_date||td.deadline],['Opening Date', td.bid_opening_date],
-   ['Pre-bid Date', td.prebid_query_date]].forEach(([k,v2]) => {
-    var s = str(v2);
-    if (s && s !== '—' && s !== 'Not specified') html += '<tr><td>' + k + '</td><td>' + s + '</td></tr>';
+   ['Pre-bid Date', td.prebid_query_date],['JV Allowed', td.jv_allowed],['Work Location', td.work_location]
+  ].forEach(([k,val]) => {
+    var s = _fv(val);
+    if (s && s !== '—') html += '<tr><td>' + k + '</td><td>' + s + '</td></tr>';
   });
   html += '</table>';
 
-  // Scope
-  if (td.scope_of_work) {
-    html += '<h2>2. Scope of Work</h2><p style="font-size:11px">' + (td.scope_of_work||'').substring(0,600) + '...</p>';
-  }
+  // 2. Scope
+  var scopeTxt = td.scope_background || td.scope_of_work || '';
+  if (scopeTxt) html += '<h2>2. Scope of Work</h2><p style="font-size:11px;line-height:1.55">' + scopeTxt.substring(0,800) + '</p>';
 
-  // PQ Criteria
+  // 3. PQ Eligibility
   if (pq.length) {
     html += '<h2>3. PQ Eligibility (' + pqMet + '/' + pq.length + ' Met)</h2>';
-    pq.forEach(c => {
-      var cls = c.status === 'MET' ? 'crit-met' : c.status === 'CONDITIONAL' ? 'crit-cond' : 'crit-fail';
-      html += '<div class="crit ' + cls + '"><span>' + (c.criterion||'').substring(0,80) + '</span><b>' + (c.status||'') + '</b></div>';
+    html += '<table><tr><th>#</th><th>Criterion</th><th>Status</th><th>Remark</th></tr>';
+    pq.forEach((c, i) => {
+      var st = (c.nascent_status||c.status||'REVIEW').toUpperCase();
+      var cls = st === 'MET' ? 'crit-met' : st === 'CONDITIONAL' ? 'crit-cond' : 'crit-fail';
+      html += '<tr><td>' + (i+1) + '</td><td>' + (c.criteria||c.criterion||'') + '</td>' +
+        '<td><div class="crit ' + cls + '" style="justify-content:center;margin:0"><b>' + st + '</b></div></td>' +
+        '<td style="font-size:10.5px;color:#555">' + (c.nascent_remark||c.remark||'') + '</td></tr>';
     });
+    html += '</table>';
   }
 
-  // TQ Criteria
+  // 4. TQ Criteria
   if (tq.length) {
     html += '<h2>4. Technical Criteria (' + tqMet + '/' + tq.length + ' Met)</h2>';
-    tq.slice(0,6).forEach(c => {
-      var cls = c.status === 'MET' ? 'crit-met' : c.status === 'CONDITIONAL' ? 'crit-cond' : 'crit-fail';
-      html += '<div class="crit ' + cls + '"><span>' + (c.criterion||'').substring(0,80) + '</span><b>' + (c.status||'') + '</b></div>';
+    html += '<table><tr><th>#</th><th>Criterion</th><th>Status</th><th>Remark</th></tr>';
+    tq.forEach((c, i) => {
+      var st = (c.nascent_status||c.status||'REVIEW').toUpperCase();
+      var cls = st === 'MET' ? 'crit-met' : st === 'CONDITIONAL' ? 'crit-cond' : 'crit-fail';
+      html += '<tr><td>' + (i+1) + '</td><td>' + (c.criteria||c.criterion||'') + '</td>' +
+        '<td><div class="crit ' + cls + '" style="justify-content:center;margin:0"><b>' + st + '</b></div></td>' +
+        '<td style="font-size:10.5px;color:#555">' + (c.nascent_remark||c.remark||'') + '</td></tr>';
     });
+    html += '</table>';
   }
 
-  // Verdict reason
-  var reason = (td.overall_verdict || {}).reason || td.reason || '';
-  if (reason) {
-    html += '<h2>5. Assessment</h2><p style="font-size:11px">' + reason + '</p>';
-  }
-
-  // Pre-bid
+  // 5. Pre-bid Queries
   if (td.prebid_queries && td.prebid_queries.length) {
-    html += '<h2>6. Pre-bid Queries (' + td.prebid_queries.length + ')</h2>';
-    td.prebid_queries.slice(0,3).forEach((q,i) => {
-      html += '<p style="font-size:11px;margin-bottom:4px"><b>' + (i+1) + '.</b> ' + (typeof q === 'string' ? q : q.query || JSON.stringify(q)).substring(0,120) + '</p>';
+    html += '<h2>5. Pre-bid Queries (' + td.prebid_queries.length + ')</h2>';
+    td.prebid_queries.forEach((q, i) => {
+      var txt = typeof q === 'string' ? q : (q.query || JSON.stringify(q));
+      html += '<p style="font-size:11px;margin-bottom:6px"><b>' + (i+1) + '.</b> ' + txt + '</p>';
     });
   }
 
-  html += '<p style="font-size:10px;color:#888;text-align:center;margin-top:16px">Generated by TenderIQ — ' + new Date().toLocaleDateString('en-IN') + '</p>';
+  html += '<p style="font-size:10px;color:#888;text-align:center;margin-top:20px;border-top:1px solid #ddd;padding-top:10px">Generated by TenderIQ · Nascent Info Technologies · ' + new Date().toLocaleDateString('en-IN') + '</p>';
   return html;
 }
 
@@ -1752,8 +1941,8 @@ function generatePrebidFromResult() {
 }
 
 function togglePreviewSize() {
-  var body = document.getElementById('res-preview-body');
-  body.style.maxHeight = body.style.maxHeight === 'none' ? '580px' : 'none';
+  var body = document.getElementById('doc-preview-content');
+  if (body) body.style.maxHeight = body.style.maxHeight === 'none' ? '580px' : 'none';
 }
 
 // ────────────────────────────────────────────
@@ -2004,8 +2193,8 @@ function renderRiskContent(t, serverData) {
   // Compute risk scores
   var timelineRisk = dl < 7 ? 90 : dl < 15 ? 65 : dl < 30 ? 35 : 20;
   var financialRisk = v === 'NO-BID' ? 80 : v === 'CONDITIONAL' ? 55 : 25;
-  var techRisk = (t.pq_criteria || []).filter(c => c.status === 'NOT MET').length > 2 ? 80 :
-                 (t.pq_criteria || []).filter(c => c.status === 'CONDITIONAL').length > 0 ? 55 : 20;
+  var techRisk = (t.pq_criteria || []).filter(c => (c.nascent_status||c.status||'') === 'NOT MET').length > 2 ? 80 :
+                 (t.pq_criteria || []).filter(c => (c.nascent_status||c.status||'') === 'CONDITIONAL').length > 0 ? 55 : 20;
   var competitionRisk = parseFloat(t.estimated_cost_cr || 0) > 10 ? 70 : 40;
 
   var overallRisk = Math.round((timelineRisk + financialRisk + techRisk + competitionRisk) / 4);
