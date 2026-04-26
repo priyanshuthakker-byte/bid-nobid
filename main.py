@@ -2688,12 +2688,16 @@ def _t247_auto_login(cfg: dict) -> str:
     }
 
     # Step 1 — authenticate, get initial JWT
+    # verify=False required: t247_api.tender247.com has underscore — SSL cert hostname mismatch
     try:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         resp = _req.post(
             _T247_LOGIN_URL,
             json={"email_id": email, "password": password},
             headers=login_headers,
             timeout=20,
+            verify=False,
         )
     except _req.exceptions.ConnectionError as e:
         raise ValueError(f"Cannot reach T247 login server: {e}")
@@ -2742,6 +2746,7 @@ def _t247_auto_login(cfg: dict) -> str:
             json={"user_id": user_id, "company_service_id": company_service_id, "is_grace": False},
             headers=q_headers,
             timeout=20,
+            verify=False,
         )
         if q_resp.status_code == 200:
             q_data = q_resp.json()
@@ -2910,7 +2915,7 @@ def _try_enrich_tender_from_t247(tender: dict):
         "user-agent": "Mozilla/5.0",
     }
     try:
-        resp = _req.post(url, headers=headers, timeout=20)
+        resp = _req.post(url, headers=headers, timeout=20, verify=False)
         if resp.status_code != 200:
             return
         data = resp.json()
@@ -2966,7 +2971,7 @@ def _run_t247_sync_once() -> dict:
 
     r = _req.post(
         "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-excel-download",
-        headers=headers, json=request_body, timeout=120,
+        headers=headers, json=request_body, timeout=120, verify=False,
     )
     if r.status_code == 401:
         raise ValueError("T247 token expired. Refresh token in Settings.")
@@ -3345,12 +3350,13 @@ async def download_tender_docs(t247_id: str):
                 doc_list_url,
                 headers=_t247_api_headers(token),
                 timeout=30,
+                verify=False,
             )
             if r_list.status_code == 401:
                 # Token rejected — force re-login once
                 try:
                     token = _t247_auto_login(cfg)
-                    r_list = _req.post(doc_list_url, headers=_t247_api_headers(token), timeout=30)
+                    r_list = _req.post(doc_list_url, headers=_t247_api_headers(token), timeout=30, verify=False)
                 except Exception:
                     pass
             if r_list.status_code == 200:
