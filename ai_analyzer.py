@@ -189,7 +189,7 @@ def call_gemini(prompt: str, api_key: str, max_tokens: int = 8192) -> str:
         }).encode("utf-8")
         req = urllib.request.Request(url, data=payload,
             headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=90) as resp:
+        with urllib.request.urlopen(req, timeout=120) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result["candidates"][0]["content"]["parts"][0]["text"]
 
@@ -237,7 +237,7 @@ def call_groq(prompt: str, groq_key: str) -> str:
             method="POST"
         )
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
@@ -628,7 +628,7 @@ def step4_pq(text: str, api_key: str, all_keys: List[str], groq_key: str) -> Dic
         pq_text = text[2000:14000]
     prompt = PQ_PROMPT.format(nascent=NASCENT, text=pq_text[:13000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=10240)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=5000)
         result = clean_json(raw)
         pq = result.get("pq_criteria", [])
         logger.info(f"[Step4-PQ] {len(pq)} criteria with refs+evidence")
@@ -864,7 +864,7 @@ def step6_payment(text: str, api_key: str, all_keys: List[str], groq_key: str) -
     combined = pay_text + "\n\n" + penalty_text
     prompt = PAYMENT_SCHEDULE_PROMPT.format(text=combined[:11000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=6144)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=4096)
         result = clean_json(raw)
         # Backward compat
         if "payment_schedule" in result and "payment_terms" not in result:
@@ -1706,7 +1706,7 @@ def analyze_with_gemini_parallel(full_text: str, prebid_passed_flag: bool = Fals
     except Exception:
         max_workers = 4
 
-    SEG_TIMEOUT = 150  # 150s per segment — generous but bounded
+    SEG_TIMEOUT = 200  # 200s per segment — 120s HTTP + pool overhead
 
     with _cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(lambda fn=fn: fn()): label for label, fn in tasks}
