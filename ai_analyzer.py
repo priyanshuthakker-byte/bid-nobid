@@ -189,7 +189,7 @@ def call_gemini(prompt: str, api_key: str, max_tokens: int = 8192) -> str:
         }).encode("utf-8")
         req = urllib.request.Request(url, data=payload,
             headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=45) as resp:
+        with urllib.request.urlopen(req, timeout=90) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result["candidates"][0]["content"]["parts"][0]["text"]
 
@@ -237,7 +237,7 @@ def call_groq(prompt: str, groq_key: str) -> str:
             method="POST"
         )
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
@@ -280,9 +280,9 @@ def _call(prompt: str, api_key: str, all_keys: List[str],
         pool = get_pool()
         if pool.size() > 0:
             last_err = None
-            attempts = max(pool.size(), 2)  # don't retry more than # of keys
+            attempts = max(pool.size(), 2)
             for _ in range(attempts):
-                key = pool.acquire(timeout=15.0)  # 15s max wait for a key
+                key = pool.acquire(timeout=30.0)  # 30s max wait for a key
                 if not key:
                     break
                 rate_limited = False
@@ -547,7 +547,7 @@ def step3_scope(text: str, api_key: str, all_keys: List[str], groq_key: str) -> 
         scope_text = text[4000:10000]
     prompt = SCOPE_PROMPT.format(text=scope_text[:6000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=2500)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=4096)
         result = clean_json(raw)
         logger.info(f"[Step3-Scope] {len(result.get('scope_sections',[]))} sections")
         return result
@@ -1706,11 +1706,11 @@ def analyze_with_gemini_parallel(full_text: str, prebid_passed_flag: bool = Fals
     except Exception:
         max_workers = 4
 
-    SEG_TIMEOUT = 90  # 90s per segment max — prevents one slow call from blocking all
+    SEG_TIMEOUT = 150  # 150s per segment — generous but bounded
 
     with _cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(lambda fn=fn: fn()): label for label, fn in tasks}
-        for fut in _cf.as_completed(futs, timeout=SEG_TIMEOUT * len(tasks)):
+        for fut in _cf.as_completed(futs):
             label = futs[fut]
             try:
                 outputs[label] = fut.result(timeout=SEG_TIMEOUT) or {}
