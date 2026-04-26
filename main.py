@@ -2669,64 +2669,121 @@ async def fetch_t247_excel(background_tasks: BackgroundTasks):
         "source": "T247 API (real-time)",
     }
 
+def _t247_doc_download_headers() -> dict:
+    """Headers for documents.tender247.com — no Bearer needed, hash is the key."""
+    return {
+        "accept": "application/json, text/plain, */*",
+        "origin": "https://www.tender247.com",
+        "referer": "https://www.tender247.com/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    }
+
 @app.get("/tender/{t247_id}/doc-download")
 async def download_tender_docs(t247_id: str):
-    """Download tender documents from T247 using Bearer token API."""
-    cfg = load_config()
-    try:
-        token = _t247_get_token(cfg)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
+    """Download tender documents from documents.tender247.com using stored doc hash."""
     import requests as _req, io as _io
-    headers = _t247_api_headers(token)
+
     safe_tid = re.sub(r"[^\w\-]", "_", str(t247_id))[:40]
 
-    # T247 API patterns for document download
-    api_urls = [
-        f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/download-tender-document/{t247_id}",
-        f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-document/{t247_id}",
-        f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/documents/{t247_id}",
-    ]
-    zip_bytes = None
-    for url in api_urls:
-        try:
-            r = _req.get(url, headers=headers, timeout=60)
-            ct = r.headers.get("Content-Type", "")
-            if r.status_code == 200 and ("zip" in ct or "octet" in ct or "pdf" in ct or len(r.content) > 2000):
-                zip_bytes = r.content
-                break
-            if r.status_code == 200 and "json" in ct:
-                data = r.json()
-                dl_url = data.get("url") or data.get("file_url") or data.get("download_url")
-                if dl_url:
-                    r2 = _req.get(dl_url, headers=headers, timeout=60)
-                    if r2.status_code == 200 and len(r2.content) > 1000:
-                        zip_bytes = r2.content
-                        break
-        except Exception:
-            continue
+    # Step 1: find stored doc hash for this tender
+    db = load_db()
+    tender = db.get("tenders", {}).get(t247_id, {})
+    doc_hash = (tender.get("t247_doc_hash") or tender.get("doc_hash")
+                or tender.get("document_hash") or "").strip()
 
-    if not zip_bytes:
+    # Step 2: if no hash, try fetching from T247 details API
+    if not doc_hash:
+        cfg = load_config()
+        try:
+            token = _t247_get_token(cfg)
+            jwt_payload = _t247_decode_jwt(token)
+            user_id = int(jwt_payload.get("UserId") or 0)
+            headers_api = _t247_api_headers(token)
+            # Try tender detail endpoints (numeric T247 IDs only)
+            t_id_num = int(t247_id) if str(t247_id).isdigit() else 0
+            detail_payloads = [
+                {"tender_id": t_id_num, "user_id": user_id},
+                {"t247_id": t247_id, "user_id": user_id},
+            ]
+            detail_urls = [
+                "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-detail",
+                f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-detail/{t247_id}",
+                "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/get-tender-detail",
+            ]
+            for url in detail_urls:
+                for body in detail_payloads:
+                    try:
+                        r = _req.post(url, headers=headers_api, json=body, timeout=20)
+                        if r.status_code == 200:
+                            data = r.json() if "json" in r.headers.get("Content-Type","") else {}
+                            doc_hash = (str(data.get("doc_hash","") or data.get("document_hash","")
+                                        or data.get("download_hash","") or data.get("hash",""))
+                                        .strip())
+                            if doc_hash and len(doc_hash) >= 32:
+                                tender["t247_doc_hash"] = doc_hash
+                                db["tenders"][t247_id] = tender
+                                save_db(db)
+                                break
+                    except Exception:
+                        continue
+                if doc_hash:
+                    break
+        except Exception:
+            pass
+
+    if not doc_hash:
         raise HTTPException(
             404,
-            f"Documents not found for T247 ID {t247_id}. "
-            "Share the document download cURL from DevTools so the correct API endpoint can be added."
+            f"Document hash not found for tender {t247_id}. "
+            "Open the tender on tender247.com, copy the document download request from DevTools "
+            "(same way you got the Excel cURL), and the hash will be added to the system."
         )
+
+    # Step 3: download from documents.tender247.com using the hash
+    download_url = f"https://documents.tender247.com/tender/download-document-all/{doc_hash}"
+    try:
+        r = _req.get(download_url, headers=_t247_doc_download_headers(), timeout=120)
+    except Exception as e:
+        raise HTTPException(502, f"Document server unreachable: {e}")
+
+    if r.status_code == 304:
+        # Not Modified — shouldn't happen on fresh request but handle it
+        raise HTTPException(502, "T247 documents server returned 304 — try again")
+    if r.status_code != 200:
+        raise HTTPException(r.status_code, f"Document server returned HTTP {r.status_code}")
+
+    content = r.content
+    if not content or len(content) < 200:
+        raise HTTPException(404, f"Document file empty ({len(content)} bytes) — hash may be invalid")
 
     from fastapi.responses import Response
     ct_out = "application/zip"
     fname = f"T247_{safe_tid}_docs.zip"
     try:
-        if not zipfile.is_zipfile(_io.BytesIO(zip_bytes)):
-            ct_out = "application/octet-stream"
-            fname = f"T247_{safe_tid}_docs.bin"
+        if not zipfile.is_zipfile(_io.BytesIO(content)):
+            ct_out = r.headers.get("Content-Type", "application/octet-stream")
+            ext = ".zip" if "zip" in ct_out else ".pdf" if "pdf" in ct_out else ".bin"
+            fname = f"T247_{safe_tid}_docs{ext}"
     except Exception:
         pass
+
     return Response(
-        content=zip_bytes, media_type=ct_out,
+        content=content, media_type=ct_out,
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )
+
+@app.post("/tender/{t247_id}/store-doc-hash")
+async def store_doc_hash(t247_id: str, data: dict = Body(...)):
+    """Store a document hash for a tender (called from frontend when hash is known)."""
+    doc_hash = str(data.get("doc_hash", "")).strip()
+    if not doc_hash or len(doc_hash) < 32:
+        raise HTTPException(400, "Invalid doc_hash")
+    db = load_db()
+    if t247_id not in db.get("tenders", {}):
+        raise HTTPException(404, f"Tender {t247_id} not in database")
+    db["tenders"][t247_id]["t247_doc_hash"] = doc_hash
+    save_db(db)
+    return {"status": "ok", "t247_id": t247_id, "doc_hash": doc_hash}
 
 
 @app.post("/auto-download/{t247_id}")
