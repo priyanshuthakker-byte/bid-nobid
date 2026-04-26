@@ -2666,18 +2666,21 @@ def _t247_api_headers(token: str) -> dict:
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     }
 
-# Only T247Tender service is confirmed to exist on this gateway.
-# Login endpoint must be found by trying all known patterns.
+# Confirmed: only /api/tender/auth/ prefix works on T247Tender service.
+# Other service names (T247User, T247Account) and other path prefixes → ConnectionError.
 _T247_LOGIN_ENDPOINTS = [
-    # T247Tender service — same gateway prefix as the working Excel API
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/user/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/user/login",
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/user/login",
-    # Main domain fallbacks (login page is at www.tender247.com/auth)
-    "https://www.tender247.com/api/user/login",
-    "https://www.tender247.com/api/login",
-    "https://www.tender247.com/auth/api/login",
+    # Same /api/tender/auth/ prefix as the confirmed-working Excel endpoint
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/user-login",
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/bidder-login",
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/signin",
+    # Other service names that may handle auth
+    "https://t247_api.tender247.com/apigateway/T247Auth/api/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Auth/api/tender/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Bidder/api/bidder/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Bidder/api/tender/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Login/api/tender/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Company/api/tender/auth/login",
 ]
 
 def _t247_auto_login(cfg: dict) -> str:
@@ -3155,7 +3158,7 @@ async def t247_connection_status():
 
 @app.get("/t247/probe-login")
 async def t247_probe_login():
-    """Probe each candidate login URL and return HTTP status codes — helps find the real endpoint."""
+    """Probe candidate login URLs — find real endpoint by status code."""
     import requests as _req
     results = []
     probe_headers = {
@@ -3166,18 +3169,27 @@ async def t247_probe_login():
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147.0.0.0 Safari/537.36",
     }
     probe_body = {"email": "probe@test.com", "password": "probe"}
+    found = []
     for url in _T247_LOGIN_ENDPOINTS:
         try:
             r = _req.post(url, json=probe_body, headers=probe_headers, timeout=10)
-            body_preview = r.text[:200]
-            results.append({"url": url, "status": r.status_code, "response": body_preview})
+            is_json = "json" in r.headers.get("content-type", "")
+            preview = r.text[:300] if is_json else f"[HTML response, {len(r.text)} chars]"
+            entry = {"url": url, "status": r.status_code, "is_json": is_json, "response_preview": preview}
+            results.append(entry)
+            if r.status_code in (200, 401, 400) and is_json:
+                found.append(url)
         except _req.exceptions.ConnectionError:
-            results.append({"url": url, "status": "ConnectionError", "response": "path not routed on this host"})
+            results.append({"url": url, "status": "ConnectionError", "is_json": False, "response_preview": "path not routed"})
         except _req.exceptions.Timeout:
-            results.append({"url": url, "status": "Timeout", "response": ""})
+            results.append({"url": url, "status": "Timeout", "is_json": False, "response_preview": ""})
         except Exception as e:
-            results.append({"url": url, "status": "Error", "response": str(e)})
-    return {"probe_results": results, "hint": "Look for status 200 or 401 — those are the correct endpoints. 404/ConnectionError = wrong path."}
+            results.append({"url": url, "status": "Error", "is_json": False, "response_preview": str(e)})
+    return {
+        "likely_login_endpoints": found,
+        "probe_results": results,
+        "hint": "likely_login_endpoints shows URLs that returned JSON with 200/401/400. Share this full result.",
+    }
 
 
 @app.get("/test-t247")
