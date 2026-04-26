@@ -2666,10 +2666,18 @@ def _t247_api_headers(token: str) -> dict:
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     }
 
+# Only T247Tender service is confirmed to exist on this gateway.
+# Login endpoint must be found by trying all known patterns.
 _T247_LOGIN_ENDPOINTS = [
-    "https://t247_api.tender247.com/apigateway/T247User/api/user/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Account/api/account/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247User/api/user/login",
+    # T247Tender service — same gateway prefix as the working Excel API
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/user/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/user/login",
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/auth/login",
+    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/user/login",
+    # Main domain fallbacks (login page is at www.tender247.com/auth)
+    "https://www.tender247.com/api/user/login",
+    "https://www.tender247.com/api/login",
+    "https://www.tender247.com/auth/api/login",
 ]
 
 def _t247_auto_login(cfg: dict) -> str:
@@ -2684,45 +2692,60 @@ def _t247_auto_login(cfg: dict) -> str:
         "accept": "application/json, text/plain, */*",
         "content-type": "application/json",
         "origin": "https://www.tender247.com",
-        "referer": "https://www.tender247.com/",
+        "referer": "https://www.tender247.com/auth",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "x-requested-with": "XMLHttpRequest",
     }
+    # Try multiple body shapes — T247 may use emailId, email, or username
     bodies = [
         {"email": email, "password": password},
         {"emailId": email, "password": password},
-        {"username": email, "password": password},
         {"email": email, "password": password, "deviceType": "web"},
+        {"username": email, "password": password},
+        {"loginId": email, "password": password},
     ]
 
-    last_err = None
+    attempt_log = []
     for url in _T247_LOGIN_ENDPOINTS:
         for body in bodies:
             try:
-                resp = _req.post(url, json=body, headers=login_headers, timeout=30)
-                if resp.status_code in (404, 405):
-                    break  # wrong endpoint, try next
-                if resp.status_code != 200:
-                    last_err = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                resp = _req.post(url, json=body, headers=login_headers, timeout=20)
+                status = resp.status_code
+                if status in (404, 405, 501):
+                    attempt_log.append(f"{url} → {status} (skip)")
+                    break  # wrong path, try next URL
+                if status == 401:
+                    attempt_log.append(f"{url} → 401 wrong credentials")
+                    raise ValueError("T247 login failed — wrong email or password. Check credentials in Settings.")
+                if status != 200:
+                    attempt_log.append(f"{url} → {status}: {resp.text[:120]}")
                     continue
-                data = resp.json()
-                # Extract token from various response shapes
+                # 200 — parse response
+                try:
+                    data = resp.json()
+                except Exception:
+                    attempt_log.append(f"{url} → 200 but non-JSON body")
+                    continue
+                # Extract token from any response shape
                 token = (
                     data.get("token") or data.get("accessToken") or data.get("access_token")
-                    or data.get("jwtToken") or data.get("jwt")
+                    or data.get("jwtToken") or data.get("jwt") or data.get("authToken")
                     or (data.get("data") or {}).get("token")
                     or (data.get("data") or {}).get("accessToken")
+                    or (data.get("data") or {}).get("jwtToken")
                     or (data.get("result") or {}).get("token")
+                    or (data.get("response") or {}).get("token")
                     or ""
                 )
-                if not token and isinstance(data.get("data"), str):
+                if not token and isinstance(data.get("data"), str) and len(data["data"]) > 20:
                     token = data["data"]
                 token = str(token).strip()
-                if token.startswith("Bearer "):
+                if token.lower().startswith("bearer "):
                     token = token[7:].strip()
                 if not token or len(token) < 20:
-                    last_err = f"Login succeeded but no token in response: {str(data)[:200]}"
+                    attempt_log.append(f"{url} → 200 OK but no token in response: {str(data)[:200]}")
                     continue
-                # Store token + metadata back to config
+                # Success — store token + credentials
                 fresh_cfg = load_config()
                 fresh_cfg["t247_bearer_token"] = token
                 fresh_cfg["t247_email"] = email
@@ -2730,17 +2753,32 @@ def _t247_auto_login(cfg: dict) -> str:
                 jwt_payload = _t247_decode_jwt(token)
                 if jwt_payload.get("UserId"):
                     fresh_cfg["t247_user_id"] = jwt_payload["UserId"]
-                if jwt_payload.get("user_email_service_query_id") or data.get("queryId"):
-                    fresh_cfg["t247_query_id"] = jwt_payload.get("user_email_service_query_id") or data.get("queryId")
+                qid = jwt_payload.get("user_email_service_query_id") or data.get("queryId")
+                if qid:
+                    fresh_cfg["t247_query_id"] = qid
                 save_config(fresh_cfg)
-                print(f"✅ T247 auto-login OK — user {jwt_payload.get('UserId','?')} | exp {datetime.fromtimestamp(jwt_payload.get('exp',0)).strftime('%d %b %H:%M') if jwt_payload.get('exp') else '?'}")
+                exp_str = datetime.fromtimestamp(jwt_payload["exp"]).strftime("%d %b %H:%M") if jwt_payload.get("exp") else "?"
+                print(f"✅ T247 auto-login OK via {url} — user {jwt_payload.get('UserId','?')} exp {exp_str}")
                 return token
+            except ValueError:
+                raise
             except _req.exceptions.ConnectionError:
-                last_err = f"Cannot reach {url}"
+                attempt_log.append(f"{url} → ConnectionError (path not routed)")
+                break  # this URL's service doesn't exist, try next
+            except _req.exceptions.Timeout:
+                attempt_log.append(f"{url} → Timeout")
                 break
             except Exception as e:
-                last_err = str(e)
+                attempt_log.append(f"{url} → {e}")
                 continue
+
+    diag = " | ".join(attempt_log[-5:])
+    raise ValueError(
+        f"T247 auto-login could not find the login endpoint. "
+        f"Please open tender247.com in Chrome, open DevTools (F12) → Network tab, "
+        f"log in manually, then find the login request and paste the response token "
+        f"OR the working endpoint URL to support. Attempts: {diag}"
+    )
 
     raise ValueError(f"T247 login failed. Check credentials in Settings. Last error: {last_err}")
 
@@ -3113,6 +3151,33 @@ async def t247_connection_status():
         "expires_at": datetime.fromtimestamp(exp).strftime("%d %b %Y %H:%M") if exp else "",
         "message": f"Connected — {remaining_hrs:.0f}h remaining",
     }
+
+
+@app.get("/t247/probe-login")
+async def t247_probe_login():
+    """Probe each candidate login URL and return HTTP status codes — helps find the real endpoint."""
+    import requests as _req
+    results = []
+    probe_headers = {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "origin": "https://www.tender247.com",
+        "referer": "https://www.tender247.com/auth",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147.0.0.0 Safari/537.36",
+    }
+    probe_body = {"email": "probe@test.com", "password": "probe"}
+    for url in _T247_LOGIN_ENDPOINTS:
+        try:
+            r = _req.post(url, json=probe_body, headers=probe_headers, timeout=10)
+            body_preview = r.text[:200]
+            results.append({"url": url, "status": r.status_code, "response": body_preview})
+        except _req.exceptions.ConnectionError:
+            results.append({"url": url, "status": "ConnectionError", "response": "path not routed on this host"})
+        except _req.exceptions.Timeout:
+            results.append({"url": url, "status": "Timeout", "response": ""})
+        except Exception as e:
+            results.append({"url": url, "status": "Error", "response": str(e)})
+    return {"probe_results": results, "hint": "Look for status 200 or 401 — those are the correct endpoints. 404/ConnectionError = wrong path."}
 
 
 @app.get("/test-t247")
