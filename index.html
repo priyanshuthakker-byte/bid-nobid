@@ -2817,8 +2817,21 @@ async function generateTechProposal() {
     var r = await fetch('/generate-tech-proposal/' + tid, { method: 'POST' });
     var d = await r.json();
     hideLoading();
-    if (d.filename) { downloadReport(d.filename); toast('Technical proposal ready!', 'success'); }
-    else toast(d.message || 'Failed', 'error');
+    if (!r.ok) { toast(d.detail || d.message || 'Generation failed', 'error'); return; }
+    if (d.doc_b64) {
+      var bytes = atob(d.doc_b64);
+      var ab = new ArrayBuffer(bytes.length);
+      var view = new Uint8Array(ab);
+      for (var i = 0; i < bytes.length; i++) view[i] = bytes.charCodeAt(i);
+      var blob = new Blob([ab], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = d.filename || 'TechnicalProposal.docx'; a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Technical proposal ready!', 'success');
+    } else if (d.filename) {
+      downloadReport(d.filename);
+      toast('Technical proposal ready!', 'success');
+    } else { toast(d.message || 'Failed', 'error'); }
   } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
 }
 

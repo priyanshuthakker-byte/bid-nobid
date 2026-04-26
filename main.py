@@ -81,6 +81,13 @@ try:
     BOQ_AVAILABLE = True
 except ImportError:
     BOQ_AVAILABLE = False
+
+try:
+    from technical_proposal_generator import generate_technical_proposal as _gen_tech_proposal
+    TECH_PROPOSAL_AVAILABLE = True
+except Exception:
+    TECH_PROPOSAL_AVAILABLE = False
+    _gen_tech_proposal = None
     def extract_boq_from_scope(t): return []
     def calculate_boq_totals(i, m=15, g=18):
         return {"items": i, "base_total": 0, "margin_amount": 0, "subtotal": 0, "gst_amount": 0, "grand_total": 0}
@@ -1903,13 +1910,29 @@ async def generate_docs(t247_id: str):
 
 @app.post("/generate-technical-proposal/{t247_id}")
 async def generate_technical_proposal(t247_id: str):
-    """
-    UI compatibility endpoint. For now maps to generate-docs package output.
-    """
-    result = await generate_docs(t247_id)
-    files = result.get("files", [])
-    first = files[0]["filename"] if files else result.get("download_file")
-    return {"status": "success", "filename": first}
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    if not TECH_PROPOSAL_AVAILABLE:
+        raise HTTPException(500, "technical_proposal_generator not available")
+    safe_no = re.sub(r'[^\w\-]', '_', str(tender.get("tender_no", t247_id)))[:30]
+    out_path = str(OUTPUT_DIR / f"TechProposal_{safe_no}.docx")
+    result = _gen_tech_proposal(tender, out_path)
+    if result.get("status") == "error":
+        raise HTTPException(500, result.get("message", "Generation failed"))
+    filename = Path(out_path).name
+    # also store b64 for ephemeral-safe download
+    try:
+        with open(out_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+    except Exception:
+        b64 = None
+    return {"status": "success", "filename": filename, "doc_b64": b64, "pages": result.get("pages")}
+
+# alias used by frontend
+@app.post("/generate-tech-proposal/{t247_id}")
+async def generate_tech_proposal_short(t247_id: str):
+    return await generate_technical_proposal(t247_id)
 
 @app.post("/tender/{t247_id}/technical-proposal")
 async def generate_technical_proposal_alias(t247_id: str):
@@ -3841,3 +3864,74 @@ async def analyst_capacity():
         "recommendation": "Add more GEMINI_API_KEY_2..5 env vars to increase throughput"
             if len(stats) < 3 else "Capacity is sufficient for 10+ tenders/day.",
     }
+
+
+# ── URL compatibility aliases ────────────────────────────────────────────────
+
+@app.post("/merge-pdf/{t247_id}")
+async def merge_pdf_url_alias(t247_id: str):
+    """Frontend calls /merge-pdf/{id} — route to /tender/{id}/merge-pdf"""
+    return await merge_submission_pdf(t247_id)
+
+@app.get("/risk-scan/{t247_id}")
+async def risk_scan_url_alias(t247_id: str):
+    """Frontend calls /risk-scan/{id} — route to /tender/{id}/risk-score"""
+    return await tender_risk_score(t247_id)
+
+@app.post("/setup-milestones/{t247_id}")
+async def setup_milestones_url_alias(t247_id: str, body: dict = Body(default={})):
+    """Frontend calls /setup-milestones/{id} — route to /milestones/{id}/setup"""
+    return await setup_milestones_alias(t247_id, body)
+
+@app.post("/restore-tender/{t247_id}")
+async def restore_tender_url_alias(t247_id: str):
+    """Frontend calls /restore-tender/{id} — route to /tender/{id}/restore"""
+    return await restore_tender(t247_id)
+
+@app.post("/generate-letter/{doc_type}")
+async def generate_letter_url_alias(doc_type: str, t247_id: str = ""):
+    """Frontend calls /generate-letter/{type}?t247_id={id} — route to /tender/{id}/letter/{type}"""
+    if not t247_id:
+        raise HTTPException(400, "t247_id required")
+    body = {"generated_at": datetime.now().isoformat()}
+    return await post_award_doc(t247_id, doc_type, body)
+
+@app.post("/generate-invoice")
+async def generate_invoice_wrapper(body: dict = Body(...)):
+    """Frontend calls /generate-invoice with {t247_id, description, amount} in body"""
+    t247_id = body.get("t247_id", "")
+    if not t247_id:
+        raise HTTPException(400, "t247_id required")
+    return await add_invoice(t247_id, body)
+
+@app.get("/boq-search")
+async def boq_search(q: str = ""):
+    """Search BOQ items across all tenders by keyword"""
+    q_lower = q.lower().strip()
+    if len(q_lower) < 2:
+        return {"results": []}
+    db = load_db()
+    results = []
+    seen = set()
+    for tid, tender in db.get("tenders", {}).items():
+        boq = tender.get("boq", {})
+        for item in boq.get("items", []):
+            name = str(item.get("item", item.get("name", ""))).lower()
+            if q_lower in name:
+                key = name
+                if key not in seen:
+                    seen.add(key)
+                    results.append({
+                        "item": item.get("item", item.get("name", "")),
+                        "category": item.get("category", ""),
+                        "unit": item.get("unit", ""),
+                        "min_price": item.get("unit_cost", item.get("min_price", "")),
+                        "max_price": item.get("max_price", ""),
+                        "avg_price": item.get("unit_cost", item.get("avg_price", "")),
+                        "last_updated": tender.get("last_analysed", ""),
+                    })
+                    if len(results) >= 50:
+                        break
+        if len(results) >= 50:
+            break
+    return {"results": results}
