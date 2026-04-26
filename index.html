@@ -197,6 +197,21 @@ select option{background:var(--bg2)}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
 .ap-progress-bar{height:3px;background:var(--bg4);border-radius:2px;margin:6px 0 10px;overflow:hidden}
 .ap-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:2px;transition:width .5s ease}
+.stream-panel{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;animation:seg-arrive .35s ease}
+.stream-panel-title{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase}
+.stream-row{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:11.5px;animation:seg-arrive .3s ease}
+.stream-row:last-child{border-bottom:none}
+.stream-pill{flex-shrink:0;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700}
+.stream-pill.MET{background:rgba(34,197,94,.2);color:#4ade80}
+.stream-pill.NOT-MET,.stream-pill.RED{background:rgba(239,68,68,.2);color:#f87171}
+.stream-pill.CONDITIONAL,.stream-pill.AMBER{background:rgba(245,158,11,.2);color:#fbbf24}
+.stream-pill.REVIEW,.stream-pill.QUERY{background:rgba(99,102,241,.2);color:#a5b4fc}
+.log-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;animation:seg-arrive .3s ease}
+.log-row .log-icon{width:16px;text-align:center;flex-shrink:0}
+.log-row .log-label{flex:1;color:var(--text2)}
+.log-row .log-time{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+.log-row .log-count{font-size:10.5px;color:var(--blue);margin-left:4px}
+@keyframes seg-arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── RESULT PANEL ── */
 #an-result-wrap{display:none;margin-top:16px}
@@ -606,9 +621,37 @@ select option{background:var(--bg2)}
 
     <!-- Analysis Progress -->
     <div id="an-progress" class="card">
-      <div class="card-title">AI Analysis Running <span id="ap-step-label" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin:0">AI Analysis Running <span id="ap-step-label" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+        <div id="ap-elapsed-badge" style="font-size:11px;color:var(--text3);font-family:var(--mono)">0s</div>
+      </div>
       <div class="ap-progress-bar"><div class="ap-progress-fill" id="ap-bar" style="width:0%"></div></div>
       <div id="ap-steps"></div>
+      <!-- Live segment log -->
+      <div id="ap-live-log" style="margin-top:14px;display:none">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:.5px">LIVE EXTRACTION</div>
+        <div id="ap-log-rows"></div>
+      </div>
+      <!-- Streaming preview panels -->
+      <div id="ap-stream-panels" style="margin-top:16px;display:none">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;letter-spacing:.5px">REAL-TIME PREVIEW</div>
+        <div id="ap-stream-pq" class="stream-panel" style="display:none">
+          <div class="stream-panel-title">PQ / Eligibility Criteria</div>
+          <div id="ap-stream-pq-body"></div>
+        </div>
+        <div id="ap-stream-tq" class="stream-panel" style="display:none">
+          <div class="stream-panel-title">Technical Criteria</div>
+          <div id="ap-stream-tq-body"></div>
+        </div>
+        <div id="ap-stream-scope" class="stream-panel" style="display:none">
+          <div class="stream-panel-title">Scope of Work</div>
+          <div id="ap-stream-scope-body"></div>
+        </div>
+        <div id="ap-stream-snapshot" class="stream-panel" style="display:none">
+          <div class="stream-panel-title">Tender Snapshot</div>
+          <div id="ap-stream-snapshot-body"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Result Panel -->
@@ -1627,13 +1670,23 @@ function dropFiles(e) {
 // ANALYSIS PROGRESS
 // ────────────────────────────────────────────
 function showProgress() {
+  _streamSeenSegs = {};
+  _stopElapsedTimer();
   document.getElementById('an-progress').style.display = 'block';
   document.getElementById('an-result-wrap').style.display = 'none';
+  document.getElementById('ap-live-log').style.display = 'none';
+  document.getElementById('ap-stream-panels').style.display = 'none';
+  document.getElementById('ap-log-rows').innerHTML = '';
+  ['pq','tq','scope','snapshot'].forEach(function(s) {
+    var p = document.getElementById('ap-stream-'+s); if (p) p.style.display = 'none';
+  });
   var stepsHTML = AP_STEPS.map((s, i) =>
     '<div class="ap-step pending" id="ap-s-' + i + '"><div class="ap-dot"></div><span>' + s + '</span></div>'
   ).join('');
   document.getElementById('ap-steps').innerHTML = stepsHTML;
   document.getElementById('ap-bar').style.width = '0%';
+  document.getElementById('ap-elapsed-badge').textContent = '0s';
+  _startElapsedTimer();
 }
 function setStep(i) {
   AP_STEPS.forEach((_, j) => {
@@ -1689,42 +1742,149 @@ async function analyseTender() {
   }
 }
 
+var _streamSeenSegs = {};
+var _apElapsedTimer = null;
+var _apStartTime = 0;
+
+function _startElapsedTimer() {
+  _apStartTime = Date.now();
+  if (_apElapsedTimer) clearInterval(_apElapsedTimer);
+  _apElapsedTimer = setInterval(function() {
+    var el = document.getElementById('ap-elapsed-badge');
+    if (el) el.textContent = Math.round((Date.now() - _apStartTime) / 1000) + 's';
+  }, 1000);
+}
+function _stopElapsedTimer() {
+  if (_apElapsedTimer) { clearInterval(_apElapsedTimer); _apElapsedTimer = null; }
+}
+
+function _renderStreamSeg(stage, data) {
+  if (!data || _streamSeenSegs[stage]) return;
+  _streamSeenSegs[stage] = true;
+  document.getElementById('ap-live-log').style.display = 'block';
+  document.getElementById('ap-stream-panels').style.display = 'block';
+
+  // Render PQ preview
+  if (stage === 'pq' && data.pq_criteria && data.pq_criteria.length) {
+    var panel = document.getElementById('ap-stream-pq');
+    var body = document.getElementById('ap-stream-pq-body');
+    panel.style.display = 'block';
+    body.innerHTML = data.pq_criteria.slice(0, 6).map(function(c) {
+      var st = (c.nascent_status || 'REVIEW').toUpperCase().replace(/ /g,'-');
+      var crit = (c.criteria || c.criterion || '').substring(0,90);
+      return '<div class="stream-row"><span class="stream-pill ' + st + '">' + st + '</span><span style="color:var(--text2);flex:1">' + crit + (crit.length===90?'…':'') + '</span></div>';
+    }).join('') + (data.pq_criteria.length > 6 ? '<div style="font-size:11px;color:var(--text3);padding:4px 0">+ ' + (data.pq_criteria.length-6) + ' more criteria</div>' : '');
+  }
+  // Render TQ preview
+  if (stage === 'tq' && data.tq_criteria && data.tq_criteria.length) {
+    var panel = document.getElementById('ap-stream-tq');
+    var body = document.getElementById('ap-stream-tq-body');
+    panel.style.display = 'block';
+    body.innerHTML = data.tq_criteria.slice(0, 5).map(function(c) {
+      var marks = c.max_marks || c.marks || '';
+      var crit = (c.eval_criteria || c.criteria || '').substring(0,80);
+      return '<div class="stream-row"><span style="color:var(--text2);flex:1">' + crit + '</span>' + (marks ? '<span style="color:var(--amber);font-family:var(--mono);font-size:11px">' + marks + ' marks</span>' : '') + '</div>';
+    }).join('') + (data.tq_criteria.length > 5 ? '<div style="font-size:11px;color:var(--text3);padding:4px 0">+ ' + (data.tq_criteria.length-5) + ' more</div>' : '');
+  }
+  // Render Scope preview
+  if (stage === 'scope') {
+    var secs = data.scope_sections || data.scope_items || [];
+    if (secs.length) {
+      var panel = document.getElementById('ap-stream-scope');
+      var body = document.getElementById('ap-stream-scope-body');
+      panel.style.display = 'block';
+      body.innerHTML = secs.slice(0,4).map(function(s) {
+        var title = s.section_title || s.title || '';
+        var desc = (s.prose || s.description || '').substring(0,80);
+        return '<div class="stream-row"><span style="color:var(--blue);font-weight:600;min-width:60px">' + (s.section_no||'') + '</span><span style="color:var(--text2);flex:1">' + title + (desc ? ' — ' + desc + '…' : '') + '</span></div>';
+      }).join('') + (secs.length > 4 ? '<div style="font-size:11px;color:var(--text3);padding:4px 0">+ ' + (secs.length-4) + ' more sections</div>' : '');
+    }
+  }
+  // Render Snapshot preview
+  if (stage === 'snapshot') {
+    var snap = data;
+    var fields = ['org_name','tender_name','tender_no','estimated_cost','emd','bid_submission_date','contract_period'];
+    var rows = fields.filter(function(k){ var v=snap[k]; return v && (typeof v==='string'?v:v.value||'') && (typeof v==='string'?v:v.value||'') !== '—'; }).map(function(k) {
+      var v = snap[k]; var val = typeof v==='string'?v:(v.value||'');
+      var lbl = k.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
+      return '<div class="stream-row"><span style="color:var(--text3);min-width:120px">' + lbl + '</span><span style="color:var(--text2)">' + val + '</span></div>';
+    });
+    if (rows.length) {
+      var panel = document.getElementById('ap-stream-snapshot');
+      var body = document.getElementById('ap-stream-snapshot-body');
+      panel.style.display = 'block';
+      body.innerHTML = rows.join('');
+    }
+  }
+}
+
+function _renderLogRow(stage, info) {
+  var container = document.getElementById('ap-log-rows');
+  if (!container || !info) return;
+  var icons = {snapshot:'📋',scope:'📄',pq:'✅',tq:'🏆',payment:'💰',workshed:'📅',corrig:'📝',assessment:'⚖',prebid:'❓',checklist:'📦'};
+  var icon = icons[stage] || '✓';
+  var row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = '<span class="log-icon">' + icon + '</span>' +
+    '<span class="log-label">' + (info.label || stage) + '</span>' +
+    (info.count ? '<span class="log-count">' + info.count + '</span>' : '') +
+    '<span class="log-time">' + (info.elapsed || '') + 's</span>';
+  container.appendChild(row);
+}
+
 async function pollAnalysis(jobId) {
   var step = 0;
   var lastProgress = '';
   var sameCount = 0;
+  _streamSeenSegs = {};
+  _startElapsedTimer();
+
   while (true) {
     await new Promise(r => setTimeout(r, 3000));
     try {
       var r = await fetch('/analyse-status/' + jobId);
       if (r.status === 404) {
+        _stopElapsedTimer();
         toast('Analysis job lost (server restarted) — please re-upload and retry', 'error');
         document.getElementById('an-progress').style.display = 'none';
         return;
       }
       var d = await r.json();
-      // Advance step from backend numeric step
+
+      // Advance step indicator
       if (typeof d.step === 'number' && d.step > step) { step = d.step; setStep(step); }
-      // Also parse progress text as fallback
+
+      // Render streaming segment data as it arrives
+      var segs = d.segments || {};
+      Object.keys(segs).forEach(function(stage) {
+        if (!_streamSeenSegs[stage]) {
+          _renderStreamSeg(stage, segs[stage]);
+          var log = d.seg_log && d.seg_log[stage];
+          if (log) _renderLogRow(stage, log);
+        }
+      });
+
+      // Stale detection
       var prog = d.progress || '';
       if (prog !== lastProgress) { lastProgress = prog; sameCount = 0; }
       else { sameCount++; }
-      // Show current activity in step label if no numeric step from server
-      if (prog && prog !== lastProgress) {
+      if (sameCount >= 5) {
         var lbl = document.getElementById('ap-step-label');
-        if (lbl && step < 2) lbl.textContent = '· ' + prog;
+        if (lbl) lbl.textContent = '· Waiting for Gemini API… (' + Math.round((Date.now()-_apStartTime)/1000) + 's)';
       }
-      // Stale: same progress for >5 polls (~15s) — show warning in label
-      if (sameCount === 5) {
-        var lbl = document.getElementById('ap-step-label');
-        if (lbl) lbl.textContent = '· ' + (prog || 'Processing…') + ' (slow API, please wait)';
-      }
+
       if (d.status === 'done') {
+        _stopElapsedTimer();
         setStep(9);
-        setTimeout(() => { document.getElementById('an-progress').style.display='none'; showAnalysisResult(d.result || d || {}); }, 500);
+        setTimeout(function() {
+          document.getElementById('an-progress').style.display = 'none';
+          document.getElementById('ap-stream-panels').style.display = 'none';
+          showAnalysisResult(d.result || d || {});
+        }, 600);
         return;
       }
       if (d.status === 'error') {
+        _stopElapsedTimer();
         toast('Analysis error: ' + (d.error || d.message || 'Unknown error'), 'error');
         document.getElementById('an-progress').style.display = 'none';
         return;

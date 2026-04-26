@@ -141,6 +141,10 @@ def _set_job(job_id: str, **kwargs):
             existing = json.loads(jf.read_text()) if jf.exists() else {}
         except Exception:
             existing = {}
+        # Merge dicts instead of overwriting for streaming fields
+        for merge_key in ("segments", "seg_log"):
+            if merge_key in kwargs:
+                existing[merge_key] = {**existing.get(merge_key, {}), **kwargs.pop(merge_key)}
         existing.update(kwargs)
         # Don't persist huge base64 doc inline — store separately
         doc_b64 = existing.pop("doc_b64", None)
@@ -1706,16 +1710,49 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
         if api_key and all_text.strip():
+            import time as _time_seg
+            _seg_start_times = {}
             _set_job(job_id, progress="AI pipeline starting (parallel 9 segments)…", step=2)
             _STAGE_STEP = {
                 "snapshot": 1, "corrig": 1,
                 "scope": 2, "pq": 3, "tq": 4, "workshed": 4,
                 "payment": 5, "assessment": 6, "prebid": 7, "checklist": 7,
             }
-            def _seg_progress(stage, done, total):
+            _STAGE_LABEL = {
+                "snapshot": "Snapshot — dates, EMD, cost",
+                "corrig": "Corrigendum check",
+                "scope": "Scope of Work",
+                "pq": "PQ / Eligibility Criteria",
+                "tq": "TQ / Marking Criteria",
+                "workshed": "Work Schedule",
+                "payment": "Payment Schedule",
+                "assessment": "Bid/No-Bid Assessment",
+                "prebid": "Pre-bid Queries",
+                "checklist": "Submission Checklist",
+            }
+            def _seg_progress(stage, done, total, seg_output=None):
                 try:
                     s = _STAGE_STEP.get(stage, 2)
-                    _set_job(job_id, progress=f"AI · {stage} · {done}/{total}", step=s)
+                    elapsed = round(_time_seg.time() - _seg_start_times.get(stage, _time_seg.time()), 1)
+                    label = _STAGE_LABEL.get(stage, stage)
+                    count_hint = ""
+                    seg_save = {}
+                    if seg_output:
+                        pq = seg_output.get("pq_criteria", [])
+                        tq = seg_output.get("tq_criteria", [])
+                        scope = seg_output.get("scope_sections", seg_output.get("scope_items", []))
+                        if pq: count_hint = f" — {len(pq)} criteria"
+                        elif tq: count_hint = f" — {len(tq)} criteria"
+                        elif scope: count_hint = f" — {len(scope)} sections"
+                        seg_save = {stage: seg_output}
+                    _set_job(
+                        job_id,
+                        progress=f"✓ {label}{count_hint} ({elapsed}s)",
+                        step=s,
+                        segments=seg_save,
+                        seg_log={stage: {"label": label, "elapsed": elapsed,
+                                         "count": count_hint.strip(" —"), "done": True}},
+                    )
                 except Exception:
                     pass
             ai_result = {"error": "timeout"}

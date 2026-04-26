@@ -1723,7 +1723,7 @@ def analyze_with_gemini_parallel(full_text: str, prebid_passed_flag: bool = Fals
             done_count += 1
             if progress_cb:
                 try:
-                    progress_cb(label, done_count, total)
+                    progress_cb(label, done_count, total, outputs.get(label, {}))
                 except Exception:
                     pass
 
