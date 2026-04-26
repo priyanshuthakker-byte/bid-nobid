@@ -12,12 +12,12 @@ FIXES APPLIED:
 - WARN: Temp dir cleanup on startup
 """
 
-import zipfile, tempfile, shutil, json, re, os
+import zipfile, tempfile, shutil, json, re, os, base64, hashlib
 import threading
 import asyncio
 import uuid
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks, Depends
 from typing import List
@@ -110,6 +110,18 @@ _last_drive_restore = 0.0  # rate-limit Drive calls in load_db to once per minut
 JOBS_DIR = OUTPUT_DIR / "jobs"
 JOBS_DIR.mkdir(exist_ok=True, parents=True)
 _jobs_lock = threading.Lock()
+_t247_sync_lock = threading.Lock()
+_t247_sync_stop = threading.Event()
+_t247_sync_state = {
+    "last_run_at": "",
+    "last_status": "idle",
+    "last_message": "",
+    "last_total": 0,
+    "last_added": 0,
+    "last_updated": 0,
+}
+_digest_lock = threading.Lock()
+_digest_state = {"last_generated_at": "", "last_generated_date": "", "status": "idle", "error": ""}
 
 def _job_file(job_id: str) -> Path:
     safe = re.sub(r"[^a-zA-Z0-9_\-]", "", job_id)
@@ -412,11 +424,17 @@ async def lifespan(app: FastAPI):
             _time.sleep(300)
 
     threading.Thread(target=_periodic_drive_sync, daemon=True, name="drive-sync").start()
+    threading.Thread(target=_run_t247_sync_scheduler, daemon=True, name="t247-sync").start()
+    threading.Thread(target=_run_daily_digest_scheduler, daemon=True, name="daily-digest").start()
 
     yield
     # Shutdown: nothing needed
     try:
         work_queue.stop()
+    except Exception:
+        pass
+    try:
+        _t247_sync_stop.set()
     except Exception:
         pass
 
@@ -1140,6 +1158,119 @@ async def dashboard():
         "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline", "")) <= 3),
         "has_boq": sum(1 for t in tenders if t.get("boq")),
     }, "tenders": sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))}
+
+@app.get("/ops/daily-report")
+async def ops_daily_report():
+    summary = _compute_ops_summary()
+    return {"status": "success", "summary": summary}
+
+def _compute_ops_summary() -> dict:
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    now = datetime.now()
+    day_ago = now - timedelta(days=1)
+    today_new = 0
+    urgent = 0
+    no_docs = 0
+    pending_analysis = 0
+    corrigendum = 0
+    for t in tenders:
+        created = str(t.get("created_at", "") or t.get("updated_at", "") or "")
+        try:
+            if created:
+                ts = datetime.fromisoformat(created.replace("Z", "+00:00").replace("+00:00", ""))
+                if ts >= day_ago:
+                    today_new += 1
+        except Exception:
+            pass
+        dl = days_left(t.get("deadline", ""))
+        if 0 <= dl <= 3:
+            urgent += 1
+        if not t.get("docs_available") and not t.get("t247_doc_hash"):
+            no_docs += 1
+        if not t.get("bid_no_bid_done"):
+            pending_analysis += 1
+        if t.get("has_corrigendum"):
+            corrigendum += 1
+    top_urgent = sorted(
+        [t for t in tenders if 0 <= days_left(t.get("deadline", "")) <= 3],
+        key=lambda t: days_left(t.get("deadline", "")),
+    )[:5]
+    return {
+        "total_tenders": len(tenders),
+        "new_last_24h": today_new,
+        "urgent_deadlines_3d": urgent,
+        "no_docs_yet": no_docs,
+        "pending_analysis": pending_analysis,
+        "corrigendum_flagged": corrigendum,
+        "top_urgent": [
+            {
+                "t247_id": str(t.get("t247_id", "")),
+                "brief": str(t.get("brief", ""))[:120],
+                "deadline": t.get("deadline", ""),
+                "days_left": days_left(t.get("deadline", "")),
+                "verdict": t.get("verdict", "REVIEW"),
+            }
+            for t in top_urgent
+        ],
+    }
+
+def _build_daily_digest() -> dict:
+    s = _compute_ops_summary()
+    today = datetime.now().strftime("%d %b %Y")
+    subject = f"Daily Tender Digest | {today} | Total {s['total_tenders']} | Urgent {s['urgent_deadlines_3d']}"
+    urgent_lines = []
+    for t in s.get("top_urgent", []):
+        urgent_lines.append(
+            f"- {t.get('t247_id','')} | {t.get('brief','')} | D-{t.get('days_left','?')} | {t.get('verdict','REVIEW')}"
+        )
+    if not urgent_lines:
+        urgent_lines = ["- No urgent tenders in next 3 days"]
+    email_body = "\n".join([
+        f"Daily Tender Digest - {today}",
+        "",
+        f"Total tenders: {s['total_tenders']}",
+        f"New in last 24h: {s['new_last_24h']}",
+        f"Urgent deadlines (<=3d): {s['urgent_deadlines_3d']}",
+        f"No docs yet: {s['no_docs_yet']}",
+        f"Pending analysis: {s['pending_analysis']}",
+        f"Corrigendum flagged: {s['corrigendum_flagged']}",
+        "",
+        "Top urgent tenders:",
+        *urgent_lines,
+        "",
+        "Action plan:",
+        "1) Download missing docs",
+        "2) Complete bid/no-bid review for pending tenders",
+        "3) Prioritize D-0 and D-1 submissions",
+    ])
+    whatsapp_text = (
+        f"Daily Digest ({today})\n"
+        f"Total:{s['total_tenders']} | New24h:{s['new_last_24h']} | Urgent<=3d:{s['urgent_deadlines_3d']}\n"
+        f"NoDocs:{s['no_docs_yet']} | PendingAnalysis:{s['pending_analysis']} | Corrigendum:{s['corrigendum_flagged']}\n"
+        + "\n".join([f"* {u}" for u in urgent_lines[:3]])
+    )
+    digest = {
+        "generated_at": datetime.now().isoformat(),
+        "subject": subject,
+        "email_body": email_body,
+        "whatsapp_text": whatsapp_text,
+        "summary": s,
+    }
+    with _digest_lock:
+        _digest_state["last_generated_at"] = digest["generated_at"]
+        _digest_state["last_generated_date"] = datetime.now().strftime("%Y-%m-%d")
+        _digest_state["status"] = "success"
+        _digest_state["error"] = ""
+    try:
+        (OUTPUT_DIR / "daily_digest_latest.json").write_text(json.dumps(digest, indent=2), encoding="utf-8")
+        (OUTPUT_DIR / "daily_digest_latest.txt").write_text(
+            f"SUBJECT: {subject}\n\nEMAIL:\n{email_body}\n\nWHATSAPP:\n{whatsapp_text}\n",
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+    return digest
 
 @app.get("/tenders")
 async def get_all_tenders():
@@ -1974,6 +2105,11 @@ async def get_config_route(request: Request):
         "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
         "groq_api_key": groq_key,
         "t247_username": config.get("t247_username", ""),
+        "t247_auto_sync_enabled": bool(config.get("t247_auto_sync_enabled", True)),
+        "t247_auto_sync_minutes": int(config.get("t247_auto_sync_minutes", 180) or 180),
+        "daily_digest_enabled": bool(config.get("daily_digest_enabled", True)),
+        "daily_digest_hour": int(config.get("daily_digest_hour", 9) or 9),
+        "daily_digest_minute": int(config.get("daily_digest_minute", 0) or 0),
     }
 
 @app.post("/config")
@@ -2002,6 +2138,26 @@ async def update_config_route(request: Request, data: dict = Body(...)):
                      ("t247_password","t247_password"),("t247_pass","t247_password")]:
         if data.get(src):
             config[dst] = data[src]
+    if "t247_auto_sync_enabled" in data:
+        config["t247_auto_sync_enabled"] = bool(data.get("t247_auto_sync_enabled"))
+    if "t247_auto_sync_minutes" in data:
+        try:
+            mins = int(data.get("t247_auto_sync_minutes") or 180)
+            config["t247_auto_sync_minutes"] = max(15, min(720, mins))
+        except Exception:
+            pass
+    if "daily_digest_enabled" in data:
+        config["daily_digest_enabled"] = bool(data.get("daily_digest_enabled"))
+    if "daily_digest_hour" in data:
+        try:
+            config["daily_digest_hour"] = max(0, min(23, int(data.get("daily_digest_hour") or 9)))
+        except Exception:
+            pass
+    if "daily_digest_minute" in data:
+        try:
+            config["daily_digest_minute"] = max(0, min(59, int(data.get("daily_digest_minute") or 0)))
+        except Exception:
+            pass
     save_config(config)
     return {"status": "saved"}
 
@@ -2526,6 +2682,8 @@ def _t247_merge_tenders(tenders: list) -> dict:
     """Merge tender list into DB. Returns {added, updated}."""
     db = load_db()
     added = updated = 0
+    added_ids = []
+    updated_ids = []
     for t in tenders:
         tid = str(t.get("t247_id", "")).strip()
         if not tid:
@@ -2539,11 +2697,264 @@ def _t247_merge_tenders(tenders: list) -> dict:
                     existing[field] = t[field]
             db["tenders"][tid] = existing
             updated += 1
+            updated_ids.append(tid)
         else:
             db["tenders"][tid] = t
             added += 1
+            added_ids.append(tid)
     save_db(db)
-    return {"added": added, "updated": updated}
+    return {"added": added, "updated": updated, "added_ids": added_ids, "updated_ids": updated_ids}
+
+def _auto_score_tender_v1(tender: dict) -> dict:
+    """Rule-based bid/no-bid scoring from Nascent profile."""
+    try:
+        from nascent_checker import load_profile
+        profile = load_profile() or {}
+    except Exception:
+        profile = {}
+
+    rules = profile.get("bid_rules", {}) or {}
+    preferred = [str(x).lower() for x in (rules.get("preferred_sectors", []) or []) if str(x).strip()]
+    do_not_bid = [str(x).lower() for x in (rules.get("do_not_bid", []) or []) if str(x).strip()]
+    conditional = [str(x).lower() for x in (rules.get("conditional", []) or []) if str(x).strip()]
+    min_v = float(rules.get("min_project_value_cr", 0) or 0)
+    max_v = float(rules.get("max_project_value_cr", 0) or 0)
+
+    text_blob = " ".join([
+        str(tender.get("brief", "") or ""),
+        str(tender.get("org_name", "") or ""),
+        str(tender.get("eligibility", "") or ""),
+    ]).lower()
+    value = float(tender.get("estimated_cost_cr", 0) or 0)
+    score = 50
+    reasons = []
+
+    pref_hits = [k for k in preferred if k and k in text_blob]
+    if pref_hits:
+        score += min(25, len(pref_hits) * 8)
+        reasons.append(f"sector match: {', '.join(pref_hits[:3])}")
+
+    dnb_hits = [k for k in do_not_bid if k and k in text_blob]
+    if dnb_hits:
+        score -= min(40, len(dnb_hits) * 15)
+        reasons.append(f"do-not-bid hit: {', '.join(dnb_hits[:3])}")
+
+    cond_hits = [k for k in conditional if k and k in text_blob]
+    if cond_hits:
+        score -= min(15, len(cond_hits) * 6)
+        reasons.append(f"conditional hit: {', '.join(cond_hits[:3])}")
+
+    if value:
+        if min_v and value < min_v:
+            score -= 12
+            reasons.append(f"value below min ({value} < {min_v} Cr)")
+        if max_v and value > max_v:
+            score -= 10
+            reasons.append(f"value above max ({value} > {max_v} Cr)")
+
+    score = max(0, min(100, int(round(score))))
+    if score >= 65:
+        verdict = "BID"
+    elif score >= 45:
+        verdict = "CONDITIONAL"
+    else:
+        verdict = "NO-BID"
+
+    tender["win_probability"] = score
+    tender["verdict"] = verdict
+    tender["auto_scored"] = True
+    tender["auto_scored_at"] = datetime.now().isoformat()
+    tender["reason"] = "; ".join(reasons[:4]) or "Rule-based profile fit scoring"
+    return tender
+
+def _try_enrich_tender_from_t247(tender: dict):
+    """Best-effort enrichment: doc count + corrigendum hint from document list API."""
+    tid = str(tender.get("t247_id", "")).strip()
+    if not tid:
+        return
+    import requests as _req
+    t_id_num = tid if tid.isdigit() else re.sub(r"\D", "", tid)
+    if not t_id_num:
+        return
+    url = f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/tender-document-list/{t_id_num}"
+    headers = {
+        "accept": "application/json",
+        "content-length": "0",
+        "origin": "https://www.tender247.com",
+        "referer": "https://www.tender247.com/",
+        "user-agent": "Mozilla/5.0",
+    }
+    try:
+        resp = _req.post(url, headers=headers, timeout=20)
+        if resp.status_code != 200:
+            return
+        data = resp.json()
+        items = data if isinstance(data, list) else (data.get("data") or data.get("result") or data.get("documents") or [])
+        if isinstance(items, dict):
+            items = [items]
+        doc_count = len(items or [])
+        tender["t247_doc_count"] = doc_count
+        tender["docs_available"] = doc_count > 0
+        corr = 0
+        for it in (items or []):
+            if not isinstance(it, dict):
+                continue
+            blob = json.dumps(it).lower()
+            if "corrig" in blob:
+                corr += 1
+        tender["corrigendum_count"] = corr
+        tender["has_corrigendum"] = corr > 0
+    except Exception:
+        return
+
+def _run_t247_sync_once() -> dict:
+    """Run one Tender247 sync and return merge summary."""
+    cfg = load_config()
+    token = _t247_get_token(cfg)
+    payload = _t247_decode_jwt(token)
+    user_id = int(payload.get("UserId") or cfg.get("t247_user_id") or 0)
+    query_id = int(cfg.get("t247_query_id") or 328890)
+
+    import requests as _req
+    headers = _t247_api_headers(token)
+    request_body = {
+        "tab_id": 2, "tender_id": 0, "tender_number": "", "search_text": "",
+        "refine_search_text": "", "tender_value_operator": 0,
+        "tender_value_from": 0, "tender_value_to": 0,
+        "publication_date_from": "", "publication_date_to": "",
+        "closing_date_from": "", "closing_date_to": "",
+        "search_by_location": False, "statezone_ids": "", "city_ids": "",
+        "state_ids": "", "organization_ids": "", "organization_name": "",
+        "sort_by": 1, "sort_type": 2, "page_no": 1, "record_per_page": 500,
+        "keyword_id": "", "mfa": "", "nameof_website": "",
+        "tender_typeid": 0, "is_tender_doc_uploaded": False,
+        "user_id": user_id, "user_email_service_query_id": query_id,
+        "exact_search": False, "exact_search_text": False,
+        "search_by_split_word": False, "product_id": "",
+        "organization_type_id": "", "sub_industry_id": "",
+        "search_by": 0, "guest_user_id": 0, "quantity": "",
+        "quantity_operator": 0, "msme_exemption": 0,
+        "startup_exemption": 0, "gem": 0, "mail_date": "",
+        "tab_status": 0, "is_ai_summary": False, "boq": 0,
+        "is_grace": False, "surety_bond": False, "limited_tender": False,
+    }
+
+    r = _req.post(
+        "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-excel-download",
+        headers=headers, json=request_body, timeout=120,
+    )
+    if r.status_code == 401:
+        raise ValueError("T247 token expired. Refresh token in Settings.")
+    if r.status_code == 403:
+        raise ValueError("T247 access denied. Check subscription/account access.")
+    if r.status_code != 200:
+        raise RuntimeError(f"T247 API returned HTTP {r.status_code}: {r.text[:300]}")
+
+    ct = r.headers.get("Content-Type", "")
+    xl_bytes = r.content
+    if "json" in ct:
+        resp_json = r.json()
+        dl_url = resp_json.get("url") or resp_json.get("file_url") or resp_json.get("download_url")
+        if not dl_url:
+            raise RuntimeError(f"T247 returned JSON instead of Excel: {str(resp_json)[:300]}")
+        r2 = _req.get(dl_url, headers=headers, timeout=120)
+        xl_bytes = r2.content
+
+    if len(xl_bytes) < 100:
+        raise RuntimeError(f"T247 returned empty file ({len(xl_bytes)} bytes)")
+
+    LATEST_EXCEL_FILE.write_bytes(xl_bytes)
+    tmp = Path(tempfile.mktemp(suffix=".xlsx", dir=str(TEMP_DIR)))
+    tmp.write_bytes(xl_bytes)
+    try:
+        tenders = process_excel(str(tmp))
+    finally:
+        try:
+            tmp.unlink()
+        except Exception:
+            pass
+
+    result = _t247_merge_tenders(tenders)
+    touched_ids = (result.get("added_ids", []) + result.get("updated_ids", []))[:120]
+    if touched_ids:
+        db = load_db()
+        changed = 0
+        for tid in touched_ids:
+            t = db.get("tenders", {}).get(tid, {})
+            if not t:
+                continue
+            _try_enrich_tender_from_t247(t)
+            if not t.get("bid_no_bid_done"):
+                t = _auto_score_tender_v1(t)
+            db["tenders"][tid] = t
+            changed += 1
+        if changed:
+            save_db(db)
+    return {
+        "status": "success",
+        "total": len(tenders),
+        "added": result["added"],
+        "updated": result["updated"],
+        "enriched": len(touched_ids),
+        "file_size_kb": len(xl_bytes) // 1024,
+        "source": "T247 API (real-time)",
+    }
+
+def _update_t247_sync_state(status: str, message: str = "", total: int = 0, added: int = 0, updated: int = 0):
+    with _t247_sync_lock:
+        _t247_sync_state["last_run_at"] = datetime.now().isoformat()
+        _t247_sync_state["last_status"] = status
+        _t247_sync_state["last_message"] = message
+        _t247_sync_state["last_total"] = int(total or 0)
+        _t247_sync_state["last_added"] = int(added or 0)
+        _t247_sync_state["last_updated"] = int(updated or 0)
+
+def _run_t247_sync_scheduler():
+    """Periodic Tender247 sync loop (manual trigger still available)."""
+    _time.sleep(60)
+    while not _t247_sync_stop.is_set():
+        try:
+            cfg = load_config()
+            enabled = bool(cfg.get("t247_auto_sync_enabled", True))
+            minutes = int(cfg.get("t247_auto_sync_minutes", 180) or 180)
+            minutes = max(15, min(720, minutes))
+            if enabled:
+                result = _run_t247_sync_once()
+                _update_t247_sync_state(
+                    "success",
+                    "auto sync completed",
+                    total=result.get("total", 0),
+                    added=result.get("added", 0),
+                    updated=result.get("updated", 0),
+                )
+            sleep_for = minutes * 60
+        except Exception as e:
+            _update_t247_sync_state("error", f"auto sync failed: {e}")
+            sleep_for = 600
+        _t247_sync_stop.wait(sleep_for)
+
+def _run_daily_digest_scheduler():
+    """Generate email/whatsapp style digest daily at configured time."""
+    _time.sleep(45)
+    while not _t247_sync_stop.is_set():
+        try:
+            cfg = load_config()
+            enabled = bool(cfg.get("daily_digest_enabled", True))
+            hour = int(cfg.get("daily_digest_hour", 9) or 9)
+            minute = int(cfg.get("daily_digest_minute", 0) or 0)
+            hour = max(0, min(23, hour))
+            minute = max(0, min(59, minute))
+            now = datetime.now()
+            today_key = now.strftime("%Y-%m-%d")
+            should_run = enabled and now.hour == hour and now.minute == minute
+            already_done = _digest_state.get("last_generated_date") == today_key
+            if should_run and not already_done:
+                _build_daily_digest()
+        except Exception as e:
+            with _digest_lock:
+                _digest_state["status"] = "error"
+                _digest_state["error"] = str(e)
+        _t247_sync_stop.wait(55)
 
 @app.get("/test-t247")
 async def test_t247():
@@ -2574,99 +2985,69 @@ async def t247_token_status():
 
 @app.post("/fetch-t247-excel")
 async def fetch_t247_excel(background_tasks: BackgroundTasks):
-    """Download today's tender calendar Excel from T247 real API and merge."""
-    cfg = load_config()
+    """Manual trigger for Tender247 sync."""
     try:
-        token = _t247_get_token(cfg)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-    payload = _t247_decode_jwt(token)
-    user_id = int(payload.get("UserId") or cfg.get("t247_user_id") or 0)
-    query_id = int(cfg.get("t247_query_id") or 328890)
-
-    import requests as _req
-    headers = _t247_api_headers(token)
-
-    request_body = {
-        "tab_id": 2, "tender_id": 0, "tender_number": "", "search_text": "",
-        "refine_search_text": "", "tender_value_operator": 0,
-        "tender_value_from": 0, "tender_value_to": 0,
-        "publication_date_from": "", "publication_date_to": "",
-        "closing_date_from": "", "closing_date_to": "",
-        "search_by_location": False, "statezone_ids": "", "city_ids": "",
-        "state_ids": "", "organization_ids": "", "organization_name": "",
-        "sort_by": 1, "sort_type": 2, "page_no": 1, "record_per_page": 500,
-        "keyword_id": "", "mfa": "", "nameof_website": "",
-        "tender_typeid": 0, "is_tender_doc_uploaded": False,
-        "user_id": user_id, "user_email_service_query_id": query_id,
-        "exact_search": False, "exact_search_text": False,
-        "search_by_split_word": False, "product_id": "",
-        "organization_type_id": "", "sub_industry_id": "",
-        "search_by": 0, "guest_user_id": 0, "quantity": "",
-        "quantity_operator": 0, "msme_exemption": 0,
-        "startup_exemption": 0, "gem": 0, "mail_date": "",
-        "tab_status": 0, "is_ai_summary": False, "boq": 0,
-        "is_grace": False, "surety_bond": False, "limited_tender": False,
-    }
-
-    try:
-        r = _req.post(
-            "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-excel-download",
-            headers=headers, json=request_body, timeout=120,
+        result = _run_t247_sync_once()
+        _update_t247_sync_state(
+            "success",
+            "manual sync completed",
+            total=result.get("total", 0),
+            added=result.get("added", 0),
+            updated=result.get("updated", 0),
         )
+        return result
+    except ValueError as e:
+        _update_t247_sync_state("error", str(e))
+        raise HTTPException(400, str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(502, f"T247 API request failed: {e}")
+        _update_t247_sync_state("error", str(e))
+        raise HTTPException(502, f"T247 sync failed: {e}")
 
-    if r.status_code == 401:
-        raise HTTPException(401, "T247 Bearer token expired. Log into tender247.com and paste a fresh token in Settings.")
-    if r.status_code == 403:
-        raise HTTPException(403, "T247 access denied. Check your subscription is active.")
-    if r.status_code != 200:
-        raise HTTPException(502, f"T247 API returned HTTP {r.status_code}: {r.text[:300]}")
+@app.post("/fetch-t247-excel/retry")
+async def retry_t247_sync():
+    return await fetch_t247_excel(BackgroundTasks())
 
-    ct = r.headers.get("Content-Type", "")
-    xl_bytes = r.content
-
-    # If API returned JSON (e.g. error or URL), handle it
-    if "json" in ct:
-        try:
-            resp_json = r.json()
-            # Maybe it contains a download URL
-            dl_url = resp_json.get("url") or resp_json.get("file_url") or resp_json.get("download_url")
-            if dl_url:
-                r2 = _req.get(dl_url, headers=headers, timeout=120)
-                xl_bytes = r2.content
-            else:
-                raise HTTPException(502, f"T247 returned JSON (not Excel): {str(resp_json)[:300]}")
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(502, f"T247 JSON response parse error: {e}")
-
-    if len(xl_bytes) < 100:
-        raise HTTPException(502, f"T247 returned empty file ({len(xl_bytes)} bytes). Token may be expired.")
-
-    # Save raw Excel
-    LATEST_EXCEL_FILE.write_bytes(xl_bytes)
-    tmp = Path(tempfile.mktemp(suffix=".xlsx", dir=str(TEMP_DIR)))
-    tmp.write_bytes(xl_bytes)
+@app.post("/ops/daily-digest/generate")
+async def generate_daily_digest():
     try:
-        tenders = process_excel(str(tmp))
+        digest = _build_daily_digest()
+        return {"status": "success", **digest}
     except Exception as e:
-        raise HTTPException(500, f"Excel parse failed: {e}")
-    finally:
-        try: tmp.unlink()
-        except Exception: pass
+        raise HTTPException(500, f"Digest generation failed: {e}")
 
-    result = _t247_merge_tenders(tenders)
+@app.get("/ops/daily-digest")
+async def get_daily_digest():
+    p = OUTPUT_DIR / "daily_digest_latest.json"
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            return {"status": "success", **data, "scheduler": dict(_digest_state)}
+        except Exception:
+            pass
+    digest = _build_daily_digest()
+    return {"status": "success", **digest, "scheduler": dict(_digest_state)}
+
+@app.get("/ops/daily-digest.txt")
+async def download_daily_digest_text():
+    p = OUTPUT_DIR / "daily_digest_latest.txt"
+    if not p.exists():
+        _build_daily_digest()
+    return FileResponse(
+        path=str(p),
+        filename=f"daily_digest_{datetime.now().strftime('%Y%m%d')}.txt",
+        media_type="text/plain",
+    )
+
+@app.get("/t247-sync-status")
+async def t247_sync_status():
+    cfg = load_config()
     return {
         "status": "success",
-        "total": len(tenders),
-        "added": result["added"],
-        "updated": result["updated"],
-        "file_size_kb": len(xl_bytes) // 1024,
-        "source": "T247 API (real-time)",
+        "auto_sync_enabled": bool(cfg.get("t247_auto_sync_enabled", True)),
+        "auto_sync_minutes": int(cfg.get("t247_auto_sync_minutes", 180) or 180),
+        **_t247_sync_state,
     }
 
 def _t247_doc_download_headers() -> dict:
@@ -2677,6 +3058,53 @@ def _t247_doc_download_headers() -> dict:
         "referer": "https://www.tender247.com/",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     }
+
+def _save_tender_doc_to_vault(t247_id: str, filename: str, content: bytes, mime: str, doc_hash: str = "") -> dict:
+    """Persist downloaded Tender247 document bundle in vault and link to tender."""
+    checksum = hashlib.sha256(content).hexdigest()
+    vault = _load_vault()
+    for item in vault:
+        if (
+            str(item.get("source")) == "t247"
+            and str(item.get("t247_id")) == str(t247_id)
+            and str(item.get("checksum")) == checksum
+        ):
+            return {k: v for k, v in item.items() if k != "b64"}
+
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": filename,
+        "category": "tender247",
+        "source": "t247",
+        "t247_id": str(t247_id),
+        "doc_hash": str(doc_hash or ""),
+        "checksum": checksum,
+        "size": len(content),
+        "uploaded_at": datetime.now().isoformat(),
+        "b64": base64.b64encode(content).decode(),
+        "mime": mime or "application/octet-stream",
+    }
+    vault.append(entry)
+    _save_vault(vault)
+
+    db = load_db()
+    tender = db.get("tenders", {}).get(str(t247_id), {})
+    attachments = tender.get("attachments", [])
+    attachments = [a for a in attachments if a.get("vault_id") != entry["id"]]
+    attachments.append({
+        "vault_id": entry["id"],
+        "name": entry["name"],
+        "source": "t247",
+        "uploaded_at": entry["uploaded_at"],
+        "size": entry["size"],
+        "mime": entry["mime"],
+    })
+    tender["attachments"] = attachments[-20:]
+    if doc_hash:
+        tender["t247_doc_hash"] = doc_hash
+    db.setdefault("tenders", {})[str(t247_id)] = tender
+    save_db(db)
+    return {k: v for k, v in entry.items() if k != "b64"}
 
 @app.get("/tender/{t247_id}/doc-download")
 async def download_tender_docs(t247_id: str):
@@ -2763,6 +3191,17 @@ async def download_tender_docs(t247_id: str):
             fname = f"T247_{safe_tid}_docs{ext}"
     except Exception:
         pass
+
+    try:
+        _save_tender_doc_to_vault(
+            t247_id=t247_id,
+            filename=fname,
+            content=content,
+            mime=ct_out,
+            doc_hash=doc_hash,
+        )
+    except Exception as e:
+        print(f"⚠️ Vault save skipped for {t247_id}: {e}")
 
     return Response(
         content=content, media_type=ct_out,
@@ -3076,7 +3515,7 @@ async def tender_doc_save(t247_id: str, body: dict = Body(...)):
             "saved_at": datetime.now().isoformat()}
 
 
-@app.get("/tender/{t247_id}/doc-download")
+@app.get("/tender/{t247_id}/analysis-doc-download")
 async def tender_doc_download_local(t247_id: str):
     """Explicit local-download button endpoint — streams docx with correct filename."""
     docx_path = _locate_tender_docx(t247_id)

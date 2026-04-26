@@ -432,6 +432,9 @@ select option{background:var(--bg2)}
     <h1>Dashboard</h1>
     <div class="topbar-actions">
       <button class="btn btn-primary btn-sm" id="t247-fetch-btn" onclick="autoFetchT247()">⚡ Fetch T247</button>
+      <button class="btn btn-ghost btn-sm" id="t247-retry-btn" onclick="retryT247Sync()">↺ Retry Sync</button>
+      <button class="btn btn-ghost btn-sm" id="digest-btn" onclick="generateDailyDigest()">📰 Daily Digest</button>
+      <span id="t247-sync-pill" class="badge badge-REVIEW" title="Tender247 sync status">Sync: idle</span>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('xl-file').click()">📥 Excel</button>
       <input type="file" id="xl-file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
       <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync</button>
@@ -464,6 +467,8 @@ select option{background:var(--bg2)}
       <input id="dash-search" placeholder="Search by T247 ID, brief, org, location..." oninput="renderDash()">
     </div>
     <div id="dash-count" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
+    <div id="dash-sync-meta" style="font-size:11px;color:var(--text3);margin-bottom:6px"></div>
+    <div id="dash-ops-meta" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
     <div style="display:flex;gap:14px;min-width:0">
       <div class="table-wrap" id="dash-table-wrap" style="flex:1;min-width:0">
         <table>
@@ -1000,6 +1005,44 @@ select option{background:var(--bg2)}
           ⚠ Token expires ~16h after login. When expired, log in again and paste a new token.<br>
           ⏰ For daily auto-fetch: paste a fresh token each morning after opening tender247.com.
         </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+        <div class="card-title" style="margin-bottom:6px">Sync Settings</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end">
+          <div>
+            <label>Auto Sync</label>
+            <select id="t247-auto-sync-enabled">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+          <div>
+            <label>Interval (minutes)</label>
+            <input type="number" id="t247-auto-sync-minutes" min="15" max="720" step="5" placeholder="180">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary btn-sm" onclick="saveSyncSettings()">Save Sync Settings</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadT247SyncStatus()">Refresh Status</button>
+        </div>
+        <div id="t247-sync-settings-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+        <div class="card-title" style="margin-bottom:6px">Daily Digest Automation</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
+          <div>
+            <label>Digest Auto</label>
+            <select id="digest-enabled">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+          <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
+          <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary btn-sm" onclick="saveDigestSettings()">Save Digest Settings</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadDailyDigestText()">Download Digest TXT</button>
+        </div>
+        <div id="digest-settings-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
       </div>
     </div>
     <div class="card">
@@ -2256,14 +2299,86 @@ async function autoFetchT247() {
     if (d.status === 'success') {
       toast('✅ T247 fetched: ' + d.total + ' tenders (' + d.added + ' new, ' + d.updated + ' updated)', 'success');
       await loadDashboard();
+      await loadT247SyncStatus();
     } else {
       var msg = d.detail || d.message || 'Fetch failed';
       toast('❌ ' + msg, 'error');
+      await loadT247SyncStatus();
     }
   } catch(e) {
     hideLoading();
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
     toast('T247 error: ' + e.message, 'error');
+    await loadT247SyncStatus();
+  }
+}
+
+async function retryT247Sync() {
+  var btn = document.getElementById('t247-retry-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Retrying...'; }
+  try {
+    var r = await fetch('/fetch-t247-excel/retry', { method: 'POST' });
+    var d = await r.json();
+    if (d.status === 'success') {
+      toast('✅ Sync retry completed: ' + d.total + ' tenders', 'success');
+      await loadDashboard();
+    } else {
+      toast('❌ Retry failed: ' + (d.detail || d.message || 'Unknown'), 'error');
+    }
+  } catch(e) {
+    toast('Retry error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↺ Retry Sync'; }
+    await loadT247SyncStatus();
+    await loadOpsDailyReport();
+  }
+}
+
+async function loadT247SyncStatus() {
+  var el = document.getElementById('t247-sync-pill');
+  var meta = document.getElementById('dash-sync-meta');
+  if (!el) return;
+  try {
+    var r = await fetch('/t247-sync-status');
+    var d = await r.json();
+    if (d.last_status === 'success') {
+      el.className = 'badge badge-BID';
+      el.textContent = 'Sync: ok (' + (d.last_added || 0) + '/' + (d.last_updated || 0) + ')';
+      el.title = 'Auto: ' + (d.auto_sync_enabled ? 'ON' : 'OFF') + ' | Every ' + d.auto_sync_minutes + 'm';
+      if (meta) meta.textContent = 'Last sync: ' + (d.last_run_at ? new Date(d.last_run_at).toLocaleString() : '—') + ' | Next run: every ' + d.auto_sync_minutes + 'm';
+    } else if (d.last_status === 'error') {
+      el.className = 'badge badge-NO-BID';
+      el.textContent = 'Sync: error';
+      el.title = d.last_message || 'Last sync failed';
+      if (meta) meta.textContent = 'Last sync error: ' + (d.last_message || 'Unknown error');
+    } else {
+      el.className = 'badge badge-REVIEW';
+      el.textContent = 'Sync: idle';
+      el.title = 'Auto: ' + (d.auto_sync_enabled ? 'ON' : 'OFF') + ' | Every ' + d.auto_sync_minutes + 'm';
+      if (meta) meta.textContent = 'Sync idle | Auto: ' + (d.auto_sync_enabled ? 'ON' : 'OFF') + ' | Every ' + d.auto_sync_minutes + 'm';
+    }
+  } catch(e) {
+    el.className = 'badge badge-REVIEW';
+    el.textContent = 'Sync: unknown';
+    el.title = 'Sync status unavailable';
+    if (meta) meta.textContent = 'Sync status unavailable';
+  }
+}
+
+async function loadOpsDailyReport() {
+  var el = document.getElementById('dash-ops-meta');
+  if (!el) return;
+  try {
+    var r = await fetch('/ops/daily-report');
+    var d = await r.json();
+    var s = d.summary || {};
+    el.textContent = 'Ops 24h: New ' + (s.new_last_24h || 0) +
+      ' | Urgent(<=3d) ' + (s.urgent_deadlines_3d || 0) +
+      ' | No docs ' + (s.no_docs_yet || 0) +
+      ' | Pending analysis ' + (s.pending_analysis || 0) +
+      ' | Corrigendum ' + (s.corrigendum_flagged || 0);
+  } catch(e) {
+    el.textContent = 'Ops report unavailable';
   }
 }
 
@@ -2327,9 +2442,27 @@ function buildSidePanelContent(t) {
     '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">⬇ Download Docs</button>' +
   '</div>';
 
+  var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
+  if (atts.length) {
+    html += '<div style="margin-top:12px">' +
+      '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
+    atts.slice().reverse().slice(0, 5).forEach(function(a) {
+      var sz = a.size ? (' (' + Math.round(a.size / 1024) + ' KB)') : '';
+      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
+        '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name || 'Document') + '">' + (a.name || 'Document') + sz + '</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
   if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
 
   return html;
+}
+
+function downloadVaultFile(fileId) {
+  window.location.href = '/vault/download/' + encodeURIComponent(fileId);
 }
 
 // ────────────────────────────────────────────
@@ -2805,6 +2938,16 @@ async function loadSettings() {
         if (el) el.placeholder = keys[i] ? '●●●●' + keys[i].slice(-4) : 'AIza...';
       });
       document.getElementById('sys-keys').textContent = d.total_keys + ' key' + (d.total_keys !== 1 ? 's' : '') + (d.ai_active ? ' ✅' : ' ❌');
+      var en = document.getElementById('t247-auto-sync-enabled');
+      var mins = document.getElementById('t247-auto-sync-minutes');
+      if (en) en.value = String(d.t247_auto_sync_enabled !== false);
+      if (mins) mins.value = String(d.t247_auto_sync_minutes || 180);
+      var de = document.getElementById('digest-enabled');
+      var dh = document.getElementById('digest-hour');
+      var dm = document.getElementById('digest-minute');
+      if (de) de.value = String(d.daily_digest_enabled !== false);
+      if (dh) dh.value = String(d.daily_digest_hour || 9);
+      if (dm) dm.value = String(d.daily_digest_minute || 0);
     }
   } catch(e) {}
 
@@ -2817,6 +2960,7 @@ async function loadSettings() {
 
   var tok = getAdminToken();
   if (tok) document.getElementById('admin-token-status').textContent = 'Token stored in browser (ends …' + tok.slice(-4) + ')';
+  try { await loadT247SyncStatus(); } catch(e) {}
 }
 
 async function saveKeys() {
@@ -2887,6 +3031,105 @@ async function saveT247Token() {
     toast('✅ T247 token saved — valid for ' + (p.exp ? Math.round((p.exp - now)/3600*10)/10 + 'h' : '?'), 'success');
     document.getElementById('t247-test-result').textContent = '✅ Saved. Click Test to verify.';
   } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function saveSyncSettings() {
+  var en = document.getElementById('t247-auto-sync-enabled');
+  var minsEl = document.getElementById('t247-auto-sync-minutes');
+  var statusEl = document.getElementById('t247-sync-settings-status');
+  var enabled = en ? en.value === 'true' : true;
+  var mins = minsEl ? parseInt(minsEl.value || '180', 10) : 180;
+  if (isNaN(mins)) mins = 180;
+  mins = Math.max(15, Math.min(720, mins));
+  if (minsEl) minsEl.value = String(mins);
+  try {
+    var r = await fetch('/config', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        t247_auto_sync_enabled: enabled,
+        t247_auto_sync_minutes: mins
+      })
+    });
+    if (r.status === 403) {
+      toast('❌ 403 — save Admin Token in Settings first', 'error');
+      if (statusEl) statusEl.textContent = '403 unauthorized. Set admin token first.';
+      return;
+    }
+    await r.json().catch(function(){ return {}; });
+    if (statusEl) statusEl.textContent = 'Saved: auto sync ' + (enabled ? 'enabled' : 'disabled') + ', every ' + mins + ' minutes.';
+    toast('✅ Sync settings saved', 'success');
+    await loadT247SyncStatus();
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Save failed: ' + e.message;
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+async function saveDigestSettings() {
+  var en = document.getElementById('digest-enabled');
+  var hEl = document.getElementById('digest-hour');
+  var mEl = document.getElementById('digest-minute');
+  var statusEl = document.getElementById('digest-settings-status');
+  var enabled = en ? en.value === 'true' : true;
+  var hour = hEl ? parseInt(hEl.value || '9', 10) : 9;
+  var minute = mEl ? parseInt(mEl.value || '0', 10) : 0;
+  if (isNaN(hour)) hour = 9;
+  if (isNaN(minute)) minute = 0;
+  hour = Math.max(0, Math.min(23, hour));
+  minute = Math.max(0, Math.min(59, minute));
+  if (hEl) hEl.value = String(hour);
+  if (mEl) mEl.value = String(minute);
+  try {
+    var r = await fetch('/config', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        daily_digest_enabled: enabled,
+        daily_digest_hour: hour,
+        daily_digest_minute: minute
+      })
+    });
+    if (r.status === 403) {
+      toast('❌ 403 — save Admin Token in Settings first', 'error');
+      if (statusEl) statusEl.textContent = '403 unauthorized. Set admin token first.';
+      return;
+    }
+    await r.json().catch(function(){ return {}; });
+    if (statusEl) statusEl.textContent = 'Saved: ' + (enabled ? 'enabled' : 'disabled') + ' at ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0');
+    toast('✅ Digest settings saved', 'success');
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Save failed: ' + e.message;
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+async function generateDailyDigest() {
+  var btn = document.getElementById('digest-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Digest...'; }
+  try {
+    var r = await fetch('/ops/daily-digest/generate', { method: 'POST' });
+    var d = await r.json();
+    if (d.status === 'success') {
+      toast('✅ Daily digest generated', 'success');
+      try {
+        await navigator.clipboard.writeText(d.whatsapp_text || '');
+        toast('📋 WhatsApp text copied', 'info');
+      } catch(e) {}
+      var el = document.getElementById('dash-ops-meta');
+      if (el) el.title = (d.subject || '') + '\n' + (d.whatsapp_text || '');
+    } else {
+      toast('Digest failed', 'error');
+    }
+  } catch(e) {
+    toast('Digest error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📰 Daily Digest'; }
+  }
+}
+
+function downloadDailyDigestText() {
+  window.location.href = '/ops/daily-digest.txt';
 }
 
 async function testT247() {
@@ -3099,11 +3342,15 @@ async function uploadLetterhead(input) {
 // ────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
   await loadDashboard();
+  await loadT247SyncStatus();
+  await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
   setInterval(updateStatusBar, 30000);
   setInterval(checkDeadlineNotifications, 60000);
   setInterval(updateTokenMeter, 120000);
+  setInterval(loadT247SyncStatus, 60000);
+  setInterval(loadOpsDailyReport, 120000);
   // Restore page from URL on load
   var params = new URLSearchParams(window.location.search);
   var initPage = params.get('p');
