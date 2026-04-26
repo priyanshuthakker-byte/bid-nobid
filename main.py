@@ -939,6 +939,65 @@ async def api_quota_status():
         "keys_count": len(keys),
     }
 
+_TOKEN_LOG_FILE = OUTPUT_DIR / "token_usage.json"
+_token_log_lock = threading.Lock()
+
+def _load_token_log() -> dict:
+    if _TOKEN_LOG_FILE.exists():
+        try:
+            return json.loads(_TOKEN_LOG_FILE.read_text())
+        except Exception:
+            pass
+    return {"today": {}, "total": {"calls": 0, "input_tokens": 0, "output_tokens": 0}}
+
+def record_token_usage(input_tokens: int, output_tokens: int):
+    """Call after each Gemini API call to accumulate usage stats."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    with _token_log_lock:
+        data = _load_token_log()
+        d = data.setdefault("today", {})
+        if d.get("date") != today:
+            data["today"] = {"date": today, "calls": 0, "input_tokens": 0, "output_tokens": 0}
+            d = data["today"]
+        d["calls"] = d.get("calls", 0) + 1
+        d["input_tokens"] = d.get("input_tokens", 0) + input_tokens
+        d["output_tokens"] = d.get("output_tokens", 0) + output_tokens
+        t = data.setdefault("total", {"calls": 0, "input_tokens": 0, "output_tokens": 0})
+        t["calls"] = t.get("calls", 0) + 1
+        t["input_tokens"] = t.get("input_tokens", 0) + input_tokens
+        t["output_tokens"] = t.get("output_tokens", 0) + output_tokens
+        try:
+            _TOKEN_LOG_FILE.write_text(json.dumps(data))
+        except Exception:
+            pass
+
+@app.get("/token-usage")
+async def token_usage():
+    """Return today's and total Gemini token usage."""
+    keys = get_all_api_keys()
+    data = _load_token_log()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    today = data.get("today", {})
+    if today.get("date") != today_str:
+        today = {"date": today_str, "calls": 0, "input_tokens": 0, "output_tokens": 0}
+    total = data.get("total", {"calls": 0, "input_tokens": 0, "output_tokens": 0})
+    GEMINI_FREE_DAILY_TOKENS = 1_000_000
+    keys_count = len(keys)
+    total_daily_limit = GEMINI_FREE_DAILY_TOKENS * max(keys_count, 1)
+    used = today.get("input_tokens", 0) + today.get("output_tokens", 0)
+    remaining = max(0, total_daily_limit - used)
+    pct_used = round(used / max(total_daily_limit, 1) * 100, 1)
+    return {
+        "status": "ok" if keys else "no_key",
+        "keys_count": keys_count,
+        "today": today,
+        "total": total,
+        "daily_limit_tokens": total_daily_limit,
+        "used_today_tokens": used,
+        "remaining_tokens": remaining,
+        "pct_used": pct_used,
+    }
+
 # ══ SELF-DIAGNOSE ════════════════════════════════════════════════════════════
 @app.get("/diagnose")
 async def diagnose():
@@ -1519,6 +1578,12 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 ai_result = analyze_with_gemini_parallel(all_text, passed, progress_cb=_seg_progress)
             else:
                 ai_result = analyze_with_gemini(all_text, passed)
+            try:
+                in_tok = len(all_text) // 4
+                out_tok = 2000
+                record_token_usage(in_tok, out_tok)
+            except Exception:
+                pass
             if "error" not in ai_result:
                 tender_data = merge_results(tender_data, ai_result, passed)
                 ai_used = True
@@ -2330,12 +2395,12 @@ def _t247_login_session(cfg: dict):
         raise ValueError("T247 credentials not configured. Add them in Settings.")
     sess = _req.Session()
     sess.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
-    login_page = sess.get("https://www.tender247.com/login", timeout=20)
+    login_page = sess.get("https://tender247.com/auth/tender", timeout=20)
     csrf = ""
     m = _re.search(r'name=["\']_token["\'] value=["\']([^"\']+)["\']', login_page.text)
     if m:
         csrf = m.group(1)
-    post_r = sess.post("https://www.tender247.com/login", data={
+    post_r = sess.post("https://tender247.com/login", data={
         "_token": csrf, "email": u, "password": p,
     }, timeout=20, allow_redirects=True)
     if "invalid" in post_r.text.lower() or ("login" in post_r.url and "dashboard" not in post_r.url):
@@ -2355,10 +2420,11 @@ async def fetch_t247_excel(background_tasks: BackgroundTasks):
         import requests as _req
         # Try common T247 Excel export URLs
         export_urls = [
-            "https://www.tender247.com/tenders/export",
-            "https://www.tender247.com/export/tenders",
-            "https://www.tender247.com/tenders/download-excel",
-            "https://www.tender247.com/dashboard/export",
+            "https://tender247.com/tenders/export",
+            "https://tender247.com/export/tenders",
+            "https://tender247.com/tenders/download-excel",
+            "https://tender247.com/dashboard/export",
+            "https://tender247.com/auth/tender/export",
         ]
         xl_bytes = None
         used_url = ""
@@ -2375,12 +2441,12 @@ async def fetch_t247_excel(background_tasks: BackgroundTasks):
                 continue
         if not xl_bytes:
             # Try scraping dashboard for a download link
-            dash = sess.get("https://www.tender247.com/dashboard", timeout=20)
+            dash = sess.get("https://tender247.com/dashboard", timeout=20)
             import re as _re
             links = _re.findall(r'href=["\']([^"\']*(?:export|excel|download)[^"\']*)["\']', dash.text, _re.I)
             for link in links[:5]:
                 if not link.startswith("http"):
-                    link = "https://www.tender247.com" + link
+                    link = "https://tender247.com" + link
                 try:
                     r = sess.get(link, timeout=60)
                     if r.status_code == 200 and len(r.content) > 5000:
@@ -2441,10 +2507,10 @@ async def download_tender_docs(t247_id: str):
         safe_tid = re.sub(r"[^\w\-]", "_", str(t247_id))[:40]
         # Try direct zip download URLs for this tender
         download_urls = [
-            f"https://www.tender247.com/tenders/{t247_id}/download",
-            f"https://www.tender247.com/tenders/{t247_id}/documents",
-            f"https://www.tender247.com/download-documents/{t247_id}",
-            f"https://www.tender247.com/tenders/download/{t247_id}",
+            f"https://tender247.com/auth/tender/{t247_id}/download",
+            f"https://tender247.com/auth/tender/{t247_id}/documents",
+            f"https://tender247.com/tenders/{t247_id}/download",
+            f"https://tender247.com/download-documents/{t247_id}",
         ]
         zip_bytes = None
         for url in download_urls:
@@ -2458,11 +2524,11 @@ async def download_tender_docs(t247_id: str):
                 continue
         if not zip_bytes:
             # Try tender detail page to find download link
-            detail_r = sess.get(f"https://www.tender247.com/tenders/{t247_id}", timeout=20)
+            detail_r = sess.get(f"https://tender247.com/auth/tender/{t247_id}", timeout=20)
             links = _re.findall(r'href=["\']([^"\']*(?:download|document|zip)[^"\']*)["\']', detail_r.text, _re.I)
             for link in links[:5]:
                 if not link.startswith("http"):
-                    link = "https://www.tender247.com" + link
+                    link = "https://tender247.com" + link
                 try:
                     r = sess.get(link, timeout=60)
                     if r.status_code == 200 and len(r.content) > 1000:

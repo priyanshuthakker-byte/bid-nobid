@@ -398,6 +398,7 @@ select option{background:var(--bg2)}
   <button class="nav-btn" onclick="showPage('letterhead')"><span class="nav-icon">🏢</span>Letterhead</button>
 
   <div class="nav-section">System</div>
+  <button class="nav-btn" onclick="showPage('profile')"><span class="nav-icon">🏢</span>Company Profile</button>
   <button class="nav-btn" onclick="showPage('settings')"><span class="nav-icon">⚙</span>Settings</button>
 
   <div id="nav-footer">
@@ -417,7 +418,7 @@ select option{background:var(--bg2)}
 <div id="main">
 
 <!-- BREADCRUMB -->
-<div id="breadcrumb" style="display:none">
+<div id="breadcrumb" style="display:flex">
   <span class="bc-link" onclick="showPage('dashboard')">Dashboard</span>
   <span class="bc-sep" id="bc-sep-2" style="display:none">›</span>
   <span class="bc-link" id="bc-page" style="display:none"></span>
@@ -844,6 +845,47 @@ select option{background:var(--bg2)}
   </div>
 </div>
 
+<!-- ═══ COMPANY PROFILE ═══ -->
+<div id="page-profile" class="page">
+  <div class="topbar"><h1>Company Profile</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="row">
+      <div class="card">
+        <div class="card-title">Nascent Info Technologies</div>
+        <label>Company Name</label><input type="text" id="prof-name" placeholder="Nascent Info Technologies">
+        <label>Registration / CIN</label><input type="text" id="prof-cin" placeholder="CIN or Reg number">
+        <label>GST Number</label><input type="text" id="prof-gst" placeholder="GST number">
+        <label>PAN</label><input type="text" id="prof-pan" placeholder="PAN number">
+        <label>Address</label><textarea id="prof-address" rows="2" placeholder="Registered address"></textarea>
+        <label>Annual Turnover (Cr)</label><input type="number" id="prof-turnover" placeholder="e.g. 5.5">
+        <label>Years in Business</label><input type="number" id="prof-years" placeholder="e.g. 10">
+      </div>
+      <div class="card">
+        <div class="card-title">Bid Rules</div>
+        <label>Min Project Value (Cr)</label><input type="number" id="prof-min" step="0.1" placeholder="0.25">
+        <label>Max Project Value (Cr)</label><input type="number" id="prof-max" step="1" placeholder="100">
+        <label>Preferred Sectors (one per line)</label>
+        <textarea id="prof-sectors" rows="5" placeholder="GIS&#10;Surveying&#10;Smart City&#10;Mapping"></textarea>
+        <label>Do Not Bid Keywords (one per line)</label>
+        <textarea id="prof-dnb" rows="4" placeholder="construction&#10;civil works&#10;roads"></textarea>
+        <label>Conditional Keywords (one per line)</label>
+        <textarea id="prof-cond" rows="3" placeholder="joint venture&#10;consortium"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Past Projects <span style="font-size:11px;color:var(--text3);font-weight:400">— used for project matching tags on dashboard</span>
+        <button class="btn btn-ghost btn-sm" onclick="addProject()">+ Add Project</button>
+      </div>
+      <div id="projects-list"></div>
+    </div>
+    <div id="profile-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+  </div>
+</div>
+
 <!-- ═══ SETTINGS ═══ -->
 <div id="page-settings" class="page">
   <div class="topbar"><h1>Settings</h1></div>
@@ -1067,6 +1109,7 @@ function showPage(name, opts) {
   if (name === 'reports') loadReports();
   if (name === 'analytics') loadAnalytics();
   if (name === 'settings') loadSettings();
+  if (name === 'profile') loadProfile();
   if (name === 'doc-editor') populateEditorSelect();
   if (name === 'assistant') updateAssistantContext();
   if (name === 'boq') initBOQ();
@@ -1264,6 +1307,11 @@ function renderTenders() {
 }
 
 function esc(s) { return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;').substring(0,80); }
+function str(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'object') return v.value || v.text || v.description || v.name || Object.values(v).filter(x=>typeof x==='string'&&x)[0] || '—';
+  return String(v) || '—';
+}
 
 // ────────────────────────────────────────────
 // CONTEXT
@@ -1419,12 +1467,12 @@ function showAnalysisResult(d) {
   // Key info table
   leftHTML += '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px">';
   var rows2 = [
-    ['Tender No', td.tender_no || '—'],
-    ['Organisation', td.org_name || '—'],
-    ['EMD', td.emd || '—'],
-    ['Est. Cost', td.estimated_cost || '—'],
-    ['Deadline', td.bid_submission_date || td.deadline || '—'],
-    ['Pre-bid Date', td.prebid_query_date || '—'],
+    ['Tender No', str(td.tender_no)],
+    ['Organisation', str(td.org_name)],
+    ['EMD', str(td.emd)],
+    ['Est. Cost', str(td.estimated_cost)],
+    ['Deadline', str(td.bid_submission_date || td.deadline)],
+    ['Pre-bid Date', str(td.prebid_query_date)],
     ['Corrigendum', td.has_corrigendum ? '⚠ Yes — ' + (td.corrigendum_files||[]).join(', ') : 'No'],
   ];
   rows2.forEach(([k,v2]) => {
@@ -1483,7 +1531,8 @@ function buildDocPreview(td, verdict) {
    ['Est. Cost', td.estimated_cost],['EMD', td.emd],['Tender Fee', td.tender_fee],
    ['Submission Date', td.bid_submission_date||td.deadline],['Opening Date', td.bid_opening_date],
    ['Pre-bid Date', td.prebid_query_date]].forEach(([k,v2]) => {
-    if (v2 && v2 !== '—' && v2 !== 'Not specified') html += '<tr><td>' + k + '</td><td>' + v2 + '</td></tr>';
+    var s = str(v2);
+    if (s && s !== '—' && s !== 'Not specified') html += '<tr><td>' + k + '</td><td>' + s + '</td></tr>';
   });
   html += '</table>';
 
@@ -2122,12 +2171,12 @@ async function autoFetchT247() {
       await loadDashboard();
     } else {
       var msg = d.detail || d.message || 'Fetch failed';
-      toast('❌ ' + msg, 'error');
+      toast('❌ ' + msg + ' — use 📥 Excel import as fallback', 'error');
     }
   } catch(e) {
     hideLoading();
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
-    toast('T247 error: ' + e.message, 'error');
+    toast('❌ T247 connect failed — use 📥 Excel import instead', 'error');
   }
 }
 
@@ -2237,23 +2286,25 @@ async function refreshProfileKeywords() {
 // ────────────────────────────────────────────
 async function updateTokenMeter() {
   try {
-    var r = await fetch('/platform/analyst-capacity');
+    var r = await fetch('/token-usage');
     var d = await r.json();
-    if (d.status !== 'ok' || !d.api_keys_configured) return;
+    if (d.status !== 'ok') return;
     var meter = document.getElementById('token-meter');
     var bars = document.getElementById('token-bars');
     if (!meter || !bars) return;
     meter.style.display = 'block';
-    var cap = d.theoretical_daily_capacity || 0;
-    var maxCap = (d.api_keys_configured || 1) * 155; // ~155 tenders/key/day
-    var pct = Math.min(100, Math.round((cap / Math.max(maxCap, 1)) * 100));
-    var cls = pct > 60 ? 'ok' : pct > 25 ? 'warn' : 'crit';
+    var used = d.used_today_tokens || 0;
+    var limit = d.daily_limit_tokens || 1000000;
+    var pct = Math.min(100, Math.round(d.pct_used || 0));
+    var cls = pct < 60 ? 'ok' : pct < 85 ? 'warn' : 'crit';
+    var fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : String(n);
+    var calls = (d.today && d.today.calls) || 0;
     bars.innerHTML = '<div class="token-bar-row">' +
-      '<div class="token-bar-label"><span>Capacity</span><span>' + cap + ' tenders</span></div>' +
+      '<div class="token-bar-label"><span>Gemini Tokens Today</span><span>' + fmt(used) + ' / ' + fmt(limit) + '</span></div>' +
       '<div class="token-bar-track"><div class="token-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
     '</div>' +
-    '<div style="font-size:9px;color:var(--text3);margin-top:2px">' + (d.api_keys_configured || 0) + ' key' + (d.api_keys_configured !== 1 ? 's' : '') + ' · ' + (d.concurrent_slots || '—') + ' slots</div>';
-    document.getElementById('api-quota').textContent = cap + ' tenders/day remaining';
+    '<div style="font-size:9px;color:var(--text3);margin-top:2px">' + (d.keys_count || 0) + ' key' + (d.keys_count !== 1 ? 's' : '') + ' · ' + calls + ' API calls today · ' + fmt(d.remaining_tokens || 0) + ' left</div>';
+    document.getElementById('api-quota').textContent = fmt(d.remaining_tokens || 0) + ' tokens remaining today';
   } catch(e) {}
 }
 
@@ -2263,8 +2314,9 @@ async function updateTokenMeter() {
 async function syncDrive() {
   toast('Syncing to Drive...', 'info');
   try {
-    var r = await fetch('/sync-drive', { method: 'POST' });
+    var r = await fetch('/sync-drive', { method: 'POST', headers: adminHeaders() });
     var d = await r.json();
+    if (r.status === 403) { toast('❌ 403 — set Admin Token in Settings first', 'error'); return; }
     toast(d.message || (d.status === 'ok' ? '✅ Drive synced' : '❌ Sync failed'), d.status === 'ok' ? 'success' : 'error');
   } catch(e) { toast('Sync error: ' + e.message, 'error'); }
 }
@@ -2405,6 +2457,92 @@ function clearAdminToken() {
 // ────────────────────────────────────────────
 // SETTINGS
 // ────────────────────────────────────────────
+// COMPANY PROFILE
+// ────────────────────────────────────────────
+var _profileData = {};
+
+async function loadProfile() {
+  try {
+    var r = await fetch('/profile');
+    var p = await r.json();
+    _profileData = p;
+    var info = p.company_info || {};
+    var rules = p.bid_rules || {};
+    var set = (id, v) => { var el = document.getElementById(id); if (el) el.value = v || ''; };
+    set('prof-name', info.name);
+    set('prof-cin', info.cin);
+    set('prof-gst', info.gst);
+    set('prof-pan', info.pan);
+    set('prof-address', info.address);
+    set('prof-turnover', info.annual_turnover_cr);
+    set('prof-years', info.years_in_business);
+    set('prof-min', rules.min_project_value_cr);
+    set('prof-max', rules.max_project_value_cr);
+    set('prof-sectors', (rules.preferred_sectors || []).join('\n'));
+    set('prof-dnb', (rules.do_not_bid || []).join('\n'));
+    set('prof-cond', (rules.conditional || []).join('\n'));
+    renderProjects(p.projects || []);
+  } catch(e) { console.error('Profile load error:', e); }
+}
+
+function renderProjects(projects) {
+  var el = document.getElementById('projects-list');
+  if (!el) return;
+  if (!projects.length) { el.innerHTML = '<div class="empty-state" style="padding:20px 0">No past projects yet. Click + Add Project.</div>'; return; }
+  el.innerHTML = projects.map((p, i) =>
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:10px;background:var(--bg4);border-radius:6px">' +
+    '<input style="flex:2" value="' + esc(p.title||'') + '" placeholder="Project title" onchange="_profileData.projects[' + i + '].title=this.value">' +
+    '<input style="flex:1" value="' + esc(p.client||'') + '" placeholder="Client" onchange="_profileData.projects[' + i + '].client=this.value">' +
+    '<input style="flex:1" value="' + esc(p.sector||'') + '" placeholder="Sector/keyword" onchange="_profileData.projects[' + i + '].sector=this.value">' +
+    '<input style="width:80px" value="' + esc(p.value_cr||'') + '" placeholder="Value Cr" onchange="_profileData.projects[' + i + '].value_cr=this.value">' +
+    '<button class="btn-icon" onclick="removeProject(' + i + ')">✕</button>' +
+    '</div>'
+  ).join('');
+}
+
+function addProject() {
+  if (!_profileData.projects) _profileData.projects = [];
+  _profileData.projects.push({title:'',client:'',sector:'',value_cr:''});
+  renderProjects(_profileData.projects);
+}
+
+function removeProject(i) {
+  _profileData.projects.splice(i, 1);
+  renderProjects(_profileData.projects);
+}
+
+async function saveProfile() {
+  var lines = id => (document.getElementById(id).value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  var info = {
+    name: document.getElementById('prof-name').value,
+    cin: document.getElementById('prof-cin').value,
+    gst: document.getElementById('prof-gst').value,
+    pan: document.getElementById('prof-pan').value,
+    address: document.getElementById('prof-address').value,
+    annual_turnover_cr: parseFloat(document.getElementById('prof-turnover').value)||0,
+    years_in_business: parseInt(document.getElementById('prof-years').value)||0,
+  };
+  var rules = {
+    min_project_value_cr: parseFloat(document.getElementById('prof-min').value)||0.25,
+    max_project_value_cr: parseFloat(document.getElementById('prof-max').value)||100,
+    preferred_sectors: lines('prof-sectors'),
+    do_not_bid: lines('prof-dnb'),
+    conditional: lines('prof-cond'),
+  };
+  _profileData.company_info = info;
+  _profileData.bid_rules = rules;
+  try {
+    var r = await fetch('/profile', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_profileData) });
+    if (r.ok) {
+      toast('✅ Profile saved', 'success');
+      document.getElementById('profile-status').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+      _profileKeywords = null;
+      refreshProfileKeywords();
+    } else toast('Save failed', 'error');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
 async function loadSettings() {
   try {
     var r = await fetch('/config-full', { headers: adminHeaders({'Content-Type': undefined}) });
@@ -2453,7 +2591,7 @@ async function testAI() {
 }
 
 async function saveT247() {
-  var data = { t247_user: document.getElementById('t247u').value, t247_pass: document.getElementById('t247p').value };
+  var data = { t247_username: document.getElementById('t247u').value, t247_password: document.getElementById('t247p').value };
   try {
     var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify(data) });
     if (r.status === 403) { toast('❌ 403 — save Admin Token in settings first', 'error'); return; }
