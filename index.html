@@ -342,7 +342,7 @@ select option{background:var(--bg2)}
   .stat-num{font-size:20px}
   .filters{gap:4px}
   .fbtn{padding:4px 8px;font-size:11px}
-  #side-panel{display:none !important}
+  #side-panel{position:fixed !important;top:0;right:0;height:100vh;z-index:200;width:320px !important;max-height:100vh !important;background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto}
   .table-wrap{overflow-x:auto}
   table th,table td{padding:7px 8px;font-size:11px}
   .topbar-actions{gap:4px}
@@ -849,40 +849,119 @@ select option{background:var(--bg2)}
 <div id="page-profile" class="page">
   <div class="topbar"><h1>Company Profile</h1>
     <div class="topbar-actions">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Import projects from Excel">
+        📥 Import Excel <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importProfileExcel(this)">
+      </label>
       <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
     </div>
   </div>
   <div class="page-body">
+    <!-- COMPANY INFO -->
     <div class="row">
-      <div class="card">
-        <div class="card-title">Nascent Info Technologies</div>
-        <label>Company Name</label><input type="text" id="prof-name" placeholder="Nascent Info Technologies">
-        <label>Registration / CIN</label><input type="text" id="prof-cin" placeholder="CIN or Reg number">
-        <label>GST Number</label><input type="text" id="prof-gst" placeholder="GST number">
-        <label>PAN</label><input type="text" id="prof-pan" placeholder="PAN number">
-        <label>Address</label><textarea id="prof-address" rows="2" placeholder="Registered address"></textarea>
-        <label>Annual Turnover (Cr)</label><input type="number" id="prof-turnover" placeholder="e.g. 5.5">
-        <label>Years in Business</label><input type="number" id="prof-years" placeholder="e.g. 10">
+      <div class="card" style="flex:2;min-width:320px">
+        <div class="card-title">Company Info</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label>Company Name</label><input id="prof-name" placeholder="Nascent Info Technologies Pvt. Ltd."></div>
+          <div><label>Short Name</label><input id="prof-short" placeholder="NIT"></div>
+          <div><label>CIN</label><input id="prof-cin" placeholder="U72200GJ2006PTC048723"></div>
+          <div><label>PAN</label><input id="prof-pan" placeholder="AACCN3670J"></div>
+          <div><label>GST / GSTIN</label><input id="prof-gst" placeholder="24AACCN3670J1ZG"></div>
+          <div><label>MSME / Udyam</label><input id="prof-udyam" placeholder="UDYAM-GJ-01-0007420"></div>
+          <div><label>MSME Type</label><input id="prof-msme-type" placeholder="MSME - Lifetime"></div>
+          <div><label>Incorporated</label><input id="prof-incorporated" placeholder="23-Jun-2006"></div>
+          <div><label>Type / Sector</label><input id="prof-type" placeholder="IT / GIS / Smart City"></div>
+          <div><label>GeM Seller ID</label><input id="prof-gem-id" placeholder="nascentinfo2"></div>
+          <div style="grid-column:1/-1"><label>Address</label><textarea id="prof-address" rows="2" placeholder="Registered address"></textarea></div>
+          <div><label>Phone</label><input id="prof-phone" placeholder="+91-79-40200400"></div>
+          <div><label>Email</label><input id="prof-email" placeholder="info@nascentinfo.com"></div>
+          <div><label>Tender Email</label><input id="prof-tender-email" placeholder="nascent.tender@nascentinfo.com"></div>
+          <div><label>Website</label><input id="prof-website" placeholder="www.nascentinfo.com"></div>
+        </div>
       </div>
-      <div class="card">
+      <div class="col" style="flex:1;min-width:260px">
+        <div class="card">
+          <div class="card-title">Managing Director</div>
+          <label>Name</label><input id="prof-md-name" placeholder="Maulik Bhagat">
+          <label>DIN</label><input id="prof-md-din" placeholder="01449881">
+          <label>Mobile</label><input id="prof-md-mobile" placeholder="9825307127">
+        </div>
+        <div class="card">
+          <div class="card-title">Authorised Signatory</div>
+          <label>Name</label><input id="prof-as-name" placeholder="Hitesh Patel">
+          <label>Designation</label><input id="prof-as-desg" placeholder="Chief Administrative Officer">
+          <label>Email</label><input id="prof-as-email" placeholder="hitesh.patel@nascentinfo.com">
+          <label>Mobile</label><input id="prof-as-mobile" placeholder="9099011792">
+          <label>POA Validity</label><input id="prof-as-poa" placeholder="01/04/2026 - 31/03/2027">
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANCE -->
+    <div class="card">
+      <div class="card-title">Finance
+        <button class="btn btn-ghost btn-xs" onclick="addTurnoverRow()">+ Add Year</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        <div><label>Net Worth (Cr)</label><input id="prof-networth" type="number" step="0.01" placeholder="26.09"></div>
+        <div><label>CA Name</label><input id="prof-ca-name" placeholder="CA Name"></div>
+        <div><label>CA UDIN (Latest FY)</label><input id="prof-ca-udin" placeholder="UDIN number"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Annual Turnover by Year (₹ Cr)</div>
+      <div id="turnover-table" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px"></div>
+    </div>
+
+    <!-- EMPLOYEES -->
+    <div class="row">
+      <div class="card" style="flex:1;min-width:220px">
+        <div class="card-title">Employee Strength</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label>Total Staff</label><input id="prof-emp-total" type="number" placeholder="67"></div>
+          <div><label>GIS Staff</label><input id="prof-emp-gis" type="number" placeholder="11"></div>
+          <div><label>IT / Dev Staff</label><input id="prof-emp-it" type="number" placeholder="21"></div>
+          <div><label>EPF Registered</label><select id="prof-emp-epf"><option value="true">Yes</option><option value="false">No</option></select></div>
+        </div>
+      </div>
+      <div class="card" style="flex:2;min-width:320px">
+        <div class="card-title">Key Technical Staff
+          <button class="btn btn-ghost btn-xs" onclick="addKeyStaff()">+ Add</button>
+        </div>
+        <div id="key-staff-list"></div>
+      </div>
+    </div>
+
+    <!-- CERTIFICATIONS -->
+    <div class="card">
+      <div class="card-title">Certifications
+        <button class="btn btn-ghost btn-xs" onclick="addCertification()">+ Add</button>
+      </div>
+      <div id="certifications-list"></div>
+    </div>
+
+    <!-- BID RULES -->
+    <div class="row">
+      <div class="card" style="flex:1">
         <div class="card-title">Bid Rules</div>
-        <label>Min Project Value (Cr)</label><input type="number" id="prof-min" step="0.1" placeholder="0.25">
-        <label>Max Project Value (Cr)</label><input type="number" id="prof-max" step="1" placeholder="100">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><label>Min Project Value (Cr)</label><input type="number" id="prof-min" step="0.1" placeholder="0.25"></div>
+          <div><label>Max Project Value (Cr)</label><input type="number" id="prof-max" step="1" placeholder="100"></div>
+        </div>
         <label>Preferred Sectors (one per line)</label>
         <textarea id="prof-sectors" rows="5" placeholder="GIS&#10;Surveying&#10;Smart City&#10;Mapping"></textarea>
-        <label>Do Not Bid Keywords (one per line)</label>
-        <textarea id="prof-dnb" rows="4" placeholder="construction&#10;civil works&#10;roads"></textarea>
-        <label>Conditional Keywords (one per line)</label>
+        <label>Do Not Bid Keywords</label>
+        <textarea id="prof-dnb" rows="4" placeholder="construction&#10;civil works"></textarea>
+        <label>Conditional Keywords</label>
         <textarea id="prof-cond" rows="3" placeholder="joint venture&#10;consortium"></textarea>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Past Projects <span style="font-size:11px;color:var(--text3);font-weight:400">— used for project matching tags on dashboard</span>
-        <button class="btn btn-ghost btn-sm" onclick="addProject()">+ Add Project</button>
+      <div class="card" style="flex:1">
+        <div class="card-title">Past Projects
+          <button class="btn btn-ghost btn-xs" onclick="addProject()">+ Add</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">These keywords power match-tags on dashboard</div>
+        <div id="projects-list"></div>
       </div>
-      <div id="projects-list"></div>
     </div>
-    <div id="profile-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+
+    <div id="profile-status" style="font-size:12px;color:var(--text3);margin-top:8px;padding:8px 0"></div>
   </div>
 </div>
 
@@ -2461,40 +2540,157 @@ function clearAdminToken() {
 // ────────────────────────────────────────────
 var _profileData = {};
 
+function _pset(id, v) { var el = document.getElementById(id); if (el) el.value = (v === null || v === undefined) ? '' : String(v); }
+
 async function loadProfile() {
   try {
     var r = await fetch('/profile');
     var p = await r.json();
     _profileData = p;
-    var info = p.company_info || {};
+    var co = p.company || {};
+    var md = p.managing_director || {};
+    var as = p.authorised_signatory || {};
+    var fin = p.finance || {};
+    var emp = p.employees || {};
     var rules = p.bid_rules || {};
-    var set = (id, v) => { var el = document.getElementById(id); if (el) el.value = v || ''; };
-    set('prof-name', info.name);
-    set('prof-cin', info.cin);
-    set('prof-gst', info.gst);
-    set('prof-pan', info.pan);
-    set('prof-address', info.address);
-    set('prof-turnover', info.annual_turnover_cr);
-    set('prof-years', info.years_in_business);
-    set('prof-min', rules.min_project_value_cr);
-    set('prof-max', rules.max_project_value_cr);
-    set('prof-sectors', (rules.preferred_sectors || []).join('\n'));
-    set('prof-dnb', (rules.do_not_bid || []).join('\n'));
-    set('prof-cond', (rules.conditional || []).join('\n'));
+
+    // Company
+    _pset('prof-name', co.name); _pset('prof-short', co.short_name);
+    _pset('prof-cin', co.cin); _pset('prof-pan', co.pan);
+    _pset('prof-gst', co.gstin); _pset('prof-udyam', co.msme_udyam || co.udyam);
+    _pset('prof-msme-type', co.msme_type); _pset('prof-incorporated', co.incorporated);
+    _pset('prof-type', co.type); _pset('prof-gem-id', co.gem_seller_id);
+    _pset('prof-address', [co.address, co.city, co.state, co.pin].filter(Boolean).join(', '));
+    _pset('prof-phone', co.phone); _pset('prof-email', co.email);
+    _pset('prof-tender-email', co.tender_email); _pset('prof-website', co.website);
+
+    // MD & Signatory
+    _pset('prof-md-name', md.name); _pset('prof-md-din', md.din); _pset('prof-md-mobile', md.mobile);
+    _pset('prof-as-name', as.name); _pset('prof-as-desg', as.designation);
+    _pset('prof-as-email', as.email); _pset('prof-as-mobile', as.mobile);
+    _pset('prof-as-poa', as.poa_validity);
+
+    // Finance
+    _pset('prof-networth', fin.net_worth_cr || fin.net_worth_latest_cr);
+    _pset('prof-ca-name', fin.ca_name); _pset('prof-ca-udin', fin.ca_udin_2024_25);
+    renderTurnoverTable(fin.turnover_by_year || {});
+
+    // Employees
+    _pset('prof-emp-total', emp.total); _pset('prof-emp-gis', emp.gis_staff || emp.gis_specialists);
+    _pset('prof-emp-it', emp.it_dev_staff || emp.it_developers);
+    var epfEl = document.getElementById('prof-emp-epf');
+    if (epfEl) epfEl.value = emp.epf_registered ? 'true' : 'false';
+    renderKeyStaff(emp.key_technical_staff || []);
+
+    // Certifications
+    renderCertifications(p.certifications || []);
+
+    // Bid rules
+    _pset('prof-min', rules.min_project_value_cr); _pset('prof-max', rules.max_project_value_cr);
+    _pset('prof-sectors', (rules.preferred_sectors || []).join('\n'));
+    _pset('prof-dnb', (rules.do_not_bid || []).join('\n'));
+    _pset('prof-cond', (rules.conditional || []).join('\n'));
+
     renderProjects(p.projects || []);
-  } catch(e) { console.error('Profile load error:', e); }
+  } catch(e) { console.error('Profile load error:', e); toast('Profile load error: ' + e.message, 'error'); }
+}
+
+function renderTurnoverTable(byYear) {
+  var el = document.getElementById('turnover-table');
+  if (!el) return;
+  var entries = Object.entries(byYear).sort();
+  if (!entries.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3)">No turnover data. Click + Add Year.</div>'; return; }
+  el.innerHTML = entries.map(([yr, val], i) =>
+    '<div style="background:var(--bg4);border-radius:6px;padding:8px;display:flex;gap:6px;align-items:center">' +
+    '<input style="width:90px" value="' + esc(yr) + '" placeholder="2024-25" oninput="_updateTurnover(' + i + ',\'year\',this.value)">' +
+    '<span style="color:var(--text3)">₹</span>' +
+    '<input type="number" step="0.01" style="flex:1" value="' + val + '" placeholder="Cr" oninput="_updateTurnover(' + i + ',\'val\',this.value)">' +
+    '<span style="font-size:10px;color:var(--text3)">Cr</span>' +
+    '<button class="btn-icon" onclick="_removeTurnover(\'' + yr + '\')">✕</button>' +
+    '</div>'
+  ).join('');
+}
+function _updateTurnover(i, field, val) {
+  var fin = _profileData.finance || {}; var by = fin.turnover_by_year || {};
+  var entries = Object.entries(by).sort();
+  if (!entries[i]) return;
+  var [yr] = entries[i];
+  if (field === 'year') { by[val] = by[yr]; delete by[yr]; }
+  else { by[yr] = parseFloat(val) || 0; }
+  if (!_profileData.finance) _profileData.finance = {};
+  _profileData.finance.turnover_by_year = by;
+}
+function _removeTurnover(yr) {
+  var by = (_profileData.finance || {}).turnover_by_year || {};
+  delete by[yr]; renderTurnoverTable(by);
+}
+function addTurnoverRow() {
+  if (!_profileData.finance) _profileData.finance = {};
+  if (!_profileData.finance.turnover_by_year) _profileData.finance.turnover_by_year = {};
+  var yr = new Date().getFullYear(); var key = (yr-1) + '-' + String(yr).slice(2);
+  _profileData.finance.turnover_by_year[key] = 0;
+  renderTurnoverTable(_profileData.finance.turnover_by_year);
+}
+
+function renderKeyStaff(list) {
+  var el = document.getElementById('key-staff-list');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3)">No key staff. Click + Add.</div>'; return; }
+  el.innerHTML = list.map((s, i) =>
+    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--bg4);border-radius:6px">' +
+    '<input style="flex:2" value="' + esc(s.name||'') + '" placeholder="Name" onchange="_profileData.employees.key_technical_staff[' + i + '].name=this.value">' +
+    '<input style="flex:2" value="' + esc(s.designation||'') + '" placeholder="Designation" onchange="_profileData.employees.key_technical_staff[' + i + '].designation=this.value">' +
+    '<input style="flex:1" value="' + esc(s.dept||'') + '" placeholder="Dept" onchange="_profileData.employees.key_technical_staff[' + i + '].dept=this.value">' +
+    '<input style="width:50px" type="number" value="' + (s.years||'') + '" placeholder="Yrs" onchange="_profileData.employees.key_technical_staff[' + i + '].years=+this.value">' +
+    '<button class="btn-icon" onclick="_removeKeyStaff(' + i + ')">✕</button>' +
+    '</div>'
+  ).join('');
+}
+function addKeyStaff() {
+  if (!_profileData.employees) _profileData.employees = {};
+  if (!_profileData.employees.key_technical_staff) _profileData.employees.key_technical_staff = [];
+  _profileData.employees.key_technical_staff.push({name:'',designation:'',dept:'',years:0});
+  renderKeyStaff(_profileData.employees.key_technical_staff);
+}
+function _removeKeyStaff(i) {
+  (_profileData.employees||{key_technical_staff:[]}).key_technical_staff.splice(i, 1);
+  renderKeyStaff(_profileData.employees.key_technical_staff);
+}
+
+function renderCertifications(list) {
+  var el = document.getElementById('certifications-list');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3)">No certifications. Click + Add.</div>'; return; }
+  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + list.map((c, i) => {
+    var label = typeof c === 'string' ? c : (c.name || JSON.stringify(c));
+    return '<div style="display:flex;align-items:center;gap:4px;background:var(--bg4);border-radius:4px;padding:4px 8px">' +
+      '<span style="font-size:12px">' + label + '</span>' +
+      '<button class="btn-icon" style="padding:2px 4px;font-size:10px" onclick="_removeCert(' + i + ')">✕</button>' +
+      '</div>';
+  }).join('') + '</div>';
+}
+function addCertification() {
+  var cert = prompt('Enter certification name:');
+  if (!cert) return;
+  if (!_profileData.certifications) _profileData.certifications = [];
+  _profileData.certifications.push(cert.trim());
+  renderCertifications(_profileData.certifications);
+}
+function _removeCert(i) {
+  (_profileData.certifications || []).splice(i, 1);
+  renderCertifications(_profileData.certifications || []);
 }
 
 function renderProjects(projects) {
   var el = document.getElementById('projects-list');
   if (!el) return;
-  if (!projects.length) { el.innerHTML = '<div class="empty-state" style="padding:20px 0">No past projects yet. Click + Add Project.</div>'; return; }
+  if (!projects.length) { el.innerHTML = '<div class="empty-state" style="padding:12px 0">No past projects. Click + Add.</div>'; return; }
   el.innerHTML = projects.map((p, i) =>
-    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:10px;background:var(--bg4);border-radius:6px">' +
-    '<input style="flex:2" value="' + esc(p.title||'') + '" placeholder="Project title" onchange="_profileData.projects[' + i + '].title=this.value">' +
-    '<input style="flex:1" value="' + esc(p.client||'') + '" placeholder="Client" onchange="_profileData.projects[' + i + '].client=this.value">' +
-    '<input style="flex:1" value="' + esc(p.sector||'') + '" placeholder="Sector/keyword" onchange="_profileData.projects[' + i + '].sector=this.value">' +
-    '<input style="width:80px" value="' + esc(p.value_cr||'') + '" placeholder="Value Cr" onchange="_profileData.projects[' + i + '].value_cr=this.value">' +
+    '<div style="display:grid;grid-template-columns:3fr 2fr 2fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--bg4);border-radius:6px">' +
+    '<input value="' + esc(p.title||p.name||'') + '" placeholder="Project title" onchange="_profileData.projects[' + i + '].title=this.value">' +
+    '<input value="' + esc(p.client||'') + '" placeholder="Client/Dept" onchange="_profileData.projects[' + i + '].client=this.value">' +
+    '<input value="' + esc(p.sector||p.domain||'') + '" placeholder="Sector/keyword" onchange="_profileData.projects[' + i + '].sector=this.value">' +
+    '<input type="number" step="0.01" value="' + (p.value_cr||p.value||'') + '" placeholder="₹Cr" onchange="_profileData.projects[' + i + '].value_cr=+this.value">' +
     '<button class="btn-icon" onclick="removeProject(' + i + ')">✕</button>' +
     '</div>'
   ).join('');
@@ -2502,44 +2698,89 @@ function renderProjects(projects) {
 
 function addProject() {
   if (!_profileData.projects) _profileData.projects = [];
-  _profileData.projects.push({title:'',client:'',sector:'',value_cr:''});
+  _profileData.projects.push({title:'',client:'',sector:'',value_cr:0});
   renderProjects(_profileData.projects);
 }
-
 function removeProject(i) {
   _profileData.projects.splice(i, 1);
   renderProjects(_profileData.projects);
 }
 
 async function saveProfile() {
-  var lines = id => (document.getElementById(id).value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-  var info = {
-    name: document.getElementById('prof-name').value,
-    cin: document.getElementById('prof-cin').value,
-    gst: document.getElementById('prof-gst').value,
-    pan: document.getElementById('prof-pan').value,
-    address: document.getElementById('prof-address').value,
-    annual_turnover_cr: parseFloat(document.getElementById('prof-turnover').value)||0,
-    years_in_business: parseInt(document.getElementById('prof-years').value)||0,
-  };
-  var rules = {
-    min_project_value_cr: parseFloat(document.getElementById('prof-min').value)||0.25,
-    max_project_value_cr: parseFloat(document.getElementById('prof-max').value)||100,
+  var lines = id => { var el = document.getElementById(id); return el ? el.value.split('\n').map(s=>s.trim()).filter(Boolean) : []; };
+  var gv = id => { var el = document.getElementById(id); return el ? el.value : ''; };
+
+  _profileData.company = Object.assign(_profileData.company || {}, {
+    name: gv('prof-name'), short_name: gv('prof-short'), cin: gv('prof-cin'),
+    pan: gv('prof-pan'), gstin: gv('prof-gst'), msme_udyam: gv('prof-udyam'), udyam: gv('prof-udyam'),
+    msme_type: gv('prof-msme-type'), incorporated: gv('prof-incorporated'),
+    type: gv('prof-type'), gem_seller_id: gv('prof-gem-id'), address: gv('prof-address'),
+    phone: gv('prof-phone'), email: gv('prof-email'),
+    tender_email: gv('prof-tender-email'), website: gv('prof-website'),
+  });
+  _profileData.managing_director = Object.assign(_profileData.managing_director || {}, {
+    name: gv('prof-md-name'), din: gv('prof-md-din'), mobile: gv('prof-md-mobile'),
+  });
+  _profileData.authorised_signatory = Object.assign(_profileData.authorised_signatory || {}, {
+    name: gv('prof-as-name'), designation: gv('prof-as-desg'),
+    email: gv('prof-as-email'), mobile: gv('prof-as-mobile'), poa_validity: gv('prof-as-poa'),
+  });
+  if (!_profileData.finance) _profileData.finance = {};
+  _profileData.finance.net_worth_cr = parseFloat(gv('prof-networth')) || 0;
+  _profileData.finance.net_worth_latest_cr = parseFloat(gv('prof-networth')) || 0;
+  _profileData.finance.ca_name = gv('prof-ca-name');
+  _profileData.finance['ca_udin_2024_25'] = gv('prof-ca-udin');
+  if (!_profileData.employees) _profileData.employees = {};
+  _profileData.employees.total = parseInt(gv('prof-emp-total')) || 0;
+  _profileData.employees.total_confirmed = parseInt(gv('prof-emp-total')) || 0;
+  _profileData.employees.gis_staff = parseInt(gv('prof-emp-gis')) || 0;
+  _profileData.employees.gis_specialists = parseInt(gv('prof-emp-gis')) || 0;
+  _profileData.employees.it_dev_staff = parseInt(gv('prof-emp-it')) || 0;
+  _profileData.employees.it_developers = parseInt(gv('prof-emp-it')) || 0;
+  _profileData.employees.epf_registered = gv('prof-emp-epf') === 'true';
+  _profileData.bid_rules = {
+    min_project_value_cr: parseFloat(gv('prof-min')) || 0.25,
+    max_project_value_cr: parseFloat(gv('prof-max')) || 100,
     preferred_sectors: lines('prof-sectors'),
     do_not_bid: lines('prof-dnb'),
     conditional: lines('prof-cond'),
   };
-  _profileData.company_info = info;
-  _profileData.bid_rules = rules;
   try {
     var r = await fetch('/profile', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_profileData) });
     if (r.ok) {
       toast('✅ Profile saved', 'success');
-      document.getElementById('profile-status').textContent = 'Saved at ' + new Date().toLocaleTimeString();
-      _profileKeywords = null;
-      refreshProfileKeywords();
-    } else toast('Save failed', 'error');
+      document.getElementById('profile-status').textContent = 'Saved ' + new Date().toLocaleTimeString();
+      _profileKeywords = null; refreshProfileKeywords();
+    } else { var er = await r.json().catch(()=>{}); toast('Save failed: ' + (er && er.detail || r.status), 'error'); }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function importProfileExcel(input) {
+  var file = input.files[0];
+  if (!file) return;
+  toast('Importing projects from Excel...', 'info');
+  var fd = new FormData(); fd.append('file', file);
+  try {
+    var r = await fetch('/profile/import-excel', { method: 'POST', body: fd });
+    var d = await r.json();
+    if (d.status === 'ok') {
+      if (d.projects && d.projects.length) {
+        if (!_profileData.projects) _profileData.projects = [];
+        var added = 0;
+        d.projects.forEach(function(np) {
+          var exists = _profileData.projects.some(function(ep) { return ep.title === np.title && ep.client === np.client; });
+          if (!exists) { _profileData.projects.push(np); added++; }
+        });
+        renderProjects(_profileData.projects);
+        toast('✅ Imported ' + added + ' new projects (' + d.projects.length + ' found in Excel)', 'success');
+      } else { toast('No projects found in Excel. Check sheet/column names.', 'info'); }
+      if (d.company) {
+        _profileData.company = Object.assign(_profileData.company || {}, d.company);
+        toast('Company info also updated from Excel', 'info');
+      }
+    } else { toast('Import failed: ' + (d.detail || d.message || 'Unknown error'), 'error'); }
+  } catch(e) { toast('Import error: ' + e.message, 'error'); }
+  input.value = '';
 }
 
 // ────────────────────────────────────────────

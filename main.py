@@ -1574,14 +1574,23 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                     _set_job(job_id, progress=f"AI · {stage} · {done}/{total}")
                 except Exception:
                     pass
-            if PARALLEL_ANALYST_AVAILABLE:
-                ai_result = analyze_with_gemini_parallel(all_text, passed, progress_cb=_seg_progress)
-            else:
-                ai_result = analyze_with_gemini(all_text, passed)
+            ai_result = {"error": "timeout"}
+            try:
+                import concurrent.futures as _cf
+                with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
+                    if PARALLEL_ANALYST_AVAILABLE:
+                        _fut = _ex.submit(analyze_with_gemini_parallel, all_text, passed, _seg_progress)
+                    else:
+                        _fut = _ex.submit(analyze_with_gemini, all_text, passed)
+                    ai_result = _fut.result(timeout=180)  # 3 min hard cap
+            except _cf.TimeoutError:
+                ai_result = {"error": "AI analysis timed out after 3 minutes — quota may be exhausted"}
+                _set_job(job_id, progress="AI timed out — returning basic extraction…")
+            except Exception as _ai_exc:
+                ai_result = {"error": str(_ai_exc)}
             try:
                 in_tok = len(all_text) // 4
-                out_tok = 2000
-                record_token_usage(in_tok, out_tok)
+                record_token_usage(in_tok, 2000)
             except Exception:
                 pass
             if "error" not in ai_result:
@@ -1589,13 +1598,18 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 ai_used = True
             else:
                 err_msg = ai_result.get("error", "AI error")
-                tender_data["ai_warning"] = err_msg
-                # If quota exhausted, still return regex-extracted data as partial result
-                if "429" in err_msg or "quota" in err_msg.lower() or "503" in err_msg:
-                    tender_data["ai_warning"] = f"Gemini quota exhausted — showing regex-extracted data only. Try again in 1 hour. ({err_msg[:80]})"
-                _set_job(job_id, progress=f"AI unavailable — using basic extraction…")
+                if "429" in err_msg or "quota" in err_msg.lower():
+                    tender_data["ai_warning"] = (
+                        "⚠ Gemini quota exhausted (HTTP 429). All API keys hit their daily limit. "
+                        "Showing regex-extracted data only. Wait ~1 hour or add keys from different Google accounts."
+                    )
+                elif "timeout" in err_msg.lower():
+                    tender_data["ai_warning"] = "⚠ AI analysis timed out. Showing basic extraction. Try again."
+                else:
+                    tender_data["ai_warning"] = f"AI unavailable: {err_msg[:120]}"
+                _set_job(job_id, progress="AI unavailable — returning basic extraction…")
         elif not api_key:
-            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → Gemini AI Keys."
+            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add Gemini keys."
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
@@ -2059,6 +2073,106 @@ async def update_profile(data: dict = Body(...)):
         pass
 
     return {"status": "saved", "drive_synced": drive_saved}
+
+
+@app.post("/profile/import-excel")
+async def import_profile_excel(file: UploadFile = File(...)):
+    """Parse an Excel file and extract company profile data (projects, company info)."""
+    if not file.filename.lower().endswith((".xlsx", ".xls")):
+        raise HTTPException(400, "Only .xlsx / .xls files accepted")
+    try:
+        import openpyxl
+    except ImportError:
+        raise HTTPException(500, "openpyxl not installed — cannot read Excel")
+
+    content = await file.read()
+    tmp = TEMP_DIR / f"profile_import_{uuid.uuid4().hex}.xlsx"
+    try:
+        tmp.write_bytes(content)
+        wb = openpyxl.load_workbook(tmp, data_only=True)
+    except Exception as e:
+        raise HTTPException(400, f"Cannot open Excel: {e}")
+    finally:
+        try: tmp.unlink()
+        except Exception: pass
+
+    projects = []
+    company_updates = {}
+
+    # Look for project data in any sheet
+    PROJECT_COLS = {
+        "title": ["title","project","project name","name","work","description","tender name"],
+        "client": ["client","department","dept","owner","organisation","org","authority","ministry"],
+        "sector": ["sector","domain","type","category","technology","area"],
+        "value_cr": ["value","amount","cost","cr","crore","contract value","₹ cr","value (cr)"],
+        "year": ["year","fy","financial year","completion","awarded"],
+    }
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows: continue
+
+        # Find header row (first row with >2 non-empty cells)
+        header_row_idx = None
+        for idx, row in enumerate(rows[:10]):
+            non_empty = [c for c in row if c is not None and str(c).strip()]
+            if len(non_empty) >= 2:
+                header_row_idx = idx
+                break
+        if header_row_idx is None: continue
+
+        headers = [str(h).strip().lower() if h else "" for h in rows[header_row_idx]]
+
+        # Map columns
+        col_map = {}
+        for field, aliases in PROJECT_COLS.items():
+            for i, h in enumerate(headers):
+                if any(a in h for a in aliases):
+                    col_map[field] = i
+                    break
+
+        # If we found at least title + client or title + value, treat as project sheet
+        if "title" not in col_map:
+            continue
+
+        for row in rows[header_row_idx + 1:]:
+            if not any(c for c in row if c is not None):
+                continue
+            def cell(field):
+                idx = col_map.get(field)
+                return str(row[idx]).strip() if idx is not None and row[idx] is not None else ""
+
+            title = cell("title")
+            if not title or title.lower() in ("none","nan","—","-",""):
+                continue
+            val_raw = cell("value_cr")
+            try: val_cr = float(re.sub(r"[^\d.]", "", val_raw)) if val_raw else 0.0
+            except Exception: val_cr = 0.0
+
+            projects.append({
+                "title": title,
+                "client": cell("client"),
+                "sector": cell("sector"),
+                "value_cr": val_cr,
+                "year": cell("year"),
+            })
+
+    # Deduplicate by title
+    seen_titles = set()
+    unique_projects = []
+    for p in projects:
+        key = p["title"].lower().strip()
+        if key not in seen_titles:
+            seen_titles.add(key)
+            unique_projects.append(p)
+
+    return {
+        "status": "ok",
+        "sheets_scanned": len(wb.sheetnames),
+        "projects": unique_projects,
+        "company": company_updates if company_updates else None,
+        "message": f"Found {len(unique_projects)} projects across {len(wb.sheetnames)} sheets",
+    }
 
 
 # ══ BOQ ══════════════════════════════════════════════════════════════════════
