@@ -1690,20 +1690,46 @@ async function analyseTender() {
 }
 
 async function pollAnalysis(jobId) {
-  var step = 2;
+  var step = 0;
+  var lastProgress = '';
+  var sameCount = 0;
   while (true) {
     await new Promise(r => setTimeout(r, 3000));
     try {
       var r = await fetch('/analyse-status/' + jobId);
-      if (r.status === 404) { toast('Analysis job lost — please retry', 'error'); document.getElementById('an-progress').style.display='none'; return; }
+      if (r.status === 404) {
+        toast('Analysis job lost (server restarted) — please re-upload and retry', 'error');
+        document.getElementById('an-progress').style.display = 'none';
+        return;
+      }
       var d = await r.json();
-      if (d.step !== undefined && d.step > step) { step = d.step; setStep(step); }
+      // Advance step from backend numeric step
+      if (typeof d.step === 'number' && d.step > step) { step = d.step; setStep(step); }
+      // Also parse progress text as fallback
+      var prog = d.progress || '';
+      if (prog !== lastProgress) { lastProgress = prog; sameCount = 0; }
+      else { sameCount++; }
+      // Show current activity in step label if no numeric step from server
+      if (prog && prog !== lastProgress) {
+        var lbl = document.getElementById('ap-step-label');
+        if (lbl && step < 2) lbl.textContent = '· ' + prog;
+      }
+      // Stale: same progress for >5 polls (~15s) — show warning in label
+      if (sameCount === 5) {
+        var lbl = document.getElementById('ap-step-label');
+        if (lbl) lbl.textContent = '· ' + (prog || 'Processing…') + ' (slow API, please wait)';
+      }
       if (d.status === 'done') {
+        setStep(9);
         setTimeout(() => { document.getElementById('an-progress').style.display='none'; showAnalysisResult(d.result || d || {}); }, 500);
         return;
       }
-      if (d.status === 'error') { toast('Analysis error: ' + d.message, 'error'); document.getElementById('an-progress').style.display='none'; return; }
-    } catch(e) { /* continue */ }
+      if (d.status === 'error') {
+        toast('Analysis error: ' + (d.error || d.message || 'Unknown error'), 'error');
+        document.getElementById('an-progress').style.display = 'none';
+        return;
+      }
+    } catch(e) { /* network glitch, continue */ }
   }
 }
 

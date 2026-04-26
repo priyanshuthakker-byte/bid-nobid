@@ -1615,11 +1615,11 @@ async def analyse_status(job_id: str):
     job = _get_job(job_id)
     if not job:
         raise HTTPException(404, "Job not found")
-    # Auto-fail jobs stuck > 8 minutes (Gemini timeout / crash)
+    # Auto-fail jobs stuck > 12 minutes (Gemini timeout / server restart)
     if job.get("status") == "running" and job.get("started_at"):
         elapsed = _time.time() - job["started_at"]
-        if elapsed > 480:
-            _set_job(job_id, status="error", error=f"Analysis timed out after {int(elapsed)}s. Check Gemini API key and try again.")
+        if elapsed > 720:
+            _set_job(job_id, status="error", error=f"Analysis timed out after {int(elapsed//60)}min. The server may have restarted. Please re-upload and try again.")
             return _get_job(job_id)
     return job
 
@@ -1646,7 +1646,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         extract_dir = Path(tmp_dir) / "extracted"
         extract_dir.mkdir()
 
-        _set_job(job_id, progress="Extracting documents…")
+        _set_job(job_id, progress="Extracting documents…", step=0)
         for fname, content in file_contents:
             dest = Path(tmp_dir) / fname
             dest.write_bytes(content)
@@ -1674,7 +1674,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         corr = [f for f in doc_files if any(k in f.name.lower() for k in ["corrigendum","addendum","amendment","corr_","addend","revised","rectification"])]
         main_files = [f for f in doc_files if f not in corr]
 
-        _set_job(job_id, progress="Reading documents…")
+        _set_job(job_id, progress="Reading documents…", step=1)
         extractor = TenderExtractor()
         tender_data = extractor.process_documents(main_files if main_files else doc_files)
 
@@ -1687,7 +1687,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             tender_data["has_corrigendum"] = True
             tender_data["corrigendum_files"] = [f.name for f in corr]
 
-        _set_job(job_id, progress="Reading full text…")
+        _set_job(job_id, progress="Reading full text…", step=1)
         all_text = ""
         MAX_CORPUS = 350_000  # ~350KB — keeps RAM under 512MB on Render free tier
         for f in sorted(doc_files, key=lambda x: (0 if any(k in x.name.lower() for k in ["rfp","nit","tender","bid"]) else 1 if any(k in x.name.lower() for k in ["corrigendum","addendum"]) else 2)):
@@ -1706,10 +1706,16 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
         if api_key and all_text.strip():
-            _set_job(job_id, progress="AI pipeline starting (parallel 9 segments)…")
+            _set_job(job_id, progress="AI pipeline starting (parallel 9 segments)…", step=2)
+            _STAGE_STEP = {
+                "snapshot": 1, "corrig": 1,
+                "scope": 2, "pq": 3, "tq": 4, "workshed": 4,
+                "payment": 5, "assessment": 6, "prebid": 7, "checklist": 7,
+            }
             def _seg_progress(stage, done, total):
                 try:
-                    _set_job(job_id, progress=f"AI · {stage} · {done}/{total}")
+                    s = _STAGE_STEP.get(stage, 2)
+                    _set_job(job_id, progress=f"AI · {stage} · {done}/{total}", step=s)
                 except Exception:
                     pass
             ai_result = {"error": "timeout"}
@@ -1720,9 +1726,9 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                         _fut = _ex.submit(analyze_with_gemini_parallel, all_text, passed, _seg_progress)
                     else:
                         _fut = _ex.submit(analyze_with_gemini, all_text, passed)
-                    ai_result = _fut.result(timeout=180)  # 3 min hard cap
+                    ai_result = _fut.result(timeout=420)  # 7 min hard cap (Render kills at 10min)
             except _cf.TimeoutError:
-                ai_result = {"error": "AI analysis timed out after 3 minutes — quota may be exhausted"}
+                ai_result = {"error": "AI analysis timed out after 7 minutes — quota may be exhausted"}
                 _set_job(job_id, progress="AI timed out — returning basic extraction…")
             except Exception as _ai_exc:
                 ai_result = {"error": str(_ai_exc)}
@@ -1751,14 +1757,14 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
-        _set_job(job_id, progress="Checking eligibility…")
+        _set_job(job_id, progress="Checking eligibility…", step=6)
         checker = NascentChecker()
         if not tender_data.get("overall_verdict"):
             tender_data["pq_criteria"] = checker.check_all(tender_data.get("pq_criteria", []))
             tender_data["tq_criteria"] = checker.check_all(tender_data.get("tq_criteria", []))
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
-        _set_job(job_id, progress="Generating Word report…")
+        _set_job(job_id, progress="Generating Word report…", step=8)
         output_filename = ""
         doc_b64 = ""
         try:
