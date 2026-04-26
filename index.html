@@ -2171,12 +2171,12 @@ async function autoFetchT247() {
       await loadDashboard();
     } else {
       var msg = d.detail || d.message || 'Fetch failed';
-      toast('❌ ' + msg + ' — use 📥 Excel import as fallback', 'error');
+      toast('❌ ' + msg, 'error');
     }
   } catch(e) {
     hideLoading();
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Fetch T247'; }
-    toast('❌ T247 connect failed — use 📥 Excel import instead', 'error');
+    toast('T247 error: ' + e.message, 'error');
   }
 }
 
@@ -2297,13 +2297,13 @@ async function updateTokenMeter() {
     var limit = d.daily_limit_tokens || 1000000;
     var pct = Math.min(100, Math.round(d.pct_used || 0));
     var cls = pct < 60 ? 'ok' : pct < 85 ? 'warn' : 'crit';
-    var fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : String(n);
+    var fmt = function(n) { return n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : String(n); };
     var calls = (d.today && d.today.calls) || 0;
     bars.innerHTML = '<div class="token-bar-row">' +
       '<div class="token-bar-label"><span>Gemini Tokens Today</span><span>' + fmt(used) + ' / ' + fmt(limit) + '</span></div>' +
       '<div class="token-bar-track"><div class="token-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
     '</div>' +
-    '<div style="font-size:9px;color:var(--text3);margin-top:2px">' + (d.keys_count || 0) + ' key' + (d.keys_count !== 1 ? 's' : '') + ' · ' + calls + ' API calls today · ' + fmt(d.remaining_tokens || 0) + ' left</div>';
+    '<div style="font-size:9px;color:var(--text3);margin-top:2px">' + (d.keys_count || 0) + ' key' + (d.keys_count !== 1 ? 's' : '') + ' · ' + calls + ' calls today · ' + fmt(d.remaining_tokens || 0) + ' left</div>';
     document.getElementById('api-quota').textContent = fmt(d.remaining_tokens || 0) + ' tokens remaining today';
   } catch(e) {}
 }
@@ -2315,8 +2315,8 @@ async function syncDrive() {
   toast('Syncing to Drive...', 'info');
   try {
     var r = await fetch('/sync-drive', { method: 'POST', headers: adminHeaders() });
-    var d = await r.json();
     if (r.status === 403) { toast('❌ 403 — set Admin Token in Settings first', 'error'); return; }
+    var d = await r.json();
     toast(d.message || (d.status === 'ok' ? '✅ Drive synced' : '❌ Sync failed'), d.status === 'ok' ? 'success' : 'error');
   } catch(e) { toast('Sync error: ' + e.message, 'error'); }
 }
