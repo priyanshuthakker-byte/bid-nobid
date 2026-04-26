@@ -635,10 +635,13 @@ select option{background:var(--bg2)}
       <div class="card" style="padding:0;overflow:hidden">
         <div class="an-tabs" id="res-tabs">
           <div class="an-tab active" onclick="switchAnTab('pq')">PQ Eligibility <span class="an-tab-badge" id="tab-badge-pq">0</span></div>
-          <div class="an-tab" onclick="switchAnTab('tq')">Technical Criteria <span class="an-tab-badge" id="tab-badge-tq">0</span></div>
-          <div class="an-tab" onclick="switchAnTab('scope')">Scope of Work</div>
-          <div class="an-tab" onclick="switchAnTab('snapshot')">Tender Details</div>
-          <div class="an-tab" onclick="switchAnTab('report')">Report Preview</div>
+          <div class="an-tab" onclick="switchAnTab('tq')">Technical <span class="an-tab-badge" id="tab-badge-tq">0</span></div>
+          <div class="an-tab" onclick="switchAnTab('assessment')">Assessment <span class="an-tab-badge" id="tab-badge-assessment"></span></div>
+          <div class="an-tab" onclick="switchAnTab('action')">Action Plan <span class="an-tab-badge" id="tab-badge-action">0</span></div>
+          <div class="an-tab" onclick="switchAnTab('checklist')">Checklist <span class="an-tab-badge" id="tab-badge-checklist">0</span></div>
+          <div class="an-tab" onclick="switchAnTab('scope')">Scope</div>
+          <div class="an-tab" onclick="switchAnTab('snapshot')">Details</div>
+          <div class="an-tab" onclick="switchAnTab('report')">Report</div>
         </div>
         <div style="padding:0 16px 16px">
           <!-- PQ Tab -->
@@ -686,6 +689,29 @@ select option{background:var(--bg2)}
               <thead><tr><th style="width:40%">Field</th><th>Value</th></tr></thead>
               <tbody id="res-snapshot-body"></tbody>
             </table>
+          </div>
+          <!-- Assessment Tab -->
+          <div class="an-tabpanel" id="anpanel-assessment">
+            <div id="res-assessment-body"></div>
+          </div>
+          <!-- Action Plan Tab -->
+          <div class="an-tabpanel" id="anpanel-action">
+            <div id="res-notes-body" style="margin-top:12px"></div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;font-weight:600">Immediate Action Items</div>
+            <div style="overflow-x:auto">
+              <table class="crit-table">
+                <thead><tr><th>#</th><th>Action</th><th>Responsible</th><th>Target Date</th><th style="width:90px">Priority</th></tr></thead>
+                <tbody id="res-action-body"><tr><td colspan="5" class="empty-state">No action items.</td></tr></tbody>
+              </table>
+            </div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:20px 0 8px;font-weight:600">Payment Schedule</div>
+            <div id="res-payment-body"></div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;font-weight:600">Penalty / LD Clauses</div>
+            <div id="res-penalty-body"></div>
+          </div>
+          <!-- Checklist Tab -->
+          <div class="an-tabpanel" id="anpanel-checklist">
+            <div id="res-checklist-body" style="margin-top:12px"></div>
           </div>
           <!-- Report Tab -->
           <div class="an-tabpanel" id="anpanel-report">
@@ -1685,8 +1711,8 @@ async function pollAnalysis(jobId) {
 // ANALYST TABS
 // ────────────────────────────────────────────
 function switchAnTab(name) {
-  document.querySelectorAll('.an-tab').forEach((el, i) => {
-    var names = ['pq','tq','scope','snapshot','report'];
+  var names = ['pq','tq','assessment','action','checklist','scope','snapshot','report'];
+  document.querySelectorAll('#res-tabs .an-tab').forEach((el, i) => {
     el.classList.toggle('active', names[i] === name);
   });
   document.querySelectorAll('.an-tabpanel').forEach(el => {
@@ -1791,6 +1817,149 @@ function showAnalysisResult(d) {
     .filter(([,val]) => { var s = _fv(val); return s && s !== '—'; })
     .map(([k,val]) => '<tr><td style="color:var(--text3);white-space:nowrap">' + k + '</td><td style="color:#fff">' + _fv(val) + '</td></tr>')
     .join('');
+
+  // ── Assessment Tab ──
+  var strengths = td.key_strengths || [];
+  var risks = td.key_risks || [];
+  var disq = td.hard_disqualifiers || [];
+  var matches = td.project_matches || [];
+  document.getElementById('tab-badge-assessment').textContent = disq.length ? '⚠ ' + disq.length : '';
+  var ahtml = '';
+  if (disq.length) {
+    ahtml += '<div style="margin-bottom:16px"><div style="font-size:11px;color:var(--red);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Hard Disqualifiers / Gaps</div>';
+    disq.forEach(function(d2) {
+      ahtml += '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:8px">' +
+        '<div style="color:#f87171;font-size:13px;font-weight:600">' + (d2.criterion||'') + '</div>' +
+        '<div style="font-size:12px;color:var(--text2);margin-top:3px">' + (d2.reason||'') + '</div>' +
+        (d2.query_suggestion ? '<div style="font-size:11.5px;color:var(--amber);margin-top:4px">⚑ Query: ' + d2.query_suggestion + '</div>' : '') +
+        (d2.clause_ref ? '<div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:3px">' + d2.clause_ref + '</div>' : '') +
+      '</div>';
+    });
+    ahtml += '</div>';
+  }
+  if (strengths.length) {
+    ahtml += '<div style="margin-bottom:16px"><div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Key Strengths</div>';
+    strengths.forEach(function(s2) {
+      ahtml += '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border2)"><span style="color:var(--green);flex-shrink:0">✓</span><span style="font-size:12.5px;color:var(--text2)">' + s2 + '</span></div>';
+    });
+    ahtml += '</div>';
+  }
+  if (risks.length) {
+    ahtml += '<div style="margin-bottom:16px"><div style="font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Key Risks</div>';
+    risks.forEach(function(r2) {
+      ahtml += '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border2)"><span style="color:var(--amber);flex-shrink:0">⚠</span><span style="font-size:12.5px;color:var(--text2)">' + r2 + '</span></div>';
+    });
+    ahtml += '</div>';
+  }
+  if (matches.length) {
+    ahtml += '<div><div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Project Matches (Nascent vs Tender)</div>';
+    ahtml += '<table class="crit-table"><thead><tr><th>Tender Requirement</th><th>Matching Project</th><th style="width:80px">Value</th><th style="width:90px">Strength</th></tr></thead><tbody>';
+    matches.forEach(function(m) {
+      var sc = m.strength === 'STRONG' ? 'MET' : m.strength === 'MODERATE' ? 'CONDITIONAL' : 'REVIEW';
+      ahtml += '<tr><td><div style="color:#fff;font-size:12px">' + (m.tender_requirement||'') + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">' + (m.relevance||'') + '</div></td>' +
+        '<td style="color:var(--blue);font-size:12px">' + (m.matching_project||'') + '</td>' +
+        '<td style="font-size:11px;color:var(--text3)">' + (m.project_value||'—') + '</td>' +
+        '<td><span class="crit-pill ' + sc + '">' + (m.strength||'—') + '</span></td></tr>';
+    });
+    ahtml += '</tbody></table></div>';
+  }
+  if (!ahtml) ahtml = '<div class="empty-state">Run analysis to see assessment.</div>';
+  document.getElementById('res-assessment-body').innerHTML = ahtml;
+
+  // ── Action Plan Tab ──
+  var notes = td.notes || [];
+  var actions = td.action_items || [];
+  document.getElementById('tab-badge-action').textContent = actions.length;
+  // Notes / critical observations
+  var nhtml = '';
+  if (notes.length) {
+    nhtml += '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Critical Observations</div>';
+    notes.forEach(function(n) {
+      var bc = n.priority === 'HIGH' ? 'rgba(239,68,68,.08)' : n.priority === 'MEDIUM' ? 'rgba(245,158,11,.08)' : 'var(--bg4)';
+      var tc = n.priority === 'HIGH' ? '#f87171' : n.priority === 'MEDIUM' ? '#fbbf24' : 'var(--text3)';
+      nhtml += '<div style="background:' + bc + ';border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:7px">' +
+        '<div style="font-size:12.5px;font-weight:600;color:#fff;margin-bottom:3px">' +
+          '<span style="color:' + tc + ';font-size:10px;margin-right:6px">' + (n.priority||'') + '</span>' + (n.title||'') +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--text2)">' + (n.detail||'') + '</div>' +
+      '</div>';
+    });
+  }
+  document.getElementById('res-notes-body').innerHTML = nhtml;
+  // Action items table
+  document.getElementById('res-action-body').innerHTML = actions.length
+    ? actions.map(function(a, i) {
+        var pc = a.priority === 'URGENT' ? 'NOT-MET' : a.priority === 'HIGH' ? 'CONDITIONAL' : 'REVIEW';
+        return '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
+          '<td style="color:#fff;font-size:12.5px">' + (a.action||'') + '</td>' +
+          '<td style="color:var(--text3);font-size:12px">' + (a.responsible||'') + '</td>' +
+          '<td style="font-size:12px;color:var(--text2);white-space:nowrap">' + (a.target_date||'') + '</td>' +
+          '<td><span class="crit-pill ' + pc + '">' + (a.priority||'') + '</span></td></tr>';
+      }).join('')
+    : '<tr><td colspan="5" class="empty-state">No action items.</td></tr>';
+  // Payment schedule
+  var payments = td.payment_schedule || td.payment_terms || [];
+  var pmhtml = '';
+  if (payments.length) {
+    pmhtml = '<table class="crit-table"><thead><tr><th>Milestone</th><th style="width:80px">%</th><th>Details</th></tr></thead><tbody>';
+    payments.forEach(function(p) {
+      pmhtml += '<tr><td style="color:#fff;font-size:12px">' + (p.milestone||p.event||'') + '</td>' +
+        '<td style="color:var(--green);font-weight:600">' + (p.percentage||p.amount||'—') + '</td>' +
+        '<td style="font-size:11.5px;color:var(--text2)">' + (p.details||p.condition||'') + '</td></tr>';
+    });
+    pmhtml += '</tbody></table>';
+  } else {
+    pmhtml = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Not extracted — check RFP Section on Payments.</div>';
+  }
+  document.getElementById('res-payment-body').innerHTML = pmhtml;
+  // Penalty / LD
+  var penalties = td.penalty_clauses || [];
+  var penhtml = '';
+  if (penalties.length) {
+    penhtml = '<table class="crit-table"><thead><tr><th>Event / Trigger</th><th style="width:100px">Penalty</th><th>Cap / Limit</th></tr></thead><tbody>';
+    penalties.forEach(function(p) {
+      penhtml += '<tr><td style="color:#fff;font-size:12px">' + (p.event||p.trigger||p.clause||'') + '</td>' +
+        '<td style="color:var(--red);font-size:12px;font-weight:600">' + (p.penalty||p.rate||'—') + '</td>' +
+        '<td style="font-size:11.5px;color:var(--text3)">' + (p.cap||p.limit||p.maximum||'—') + '</td></tr>';
+    });
+    penhtml += '</tbody></table>';
+  } else {
+    penhtml = '<div style="font-size:12px;color:var(--text3);padding:8px 0">No penalty clauses extracted.</div>';
+  }
+  document.getElementById('res-penalty-body').innerHTML = penhtml;
+
+  // ── Checklist Tab ──
+  var checklist = td.submission_checklist || [];
+  document.getElementById('tab-badge-checklist').textContent = checklist.length;
+  var clhtml = '';
+  if (checklist.length) {
+    // Group by category
+    var cats = {};
+    checklist.forEach(function(item) {
+      var cat = item.category || 'Other';
+      if (!cats[cat]) cats[cat] = [];
+      cats[cat].push(item);
+    });
+    Object.keys(cats).forEach(function(cat) {
+      clhtml += '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:14px 0 6px">' + cat + '</div>';
+      clhtml += '<table class="crit-table"><thead><tr><th>#</th><th>Document</th><th style="width:80px">Annexure</th><th style="width:80px">Clause</th><th style="width:110px">Status</th><th>Note</th></tr></thead><tbody>';
+      cats[cat].forEach(function(item, i) {
+        var st = (item.status||'Prepare').replace('CRITICAL-verify','CRITICAL');
+        var sc = st === 'Ready' ? 'MET' : st === 'CRITICAL' ? 'NOT-MET' : st === 'Prepare' ? 'CONDITIONAL' : 'REVIEW';
+        clhtml += '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
+          '<td style="color:#fff;font-size:12.5px">' + (item.document||'') + '</td>' +
+          '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.annexure||'—') + '</td>' +
+          '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.clause_ref||'—') + '</td>' +
+          '<td><span class="crit-pill ' + sc + '">' + st + '</span></td>' +
+          '<td style="font-size:11.5px;color:' + (st==='CRITICAL'?'#fbbf24':'var(--text3)') + '">' + (item.nascent_note||'') + '</td></tr>';
+      });
+      clhtml += '</tbody></table>';
+    });
+  } else {
+    clhtml = '<div class="empty-state">No checklist generated yet.</div>';
+  }
+  document.getElementById('res-checklist-body').innerHTML = clhtml;
 
   // ── Report Tab ──
   document.getElementById('doc-preview-content').innerHTML = buildDocPreview(td, v);
