@@ -189,7 +189,7 @@ def call_gemini(prompt: str, api_key: str, max_tokens: int = 8192) -> str:
         }).encode("utf-8")
         req = urllib.request.Request(url, data=payload,
             headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=45) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result["candidates"][0]["content"]["parts"][0]["text"]
 
@@ -237,7 +237,7 @@ def call_groq(prompt: str, groq_key: str) -> str:
             method="POST"
         )
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=30) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
@@ -262,7 +262,7 @@ def _call_single_model(prompt: str, api_key: str, model: str, max_tokens: int) -
     }).encode("utf-8")
     req = urllib.request.Request(url, data=payload,
         headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=45) as resp:  # 45s — if no response by then, give up
         result = json.loads(resp.read().decode("utf-8"))
         return result["candidates"][0]["content"]["parts"][0]["text"]
 
@@ -280,9 +280,9 @@ def _call(prompt: str, api_key: str, all_keys: List[str],
         pool = get_pool()
         if pool.size() > 0:
             last_err = None
-            attempts = max(pool.size() * 2, 3)
+            attempts = max(pool.size(), 2)  # don't retry more than # of keys
             for _ in range(attempts):
-                key = pool.acquire(timeout=120.0)
+                key = pool.acquire(timeout=15.0)  # 15s max wait for a key
                 if not key:
                     break
                 rate_limited = False
@@ -509,44 +509,28 @@ def step2_corrigendums(corrigendum_texts: List[str], api_key: str,
 # STEP 3 — SCOPE OF WORK (DETAILED PROSE)
 # ═══════════════════════════════════════════════════════
 
-SCOPE_PROMPT = """You are a senior bid analyst reading an Indian government tender.
-Extract the COMPLETE Scope of Work. Write detailed prose, not bullet points.
-Every component MUST include its section reference and page number from the document.
+SCOPE_PROMPT = """You are a bid analyst. Extract the Scope of Work from this Indian government tender.
 
-Return ONLY valid JSON:
+Return ONLY valid JSON — no markdown, no preamble:
 {{
-  "scope_background": "2-3 sentences: what problem client is solving, what they currently have, why project exists",
+  "scope_background": "1-2 sentences: what the client wants built and why",
   "scope_sections": [
     {{
       "section_no": "6.1",
-      "section_title": "Component name from document",
+      "section_title": "Component name",
       "page_no": "Pg. 12",
-      "prose": "Full detailed description in prose — include all sub-components, specific module names, feature names, EXACT system names (e.g. SWAGAT, CPGRAMS, IGiS — use actual names from document). Include Phase A / Phase B if applicable. Write complete sentences.",
-      "deliverables": ["SRS document", "HLD", "UAT sign-off", "Source code", "User manual"],
-      "tech_specified": "Technology/platform if explicitly stated in this section, else —",
+      "prose": "2-3 sentence description. Include actual system/module names from document.",
+      "deliverables": ["SRS", "Source code", "UAT sign-off"],
+      "tech_specified": "Tech if stated, else —",
       "phase": "Phase A / Phase B / Both / —"
     }}
   ],
   "key_integrations": [
-    {{
-      "system": "System name",
-      "type": "API / Portal / Database / Webhook",
-      "purpose": "What this integration does",
-      "section_ref": "Cl. X"
-    }}
+    {{"system": "System name", "type": "API/Portal/DB", "purpose": "brief purpose", "section_ref": "Cl. X"}}
   ],
-  "scale_requirements": "Concurrent users, uptime %, transaction volume if stated [Sec. X, Pg. Y]",
-  "data_migration": "Any data migration requirements [Sec. X, Pg. Y] or —",
-  "training_requirement": "Training requirements [Sec. X, Pg. Y] or —",
-  "deployment_requirement": "Cloud/On-premise/Hybrid deployment requirement [Sec. X, Pg. Y] or —"
+  "scale_requirements": "Users/uptime if stated, else —",
+  "deployment_requirement": "Cloud/On-prem/Hybrid if stated, else —"
 }}
-
-Rules:
-- Extract EVERY work component — do not skip any
-- Use ACTUAL names from document (not generic terms)
-- section_no must be the actual section number from the RFP (e.g. "6.1", "3.2.1")
-- prose must be detailed — minimum 3 sentences per component
-- deliverables: actual artifact names as specified or as standard for that type of work
 
 Text:
 {text}
@@ -558,12 +542,12 @@ def step3_scope(text: str, api_key: str, all_keys: List[str], groq_key: str) -> 
         "Work to be Done", "Phase A", "Phase 1", "Scope:", "6. Scope",
         "3. Scope", "4. Scope", "Work Components", "Deliverables",
         "Functional Requirements", "Technical Requirements"
-    ], chars=10000)
+    ], chars=6000)
     if not scope_text:
-        scope_text = text[4000:16000]
-    prompt = SCOPE_PROMPT.format(text=scope_text[:12000])
+        scope_text = text[4000:10000]
+    prompt = SCOPE_PROMPT.format(text=scope_text[:6000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=8192)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=2500)
         result = clean_json(raw)
         logger.info(f"[Step3-Scope] {len(result.get('scope_sections',[]))} sections")
         return result
@@ -724,7 +708,7 @@ def step5_tq(text: str, api_key: str, all_keys: List[str], groq_key: str) -> Dic
         return {}
     prompt = TQ_PROMPT.format(nascent=NASCENT, text=tq_text[:11000])
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=8192)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=3500)
         result = clean_json(raw)
         tq_list = result.get("tq_criteria", [])
         for item in tq_list:
@@ -1015,7 +999,7 @@ def step7_assessment(snapshot: Dict, pq: Dict, tq: Dict, scope: Dict,
         scope_summary=scope_summary,
     )
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=8192)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=3500)
         result = clean_json(raw)
         logger.info(f"[Step7-Assessment] verdict={result.get('overall_recommendation')}, confidence={result.get('confidence_level')}")
         return result
@@ -1231,7 +1215,7 @@ def step9_prebid_queries(snapshot: Dict, pq: Dict, tq: Dict,
         gaps_summary=gaps_summary[:8000],
     )
     try:
-        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=8192)
+        raw = _call(prompt, api_key, all_keys, groq_key, max_tokens=3500)
         result = clean_json(raw)
         queries = result.get("queries", [])
         result["total_queries"] = len(queries)
@@ -1722,12 +1706,17 @@ def analyze_with_gemini_parallel(full_text: str, prebid_passed_flag: bool = Fals
     except Exception:
         max_workers = 4
 
+    SEG_TIMEOUT = 90  # 90s per segment max — prevents one slow call from blocking all
+
     with _cf.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(lambda fn=fn: fn()): label for label, fn in tasks}
-        for fut in _cf.as_completed(futs):
+        for fut in _cf.as_completed(futs, timeout=SEG_TIMEOUT * len(tasks)):
             label = futs[fut]
             try:
-                outputs[label] = fut.result() or {}
+                outputs[label] = fut.result(timeout=SEG_TIMEOUT) or {}
+            except _cf.TimeoutError:
+                errors[label] = f"segment timeout >{SEG_TIMEOUT}s"
+                outputs[label] = {}
             except Exception as e:
                 errors[label] = str(e)[:160]
                 outputs[label] = {}
