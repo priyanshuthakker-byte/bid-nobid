@@ -1727,6 +1727,9 @@ function showAnalysisResult(d) {
   lastAnalysisResult = d;
   lastAnalysisFilename = d.download_file || '';
   lastAnalysisTid = d.t247_id || (d.tender_data && d.tender_data.t247_id) || '';
+  // Hoist doc_b64 to top level so downloadReport() can find it regardless of nesting
+  if (!d.doc_b64 && d.result && d.result.doc_b64) d.doc_b64 = d.result.doc_b64;
+  if (!d.doc_filename && d.result && d.result.doc_filename) d.doc_filename = d.result.doc_filename;
   document.getElementById('an-result-wrap').style.display = 'block';
 
   var td = d.tender_data || d;
@@ -1972,6 +1975,9 @@ function showAnalysisResult(d) {
 
   switchAnTab('pq');
   toast('Analysis complete — Verdict: ' + v, v === 'BID' ? 'success' : v === 'NO-BID' ? 'error' : 'info');
+
+  // Auto-link to T247 tender if not already linked
+  setTimeout(function() { tryAutoLinkT247(td); }, 500);
 }
 
 function _fv(val) {
@@ -1979,6 +1985,59 @@ function _fv(val) {
   if (typeof val === 'object' && val.value !== undefined) val = val.value;
   var s = String(val || '').trim();
   return (s === '' || s === 'null' || s === 'None' || s === 'Not specified') ? '—' : s;
+}
+
+// ────────────────────────────────────────────
+// AUTO-LINK T247
+// ────────────────────────────────────────────
+function tryAutoLinkT247(td) {
+  if (lastAnalysisTid) return; // already linked
+  if (!allTenders || !allTenders.length) return;
+
+  var extractedNo = _fv(td.tender_no).replace(/[^a-z0-9]/gi, '').toLowerCase();
+  var extractedOrg = _fv(td.org_name).toLowerCase().trim().substring(0, 30);
+  var extractedName = _fv(td.tender_name).toLowerCase().trim().substring(0, 40);
+
+  var best = null, bestScore = 0;
+  allTenders.forEach(function(t) {
+    var score = 0;
+    var tRef = (t.ref_no || t.tender_no || '').replace(/[^a-z0-9]/gi,'').toLowerCase();
+    var tOrg = (t.org_name || t.brief || '').toLowerCase().trim();
+    var tName = (t.brief || t.tender_name || '').toLowerCase().trim();
+
+    // Tender number match is strongest signal
+    if (extractedNo && tRef && extractedNo.length > 4) {
+      if (tRef === extractedNo) score += 80;
+      else if (tRef.includes(extractedNo) || extractedNo.includes(tRef)) score += 50;
+    }
+    // Org name partial match
+    if (extractedOrg.length > 5 && tOrg.length > 5) {
+      var orgWords = extractedOrg.split(/\s+/).filter(w => w.length > 4);
+      var hits = orgWords.filter(w => tOrg.includes(w)).length;
+      if (hits > 0) score += hits * 15;
+    }
+    // Tender name partial match
+    if (extractedName.length > 10 && tName.length > 10) {
+      var nameWords = extractedName.split(/\s+/).filter(w => w.length > 5);
+      var nhits = nameWords.filter(w => tName.includes(w)).length;
+      if (nhits > 1) score += nhits * 8;
+    }
+
+    if (score > bestScore) { bestScore = score; best = t; }
+  });
+
+  if (best && bestScore >= 50) {
+    lastAnalysisTid = best.t247_id;
+    document.getElementById('an-tid').value = best.t247_id;
+    // Update download button with new tid
+    document.getElementById('dl-btn').onclick = () => downloadTenderDoc(best.t247_id);
+    toast('Auto-linked to T247 #' + best.t247_id + ' — ' + (best.brief || '').substring(0, 50), 'success');
+    // Show banner
+    document.getElementById('ctx-id').textContent = best.t247_id;
+    document.getElementById('ctx-brief').textContent = (best.brief || '').substring(0, 60);
+    document.getElementById('ctx-banner').style.display = 'flex';
+    loadDashboard();
+  }
 }
 
 function _critRow(idx, c) {
@@ -2192,7 +2251,23 @@ function buildDocPreview(td, verdict) {
 // DOWNLOAD REPORT
 // ────────────────────────────────────────────
 function downloadReport(filename) {
-  if (!filename) { toast('No report file available', 'error'); return; }
+  // Try base64 first (survives Render ephemeral restarts), fallback to /download/
+  var b64 = lastAnalysisResult && (lastAnalysisResult.doc_b64 || (lastAnalysisResult.result && lastAnalysisResult.result.doc_b64));
+  var fname = lastAnalysisResult && (lastAnalysisResult.doc_filename || lastAnalysisResult.download_file || filename) || filename;
+  if (b64) {
+    try {
+      var bytes = atob(b64);
+      var ab = new ArrayBuffer(bytes.length);
+      var view = new Uint8Array(ab);
+      for (var i = 0; i < bytes.length; i++) view[i] = bytes.charCodeAt(i);
+      var blob = new Blob([ab], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = fname || 'BidNoBid_Report.docx'; a.click();
+      URL.revokeObjectURL(a.href);
+      return;
+    } catch(e) { /* fallthrough to server */ }
+  }
+  if (!filename) { toast('No report available — analyse a tender first', 'error'); return; }
   window.location.href = '/download/' + filename;
 }
 
@@ -2229,13 +2304,13 @@ function togglePreviewSize() {
 async function reanalyseDrive() {
   var tid = document.getElementById('an-tid').value.trim();
   if (!tid) { toast('Enter T247 ID first', 'error'); return; }
-  showLoading('Loading from Drive...');
+  showLoading('Re-analysing from saved data...');
   try {
-    var r = await fetch('/reanalyse-drive/' + tid, { method: 'POST' });
+    var r = await fetch('/tender/' + tid + '/reanalyse', { method: 'POST' });
     var d = await r.json();
     hideLoading();
-    if (d.tender_data) showAnalysisResult(d);
-    else toast(d.message || 'Not found on Drive', 'error');
+    if (d.tender_data || d.verdict) showAnalysisResult(d);
+    else toast(d.detail || d.message || 'No saved data — analyse fresh first', 'error');
   } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
 }
 
@@ -2265,11 +2340,11 @@ function renderPrebidList(queries) {
 }
 
 async function generatePrebidLetter() {
-  var tid = document.getElementById('an-tid').value.trim();
+  var tid = document.getElementById('an-tid').value.trim() || lastAnalysisTid;
   if (!tid) { toast('Enter T247 ID first', 'error'); return; }
   showLoading('Generating pre-bid letter...');
   try {
-    var r = await fetch('/generate-prebid-letter/' + tid, { method: 'POST' });
+    var r = await fetch('/tender/' + tid + '/generate-prebid-letter', { method: 'POST' });
     if (r.ok) {
       var blob = await r.blob();
       var url = URL.createObjectURL(blob);
@@ -2290,15 +2365,26 @@ function copyPrebidEmail() {
 }
 
 async function runCompliance() {
-  var tid = document.getElementById('an-tid').value.trim();
-  if (!tid && !lastAnalysisResult) { toast('Analyse a tender first', 'error'); return; }
+  var tid = document.getElementById('an-tid').value.trim() || lastAnalysisTid;
+  if (!tid) { toast('Analyse a tender first or enter a T247 ID', 'error'); return; }
   showLoading('Running compliance check...');
   try {
-    var r = await fetch('/compliance-check', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({t247_id: tid}) });
+    var r = await fetch('/tender/' + tid + '/analyze-compliance', { method: 'POST' });
     var d = await r.json();
     hideLoading();
     document.getElementById('compliance-section').style.display = 'block';
-    document.getElementById('compliance-result').innerHTML = d.html || d.result || '<div class="empty-state">No issues found.</div>';
+    var issues = (d.analysis || {}).clause_violations || [];
+    if (!issues.length) {
+      document.getElementById('compliance-result').innerHTML = '<div class="empty-state">No compliance issues found.</div>';
+    } else {
+      document.getElementById('compliance-result').innerHTML = issues.map(function(v) {
+        var sc = v.severity === 'HIGH' ? 'var(--red)' : v.severity === 'MEDIUM' ? 'var(--amber)' : 'var(--text3)';
+        return '<div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">' +
+          '<div style="font-size:12.5px;font-weight:600;color:#fff">' + (v.clause_no||'') + ' <span style="color:'+sc+';font-size:11px">['+v.severity+']</span></div>' +
+          '<div style="font-size:12px;color:var(--text2);margin-top:3px">' + (v.issue_type||'') + '</div>' +
+          '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">' + (v.what_law_says||'') + '</div></div>';
+      }).join('');
+    }
   } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
 }
 
@@ -2426,13 +2512,17 @@ async function downloadEditorDoc() {
 async function regenerateDoc() {
   var tid = document.getElementById('de-tender-select').value;
   if (!tid) { toast('Select a tender first', 'error'); return; }
-  showLoading('Regenerating...');
+  showLoading('Regenerating report...');
   try {
-    var r = await fetch('/regenerate-report/' + tid, { method: 'POST' });
+    var r = await fetch('/tender/' + tid + '/reanalyse', { method: 'POST' });
     var d = await r.json();
     hideLoading();
-    if (d.download_file) { toast('Report regenerated!', 'success'); downloadReport(d.download_file); }
-    else toast(d.message || 'Regeneration failed', 'error');
+    if (d.tender_data || d.verdict) {
+      toast('Report regenerated!', 'success');
+      editorTenderData = d.tender_data || d;
+      document.getElementById('editor-content').innerHTML = buildDocPreview(editorTenderData, editorTenderData.verdict || 'REVIEW');
+      if (d.download_file) downloadReport(d.download_file);
+    } else toast(d.detail || 'Regeneration failed — analyse first', 'error');
   } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
 }
 
