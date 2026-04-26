@@ -2666,25 +2666,13 @@ def _t247_api_headers(token: str) -> dict:
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     }
 
-# Confirmed: only /api/tender/auth/ prefix works on T247Tender service.
-# Other service names (T247User, T247Account) and other path prefixes → ConnectionError.
-_T247_LOGIN_ENDPOINTS = [
-    # Same /api/tender/auth/ prefix as the confirmed-working Excel endpoint
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/user-login",
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/bidder-login",
-    "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/signin",
-    # Other service names that may handle auth
-    "https://t247_api.tender247.com/apigateway/T247Auth/api/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Auth/api/tender/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Bidder/api/bidder/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Bidder/api/tender/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Login/api/tender/auth/login",
-    "https://t247_api.tender247.com/apigateway/T247Company/api/tender/auth/login",
-]
+# Confirmed from browser DevTools (F12): exact service name and path
+_T247_LOGIN_URL = "https://t247_api.tender247.com/apigateway/T247ApiTender/api/auth/login"
+_T247_USER_QUERY_URL = "https://t247_api.tender247.com/apigateway/T247ApiTender/api/auth/user-login-query"
+_T247_LOGIN_ENDPOINTS = [_T247_LOGIN_URL]  # kept for probe endpoint compatibility
 
 def _t247_auto_login(cfg: dict) -> str:
-    """Login to T247 with stored email+password, store fresh JWT, return token string."""
+    """Login to T247 with stored email+password. Two-step: login → user-login-query."""
     import requests as _req
     email = str(cfg.get("t247_email", "") or cfg.get("t247_username", "") or "").strip()
     password = str(cfg.get("t247_password", "") or "").strip()
@@ -2697,91 +2685,92 @@ def _t247_auto_login(cfg: dict) -> str:
         "origin": "https://www.tender247.com",
         "referer": "https://www.tender247.com/auth",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        "x-requested-with": "XMLHttpRequest",
     }
-    # Try multiple body shapes — T247 may use emailId, email, or username
-    bodies = [
-        {"email": email, "password": password},
-        {"emailId": email, "password": password},
-        {"email": email, "password": password, "deviceType": "web"},
-        {"username": email, "password": password},
-        {"loginId": email, "password": password},
-    ]
 
-    attempt_log = []
-    for url in _T247_LOGIN_ENDPOINTS:
-        for body in bodies:
-            try:
-                resp = _req.post(url, json=body, headers=login_headers, timeout=20)
-                status = resp.status_code
-                if status in (404, 405, 501):
-                    attempt_log.append(f"{url} → {status} (skip)")
-                    break  # wrong path, try next URL
-                if status == 401:
-                    attempt_log.append(f"{url} → 401 wrong credentials")
-                    raise ValueError("T247 login failed — wrong email or password. Check credentials in Settings.")
-                if status != 200:
-                    attempt_log.append(f"{url} → {status}: {resp.text[:120]}")
-                    continue
-                # 200 — parse response
-                try:
-                    data = resp.json()
-                except Exception:
-                    attempt_log.append(f"{url} → 200 but non-JSON body")
-                    continue
-                # Extract token from any response shape
-                token = (
-                    data.get("token") or data.get("accessToken") or data.get("access_token")
-                    or data.get("jwtToken") or data.get("jwt") or data.get("authToken")
-                    or (data.get("data") or {}).get("token")
-                    or (data.get("data") or {}).get("accessToken")
-                    or (data.get("data") or {}).get("jwtToken")
-                    or (data.get("result") or {}).get("token")
-                    or (data.get("response") or {}).get("token")
-                    or ""
-                )
-                if not token and isinstance(data.get("data"), str) and len(data["data"]) > 20:
-                    token = data["data"]
-                token = str(token).strip()
-                if token.lower().startswith("bearer "):
-                    token = token[7:].strip()
-                if not token or len(token) < 20:
-                    attempt_log.append(f"{url} → 200 OK but no token in response: {str(data)[:200]}")
-                    continue
-                # Success — store token + credentials
-                fresh_cfg = load_config()
-                fresh_cfg["t247_bearer_token"] = token
-                fresh_cfg["t247_email"] = email
-                fresh_cfg["t247_password"] = password
-                jwt_payload = _t247_decode_jwt(token)
-                if jwt_payload.get("UserId"):
-                    fresh_cfg["t247_user_id"] = jwt_payload["UserId"]
-                qid = jwt_payload.get("user_email_service_query_id") or data.get("queryId")
-                if qid:
-                    fresh_cfg["t247_query_id"] = qid
-                save_config(fresh_cfg)
-                exp_str = datetime.fromtimestamp(jwt_payload["exp"]).strftime("%d %b %H:%M") if jwt_payload.get("exp") else "?"
-                print(f"✅ T247 auto-login OK via {url} — user {jwt_payload.get('UserId','?')} exp {exp_str}")
-                return token
-            except ValueError:
-                raise
-            except _req.exceptions.ConnectionError:
-                attempt_log.append(f"{url} → ConnectionError (path not routed)")
-                break  # this URL's service doesn't exist, try next
-            except _req.exceptions.Timeout:
-                attempt_log.append(f"{url} → Timeout")
-                break
-            except Exception as e:
-                attempt_log.append(f"{url} → {e}")
-                continue
+    # Step 1 — authenticate, get initial JWT
+    try:
+        resp = _req.post(
+            _T247_LOGIN_URL,
+            json={"email_id": email, "password": password},
+            headers=login_headers,
+            timeout=20,
+        )
+    except _req.exceptions.ConnectionError as e:
+        raise ValueError(f"Cannot reach T247 login server: {e}")
+    except _req.exceptions.Timeout:
+        raise ValueError("T247 login request timed out.")
 
-    diag = " | ".join(attempt_log[-5:])
-    raise ValueError(
-        f"T247 auto-login could not find the login endpoint. "
-        f"Please open tender247.com in Chrome, open DevTools (F12) → Network tab, "
-        f"log in manually, then find the login request and paste the response token "
-        f"OR the working endpoint URL to support. Attempts: {diag}"
+    if resp.status_code == 401:
+        raise ValueError("T247 login failed — wrong email or password. Check credentials in Settings.")
+    if resp.status_code != 200:
+        raise ValueError(f"T247 login failed (HTTP {resp.status_code}): {resp.text[:200]}")
+
+    try:
+        data = resp.json()
+    except Exception:
+        raise ValueError(f"T247 login returned non-JSON: {resp.text[:200]}")
+
+    # Extract token — T247 returns it in data.token or top-level token
+    token = (
+        (data.get("data") or {}).get("token")
+        or (data.get("data") or {}).get("accessToken")
+        or data.get("token")
+        or data.get("accessToken")
+        or data.get("access_token")
+        or data.get("jwtToken")
+        or ""
     )
+    if not token and isinstance(data.get("data"), str) and len(data["data"]) > 20:
+        token = data["data"]
+    token = str(token).strip()
+    if token.lower().startswith("bearer "):
+        token = token[7:].strip()
+    if not token or len(token) < 20:
+        raise ValueError(f"T247 login succeeded but no token in response: {str(data)[:300]}")
+
+    jwt_payload = _t247_decode_jwt(token)
+    user_id = jwt_payload.get("UserId") or jwt_payload.get("user_id")
+    company_service_ids = jwt_payload.get("CompanyServiceids") or []
+    company_service_id = company_service_ids[0] if company_service_ids else 1
+
+    # Step 2 — user-login-query (gets subscription/query data, refreshes session)
+    query_id = None
+    try:
+        q_headers = {**login_headers, "authorization": f"Bearer {token}"}
+        q_resp = _req.post(
+            _T247_USER_QUERY_URL,
+            json={"user_id": user_id, "company_service_id": company_service_id, "is_grace": False},
+            headers=q_headers,
+            timeout=20,
+        )
+        if q_resp.status_code == 200:
+            q_data = q_resp.json()
+            query_id = (
+                (q_data.get("data") or {}).get("query_id")
+                or (q_data.get("data") or {}).get("queryId")
+                or q_data.get("query_id")
+                or q_data.get("queryId")
+            )
+            print(f"T247 user-login-query OK — query_id={query_id}")
+        else:
+            print(f"T247 user-login-query non-200: {q_resp.status_code} {q_resp.text[:120]}")
+    except Exception as e:
+        print(f"T247 user-login-query failed (non-fatal): {e}")
+
+    # Persist everything
+    fresh_cfg = load_config()
+    fresh_cfg["t247_bearer_token"] = token
+    fresh_cfg["t247_email"] = email
+    fresh_cfg["t247_password"] = password
+    if user_id:
+        fresh_cfg["t247_user_id"] = user_id
+    if query_id:
+        fresh_cfg["t247_query_id"] = query_id
+    save_config(fresh_cfg)
+
+    exp_str = datetime.fromtimestamp(jwt_payload["exp"]).strftime("%d %b %H:%M") if jwt_payload.get("exp") else "?"
+    print(f"✅ T247 auto-login OK — user {user_id} exp {exp_str}")
+    return token
 
     raise ValueError(f"T247 login failed. Check credentials in Settings. Last error: {last_err}")
 
