@@ -641,8 +641,10 @@ def analyze_with_gemini(full_text: str,
         except Exception:
             pass
 
-    # Try each Gemini key in order
+    # Try each Gemini key in order — wait between keys to avoid RPM cascade
     for key_idx, api_key in enumerate(all_keys):
+        if key_idx > 0:
+            import time as _tw; _tw.sleep(15)  # 15s gap prevents RPM cascade across keys
         logger.info(f"Trying Gemini API key {key_idx + 1}/{len(all_keys)}")
         try:
             response_text = call_gemini(prompt, api_key)
