@@ -421,6 +421,18 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
 
+    # Restore token usage log from Drive (persists across restarts)
+    try:
+        if drive_available():
+            _tok_drive = OUTPUT_DIR / "token_usage.json"
+            if load_from_drive(_tok_drive, filename="token_usage.json"):
+                _tok_bytes = _tok_drive.read_bytes()
+                if len(_tok_bytes) > 10:
+                    _TOKEN_LOG_FILE.write_bytes(_tok_bytes)
+                    print("✅ Token usage log restored from Drive")
+    except Exception:
+        pass
+
     # Background Drive sync every 5 minutes — safety net if a save_db call was skipped
     def _periodic_drive_sync():
         _time.sleep(90)  # wait for startup to settle
@@ -979,30 +991,72 @@ def _load_token_log() -> dict:
             pass
     return {"today": {}, "total": {"calls": 0, "input_tokens": 0, "output_tokens": 0}}
 
-def record_token_usage(input_tokens: int, output_tokens: int):
-    """Call after each Gemini API call to accumulate usage stats."""
+def _save_token_log(data: dict):
+    """Write token log locally + backup to Drive so it survives restarts."""
+    try:
+        _TOKEN_LOG_FILE.write_text(json.dumps(data, indent=2))
+    except Exception:
+        pass
+    # Drive backup — async so it doesn't slow down the analysis path
+    def _drive_save():
+        try:
+            if drive_available():
+                save_to_drive(_TOKEN_LOG_FILE, filename="token_usage.json")
+        except Exception:
+            pass
+    import threading as _thr
+    _thr.Thread(target=_drive_save, daemon=True).start()
+
+
+def _load_token_log() -> dict:
+    """Load token log — prefer Drive-restored file if present."""
+    if _TOKEN_LOG_FILE.exists():
+        try:
+            return json.loads(_TOKEN_LOG_FILE.read_text())
+        except Exception:
+            pass
+    return {"today": {}, "history": {}, "total": {"calls": 0, "input_tokens": 0, "output_tokens": 0}}
+
+
+def record_token_usage(input_tokens: int, output_tokens: int, key_masked: str = ""):
+    """Call after each Gemini API call — persists to Drive, survives restarts."""
     today = datetime.now().strftime("%Y-%m-%d")
     with _token_log_lock:
         data = _load_token_log()
+        # Today summary
         d = data.setdefault("today", {})
         if d.get("date") != today:
-            data["today"] = {"date": today, "calls": 0, "input_tokens": 0, "output_tokens": 0}
+            # Roll yesterday into history
+            if d.get("date"):
+                hist = data.setdefault("history", {})
+                hist[d["date"]] = {"calls": d.get("calls", 0),
+                                   "input_tokens": d.get("input_tokens", 0),
+                                   "output_tokens": d.get("output_tokens", 0)}
+                # Keep only last 30 days
+                for old in sorted(hist.keys())[:-30]:
+                    del hist[old]
+            data["today"] = {"date": today, "calls": 0, "input_tokens": 0,
+                             "output_tokens": 0, "keys": {}}
             d = data["today"]
         d["calls"] = d.get("calls", 0) + 1
         d["input_tokens"] = d.get("input_tokens", 0) + input_tokens
         d["output_tokens"] = d.get("output_tokens", 0) + output_tokens
+        # Per-key tracking
+        if key_masked:
+            kd = d.setdefault("keys", {}).setdefault(key_masked, {"calls": 0, "tokens": 0})
+            kd["calls"] += 1
+            kd["tokens"] += input_tokens + output_tokens
+        # All-time total
         t = data.setdefault("total", {"calls": 0, "input_tokens": 0, "output_tokens": 0})
         t["calls"] = t.get("calls", 0) + 1
         t["input_tokens"] = t.get("input_tokens", 0) + input_tokens
         t["output_tokens"] = t.get("output_tokens", 0) + output_tokens
-        try:
-            _TOKEN_LOG_FILE.write_text(json.dumps(data))
-        except Exception:
-            pass
+        _save_token_log(data)
+
 
 @app.get("/token-usage")
 async def token_usage():
-    """Return today's and total Gemini token usage."""
+    """Return today's and all-time Gemini token/call usage — persisted on Drive."""
     keys = get_all_api_keys()
     data = _load_token_log()
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -1010,21 +1064,48 @@ async def token_usage():
     if today.get("date") != today_str:
         today = {"date": today_str, "calls": 0, "input_tokens": 0, "output_tokens": 0}
     total = data.get("total", {"calls": 0, "input_tokens": 0, "output_tokens": 0})
-    GEMINI_FREE_DAILY_TOKENS = 1_000_000
+    history = data.get("history", {})
+
+    # Per free tier: 1500 requests/day per key, 1M tokens/day per key
+    RPD_PER_KEY = 1500
     keys_count = len(keys)
-    total_daily_limit = GEMINI_FREE_DAILY_TOKENS * max(keys_count, 1)
-    used = today.get("input_tokens", 0) + today.get("output_tokens", 0)
-    remaining = max(0, total_daily_limit - used)
-    pct_used = round(used / max(total_daily_limit, 1) * 100, 1)
+    total_rpd   = RPD_PER_KEY * max(keys_count, 1)
+    calls_today = today.get("calls", 0)
+    rpd_used_pct = round(calls_today / max(total_rpd, 1) * 100, 1)
+    rpd_remaining = max(0, total_rpd - calls_today)
+
+    TOKENS_PER_KEY = 1_000_000
+    total_tok_limit = TOKENS_PER_KEY * max(keys_count, 1)
+    used_tok = today.get("input_tokens", 0) + today.get("output_tokens", 0)
+    tok_remaining = max(0, total_tok_limit - used_tok)
+    tok_pct = round(used_tok / max(total_tok_limit, 1) * 100, 1)
+
+    # Last 7 days history for sparkline
+    last7 = []
+    for i in range(6, -1, -1):
+        from datetime import timedelta
+        day = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+        if day == today_str:
+            last7.append({"date": day, "calls": calls_today})
+        else:
+            h = history.get(day, {})
+            last7.append({"date": day, "calls": h.get("calls", 0)})
+
     return {
         "status": "ok" if keys else "no_key",
         "keys_count": keys_count,
-        "today": today,
-        "total": total,
-        "daily_limit_tokens": total_daily_limit,
-        "used_today_tokens": used,
-        "remaining_tokens": remaining,
-        "pct_used": pct_used,
+        "today_calls": calls_today,
+        "today_tokens_used": used_tok,
+        "rpd_limit": total_rpd,
+        "rpd_remaining": rpd_remaining,
+        "rpd_pct_used": rpd_used_pct,
+        "token_limit": total_tok_limit,
+        "token_remaining": tok_remaining,
+        "token_pct_used": tok_pct,
+        "total_all_time": total,
+        "per_key_today": today.get("keys", {}),
+        "last7_days": last7,
+        "reset_time": "Midnight IST (Google quota resets daily)",
     }
 
 # ══ SELF-DIAGNOSE ════════════════════════════════════════════════════════════
