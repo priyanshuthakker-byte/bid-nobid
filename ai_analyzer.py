@@ -27,10 +27,11 @@ CONFIG_PATH = Path(__file__).parent / "config.json"
 # ─────────────────────────────────────────
 
 GEMINI_MODELS = [
-    "gemini-1.5-pro-latest",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash-latest",
+    "gemini-2.0-flash",          # 15 RPM free — primary
+    "gemini-2.0-flash-lite",     # 30 RPM free — fastest fallback
+    "gemini-1.5-flash",          # 15 RPM free — stable fallback
+    "gemini-1.5-flash-8b",       # 15 RPM free — small but works
+    "gemini-1.5-pro",            # 2 RPM free — slow but high quality
 ]
 
 GROQ_MODELS = [
@@ -222,7 +223,12 @@ def call_gemini(prompt: str, api_key: str) -> str:
                 return text
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")
-            if e.code in [429, 503, 500, 404]:
+            if e.code == 429:
+                logger.warning(f"Model {model} rate-limited (429) — waiting 5s then trying next")
+                import time as _t; _t.sleep(5)
+                last_error = e
+                continue
+            elif e.code in [503, 500, 404, 400]:
                 logger.warning(f"Model {model} unavailable ({e.code}) — trying next")
                 last_error = e
                 continue
