@@ -1756,19 +1756,93 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 except Exception:
                     pass
             ai_result = {"error": "timeout"}
+
+            # Ticker thread — updates progress every 8s so frontend shows elapsed time
+            import threading as _threading
+            _ai_done_evt = _threading.Event()
+            _ai_start_t = _time_seg.time()
+            def _ai_ticker():
+                _models = ["gemini-1.5-pro","gemini-2.0-flash","gemini-1.5-flash"]
+                _mi = 0
+                while not _ai_done_evt.wait(timeout=8):
+                    _el = int(_time_seg.time() - _ai_start_t)
+                    _mod = _models[_mi % len(_models)]
+                    _set_job(job_id,
+                             progress=f"🤖 AI reading tender… ({_el}s) — {_mod}",
+                             step=3)
+                    _mi += 1
+            _ticker = _threading.Thread(target=_ai_ticker, daemon=True)
+            _ticker.start()
+
+            # Inner progress callback — fires once with full result to populate stream panels
+            def _ai_done_cb(stage, done, total, seg_output=None):
+                if stage == "done" and seg_output:
+                    _ai_done_evt.set()  # stop ticker before setting higher steps
+                    import time as _t2
+                    _now = _t2.time()
+                    # Fire segment callbacks so live panels populate
+                    pq = seg_output.get("pq_criteria", [])
+                    tq = seg_output.get("tq_criteria", [])
+                    scope = seg_output.get("scope_items", [])
+                    payment = seg_output.get("payment_terms", [])
+                    snap = {k: seg_output.get(k) for k in [
+                        "tender_no","org_name","estimated_cost","emd",
+                        "bid_submission_date","bid_opening_date","prebid_meeting",
+                        "tender_fee","contract_period","location"
+                    ] if seg_output.get(k)}
+                    elapsed = round(_t2.time() - _ai_start_t, 1)
+                    if snap:
+                        _set_job(job_id,
+                                 progress=f"✓ Snapshot — dates, EMD, cost ({elapsed}s)",
+                                 step=3,
+                                 segments={"snapshot": snap},
+                                 seg_log={"snapshot": {"label":"Snapshot — dates, EMD, cost",
+                                                        "elapsed":elapsed,"count":"","done":True}})
+                    if pq:
+                        _set_job(job_id,
+                                 progress=f"✓ PQ / Eligibility Criteria — {len(pq)} criteria ({elapsed}s)",
+                                 step=4,
+                                 segments={"pq": {"pq_criteria": pq}},
+                                 seg_log={"pq": {"label":"PQ / Eligibility Criteria",
+                                                  "elapsed":elapsed,"count":f"{len(pq)} criteria","done":True}})
+                    if tq:
+                        _set_job(job_id,
+                                 progress=f"✓ TQ / Marking Criteria — {len(tq)} criteria ({elapsed}s)",
+                                 step=5,
+                                 segments={"tq": {"tq_criteria": tq}},
+                                 seg_log={"tq": {"label":"TQ / Marking Criteria",
+                                                  "elapsed":elapsed,"count":f"{len(tq)} criteria","done":True}})
+                    if scope:
+                        _set_job(job_id,
+                                 progress=f"✓ Scope of Work — {len(scope)} items ({elapsed}s)",
+                                 step=5,
+                                 segments={"scope": {"scope_items": scope}},
+                                 seg_log={"scope": {"label":"Scope of Work",
+                                                     "elapsed":elapsed,"count":f"{len(scope)} items","done":True}})
+                    if payment:
+                        _set_job(job_id,
+                                 progress=f"✓ Payment Schedule — {len(payment)} milestones ({elapsed}s)",
+                                 step=5,
+                                 segments={"payment": {"payment_terms": payment}},
+                                 seg_log={"payment": {"label":"Payment Schedule",
+                                                       "elapsed":elapsed,"count":f"{len(payment)} milestones","done":True}})
+
             try:
                 import concurrent.futures as _cf
                 with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
                     if PARALLEL_ANALYST_AVAILABLE:
                         _fut = _ex.submit(analyze_with_gemini_parallel, all_text, passed, _seg_progress)
                     else:
-                        _fut = _ex.submit(analyze_with_gemini, all_text, passed)
+                        _fut = _ex.submit(analyze_with_gemini, all_text, passed, _ai_done_cb)
                     ai_result = _fut.result(timeout=420)  # 7 min hard cap (Render kills at 10min)
             except _cf.TimeoutError:
                 ai_result = {"error": "AI analysis timed out after 7 minutes — quota may be exhausted"}
                 _set_job(job_id, progress="AI timed out — returning basic extraction…")
             except Exception as _ai_exc:
                 ai_result = {"error": str(_ai_exc)}
+            finally:
+                _ai_done_evt.set()  # stop ticker thread
+
             try:
                 in_tok = len(all_text) // 4
                 record_token_usage(in_tok, 2000)

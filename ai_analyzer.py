@@ -204,7 +204,7 @@ def call_gemini(prompt: str, api_key: str) -> str:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.1,
-                "maxOutputTokens": 4096,
+                "maxOutputTokens": 8192,
             }
         }).encode("utf-8")
 
@@ -618,7 +618,8 @@ def merge_results(regex_data: Dict, ai_data: Dict,
 # ─────────────────────────────────────────
 
 def analyze_with_gemini(full_text: str,
-                         prebid_passed: bool = False) -> Dict[str, Any]:
+                         prebid_passed: bool = False,
+                         progress_cb=None) -> Dict[str, Any]:
     import time
 
     all_keys = get_all_api_keys()
@@ -628,6 +629,12 @@ def analyze_with_gemini(full_text: str,
     text_chunk = smart_chunk(full_text)
     prompt = build_prompt(text_chunk, prebid_passed)
 
+    if progress_cb:
+        try:
+            progress_cb("thinking", 0, 1)
+        except Exception:
+            pass
+
     # Try each Gemini key in order
     for key_idx, api_key in enumerate(all_keys):
         logger.info(f"Trying Gemini API key {key_idx + 1}/{len(all_keys)}")
@@ -635,6 +642,11 @@ def analyze_with_gemini(full_text: str,
             response_text = call_gemini(prompt, api_key)
             result = clean_json(response_text)
             logger.info(f"Gemini success with key {key_idx + 1}")
+            if progress_cb:
+                try:
+                    progress_cb("done", 1, 1, result)
+                except Exception:
+                    pass
             return result
 
         except json.JSONDecodeError as e:

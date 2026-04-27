@@ -1793,11 +1793,15 @@ function _renderStreamSeg(stage, data) {
       var panel = document.getElementById('ap-stream-scope');
       var body = document.getElementById('ap-stream-scope-body');
       panel.style.display = 'block';
-      body.innerHTML = secs.slice(0,4).map(function(s) {
+      body.innerHTML = secs.slice(0,5).map(function(s, i) {
+        // Handle both plain strings and objects
+        if (typeof s === 'string') {
+          return '<div class="stream-row" style="align-items:flex-start"><span style="color:var(--blue);font-weight:600;min-width:22px">' + (i+1) + '.</span><span style="color:var(--text2);flex:1">' + s.substring(0,110) + (s.length>110?'…':'') + '</span></div>';
+        }
         var title = s.section_title || s.title || '';
         var desc = (s.prose || s.description || '').substring(0,80);
-        return '<div class="stream-row"><span style="color:var(--blue);font-weight:600;min-width:60px">' + (s.section_no||'') + '</span><span style="color:var(--text2);flex:1">' + title + (desc ? ' — ' + desc + '…' : '') + '</span></div>';
-      }).join('') + (secs.length > 4 ? '<div style="font-size:11px;color:var(--text3);padding:4px 0">+ ' + (secs.length-4) + ' more sections</div>' : '');
+        return '<div class="stream-row"><span style="color:var(--blue);font-weight:600;min-width:60px">' + (s.section_no||i+1) + '</span><span style="color:var(--text2);flex:1">' + title + (desc ? ' — ' + desc + '…' : '') + '</span></div>';
+      }).join('') + (secs.length > 5 ? '<div style="font-size:11px;color:var(--text3);padding:4px 0">+ ' + (secs.length-5) + ' more items</div>' : '');
     }
   }
   // Render Snapshot preview
@@ -1949,9 +1953,10 @@ function showAnalysisResult(d) {
   ).join('');
 
   // ── PQ Tab ──
-  var pqMet = pq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
-  var pqCond = pq.filter(c => (c.nascent_status||c.status||'') === 'CONDITIONAL').length;
-  var pqFail = pq.filter(c => ['NOT MET','NOT-MET','FAIL','NO'].includes((c.nascent_status||c.status||'').toUpperCase())).length;
+  function _stUp(c) { return (c.nascent_status||c.status||'').toUpperCase().replace(/ /g,'-'); }
+  var pqMet = pq.filter(c => _stUp(c) === 'MET').length;
+  var pqCond = pq.filter(c => _stUp(c) === 'CONDITIONAL').length;
+  var pqFail = pq.filter(c => ['NOT-MET','NOT MET','FAIL','NO'].includes(_stUp(c))).length;
   document.getElementById('tab-badge-pq').textContent = pq.length;
   document.getElementById('res-pq-summary').innerHTML =
     '<span style="color:var(--green)">✓ ' + pqMet + ' Met</span>' +
@@ -1963,8 +1968,8 @@ function showAnalysisResult(d) {
     : '<tr><td colspan="6" class="empty-state">No PQ criteria extracted.</td></tr>';
 
   // ── TQ Tab ──
-  var tqMet = tq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
-  var tqCond = tq.filter(c => (c.nascent_status||c.status||'') === 'CONDITIONAL').length;
+  var tqMet = tq.filter(c => _stUp(c) === 'MET').length;
+  var tqCond = tq.filter(c => _stUp(c) === 'CONDITIONAL').length;
   document.getElementById('tab-badge-tq').textContent = tq.length;
   document.getElementById('res-tq-summary').innerHTML =
     '<span style="color:var(--green)">✓ ' + tqMet + ' Met</span>' +
@@ -1978,7 +1983,14 @@ function showAnalysisResult(d) {
   document.getElementById('res-scope-bg').textContent = scopeBg ? scopeBg.substring(0, 800) : '';
   var sections = td.scope_sections || td.scope_items || [];
   document.getElementById('res-scope-body').innerHTML = sections.length
-    ? sections.map(s => {
+    ? sections.map((s, i) => {
+        if (typeof s === 'string') {
+          // Plain string format (v5 single-prompt output)
+          return '<div class="scope-item">' +
+            '<div class="scope-item-title" style="font-size:12px;font-weight:500;color:#fff">' +
+              '<span style="color:var(--blue);margin-right:8px">' + (i+1) + '.</span>' + s +
+            '</div></div>';
+        }
         var delivs = (s.deliverables || []).map(d2 => '<div class="scope-deliverable">• ' + d2 + '</div>').join('');
         return '<div class="scope-item">' +
           '<div class="scope-item-title">' + (s.section_title || s.title || 'Section') +
@@ -2257,8 +2269,8 @@ function buildDocPreview(td, verdict) {
   var v = verdict || 'REVIEW';
   var pq = td.pq_criteria || [];
   var tq = td.tq_criteria || [];
-  var pqMet = pq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
-  var tqMet = tq.filter(c => (c.nascent_status||c.status||'') === 'MET').length;
+  var pqMet = pq.filter(c => (c.nascent_status||c.status||'').toUpperCase() === 'MET').length;
+  var tqMet = tq.filter(c => (c.nascent_status||c.status||'').toUpperCase() === 'MET').length;
   var reason = (td.overall_verdict || {}).reason || td.reason || '';
   var conf = (td.overall_verdict || {}).confidence || td.confidence || '';
 
@@ -2747,8 +2759,8 @@ function renderRiskContent(t, serverData) {
   // Compute risk scores
   var timelineRisk = dl < 7 ? 90 : dl < 15 ? 65 : dl < 30 ? 35 : 20;
   var financialRisk = v === 'NO-BID' ? 80 : v === 'CONDITIONAL' ? 55 : 25;
-  var techRisk = (t.pq_criteria || []).filter(c => (c.nascent_status||c.status||'') === 'NOT MET').length > 2 ? 80 :
-                 (t.pq_criteria || []).filter(c => (c.nascent_status||c.status||'') === 'CONDITIONAL').length > 0 ? 55 : 20;
+  var techRisk = (t.pq_criteria || []).filter(c => /not.?met/i.test(c.nascent_status||c.status||'')).length > 2 ? 80 :
+                 (t.pq_criteria || []).filter(c => /conditional/i.test(c.nascent_status||c.status||'')).length > 0 ? 55 : 20;
   var competitionRisk = parseFloat(t.estimated_cost_cr || 0) > 10 ? 70 : 40;
 
   var overallRisk = Math.round((timelineRisk + financialRisk + techRisk + competitionRisk) / 4);
