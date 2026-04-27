@@ -1853,18 +1853,24 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 ai_used = True
             else:
                 err_msg = ai_result.get("error", "AI error")
+                import logging as _log
+                _log.getLogger(__name__).error(f"AI FAILED job={job_id}: {err_msg}")
                 if "429" in err_msg or "quota" in err_msg.lower():
-                    tender_data["ai_warning"] = (
-                        "⚠ Gemini quota exhausted (HTTP 429). All API keys hit their daily limit. "
-                        "Showing regex-extracted data only. Wait ~1 hour or add keys from different Google accounts."
-                    )
+                    warn = ("Gemini quota exhausted. All API keys hit their daily limit. "
+                            "Add a fresh key from aistudio.google.com or wait until tomorrow.")
                 elif "timeout" in err_msg.lower():
-                    tender_data["ai_warning"] = "⚠ AI analysis timed out. Showing basic extraction. Try again."
+                    warn = "AI analysis timed out (7 min). Try again — large PDFs can be slow."
+                elif "invalid JSON" in err_msg or "JSONDecodeError" in err_msg:
+                    warn = ("AI returned malformed JSON — response may have been cut off. "
+                            "This usually means the tender is very large. Try again.")
+                elif "No Gemini API key" in err_msg or not api_key:
+                    warn = "Gemini API key not configured. Go to Settings to add your key from aistudio.google.com."
                 else:
-                    tender_data["ai_warning"] = f"AI unavailable: {err_msg[:120]}"
-                _set_job(job_id, progress="AI unavailable — returning basic extraction…")
+                    warn = f"AI error: {err_msg[:200]}"
+                tender_data["ai_warning"] = warn
+                _set_job(job_id, progress=f"AI unavailable: {err_msg[:80]}")
         elif not api_key:
-            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add Gemini keys."
+            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add key from aistudio.google.com (free)."
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check

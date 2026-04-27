@@ -672,6 +672,8 @@ select option{background:var(--bg2)}
           <button class="btn btn-ghost btn-sm" onclick="generatePrebidFromResult()">📝 Pre-bid</button>
         </div>
       </div>
+      <!-- AI Warning Banner -->
+      <div id="res-ai-warning" style="display:none;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 14px;margin-top:10px;font-size:12.5px;color:#fbbf24"></div>
       <!-- KPI Row -->
       <div id="res-kpi-row" class="verdict-kpi-row" style="margin-bottom:16px"></div>
       <!-- Tabs -->
@@ -1937,7 +1939,16 @@ function showAnalysisResult(d) {
   stamp.textContent = v;
   document.getElementById('res-conf').textContent = conf ? 'Confidence: ' + conf : '';
   document.getElementById('res-reason').textContent = reason;
-  document.getElementById('res-ai-badge').textContent = d.ai_used ? 'AI Analysed' : 'Basic Extract';
+  document.getElementById('res-ai-badge').textContent = d.ai_used ? '✓ AI Analysed' : '⚠ Basic Extract';
+  document.getElementById('res-ai-badge').style.background = d.ai_used ? 'rgba(34,197,94,.15)' : 'rgba(251,191,36,.15)';
+  document.getElementById('res-ai-badge').style.color = d.ai_used ? '#4ade80' : '#fbbf24';
+  var aiWarnEl = document.getElementById('res-ai-warning');
+  var aiWarn = td.ai_warning || '';
+  if (aiWarn && !d.ai_used) {
+    aiWarnEl.style.display = 'block';
+    aiWarnEl.innerHTML = '⚠ ' + aiWarn + (aiWarn.includes('key') || aiWarn.includes('quota') ?
+      ' &nbsp;<a href="#" onclick="showSection(\'settings\');return false" style="color:#60a5fa;text-decoration:underline">→ Go to Settings</a>' : '');
+  } else { aiWarnEl.style.display = 'none'; }
   document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);
 
   // ── KPI Row ──

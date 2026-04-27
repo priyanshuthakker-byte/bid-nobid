@@ -650,26 +650,42 @@ def analyze_with_gemini(full_text: str,
             return result
 
         except json.JSONDecodeError as e:
-            logger.error(f"JSON parse error: {e}")
+            logger.error(f"JSON parse error with key {key_idx + 1}: {e}")
+            # Try to extract the largest valid JSON object from the response
+            try:
+                # Find last complete closing brace to handle truncated JSON
+                last_brace = response_text.rfind('}')
+                if last_brace != -1:
+                    candidate = response_text[:last_brace + 1]
+                    first_brace = candidate.find('{')
+                    if first_brace != -1:
+                        return json.loads(candidate[first_brace:])
+            except Exception:
+                pass
             try:
                 match = re.search(r'\{.*\}', response_text, re.DOTALL)
                 if match:
                     return json.loads(match.group(0))
             except Exception:
                 pass
-            return {"error": f"Gemini returned invalid JSON: {str(e)[:100]}"}
+            # JSON is fatally broken — try next key
+            logger.warning(f"JSON recovery failed on key {key_idx + 1} — trying next key")
+            continue
 
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="ignore")
-            logger.error(f"Gemini HTTP {e.code} on key {key_idx + 1}: {body[:100]}")
-            if e.code in [429, 503]:
-                logger.warning(f"Key {key_idx + 1} quota exceeded — trying backup key")
+            logger.error(f"Gemini HTTP {e.code} on key {key_idx + 1}: {body[:200]}")
+            if e.code in [429, 503, 500, 400, 404]:
+                logger.warning(f"Key {key_idx + 1} code {e.code} — trying backup key")
                 continue
-            return {"error": f"Gemini API error {e.code}: {body[:100]}"}
+            return {"error": f"Gemini API error {e.code}: {body[:150]}"}
 
         except Exception as e:
             logger.error(f"Gemini failed on key {key_idx + 1}: {e}")
-            if "quota" in str(e).lower() or "429" in str(e):
+            if "quota" in str(e).lower() or "429" in str(e) or "All Gemini" in str(e):
+                continue
+            # Network/timeout errors — try next key too
+            if "timeout" in str(e).lower() or "URLError" in type(e).__name__:
                 continue
             return {"error": str(e)[:200]}
 
