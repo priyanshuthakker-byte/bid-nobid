@@ -2782,15 +2782,98 @@ async def export_tenders(verdict: str = "", search: str = ""):
 # ══ TEST ════════════════════════════════════════════════════════════════════
 @app.get("/test-ai")
 async def test_ai():
+    """Quick single-key test (legacy)."""
     from ai_analyzer import get_api_key, call_gemini
     key = get_api_key()
     if not key:
-        return {"status": "error", "message": "No API key"}
+        return {"status": "error", "message": "No API key configured"}
     try:
-        result = call_gemini('Return this exact JSON: {"status": "ok"}', key)
-        return {"status": "success", "api_key_present": True, "gemini_response": result[:100]}
+        result = call_gemini('Return this exact JSON: {"status":"ok"}', key)
+        return {"status": "success", "gemini_response": result[:80]}
     except Exception as e:
-        return {"status": "error", "api_key_present": True, "error": str(e)}
+        return {"status": "error", "error": str(e)[:200]}
+
+
+@app.get("/test-ai-keys")
+async def test_ai_keys():
+    """Ping every configured key with a tiny 5-token call.
+    Returns live status per key — working / rate_limited / invalid / no_key."""
+    import urllib.request, urllib.error, json as _json, time as _t
+    from ai_analyzer import get_all_api_keys, GEMINI_MODELS
+
+    PING_PROMPT = 'Reply with exactly: {"ok":true}'
+    TEST_MODEL  = "gemini-2.0-flash"   # fastest, cheapest ping
+
+    keys = get_all_api_keys()
+    if not keys:
+        return {"keys": [], "summary": "No keys configured"}
+
+    results = []
+    for idx, key in enumerate(keys):
+        masked = key[:8] + "…" + key[-4:]
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{TEST_MODEL}:generateContent?key={key}"
+        )
+        payload = _json.dumps({
+            "contents": [{"parts": [{"text": PING_PROMPT}]}],
+            "generationConfig": {"temperature": 0, "maxOutputTokens": 20}
+        }).encode()
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json"}, method="POST"
+        )
+        t0 = _t.time()
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = _json.loads(resp.read())
+                ms = int((_t.time() - t0) * 1000)
+                results.append({
+                    "key_no": idx + 1,
+                    "masked": masked,
+                    "status": "working",
+                    "model": TEST_MODEL,
+                    "latency_ms": ms,
+                    "color": "green",
+                })
+        except urllib.error.HTTPError as e:
+            ms = int((_t.time() - t0) * 1000)
+            body = e.read().decode("utf-8", errors="ignore")[:120]
+            if e.code == 429:
+                status, color = "rate_limited", "amber"
+            elif e.code in [400, 403]:
+                status, color = "invalid_key", "red"
+            elif e.code == 404:
+                status, color = "model_unavailable", "amber"
+            else:
+                status, color = f"error_{e.code}", "red"
+            results.append({
+                "key_no": idx + 1,
+                "masked": masked,
+                "status": status,
+                "error": body,
+                "latency_ms": ms,
+                "color": color,
+            })
+        except Exception as e:
+            results.append({
+                "key_no": idx + 1,
+                "masked": masked,
+                "status": "unreachable",
+                "error": str(e)[:120],
+                "color": "red",
+            })
+
+    working = sum(1 for r in results if r["status"] == "working")
+    limited = sum(1 for r in results if r["status"] == "rate_limited")
+    return {
+        "keys": results,
+        "total": len(results),
+        "working": working,
+        "rate_limited": limited,
+        "summary": f"{working}/{len(results)} keys working" + (f", {limited} rate-limited" if limited else ""),
+        "note": "Each ping uses ~5 Gemini tokens total"
+    }
 
 def _t247_decode_jwt(token: str) -> dict:
     """Decode JWT payload (no signature check — we trust T247's server)."""
