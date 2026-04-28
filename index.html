@@ -962,7 +962,11 @@ select option{background:var(--bg2)}
       <div class="card">
         <div class="card-title">Submission Documents</div>
         <p style="font-size:12.5px;color:var(--text2);margin-bottom:14px">Generate all standard documents — Cover Letter, Non-Blacklisting, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
-        <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
+          <button class="btn btn-ghost" onclick="generateCompliancePlan()">🧠 Build RFP Compliance Plan</button>
+        </div>
+        <div id="docs-plan" style="margin-top:12px"></div>
       </div>
       <div id="docs-list"></div>
     </div>
@@ -1330,42 +1334,6 @@ select option{background:var(--bg2)}
           <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
           <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
         </div>
-<<<<<<< Updated upstream
-=======
-        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-        <div class="card-title" style="margin-bottom:6px">Sync Settings</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end">
-          <div>
-            <label>Auto Sync</label>
-            <select id="t247-auto-sync-enabled">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-          </div>
-          <div>
-            <label>Interval (minutes)</label>
-            <input type="number" id="t247-auto-sync-minutes" min="15" max="720" step="5" placeholder="180">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary btn-sm" onclick="saveSyncSettings()">Save Sync Settings</button>
-          <button class="btn btn-ghost btn-sm" onclick="loadT247SyncStatus()">Refresh Status</button>
-        </div>
-        <div id="t247-sync-settings-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-        <div class="card-title" style="margin-bottom:6px">Daily Digest Automation</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
-          <div>
-            <label>Digest Auto</label>
-            <select id="digest-enabled">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-          </div>
-          <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
-          <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
-        </div>
->>>>>>> Stashed changes
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-primary btn-sm" onclick="saveDigestSettings()">Save Digest Settings</button>
           <button class="btn btn-ghost btn-sm" onclick="downloadDailyDigestText()">Download Digest TXT</button>
@@ -3405,6 +3373,44 @@ async function loadDocs() {
   var tid = document.getElementById('doc-select').value;
   if (!tid) return;
   document.getElementById('docs-list').innerHTML = '<div style="font-size:13px;color:var(--text2)">Select document type and generate.</div>';
+  var plan = document.getElementById('docs-plan');
+  if (plan) plan.innerHTML = '<div style="font-size:12px;color:var(--text3)">Tip: click <b>Build RFP Compliance Plan</b> to auto-map required docs vs Vault.</div>';
+}
+
+async function generateCompliancePlan() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  var holder = document.getElementById('docs-plan');
+  if (!holder) return;
+  holder.innerHTML = '<div style="font-size:12px;color:var(--text2)">Analyzing RFP requirements and matching vault files...</div>';
+  try {
+    var r = await fetch('/documents-plan/' + encodeURIComponent(tid));
+    var d = await r.json();
+    if (!r.ok) { holder.innerHTML = '<div class="empty-state">' + (d.detail || 'Unable to build plan') + '</div>'; return; }
+    var s = d.summary || {};
+    var hdr = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<span class="badge badge-BID">Ready: ' + (s.ready || 0) + '</span>' +
+      '<span class="badge badge-NO-BID">Missing: ' + (s.missing || 0) + '</span>' +
+      '<span class="badge badge-REVIEW">Coverage: ' + (s.coverage_pct || 0) + '%</span>' +
+    '</div>';
+    var rows = (d.requirements || []).map(function(x) {
+      var ready = x.status === 'ready';
+      var files = (x.matched_files || []).map(function(f) {
+        return '<div style="font-size:11px;color:var(--text3)">• ' + (f.name || 'Document') + '</div>';
+      }).join('');
+      return '<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--bg2)">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">' +
+          '<div style="font-size:13px;color:var(--text);font-weight:600">' + (x.title || x.id || 'Requirement') + '</div>' +
+          '<span class="badge badge-' + (ready ? 'BID' : 'NO-BID') + '">' + (ready ? 'READY' : 'MISSING') + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Priority: ' + (x.priority || 'medium').toUpperCase() + '</div>' +
+        (files ? '<div style="margin-top:6px">' + files + '</div>' : '<div style="font-size:11px;color:#f59e0b;margin-top:6px">No matching file in vault. Upload supporting document.</div>') +
+      '</div>';
+    }).join('');
+    holder.innerHTML = hdr + (rows || '<div class="empty-state">No requirements inferred.</div>');
+  } catch(e) {
+    holder.innerHTML = '<div class="empty-state">Error: ' + e.message + '</div>';
+  }
 }
 
 async function generateDocs() {
@@ -3654,7 +3660,6 @@ function buildSidePanelContent(t) {
     (t.manual_verdict ? '<button onclick="clearManualVerdict(\''+tid+'\')" style="margin-top:6px;font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">↺ Restore AI verdict</button>' : '') +
   '</div>';
 
-<<<<<<< Updated upstream
   // ── PQ/TQ Summary (analysed tenders) ──
   var pq = t.pq_criteria || [];
   var tq = t.tq_criteria || [];
@@ -3715,15 +3720,6 @@ function buildSidePanelContent(t) {
   // ── Attachments ──
   var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
   if (atts.length) {
-    html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
-    atts.slice().reverse().slice(0, 5).forEach(function(a) {
-      var sz = a.size ? (' ('+Math.round(a.size/1024)+' KB)') : '';
-      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
-        '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||'Document')+'">'+(a.name||'Document')+sz+'</div>' +
-        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\''+a.vault_id+'\')">Open</button>' +
-=======
-  var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
-  if (atts.length) {
     html += '<div style="margin-top:12px">' +
       '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
     atts.slice().reverse().slice(0, 5).forEach(function(a) {
@@ -3731,22 +3727,16 @@ function buildSidePanelContent(t) {
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
         '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name || 'Document') + '">' + (a.name || 'Document') + sz + '</div>' +
         '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
->>>>>>> Stashed changes
       '</div>';
     });
     html += '</div>';
   }
 
-<<<<<<< Updated upstream
-  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">'+(t.eligibility||'').substring(0,300)+'...</div></div>';
-=======
   if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
->>>>>>> Stashed changes
 
   return html;
 }
 
-<<<<<<< Updated upstream
 async function setManualVerdict(tid, verdict) {
   var note = (document.getElementById('sp-note-'+tid)||{}).value || '';
   try {
@@ -3778,9 +3768,6 @@ async function clearManualVerdict(tid) {
     openSidePanel(tid);
   } catch(e) { toast('Error: '+e.message,'error'); }
 }
-
-=======
->>>>>>> Stashed changes
 function downloadVaultFile(fileId) {
   window.location.href = '/vault/download/' + encodeURIComponent(fileId);
 }
@@ -4931,10 +4918,7 @@ async function uploadLetterhead(input) {
 document.addEventListener('DOMContentLoaded', async function() {
   await loadDashboard();
   await loadT247SyncStatus();
-<<<<<<< Updated upstream
   await loadT247ConnectionStatus();
-=======
->>>>>>> Stashed changes
   await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
@@ -4942,10 +4926,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(checkDeadlineNotifications, 60000);
   setInterval(updateTokenMeter, 120000);
   setInterval(loadT247SyncStatus, 60000);
-<<<<<<< Updated upstream
   setInterval(loadT247ConnectionStatus, 300000);
-=======
->>>>>>> Stashed changes
   setInterval(loadOpsDailyReport, 120000);
   // Restore page from URL on load
   var params = new URLSearchParams(window.location.search);
