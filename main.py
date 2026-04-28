@@ -1649,11 +1649,35 @@ async def reclassify_tender(t247_id: str):
     t = db["tenders"].get(t247_id, {})
     if not t:
         raise HTTPException(404, "Not found")
+    if t.get("manual_verdict"):
+        return {"status": "skipped", "verdict": t["verdict"], "reason": "Manual verdict locked"}
     r = classify_tender(t.get("brief", ""), t.get("estimated_cost_raw", 0), t.get("eligibility", ""), t.get("checklist", ""))
     t.update({"verdict": r["verdict"], "verdict_color": r["verdict_color"], "reason": r["reason"]})
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "reclassified", "verdict": r["verdict"], "reason": r["reason"]}
+
+@app.post("/tender/{t247_id}/set-verdict")
+async def set_verdict_manual(t247_id: str, payload: dict):
+    """Human override — lock verdict so AI reclassify cannot change it."""
+    verdict = (payload.get("verdict") or "").upper().strip()
+    if verdict not in ("BID", "NO-BID", "CONDITIONAL", "REVIEW"):
+        raise HTTPException(400, "verdict must be BID / NO-BID / CONDITIONAL / REVIEW")
+    db = load_db()
+    t = db["tenders"].get(t247_id)
+    if not t:
+        raise HTTPException(404, "Tender not found")
+    t["verdict"] = verdict
+    if payload.get("_clear_manual"):
+        t.pop("manual_verdict", None)
+        t.pop("manual_verdict_note", None)
+    else:
+        t["manual_verdict"] = True
+        t["manual_verdict_note"] = (payload.get("note") or "").strip()[:200]
+    db["tenders"][t247_id] = t
+    save_db(db)
+    asyncio.create_task(sync_to_drive_async())
+    return {"status": "ok", "verdict": verdict, "manual_verdict": not payload.get("_clear_manual")}
 
 @app.post("/reclassify-all")
 async def reclassify_all():
@@ -1661,7 +1685,7 @@ async def reclassify_all():
     db = load_db()
     counts = {}
     for tid, t in db["tenders"].items():
-        if t.get("bid_no_bid_done"):
+        if t.get("bid_no_bid_done") or t.get("manual_verdict"):
             continue
         r = classify_tender(t.get("brief", ""), t.get("estimated_cost_raw", 0), t.get("eligibility", ""), t.get("checklist", ""))
         t.update({"verdict": r["verdict"], "verdict_color": r["verdict_color"], "reason": r["reason"]})
@@ -3144,6 +3168,7 @@ def _t247_merge_tenders(tenders: list) -> dict:
             added_ids.append(tid)
     save_db(db)
     return {"added": added, "updated": updated, "added_ids": added_ids, "updated_ids": updated_ids}
+<<<<<<< Updated upstream
 
 def _auto_score_tender_v1(tender: dict) -> dict:
     """Rule-based bid/no-bid scoring from Nascent profile."""
@@ -3338,6 +3363,352 @@ def _run_t247_sync_once() -> dict:
         "enriched": len(touched_ids),
         "file_size_kb": len(xl_bytes) // 1024,
         "source": "T247 API (real-time)",
+=======
+
+def _auto_score_tender_v1(tender: dict) -> dict:
+    """Rule-based bid/no-bid scoring from Nascent profile."""
+    try:
+        from nascent_checker import load_profile
+        profile = load_profile() or {}
+    except Exception:
+        profile = {}
+
+    rules = profile.get("bid_rules", {}) or {}
+    preferred = [str(x).lower() for x in (rules.get("preferred_sectors", []) or []) if str(x).strip()]
+    do_not_bid = [str(x).lower() for x in (rules.get("do_not_bid", []) or []) if str(x).strip()]
+    conditional = [str(x).lower() for x in (rules.get("conditional", []) or []) if str(x).strip()]
+    min_v = float(rules.get("min_project_value_cr", 0) or 0)
+    max_v = float(rules.get("max_project_value_cr", 0) or 0)
+
+    text_blob = " ".join([
+        str(tender.get("brief", "") or ""),
+        str(tender.get("org_name", "") or ""),
+        str(tender.get("eligibility", "") or ""),
+    ]).lower()
+    value = float(tender.get("estimated_cost_cr", 0) or 0)
+    score = 50
+    reasons = []
+
+    pref_hits = [k for k in preferred if k and k in text_blob]
+    if pref_hits:
+        score += min(25, len(pref_hits) * 8)
+        reasons.append(f"sector match: {', '.join(pref_hits[:3])}")
+
+    dnb_hits = [k for k in do_not_bid if k and k in text_blob]
+    if dnb_hits:
+        score -= min(40, len(dnb_hits) * 15)
+        reasons.append(f"do-not-bid hit: {', '.join(dnb_hits[:3])}")
+
+    cond_hits = [k for k in conditional if k and k in text_blob]
+    if cond_hits:
+        score -= min(15, len(cond_hits) * 6)
+        reasons.append(f"conditional hit: {', '.join(cond_hits[:3])}")
+
+    if value:
+        if min_v and value < min_v:
+            score -= 12
+            reasons.append(f"value below min ({value} < {min_v} Cr)")
+        if max_v and value > max_v:
+            score -= 10
+            reasons.append(f"value above max ({value} > {max_v} Cr)")
+
+    score = max(0, min(100, int(round(score))))
+    if score >= 65:
+        verdict = "BID"
+    elif score >= 45:
+        verdict = "CONDITIONAL"
+    else:
+        verdict = "NO-BID"
+
+    tender["win_probability"] = score
+    tender["verdict"] = verdict
+    tender["auto_scored"] = True
+    tender["auto_scored_at"] = datetime.now().isoformat()
+    tender["reason"] = "; ".join(reasons[:4]) or "Rule-based profile fit scoring"
+    return tender
+
+def _try_enrich_tender_from_t247(tender: dict):
+    """Best-effort enrichment: doc count + corrigendum hint from document list API."""
+    tid = str(tender.get("t247_id", "")).strip()
+    if not tid:
+        return
+    import requests as _req
+    t_id_num = tid if tid.isdigit() else re.sub(r"\D", "", tid)
+    if not t_id_num:
+        return
+    url = f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/tender-document-list/{t_id_num}"
+    headers = {
+        "accept": "application/json",
+        "content-length": "0",
+        "origin": "https://www.tender247.com",
+        "referer": "https://www.tender247.com/",
+        "user-agent": "Mozilla/5.0",
+    }
+    try:
+        resp = _req.post(url, headers=headers, timeout=20)
+        if resp.status_code != 200:
+            return
+        data = resp.json()
+        items = data if isinstance(data, list) else (data.get("data") or data.get("result") or data.get("documents") or [])
+        if isinstance(items, dict):
+            items = [items]
+        doc_count = len(items or [])
+        tender["t247_doc_count"] = doc_count
+        tender["docs_available"] = doc_count > 0
+        corr = 0
+        for it in (items or []):
+            if not isinstance(it, dict):
+                continue
+            blob = json.dumps(it).lower()
+            if "corrig" in blob:
+                corr += 1
+        tender["corrigendum_count"] = corr
+        tender["has_corrigendum"] = corr > 0
+    except Exception:
+        return
+
+def _run_t247_sync_once() -> dict:
+    """Run one Tender247 sync and return merge summary."""
+    cfg = load_config()
+    token = _t247_get_token(cfg)
+    payload = _t247_decode_jwt(token)
+    user_id = int(payload.get("UserId") or cfg.get("t247_user_id") or 0)
+    query_id = int(cfg.get("t247_query_id") or 328890)
+
+    import requests as _req
+    headers = _t247_api_headers(token)
+    request_body = {
+        "tab_id": 2, "tender_id": 0, "tender_number": "", "search_text": "",
+        "refine_search_text": "", "tender_value_operator": 0,
+        "tender_value_from": 0, "tender_value_to": 0,
+        "publication_date_from": "", "publication_date_to": "",
+        "closing_date_from": "", "closing_date_to": "",
+        "search_by_location": False, "statezone_ids": "", "city_ids": "",
+        "state_ids": "", "organization_ids": "", "organization_name": "",
+        "sort_by": 1, "sort_type": 2, "page_no": 1, "record_per_page": 500,
+        "keyword_id": "", "mfa": "", "nameof_website": "",
+        "tender_typeid": 0, "is_tender_doc_uploaded": False,
+        "user_id": user_id, "user_email_service_query_id": query_id,
+        "exact_search": False, "exact_search_text": False,
+        "search_by_split_word": False, "product_id": "",
+        "organization_type_id": "", "sub_industry_id": "",
+        "search_by": 0, "guest_user_id": 0, "quantity": "",
+        "quantity_operator": 0, "msme_exemption": 0,
+        "startup_exemption": 0, "gem": 0, "mail_date": "",
+        "tab_status": 0, "is_ai_summary": False, "boq": 0,
+        "is_grace": False, "surety_bond": False, "limited_tender": False,
+    }
+
+    r = _req.post(
+        "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-excel-download",
+        headers=headers, json=request_body, timeout=120,
+    )
+    if r.status_code == 401:
+        raise ValueError("T247 token expired. Refresh token in Settings.")
+    if r.status_code == 403:
+        raise ValueError("T247 access denied. Check subscription/account access.")
+    if r.status_code != 200:
+        raise RuntimeError(f"T247 API returned HTTP {r.status_code}: {r.text[:300]}")
+
+    ct = r.headers.get("Content-Type", "")
+    xl_bytes = r.content
+    if "json" in ct:
+        resp_json = r.json()
+        dl_url = resp_json.get("url") or resp_json.get("file_url") or resp_json.get("download_url")
+        if not dl_url:
+            raise RuntimeError(f"T247 returned JSON instead of Excel: {str(resp_json)[:300]}")
+        r2 = _req.get(dl_url, headers=headers, timeout=120)
+        xl_bytes = r2.content
+
+    if len(xl_bytes) < 100:
+        raise RuntimeError(f"T247 returned empty file ({len(xl_bytes)} bytes)")
+
+    LATEST_EXCEL_FILE.write_bytes(xl_bytes)
+    tmp = Path(tempfile.mktemp(suffix=".xlsx", dir=str(TEMP_DIR)))
+    tmp.write_bytes(xl_bytes)
+    try:
+        tenders = process_excel(str(tmp))
+    finally:
+        try:
+            tmp.unlink()
+        except Exception:
+            pass
+
+    result = _t247_merge_tenders(tenders)
+    touched_ids = (result.get("added_ids", []) + result.get("updated_ids", []))[:120]
+    if touched_ids:
+        db = load_db()
+        changed = 0
+        for tid in touched_ids:
+            t = db.get("tenders", {}).get(tid, {})
+            if not t:
+                continue
+            _try_enrich_tender_from_t247(t)
+            if not t.get("bid_no_bid_done"):
+                t = _auto_score_tender_v1(t)
+            db["tenders"][tid] = t
+            changed += 1
+        if changed:
+            save_db(db)
+    return {
+        "status": "success",
+        "total": len(tenders),
+        "added": result["added"],
+        "updated": result["updated"],
+        "enriched": len(touched_ids),
+        "file_size_kb": len(xl_bytes) // 1024,
+        "source": "T247 API (real-time)",
+    }
+
+def _update_t247_sync_state(status: str, message: str = "", total: int = 0, added: int = 0, updated: int = 0):
+    with _t247_sync_lock:
+        _t247_sync_state["last_run_at"] = datetime.now().isoformat()
+        _t247_sync_state["last_status"] = status
+        _t247_sync_state["last_message"] = message
+        _t247_sync_state["last_total"] = int(total or 0)
+        _t247_sync_state["last_added"] = int(added or 0)
+        _t247_sync_state["last_updated"] = int(updated or 0)
+
+def _run_t247_sync_scheduler():
+    """Periodic Tender247 sync loop (manual trigger still available)."""
+    _time.sleep(60)
+    while not _t247_sync_stop.is_set():
+        try:
+            cfg = load_config()
+            enabled = bool(cfg.get("t247_auto_sync_enabled", True))
+            minutes = int(cfg.get("t247_auto_sync_minutes", 180) or 180)
+            minutes = max(15, min(720, minutes))
+            if enabled:
+                result = _run_t247_sync_once()
+                _update_t247_sync_state(
+                    "success",
+                    "auto sync completed",
+                    total=result.get("total", 0),
+                    added=result.get("added", 0),
+                    updated=result.get("updated", 0),
+                )
+            sleep_for = minutes * 60
+        except Exception as e:
+            _update_t247_sync_state("error", f"auto sync failed: {e}")
+            sleep_for = 600
+        _t247_sync_stop.wait(sleep_for)
+
+def _run_daily_digest_scheduler():
+    """Generate email/whatsapp style digest daily at configured time."""
+    _time.sleep(45)
+    while not _t247_sync_stop.is_set():
+        try:
+            cfg = load_config()
+            enabled = bool(cfg.get("daily_digest_enabled", True))
+            hour = int(cfg.get("daily_digest_hour", 9) or 9)
+            minute = int(cfg.get("daily_digest_minute", 0) or 0)
+            hour = max(0, min(23, hour))
+            minute = max(0, min(59, minute))
+            now = datetime.now()
+            today_key = now.strftime("%Y-%m-%d")
+            should_run = enabled and now.hour == hour and now.minute == minute
+            already_done = _digest_state.get("last_generated_date") == today_key
+            if should_run and not already_done:
+                _build_daily_digest()
+        except Exception as e:
+            with _digest_lock:
+                _digest_state["status"] = "error"
+                _digest_state["error"] = str(e)
+        _t247_sync_stop.wait(55)
+
+@app.get("/test-t247")
+async def test_t247():
+    cfg = load_config()
+    token = str(cfg.get("t247_bearer_token", "") or "").strip()
+    if not token:
+        return {"status": "error", "message": "No Bearer token saved. Paste it in Settings → T247 Token."}
+    payload = _t247_decode_jwt(token)
+    if not payload:
+        return {"status": "error", "message": "Invalid token format. Paste the full Bearer token from DevTools."}
+    import time as _t
+    exp = payload.get("exp", 0)
+    remaining_hrs = round((exp - _t.time()) / 3600, 1) if exp else 0
+    if exp and _t.time() > exp:
+        return {"status": "error", "message": f"Token expired {abs(remaining_hrs):.1f}h ago. Log into tender247.com and paste a fresh token."}
+    return {
+        "status": "success",
+        "message": f"✅ Token valid for {remaining_hrs}h | User: {payload.get('bidder_name','?')} | ID: {payload.get('UserId','?')}",
+        "user_id": payload.get("UserId"),
+        "bidder_name": payload.get("bidder_name"),
+        "expires_in_hours": remaining_hrs,
+        "keywords": payload.get("WordHighlight", "").split(",")[:5],
+    }
+
+@app.get("/t247-token-status")
+async def t247_token_status():
+    return await test_t247()
+
+@app.post("/fetch-t247-excel")
+async def fetch_t247_excel(background_tasks: BackgroundTasks):
+    """Manual trigger for Tender247 sync."""
+    try:
+        result = _run_t247_sync_once()
+        _update_t247_sync_state(
+            "success",
+            "manual sync completed",
+            total=result.get("total", 0),
+            added=result.get("added", 0),
+            updated=result.get("updated", 0),
+        )
+        return result
+    except ValueError as e:
+        _update_t247_sync_state("error", str(e))
+        raise HTTPException(400, str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        _update_t247_sync_state("error", str(e))
+        raise HTTPException(502, f"T247 sync failed: {e}")
+
+@app.post("/fetch-t247-excel/retry")
+async def retry_t247_sync():
+    return await fetch_t247_excel(BackgroundTasks())
+
+@app.post("/ops/daily-digest/generate")
+async def generate_daily_digest():
+    try:
+        digest = _build_daily_digest()
+        return {"status": "success", **digest}
+    except Exception as e:
+        raise HTTPException(500, f"Digest generation failed: {e}")
+
+@app.get("/ops/daily-digest")
+async def get_daily_digest():
+    p = OUTPUT_DIR / "daily_digest_latest.json"
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            return {"status": "success", **data, "scheduler": dict(_digest_state)}
+        except Exception:
+            pass
+    digest = _build_daily_digest()
+    return {"status": "success", **digest, "scheduler": dict(_digest_state)}
+
+@app.get("/ops/daily-digest.txt")
+async def download_daily_digest_text():
+    p = OUTPUT_DIR / "daily_digest_latest.txt"
+    if not p.exists():
+        _build_daily_digest()
+    return FileResponse(
+        path=str(p),
+        filename=f"daily_digest_{datetime.now().strftime('%Y%m%d')}.txt",
+        media_type="text/plain",
+    )
+
+@app.get("/t247-sync-status")
+async def t247_sync_status():
+    cfg = load_config()
+    return {
+        "status": "success",
+        "auto_sync_enabled": bool(cfg.get("t247_auto_sync_enabled", True)),
+        "auto_sync_minutes": int(cfg.get("t247_auto_sync_minutes", 180) or 180),
+        **_t247_sync_state,
+>>>>>>> Stashed changes
     }
 
 def _update_t247_sync_state(status: str, message: str = "", total: int = 0, added: int = 0, updated: int = 0):
@@ -3582,6 +3953,53 @@ def _t247_doc_download_headers(token: str = "") -> dict:
     if token:
         h["authorization"] = f"Bearer {token}"
     return h
+
+def _save_tender_doc_to_vault(t247_id: str, filename: str, content: bytes, mime: str, doc_hash: str = "") -> dict:
+    """Persist downloaded Tender247 document bundle in vault and link to tender."""
+    checksum = hashlib.sha256(content).hexdigest()
+    vault = _load_vault()
+    for item in vault:
+        if (
+            str(item.get("source")) == "t247"
+            and str(item.get("t247_id")) == str(t247_id)
+            and str(item.get("checksum")) == checksum
+        ):
+            return {k: v for k, v in item.items() if k != "b64"}
+
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": filename,
+        "category": "tender247",
+        "source": "t247",
+        "t247_id": str(t247_id),
+        "doc_hash": str(doc_hash or ""),
+        "checksum": checksum,
+        "size": len(content),
+        "uploaded_at": datetime.now().isoformat(),
+        "b64": base64.b64encode(content).decode(),
+        "mime": mime or "application/octet-stream",
+    }
+    vault.append(entry)
+    _save_vault(vault)
+
+    db = load_db()
+    tender = db.get("tenders", {}).get(str(t247_id), {})
+    attachments = tender.get("attachments", [])
+    attachments = [a for a in attachments if a.get("vault_id") != entry["id"]]
+    attachments.append({
+        "vault_id": entry["id"],
+        "name": entry["name"],
+        "source": "t247",
+        "uploaded_at": entry["uploaded_at"],
+        "size": entry["size"],
+        "mime": entry["mime"],
+    })
+    tender["attachments"] = attachments[-20:]
+    if doc_hash:
+        tender["t247_doc_hash"] = doc_hash
+    db.setdefault("tenders", {})[str(t247_id)] = tender
+    save_db(db)
+    return {k: v for k, v in entry.items() if k != "b64"}
 
 def _save_tender_doc_to_vault(t247_id: str, filename: str, content: bytes, mime: str, doc_hash: str = "") -> dict:
     """Persist downloaded Tender247 document bundle in vault and link to tender."""

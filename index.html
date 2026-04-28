@@ -546,25 +546,22 @@ select option{background:var(--bg2)}
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px">
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">STATE</label>
-          <select id="af-state" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
-            <option value="">All States</option>
-          </select>
+          <input id="af-state" list="dl-states" placeholder="Type state…" oninput="_dashPage=1;renderDash()" autocomplete="off" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <datalist id="dl-states"></datalist>
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CITY / DISTRICT</label>
-          <select id="af-city" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
-            <option value="">All Cities</option>
-          </select>
+          <input id="af-city" list="dl-cities" placeholder="Type city…" oninput="_dashPage=1;renderDash()" autocomplete="off" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <datalist id="dl-cities"></datalist>
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">PORTAL / WEBSITE</label>
-          <select id="af-portal" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
-            <option value="">All Portals</option>
-          </select>
+          <input id="af-portal" list="dl-portals" placeholder="Type portal…" oninput="_dashPage=1;renderDash()" autocomplete="off" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <datalist id="dl-portals"></datalist>
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">OWNERSHIP TYPE</label>
-          <select id="af-ownership" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <select id="af-ownership" onchange="_dashPage=1;renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
             <option value="">All Types</option>
             <option value="central">Central Govt</option>
             <option value="state">State Govt</option>
@@ -575,30 +572,30 @@ select option{background:var(--bg2)}
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">VALUE FROM (Cr)</label>
-          <input type="number" id="af-val-min" placeholder="e.g. 1" min="0" step="0.5" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="number" id="af-val-min" placeholder="e.g. 1" min="0" step="0.5" oninput="_dashPage=1;renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">VALUE TO (Cr)</label>
-          <input type="number" id="af-val-max" placeholder="e.g. 50" min="0" step="0.5" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="number" id="af-val-max" placeholder="e.g. 50" min="0" step="0.5" oninput="_dashPage=1;renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CLOSING DATE FROM</label>
-          <input type="date" id="af-date-from" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="date" id="af-date-from" oninput="_dashPage=1;renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CLOSING DATE TO</label>
-          <input type="date" id="af-date-to" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="date" id="af-date-to" oninput="_dashPage=1;renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
         </div>
       </div>
       <!-- Checkboxes row -->
       <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:10px">
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-gem" onchange="renderDash()"> 💎 GeM Only</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-non-gem" onchange="renderDash()"> Non-GeM Only</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-msme" onchange="renderDash()"> MSME Exempt</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-boq" onchange="renderDash()"> Has BOQ</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-ai" onchange="renderDash()"> AI Analysed</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-starred2" onchange="renderDash()"> ★ Starred Only</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-hide-closed" onchange="renderDash()"> Hide Closed</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-gem" onchange="_dashPage=1;renderDash()"> 💎 GeM Only</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-non-gem" onchange="_dashPage=1;renderDash()"> Non-GeM Only</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-msme" onchange="_dashPage=1;renderDash()"> MSME Exempt</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-boq" onchange="_dashPage=1;renderDash()"> Has BOQ</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-ai" onchange="_dashPage=1;renderDash()"> AI Analysed</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-starred2" onchange="_dashPage=1;renderDash()"> ★ Starred Only</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-hide-closed" checked onchange="_dashPage=1;renderDash()"> Hide Closed</label>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="resetAdvSearch()">✕ Clear All Filters</button>
@@ -609,7 +606,7 @@ select option{background:var(--bg2)}
     <!-- Search -->
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input id="dash-search" placeholder="Search by T247 ID, brief, org, location, ref no..." oninput="renderDash()">
+      <input id="dash-search" placeholder="Search by T247 ID, brief, org, location, ref no..." oninput="_dashPage=1;renderDash()">
     </div>
     <div id="dash-count" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
     <div id="dash-sync-meta" style="font-size:11px;color:var(--text3);margin-bottom:6px"></div>
@@ -617,9 +614,19 @@ select option{background:var(--bg2)}
     <div style="display:flex;gap:14px;min-width:0">
       <div class="table-wrap" id="dash-table-wrap" style="flex:1;min-width:0">
         <table>
-          <thead><tr><th>T247 ID</th><th>Brief / Org</th><th>Value</th><th>Deadline</th><th>Days</th><th>Verdict</th><th>Win%</th><th>Actions</th></tr></thead>
+          <thead><tr>
+            <th>T247 ID</th>
+            <th>Brief / Org</th>
+            <th style="cursor:pointer;user-select:none" onclick="setDashSort('value')" title="Sort by value">Value <span id="sort-ind-value"></span></th>
+            <th style="cursor:pointer;user-select:none" onclick="setDashSort('deadline')" title="Sort by deadline">Deadline <span id="sort-ind-deadline">▲</span></th>
+            <th style="cursor:pointer;user-select:none" onclick="setDashSort('days')" title="Sort by days left">Days <span id="sort-ind-days"></span></th>
+            <th style="cursor:pointer;user-select:none" onclick="setDashSort('verdict')" title="Sort by verdict">Verdict <span id="sort-ind-verdict"></span></th>
+            <th>Win%</th>
+            <th>Actions</th>
+          </tr></thead>
           <tbody id="dash-table"><tr><td colspan="8" class="empty-state"><div class="empty-icon">📋</div>Loading tenders...</td></tr></tbody>
         </table>
+        <div id="dash-pagination" style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:12px;color:var(--text3)"></div>
       </div>
       <!-- Side Panel -->
       <div id="side-panel" style="width:340px;flex-shrink:0;display:none;overflow-y:auto;max-height:calc(100vh - 200px);position:sticky;top:0">
@@ -1323,6 +1330,42 @@ select option{background:var(--bg2)}
           <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
           <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
         </div>
+<<<<<<< Updated upstream
+=======
+        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+        <div class="card-title" style="margin-bottom:6px">Sync Settings</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end">
+          <div>
+            <label>Auto Sync</label>
+            <select id="t247-auto-sync-enabled">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+          <div>
+            <label>Interval (minutes)</label>
+            <input type="number" id="t247-auto-sync-minutes" min="15" max="720" step="5" placeholder="180">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary btn-sm" onclick="saveSyncSettings()">Save Sync Settings</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadT247SyncStatus()">Refresh Status</button>
+        </div>
+        <div id="t247-sync-settings-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+        <div class="card-title" style="margin-bottom:6px">Daily Digest Automation</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
+          <div>
+            <label>Digest Auto</label>
+            <select id="digest-enabled">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+          <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
+          <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
+        </div>
+>>>>>>> Stashed changes
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-primary btn-sm" onclick="saveDigestSettings()">Save Digest Settings</button>
           <button class="btn btn-ghost btn-sm" onclick="downloadDailyDigestText()">Download Digest TXT</button>
@@ -1667,44 +1710,107 @@ function resetAdvSearch() {
   ['af-state','af-city','af-portal','af-ownership'].forEach(id => { var el=document.getElementById(id); if(el) el.value=''; });
   ['af-val-min','af-val-max','af-date-from','af-date-to'].forEach(id => { var el=document.getElementById(id); if(el) el.value=''; });
   ['af-gem','af-non-gem','af-msme','af-boq','af-ai','af-starred2','af-hide-closed'].forEach(id => { var el=document.getElementById(id); if(el) el.checked=false; });
+  _dashPage = 1;
   renderDash();
 }
 function _afVal(id) { var el=document.getElementById(id); return el ? el.value.trim() : ''; }
 function _afChk(id) { var el=document.getElementById(id); return el ? el.checked : false; }
 
+// Known Indian states/UTs — used to strip "India" and extract correct state
+var _INDIAN_STATES = new Set([
+  'andhra pradesh','arunachal pradesh','assam','bihar','chhattisgarh','goa','gujarat',
+  'haryana','himachal pradesh','jharkhand','karnataka','kerala','madhya pradesh',
+  'maharashtra','manipur','meghalaya','mizoram','nagaland','odisha','punjab',
+  'rajasthan','sikkim','tamil nadu','telangana','tripura','uttar pradesh',
+  'uttarakhand','west bengal',
+  'andaman and nicobar','andaman & nicobar','chandigarh','dadra and nagar haveli',
+  'dadra & nagar haveli','daman and diu','daman & diu','delhi','jammu and kashmir',
+  'jammu & kashmir','ladakh','lakshadweep','puducherry','pondicherry'
+]);
+
 function _populateAdvDropdowns(tenders) {
-  // Extract unique states, cities, portals
   var states=new Set(), cities=new Set(), portals=new Set();
   tenders.forEach(function(t) {
     var loc = (t.location||t.work_location||'').trim();
     if (loc) {
-      // Try "City, State" or "City (State)" patterns
       var parts = loc.split(/[,\(\)\/]/).map(function(s){return s.trim();}).filter(Boolean);
-      if (parts.length >= 2) { cities.add(parts[0]); states.add(parts[parts.length-1]); }
-      else if (parts.length === 1) cities.add(parts[0]);
+      // Find first part that matches a known Indian state
+      var foundState = '';
+      for (var i = parts.length-1; i >= 0; i--) {
+        if (_INDIAN_STATES.has(parts[i].toLowerCase())) { foundState = parts[i]; break; }
+      }
+      if (foundState) {
+        states.add(foundState);
+        // City = first part that isn't "India" and isn't the state
+        var city = parts.find(function(p){ return p.toLowerCase() !== 'india' && p !== foundState; });
+        if (city) cities.add(city);
+      } else {
+        // Fallback: skip "India", take last remaining as state, first as city
+        var filtered = parts.filter(function(p){ return p.toLowerCase() !== 'india'; });
+        if (filtered.length >= 2) { cities.add(filtered[0]); states.add(filtered[filtered.length-1]); }
+        else if (filtered.length === 1) cities.add(filtered[0]);
+      }
     }
     var portal = (t.portal||t.website||'').replace(/https?:\/\//,'').split('/')[0].trim();
     if (portal && portal.length > 3) portals.add(portal);
   });
-  function fillSelect(id, items) {
+  function fillDatalist(id, items) {
     var el = document.getElementById(id); if (!el) return;
-    var cur = el.value;
-    el.innerHTML = el.options[0].outerHTML + Array.from(items).sort().map(function(v){
-      return '<option value="'+v+'" '+(v===cur?'selected':'')+'>'+v+'</option>';
+    el.innerHTML = Array.from(items).sort().map(function(v){
+      return '<option value="'+v+'">';
     }).join('');
   }
-  fillSelect('af-state', states);
-  fillSelect('af-city', cities);
-  fillSelect('af-portal', portals);
+  fillDatalist('dl-states', states);
+  fillDatalist('dl-cities', cities);
+  fillDatalist('dl-portals', portals);
 }
 
 function setFilter(f) {
   currentFilter = f;
+  _dashPage = 1;
   document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-filter'));
   var btns = document.querySelectorAll('.fbtn');
   btns.forEach(b => { if ((b.getAttribute('onclick')||'').includes("'" + f + "'")) b.classList.add('active'); });
   renderDash();
+}
+
+// ── SORT + PAGINATION ──────────────────────────
+var _dashSort = 'deadline';
+var _dashSortDir = 1; // 1=asc, -1=desc
+var _dashPage = 1;
+var _dashPageSize = 50;
+
+function setDashSort(col) {
+  if (_dashSort === col) _dashSortDir *= -1; else { _dashSort = col; _dashSortDir = 1; }
+  _dashPage = 1;
+  ['value','deadline','days','verdict'].forEach(function(c) {
+    var el = document.getElementById('sort-ind-'+c);
+    if (el) el.textContent = '';
+  });
+  var ind = document.getElementById('sort-ind-'+col);
+  if (ind) ind.textContent = _dashSortDir === 1 ? ' ▲' : ' ▼';
+  renderDash();
+}
+
+function _sortList(list) {
+  return list.slice().sort(function(a,b) {
+    var av, bv;
+    if (_dashSort === 'value')    { av = parseFloat(a.estimated_cost_cr)||0; bv = parseFloat(b.estimated_cost_cr)||0; }
+    else if (_dashSort === 'days'){ av = getDaysLeft(a); bv = getDaysLeft(b); }
+    else if (_dashSort === 'verdict') { var order={BID:0,CONDITIONAL:1,REVIEW:2,'NO-BID':3}; av=order[getVerdict(a)]??4; bv=order[getVerdict(b)]??4; }
+    else { // deadline
+      av = (a.deadline||'9999'); bv = (b.deadline||'9999');
+      // normalise dd-mm-yyyy → yyyy-mm-dd for string compare
+      var ma = av.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+      var mb = bv.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+      if (ma) av = ma[3]+'-'+ma[2]+'-'+ma[1];
+      if (mb) bv = mb[3]+'-'+mb[2]+'-'+mb[1];
+    }
+    if (av < bv) return -1 * _dashSortDir;
+    if (av > bv) return  1 * _dashSortDir;
+    return 0;
+  });
 }
 
 function renderDash() {
@@ -1805,7 +1911,17 @@ function renderDash() {
   var matchEl = document.getElementById('adv-match-count');
   if (matchEl) matchEl.textContent = list.length + ' match' + (list.length!==1?'es':'');
 
-  var rows = list.slice(0, 300).map(function(t) {
+  // Sort
+  var sorted = _sortList(list);
+
+  // Pagination
+  var totalPages = Math.max(1, Math.ceil(sorted.length / _dashPageSize));
+  if (_dashPage > totalPages) _dashPage = totalPages;
+  var pageStart = (_dashPage - 1) * _dashPageSize;
+  var pageEnd   = pageStart + _dashPageSize;
+  var paginated = sorted.slice(pageStart, pageEnd);
+
+  var rows = paginated.map(function(t) {
     var v = getVerdict(t);
     var dl = getDaysLeft(t);
     var matchTags = buildMatchTags(t);
@@ -1817,6 +1933,8 @@ function renderDash() {
         '<span class="mono">'+(t.t247_id||'—')+'</span>' +
         (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
         (t.bid_no_bid_done ? ' <span style="font-size:9px;color:#8b5cf6;font-weight:600">AI</span>' : '') +
+        (t.manual_verdict ? ' <span style="font-size:9px;color:#f59e0b;font-weight:600" title="Manual verdict set">👤</span>' : '') +
+        (t.has_corrigendum ? ' <span style="font-size:9px;color:#ef4444;font-weight:600" title="Corrigendum issued">⚠COR</span>' : '') +
       '</td>' +
       '<td class="brief-cell"><div class="brief">' + (t.brief || '—') + '</div><div class="org">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>' +
         (matchTags ? '<div style="margin-top:3px">' + matchTags + '</div>' : '') +
@@ -1835,7 +1953,32 @@ function renderDash() {
   }).join('');
 
   document.getElementById('dash-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders match current filters</td></tr>';
+
+  // Render pagination bar
+  var pgEl = document.getElementById('dash-pagination');
+  if (pgEl) {
+    if (totalPages <= 1) { pgEl.innerHTML = ''; }
+    else {
+      var pgBtns = '';
+      pgBtns += '<button class="btn btn-ghost btn-xs" onclick="_goPage(1)" '+((_dashPage===1)?'disabled':'')+'>«</button>';
+      pgBtns += '<button class="btn btn-ghost btn-xs" onclick="_goPage('+(_dashPage-1)+')" '+((_dashPage===1)?'disabled':'')+'>‹</button>';
+      // window of pages
+      var from = Math.max(1, _dashPage-2), to = Math.min(totalPages, _dashPage+2);
+      for (var p=from;p<=to;p++) {
+        pgBtns += '<button class="btn btn-xs '+(p===_dashPage?'btn-primary':'btn-ghost')+'" onclick="_goPage('+p+')">'+p+'</button>';
+      }
+      pgBtns += '<button class="btn btn-ghost btn-xs" onclick="_goPage('+(_dashPage+1)+')" '+((_dashPage===totalPages)?'disabled':'')+'>›</button>';
+      pgBtns += '<button class="btn btn-ghost btn-xs" onclick="_goPage('+totalPages+')" '+((_dashPage===totalPages)?'disabled':'')+'>»</button>';
+      pgBtns += '<span style="margin-left:8px">Page '+_dashPage+' / '+totalPages+' &nbsp;·&nbsp; '+sorted.length+' tenders</span>';
+      pgBtns += '<select onchange="_setPageSize(+this.value)" style="margin-left:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:11px">'
+        + [25,50,100,200].map(function(n){ return '<option value="'+n+'"'+(n===_dashPageSize?' selected':'')+'>'+n+' / page</option>'; }).join('')
+        + '</select>';
+      pgEl.innerHTML = pgBtns;
+    }
+  }
 }
+function _goPage(p) { _dashPage = p; renderDash(); }
+function _setPageSize(n) { _dashPageSize = n; _dashPage = 1; renderDash(); }
 
 function renderTenders() {
   var search = (document.getElementById('tl-search').value || '').toLowerCase();
@@ -3468,38 +3611,117 @@ function buildSidePanelContent(t) {
   var v = getVerdict(t);
   var dl = getDaysLeft(t);
   var matchTags = buildMatchTags(t);
-  var html = '<div style="margin-bottom:10px">' +
+  var tid = t.t247_id || '';
+
+  // ── Header ──
+  var html = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
     '<span class="badge badge-' + v + '" style="font-size:12px;padding:4px 10px">' + v + '</span>' +
+    (t.manual_verdict ? '<span style="font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;border-radius:4px;padding:2px 6px">👤 Manual</span>' : '') +
     (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
+    (t.has_corrigendum ? '<span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;border-radius:4px;padding:2px 6px">⚠ Corrigendum</span>' : '') +
   '</div>' +
   '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;line-height:1.4">' + (t.brief || '—') + '</div>' +
   '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>';
 
   if (matchTags) html += '<div style="margin-bottom:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Project Match</div>' + matchTags + '</div>';
 
+  // ── Key Data ──
   html += '<table style="width:100%;font-size:11.5px;border-collapse:collapse">';
-  var rows = [
-    ['T247 ID', t.t247_id || '—'],
-    ['Ref No', t.ref_no || '—'],
-    ['Value', t.estimated_cost_cr ? '₹' + t.estimated_cost_cr + ' Cr' : '—'],
-    ['EMD', t.emd || '—'],
-    ['Deadline', t.deadline || '—'],
-    ['Days Left', daysDisplay(dl)],
-    ['Status', t.status || '—'],
-    ['Win %', t.win_probability ? t.win_probability.toFixed(1) + '%' : '—'],
-  ];
-  rows.forEach(function(r) {
-    html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">' + r[0] + '</td><td style="padding:5px 0;color:var(--text)">' + r[1] + '</td></tr>';
+  [['T247 ID', tid], ['Ref No', t.ref_no||'—'], ['Value', t.estimated_cost_cr ? '₹'+t.estimated_cost_cr+' Cr' : '—'],
+   ['EMD', t.emd||'—'], ['Deadline', t.deadline||'—'], ['Days Left', daysDisplay(dl)],
+   ['Status', t.status||'—'], ['Win %', t.win_probability ? t.win_probability.toFixed(1)+'%' : '—']
+  ].forEach(function(r) {
+    html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">'+r[0]+'</td><td style="padding:5px 0;color:var(--text)">'+r[1]+'</td></tr>';
   });
   html += '</table>';
 
   if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
 
-  html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
-    '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">🔍 Analyse with AI</button>' +
-    '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">⬇ Download Docs</button>' +
+  // ── Manual Verdict Override ──
+  html += '<div style="margin-top:14px;padding:10px;background:var(--bg4);border:1px solid var(--border);border-radius:8px">' +
+    '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Override Verdict' +
+      (t.manual_verdict ? ' <span style="color:#f59e0b">• Locked</span>' : '') +
+    '</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">' +
+    ['BID','NO-BID','CONDITIONAL','REVIEW'].map(function(ov) {
+      var colors = {BID:'var(--green)',  'NO-BID':'var(--red)', CONDITIONAL:'var(--amber)', REVIEW:'var(--blue)'};
+      var bgs    = {BID:'rgba(34,197,94,.15)', 'NO-BID':'rgba(239,68,68,.15)', CONDITIONAL:'rgba(245,158,11,.15)', REVIEW:'rgba(59,130,246,.15)'};
+      var isActive = v === ov;
+      return '<button onclick="setManualVerdict(\''+tid+'\',\''+ov+'\')" style="flex:1;min-width:60px;padding:4px 6px;border-radius:5px;border:1px solid '+(isActive?colors[ov]:'var(--border)')+';background:'+(isActive?bgs[ov]:'none')+';color:'+(isActive?colors[ov]:'var(--text3)')+';font-size:11px;font-weight:'+(isActive?'700':'400')+';cursor:pointer;font-family:var(--font);transition:all .15s" title="Set verdict to '+ov+'">' + ov + '</button>';
+    }).join('') +
+    '</div>' +
+    '<input id="sp-note-'+tid+'" placeholder="Note (optional)…" value="'+(t.manual_verdict_note||'')+'" style="width:100%;padding:5px 8px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:11px;font-family:var(--font)">' +
+    (t.manual_verdict ? '<button onclick="clearManualVerdict(\''+tid+'\')" style="margin-top:6px;font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">↺ Restore AI verdict</button>' : '') +
   '</div>';
 
+<<<<<<< Updated upstream
+  // ── PQ/TQ Summary (analysed tenders) ──
+  var pq = t.pq_criteria || [];
+  var tq = t.tq_criteria || [];
+  if (pq.length || tq.length) {
+    function _stUp2(c) { return (c.nascent_status||c.status||'').toUpperCase().replace(/ /g,'-'); }
+    var pqMet = pq.filter(function(c){return _stUp2(c)==='MET';}).length;
+    var pqFail = pq.filter(function(c){return ['NOT-MET','NOT MET','FAIL','NO'].includes(_stUp2(c));}).length;
+    var pqCond = pq.filter(function(c){return _stUp2(c)==='CONDITIONAL';}).length;
+    html += '<div style="margin-top:12px">';
+    html += '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">PQ / TQ Summary</div>';
+    // Scorecard row
+    html += '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+      '<span style="font-size:11px;color:var(--green)">✓ '+pqMet+' Met</span>' +
+      (pqCond ? '<span style="font-size:11px;color:var(--amber)">⚠ '+pqCond+' Cond</span>' : '') +
+      (pqFail ? '<span style="font-size:11px;color:var(--red)">✗ '+pqFail+' Fail</span>' : '') +
+      (tq.length ? '<span style="font-size:11px;color:var(--blue)">TQ: '+tq.length+' criteria</span>' : '') +
+    '</div>';
+    // Show first 5 PQ items
+    pq.slice(0, 5).forEach(function(c) {
+      var st = _stUp2(c);
+      var stColor = st==='MET' ? 'var(--green)' : st==='NOT-MET'||st==='NOT MET'||st==='FAIL' ? 'var(--red)' : st==='CONDITIONAL' ? 'var(--amber)' : 'var(--text3)';
+      var stIcon  = st==='MET' ? '✓' : st==='NOT-MET'||st==='NOT MET'||st==='FAIL' ? '✗' : '⚠';
+      html += '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:5px;padding:4px 6px;background:var(--bg4);border-radius:4px">' +
+        '<span style="color:'+stColor+';font-size:11px;font-weight:700;flex-shrink:0">'+stIcon+'</span>' +
+        '<span style="font-size:11px;color:var(--text2);line-height:1.4;flex:1">'+(c.criterion||c.description||'').substring(0,80)+'</span>' +
+      '</div>';
+    });
+    if (pq.length > 5) html += '<div style="font-size:10px;color:var(--text3);margin-top:2px">+ '+(pq.length-5)+' more criteria — open Analysis tab to see all</div>';
+    html += '</div>';
+  } else {
+    // Generic checklist for unanalysed tenders
+    html += '<div style="margin-top:12px">' +
+      '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Pre-Bid Checklist</div>' +
+      ['Read all tender documents carefully',
+       'Check EMD amount and validity',
+       'Verify eligibility criteria (turnover, experience)',
+       'Check MSME/GeM exemptions',
+       'Confirm work location feasibility',
+       'Review scope and timeline',
+       'Estimate project cost accurately',
+       'Check payment terms and milestones',
+       'Verify insurance and performance bond requirements',
+       'Submit AI analysis before final decision',
+      ].map(function(item) {
+        return '<label style="display:flex;gap:7px;align-items:flex-start;margin-bottom:5px;cursor:pointer;font-size:11.5px;color:var(--text2)">' +
+          '<input type="checkbox" style="margin-top:2px;flex-shrink:0"> ' + item + '</label>';
+      }).join('') +
+    '</div>';
+  }
+
+  // ── Action Buttons ──
+  html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
+    '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\''+tid+'\',\''+esc(t.brief)+'\')">🔍 Analyse with AI</button>' +
+    (t.bid_no_bid_done ? '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\''+tid+'\')">⬇ Download Report</button>' : '') +
+    '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\''+tid+'\')">📄 Download Docs</button>' +
+  '</div>';
+
+  // ── Attachments ──
+  var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
+  if (atts.length) {
+    html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
+    atts.slice().reverse().slice(0, 5).forEach(function(a) {
+      var sz = a.size ? (' ('+Math.round(a.size/1024)+' KB)') : '';
+      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
+        '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||'Document')+'">'+(a.name||'Document')+sz+'</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\''+a.vault_id+'\')">Open</button>' +
+=======
   var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
   if (atts.length) {
     html += '<div style="margin-top:12px">' +
@@ -3509,16 +3731,56 @@ function buildSidePanelContent(t) {
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
         '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name || 'Document') + '">' + (a.name || 'Document') + sz + '</div>' +
         '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
+>>>>>>> Stashed changes
       '</div>';
     });
     html += '</div>';
   }
 
+<<<<<<< Updated upstream
+  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">'+(t.eligibility||'').substring(0,300)+'...</div></div>';
+=======
   if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
+>>>>>>> Stashed changes
 
   return html;
 }
 
+<<<<<<< Updated upstream
+async function setManualVerdict(tid, verdict) {
+  var note = (document.getElementById('sp-note-'+tid)||{}).value || '';
+  try {
+    var r = await fetch('/tender/'+encodeURIComponent(tid)+'/set-verdict', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({verdict: verdict, note: note})
+    });
+    var d = await r.json();
+    if (d.status === 'ok') {
+      toast('Verdict → ' + verdict + ' (locked)', 'success');
+      await loadDashboard();
+      // Re-open panel with updated data
+      var t2 = allTenders.find(function(x){return x.t247_id===tid;});
+      if (t2) openSidePanel(tid);
+    } else toast('Error: ' + (d.detail||'Unknown'), 'error');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function clearManualVerdict(tid) {
+  try {
+    // Clear the manual lock, then reclassify with AI rules
+    await fetch('/tender/'+encodeURIComponent(tid)+'/set-verdict', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({verdict:'REVIEW', note:'', _clear_manual: true})
+    });
+    await fetch('/tender/'+encodeURIComponent(tid)+'/reclassify', {method:'POST'});
+    toast('Manual verdict cleared — AI verdict restored', 'success');
+    await loadDashboard();
+    openSidePanel(tid);
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+=======
+>>>>>>> Stashed changes
 function downloadVaultFile(fileId) {
   window.location.href = '/vault/download/' + encodeURIComponent(fileId);
 }
@@ -4373,6 +4635,105 @@ function downloadDailyDigestText() {
   window.location.href = '/ops/daily-digest.txt';
 }
 
+async function saveSyncSettings() {
+  var en = document.getElementById('t247-auto-sync-enabled');
+  var minsEl = document.getElementById('t247-auto-sync-minutes');
+  var statusEl = document.getElementById('t247-sync-settings-status');
+  var enabled = en ? en.value === 'true' : true;
+  var mins = minsEl ? parseInt(minsEl.value || '180', 10) : 180;
+  if (isNaN(mins)) mins = 180;
+  mins = Math.max(15, Math.min(720, mins));
+  if (minsEl) minsEl.value = String(mins);
+  try {
+    var r = await fetch('/config', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        t247_auto_sync_enabled: enabled,
+        t247_auto_sync_minutes: mins
+      })
+    });
+    if (r.status === 403) {
+      toast('❌ 403 — save Admin Token in Settings first', 'error');
+      if (statusEl) statusEl.textContent = '403 unauthorized. Set admin token first.';
+      return;
+    }
+    await r.json().catch(function(){ return {}; });
+    if (statusEl) statusEl.textContent = 'Saved: auto sync ' + (enabled ? 'enabled' : 'disabled') + ', every ' + mins + ' minutes.';
+    toast('✅ Sync settings saved', 'success');
+    await loadT247SyncStatus();
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Save failed: ' + e.message;
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+async function saveDigestSettings() {
+  var en = document.getElementById('digest-enabled');
+  var hEl = document.getElementById('digest-hour');
+  var mEl = document.getElementById('digest-minute');
+  var statusEl = document.getElementById('digest-settings-status');
+  var enabled = en ? en.value === 'true' : true;
+  var hour = hEl ? parseInt(hEl.value || '9', 10) : 9;
+  var minute = mEl ? parseInt(mEl.value || '0', 10) : 0;
+  if (isNaN(hour)) hour = 9;
+  if (isNaN(minute)) minute = 0;
+  hour = Math.max(0, Math.min(23, hour));
+  minute = Math.max(0, Math.min(59, minute));
+  if (hEl) hEl.value = String(hour);
+  if (mEl) mEl.value = String(minute);
+  try {
+    var r = await fetch('/config', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        daily_digest_enabled: enabled,
+        daily_digest_hour: hour,
+        daily_digest_minute: minute
+      })
+    });
+    if (r.status === 403) {
+      toast('❌ 403 — save Admin Token in Settings first', 'error');
+      if (statusEl) statusEl.textContent = '403 unauthorized. Set admin token first.';
+      return;
+    }
+    await r.json().catch(function(){ return {}; });
+    if (statusEl) statusEl.textContent = 'Saved: ' + (enabled ? 'enabled' : 'disabled') + ' at ' + String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0');
+    toast('✅ Digest settings saved', 'success');
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Save failed: ' + e.message;
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
+async function generateDailyDigest() {
+  var btn = document.getElementById('digest-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Digest...'; }
+  try {
+    var r = await fetch('/ops/daily-digest/generate', { method: 'POST' });
+    var d = await r.json();
+    if (d.status === 'success') {
+      toast('✅ Daily digest generated', 'success');
+      try {
+        await navigator.clipboard.writeText(d.whatsapp_text || '');
+        toast('📋 WhatsApp text copied', 'info');
+      } catch(e) {}
+      var el = document.getElementById('dash-ops-meta');
+      if (el) el.title = (d.subject || '') + '\n' + (d.whatsapp_text || '');
+    } else {
+      toast('Digest failed', 'error');
+    }
+  } catch(e) {
+    toast('Digest error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📰 Daily Digest'; }
+  }
+}
+
+function downloadDailyDigestText() {
+  window.location.href = '/ops/daily-digest.txt';
+}
+
 async function testT247() {
   await loadT247ConnectionStatus();
 }
@@ -4570,7 +4931,10 @@ async function uploadLetterhead(input) {
 document.addEventListener('DOMContentLoaded', async function() {
   await loadDashboard();
   await loadT247SyncStatus();
+<<<<<<< Updated upstream
   await loadT247ConnectionStatus();
+=======
+>>>>>>> Stashed changes
   await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
@@ -4578,7 +4942,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(checkDeadlineNotifications, 60000);
   setInterval(updateTokenMeter, 120000);
   setInterval(loadT247SyncStatus, 60000);
+<<<<<<< Updated upstream
   setInterval(loadT247ConnectionStatus, 300000);
+=======
+>>>>>>> Stashed changes
   setInterval(loadOpsDailyReport, 120000);
   // Restore page from URL on load
   var params = new URLSearchParams(window.location.search);
