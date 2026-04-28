@@ -1989,6 +1989,32 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             tender_data["tq_criteria"] = checker.check_all(tender_data.get("tq_criteria", []))
             tender_data["overall_verdict"] = checker.get_overall_verdict(tender_data["pq_criteria"] + tender_data["tq_criteria"])
 
+        pq_count = len(tender_data.get("pq_criteria", []) or [])
+        tq_count = len(tender_data.get("tq_criteria", []) or [])
+        if not ai_used and (pq_count + tq_count == 0):
+            tender_data["analysis_status"] = "failed_incomplete"
+            tender_data["ai_warning"] = (
+                tender_data.get("ai_warning")
+                or "AI did not run and no PQ/TQ criteria were extracted."
+            )
+            tender_data["overall_verdict"] = {
+                "verdict": "REVIEW REQUIRED",
+                "reason": (
+                    "AI analysis failed and 0 eligibility/technical criteria were extracted. "
+                    "This result is unsafe for bid/no-bid decisions. Re-run analysis after fixing AI access."
+                ),
+                "color": "RED",
+                "green": 0,
+                "amber": 0,
+                "red": 0,
+            }
+
+        if not tender_data.get("prebid_queries"):
+            try:
+                tender_data["prebid_queries"] = generate_prebid_queries(tender_data) or []
+            except Exception:
+                tender_data["prebid_queries"] = []
+
         _set_job(job_id, progress="Generating Word report…", step=8)
         output_filename = ""
         doc_b64 = ""

@@ -1330,42 +1330,8 @@ select option{background:var(--bg2)}
           <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
           <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
         </div>
-<<<<<<< Updated upstream
-=======
-        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-        <div class="card-title" style="margin-bottom:6px">Sync Settings</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end">
-          <div>
-            <label>Auto Sync</label>
-            <select id="t247-auto-sync-enabled">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-          </div>
-          <div>
-            <label>Interval (minutes)</label>
-            <input type="number" id="t247-auto-sync-minutes" min="15" max="720" step="5" placeholder="180">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary btn-sm" onclick="saveSyncSettings()">Save Sync Settings</button>
-          <button class="btn btn-ghost btn-sm" onclick="loadT247SyncStatus()">Refresh Status</button>
-        </div>
-        <div id="t247-sync-settings-status" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-        <div class="card-title" style="margin-bottom:6px">Daily Digest Automation</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
-          <div>
-            <label>Digest Auto</label>
-            <select id="digest-enabled">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-          </div>
-          <div><label>Hour (24h)</label><input type="number" id="digest-hour" min="0" max="23" step="1" placeholder="9"></div>
-          <div><label>Minute</label><input type="number" id="digest-minute" min="0" max="59" step="1" placeholder="0"></div>
-        </div>
->>>>>>> Stashed changes
+
+
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-primary btn-sm" onclick="saveDigestSettings()">Save Digest Settings</button>
           <button class="btn btn-ghost btn-sm" onclick="downloadDailyDigestText()">Download Digest TXT</button>
@@ -2347,14 +2313,21 @@ function showAnalysisResult(d) {
   stamp.textContent = v;
   document.getElementById('res-conf').textContent = conf ? 'Confidence: ' + conf : '';
   document.getElementById('res-reason').textContent = reason;
-  document.getElementById('res-ai-badge').textContent = d.ai_used ? '✓ AI Analysed' : '⚠ Basic Extract';
-  document.getElementById('res-ai-badge').style.background = d.ai_used ? 'rgba(34,197,94,.15)' : 'rgba(251,191,36,.15)';
-  document.getElementById('res-ai-badge').style.color = d.ai_used ? '#4ade80' : '#fbbf24';
+  document.getElementById('res-ai-badge').textContent = d.ai_used ? '✓ AI Analysed' : '⚠ AI Not Run';
+  document.getElementById('res-ai-badge').style.background = d.ai_used ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
+  document.getElementById('res-ai-badge').style.color = d.ai_used ? '#4ade80' : '#f87171';
   var aiWarnEl = document.getElementById('res-ai-warning');
   var aiWarn = td.ai_warning || '';
-  if (aiWarn && !d.ai_used) {
+  var incomplete = !d.ai_used && (!pq.length && !tq.length);
+  if (!d.ai_used && (aiWarn || incomplete)) {
     aiWarnEl.style.display = 'block';
-    aiWarnEl.innerHTML = '⚠ ' + aiWarn + (aiWarn.includes('key') || aiWarn.includes('quota') ?
+    aiWarnEl.style.background = 'rgba(239,68,68,.12)';
+    aiWarnEl.style.border = '1px solid rgba(239,68,68,.45)';
+    aiWarnEl.style.color = '#fca5a5';
+    var hardWarn = incomplete
+      ? 'CRITICAL: AI did not run and no PQ/TQ criteria were extracted. Do NOT trust this verdict.'
+      : aiWarn;
+    aiWarnEl.innerHTML = '⚠ ' + hardWarn + ((aiWarn || '').includes('key') || (aiWarn || '').includes('quota') ?
       ' &nbsp;<a href="#" onclick="showSection(\'settings\');return false" style="color:#60a5fa;text-decoration:underline">→ Go to Settings</a>' : '');
   } else { aiWarnEl.style.display = 'none'; }
   document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);
@@ -2384,7 +2357,7 @@ function showAnalysisResult(d) {
     '<span>' + (pq.length - pqMet - pqCond - pqFail) + ' Under Review</span>';
   document.getElementById('res-pq-body').innerHTML = pq.length
     ? pq.map((c, i) => _critRow(i+1, c)).join('')
-    : '<tr><td colspan="6" class="empty-state">No PQ criteria extracted.</td></tr>';
+    : '<tr><td colspan="6" class="empty-state">No PQ criteria extracted. Re-run with AI before taking bid/no-bid decision.</td></tr>';
 
   // ── TQ Tab ──
   var tqMet = tq.filter(c => _stUp(c) === 'MET').length;
@@ -2584,11 +2557,9 @@ function showAnalysisResult(d) {
   // ── Report Tab ──
   document.getElementById('doc-preview-content').innerHTML = buildDocPreview(td, v);
 
-  // Show prebid section if queries exist
-  if (td.prebid_queries && td.prebid_queries.length) {
-    document.getElementById('prebid-section').style.display = 'block';
-    renderPrebidList(td.prebid_queries);
-  }
+  // Always refresh pre-bid section from current analysis output
+  document.getElementById('prebid-section').style.display = 'block';
+  renderPrebidList(td.prebid_queries || []);
 
   switchAnTab('pq');
   toast('Analysis complete — Verdict: ' + v, v === 'BID' ? 'success' : v === 'NO-BID' ? 'error' : 'info');
@@ -2945,7 +2916,10 @@ async function loadPrebidQueries() {
 }
 
 function renderPrebidList(queries) {
-  if (!queries.length) { document.getElementById('prebid-list').innerHTML = '<div class="empty-state">No queries generated.</div>'; return; }
+  if (!queries.length) {
+    document.getElementById('prebid-list').innerHTML = '<div class="empty-state">No queries generated from current criteria. Re-run AI or review PQ/TQ gaps manually.</div>';
+    return;
+  }
   document.getElementById('prebid-list').innerHTML = queries.map((q, i) => {
     var text = typeof q === 'string' ? q : q.query || JSON.stringify(q);
     var cat = typeof q === 'object' ? q.category || '' : '';
@@ -3637,6 +3611,31 @@ function buildSidePanelContent(t) {
 
   if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
 
+  var pq = t.pq_criteria || [];
+  var tq = t.tq_criteria || [];
+  if (pq.length || tq.length) {
+    function _stUp2(c) { return (c.nascent_status||c.status||'').toUpperCase().replace(/ /g,'-'); }
+    var pqMet = pq.filter(function(c){return _stUp2(c)==='MET';}).length;
+    var pqFail = pq.filter(function(c){return ['NOT-MET','NOT MET','FAIL','NO'].includes(_stUp2(c));}).length;
+    var pqCond = pq.filter(function(c){return _stUp2(c)==='CONDITIONAL';}).length;
+    html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">PQ / TQ Summary</div>';
+    html += '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+      '<span style="font-size:11px;color:var(--green)">✓ '+pqMet+' Met</span>' +
+      (pqCond ? '<span style="font-size:11px;color:var(--amber)">⚠ '+pqCond+' Cond</span>' : '') +
+      (pqFail ? '<span style="font-size:11px;color:var(--red)">✗ '+pqFail+' Fail</span>' : '') +
+      (tq.length ? '<span style="font-size:11px;color:var(--blue)">TQ: '+tq.length+' criteria</span>' : '') +
+    '</div></div>';
+  }
+
+  if (t.scope_items && t.scope_items.length) {
+    html += '<div style="margin-top:10px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Scope (Top Items)</div>';
+    t.scope_items.slice(0, 3).forEach(function(si, i) {
+      var txt = typeof si === 'string' ? si : (si.section_title || si.title || si.description || '');
+      html += '<div style="font-size:11px;color:var(--text2);margin-bottom:4px;line-height:1.4">' + (i+1) + '. ' + (txt || '—') + '</div>';
+    });
+    html += '</div>';
+  }
+
   // ── Manual Verdict Override ──
   html += '<div style="margin-top:14px;padding:10px;background:var(--bg4);border:1px solid var(--border);border-radius:8px">' +
     '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Override Verdict' +
@@ -3654,56 +3653,6 @@ function buildSidePanelContent(t) {
     (t.manual_verdict ? '<button onclick="clearManualVerdict(\''+tid+'\')" style="margin-top:6px;font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">↺ Restore AI verdict</button>' : '') +
   '</div>';
 
-<<<<<<< Updated upstream
-  // ── PQ/TQ Summary (analysed tenders) ──
-  var pq = t.pq_criteria || [];
-  var tq = t.tq_criteria || [];
-  if (pq.length || tq.length) {
-    function _stUp2(c) { return (c.nascent_status||c.status||'').toUpperCase().replace(/ /g,'-'); }
-    var pqMet = pq.filter(function(c){return _stUp2(c)==='MET';}).length;
-    var pqFail = pq.filter(function(c){return ['NOT-MET','NOT MET','FAIL','NO'].includes(_stUp2(c));}).length;
-    var pqCond = pq.filter(function(c){return _stUp2(c)==='CONDITIONAL';}).length;
-    html += '<div style="margin-top:12px">';
-    html += '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">PQ / TQ Summary</div>';
-    // Scorecard row
-    html += '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
-      '<span style="font-size:11px;color:var(--green)">✓ '+pqMet+' Met</span>' +
-      (pqCond ? '<span style="font-size:11px;color:var(--amber)">⚠ '+pqCond+' Cond</span>' : '') +
-      (pqFail ? '<span style="font-size:11px;color:var(--red)">✗ '+pqFail+' Fail</span>' : '') +
-      (tq.length ? '<span style="font-size:11px;color:var(--blue)">TQ: '+tq.length+' criteria</span>' : '') +
-    '</div>';
-    // Show first 5 PQ items
-    pq.slice(0, 5).forEach(function(c) {
-      var st = _stUp2(c);
-      var stColor = st==='MET' ? 'var(--green)' : st==='NOT-MET'||st==='NOT MET'||st==='FAIL' ? 'var(--red)' : st==='CONDITIONAL' ? 'var(--amber)' : 'var(--text3)';
-      var stIcon  = st==='MET' ? '✓' : st==='NOT-MET'||st==='NOT MET'||st==='FAIL' ? '✗' : '⚠';
-      html += '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:5px;padding:4px 6px;background:var(--bg4);border-radius:4px">' +
-        '<span style="color:'+stColor+';font-size:11px;font-weight:700;flex-shrink:0">'+stIcon+'</span>' +
-        '<span style="font-size:11px;color:var(--text2);line-height:1.4;flex:1">'+(c.criterion||c.description||'').substring(0,80)+'</span>' +
-      '</div>';
-    });
-    if (pq.length > 5) html += '<div style="font-size:10px;color:var(--text3);margin-top:2px">+ '+(pq.length-5)+' more criteria — open Analysis tab to see all</div>';
-    html += '</div>';
-  } else {
-    // Generic checklist for unanalysed tenders
-    html += '<div style="margin-top:12px">' +
-      '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Pre-Bid Checklist</div>' +
-      ['Read all tender documents carefully',
-       'Check EMD amount and validity',
-       'Verify eligibility criteria (turnover, experience)',
-       'Check MSME/GeM exemptions',
-       'Confirm work location feasibility',
-       'Review scope and timeline',
-       'Estimate project cost accurately',
-       'Check payment terms and milestones',
-       'Verify insurance and performance bond requirements',
-       'Submit AI analysis before final decision',
-      ].map(function(item) {
-        return '<label style="display:flex;gap:7px;align-items:flex-start;margin-bottom:5px;cursor:pointer;font-size:11.5px;color:var(--text2)">' +
-          '<input type="checkbox" style="margin-top:2px;flex-shrink:0"> ' + item + '</label>';
-      }).join('') +
-    '</div>';
-  }
 
   // ── Action Buttons ──
   html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
@@ -3721,32 +3670,20 @@ function buildSidePanelContent(t) {
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
         '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||'Document')+'">'+(a.name||'Document')+sz+'</div>' +
         '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\''+a.vault_id+'\')">Open</button>' +
-=======
-  var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
-  if (atts.length) {
-    html += '<div style="margin-top:12px">' +
-      '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
-    atts.slice().reverse().slice(0, 5).forEach(function(a) {
-      var sz = a.size ? (' (' + Math.round(a.size / 1024) + ' KB)') : '';
-      html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
-        '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name || 'Document') + '">' + (a.name || 'Document') + sz + '</div>' +
-        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
->>>>>>> Stashed changes
+
       '</div>';
     });
     html += '</div>';
   }
 
-<<<<<<< Updated upstream
+
   if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">'+(t.eligibility||'').substring(0,300)+'...</div></div>';
-=======
-  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
->>>>>>> Stashed changes
+
 
   return html;
 }
 
-<<<<<<< Updated upstream
+
 async function setManualVerdict(tid, verdict) {
   var note = (document.getElementById('sp-note-'+tid)||{}).value || '';
   try {
@@ -3779,8 +3716,7 @@ async function clearManualVerdict(tid) {
   } catch(e) { toast('Error: '+e.message,'error'); }
 }
 
-=======
->>>>>>> Stashed changes
+
 function downloadVaultFile(fileId) {
   window.location.href = '/vault/download/' + encodeURIComponent(fileId);
 }
@@ -4931,10 +4867,9 @@ async function uploadLetterhead(input) {
 document.addEventListener('DOMContentLoaded', async function() {
   await loadDashboard();
   await loadT247SyncStatus();
-<<<<<<< Updated upstream
+
   await loadT247ConnectionStatus();
-=======
->>>>>>> Stashed changes
+
   await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
@@ -4942,10 +4877,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   setInterval(checkDeadlineNotifications, 60000);
   setInterval(updateTokenMeter, 120000);
   setInterval(loadT247SyncStatus, 60000);
-<<<<<<< Updated upstream
+
   setInterval(loadT247ConnectionStatus, 300000);
-=======
->>>>>>> Stashed changes
+
   setInterval(loadOpsDailyReport, 120000);
   // Restore page from URL on load
   var params = new URLSearchParams(window.location.search);

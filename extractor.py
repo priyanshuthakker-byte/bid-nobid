@@ -364,6 +364,32 @@ def extract_snapshot_from_text(text: str) -> dict:
     return {k: v for k, v in snap.items() if v and len(v.strip()) > 2}
 
 
+def _looks_like_placeholder(value: str) -> bool:
+    s = str(value or "").strip()
+    if not s:
+        return True
+    bad = {"na", "n/a", "-", "—", "nil", "none", "not specified"}
+    return s.lower() in bad
+
+
+def _sanitize_snapshot(snapshot: dict) -> dict:
+    cleaned = dict(snapshot or {})
+
+    tender_no = str(cleaned.get("tender_no", "") or "").strip()
+    if tender_no.lower() in {"tender no", "tender number", "tender id", "reference no", "ref no"}:
+        cleaned["tender_no"] = "—"
+
+    tender_name = str(cleaned.get("tender_name", "") or "").strip()
+    if _looks_like_placeholder(tender_name) or len(tender_name) < 8:
+        cleaned["tender_name"] = "—"
+
+    emd = str(cleaned.get("emd", "") or "").strip()
+    if emd and ("pdf" in emd.lower() or not re.search(r"\d", emd)):
+        cleaned["emd"] = "—"
+
+    return cleaned
+
+
 # ── MAIN EXTRACTOR CLASS ───────────────────────────────────────
 
 class TenderExtractor:
@@ -442,4 +468,4 @@ class TenderExtractor:
             except Exception as e:
                 logger.warning(f"[Extractor] Failed to read {doc.name}: {e}")
 
-        return result
+        return _sanitize_snapshot(result)

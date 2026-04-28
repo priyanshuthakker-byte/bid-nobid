@@ -550,6 +550,19 @@ class NascentChecker:
         return results
 
     def get_overall_verdict(self, checked_criteria: List[Dict]) -> Dict:
+        if not checked_criteria:
+            return {
+                "verdict": "REVIEW REQUIRED",
+                "reason": (
+                    "No PQ/TQ criteria could be extracted. "
+                    "Do not treat this as a clean BID signal. Re-run AI analysis or review manually."
+                ),
+                "color": "RED",
+                "green": 0,
+                "amber": 0,
+                "red": 0,
+            }
+
         red_count = sum(1 for c in checked_criteria if c.get("nascent_color") == "RED")
         amber_count = sum(1 for c in checked_criteria if c.get("nascent_color") == "AMBER")
         green_count = sum(1 for c in checked_criteria if c.get("nascent_color") == "GREEN")

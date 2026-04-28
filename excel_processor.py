@@ -187,10 +187,29 @@ def process_excel(filepath: str) -> List[Dict]:
             elig = cs("eligibility")
             chklist = cs("checklist")
 
-            try:
-                cost = float(str(cost_raw).replace(",", "")) if cost_raw else 0
-            except Exception:
-                cost = 0
+            def parse_cost_rupees(raw) -> float:
+                if raw is None:
+                    return 0.0
+                if isinstance(raw, (int, float)):
+                    return float(raw)
+                s = str(raw).strip()
+                if not s:
+                    return 0.0
+                s_low = s.lower()
+                multiplier = 1.0
+                if "crore" in s_low or re.search(r"\bcr\b", s_low):
+                    multiplier = 1_00_00_000
+                elif "lakh" in s_low or "lac" in s_low or re.search(r"\bl\b", s_low):
+                    multiplier = 1_00_000
+                num_match = re.search(r"(\d[\d,]*(?:\.\d+)?)", s_low)
+                if not num_match:
+                    return 0.0
+                try:
+                    return float(num_match.group(1).replace(",", "")) * multiplier
+                except Exception:
+                    return 0.0
+
+            cost = parse_cost_rupees(cost_raw)
 
             classification = classify_tender(brief, cost, elig, chklist)
             dl = days_left(deadline)
