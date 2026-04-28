@@ -28,7 +28,13 @@ from sqlalchemy import text
 from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
+codex/find-issues-with-api-keys-96skiq
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
+
+codex/find-issues-with-api-keys-cwvep4
+from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
+from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini
+main main
 try:
     from ai_analyzer import analyze_with_gemini_parallel
     PARALLEL_ANALYST_AVAILABLE = True
@@ -152,6 +158,7 @@ def _set_job(job_id: str, **kwargs):
             jf.write_text(json.dumps(existing))
         except Exception:
             pass
+ codex/find-issues-with-api-keys-96skiq
         if doc_b64:
             try:
                 safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
@@ -159,11 +166,20 @@ def _set_job(job_id: str, **kwargs):
             except Exception:
                 pass
 
+        if doc_b64:
+            try:
+                safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
+                (JOBS_DIR / f"{safe_job_id}.b64").write_text(doc_b64)
+            except Exception:
+                pass
+main
+
 def _get_job(job_id: str) -> dict:
     with _jobs_lock:
         jf = _job_file(job_id)
         if not jf.exists():
             return {}
+ codex/find-issues-with-api-keys-96skiq
         try:
             data = json.loads(jf.read_text())
             # Re-attach b64 if result is being fetched and file exists
@@ -172,6 +188,16 @@ def _get_job(job_id: str) -> dict:
             if data.get("status") == "done" and b64f.exists():
                 if data.get("result"):
                     data["result"]["doc_b64"] = b64f.read_text()
+
+        try:
+            data = json.loads(jf.read_text())
+            # Re-attach b64 if result is being fetched and file exists
+            safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
+            b64f = JOBS_DIR / f"{safe_job_id}.b64"
+            if data.get("status") == "done" and b64f.exists():
+                if data.get("result"):
+                    data["result"]["doc_b64"] = b64f.read_text()
+ main
             return data
         except Exception:
             return {}
@@ -1513,6 +1539,8 @@ async def generate_prebid_letter(t247_id: str):
 
         safe_tender_no = re.sub(r"[^\w-]", "_", tender_no)[:40]
         fname = f"PreBid_{safe_tender_no}.docx"
+        safe_tender_no = re.sub(r"[^\w-]", "_", tender_no)[:40]
+        fname = f"PreBid_{safe_tender_no}.docx"
 
         # Also save to disk for /download/ fallback
         try:
@@ -1847,6 +1875,13 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             _ai_start_t = _time_seg.time()
             def _ai_ticker():
                 _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+ codex/find-issues-with-api-keys-cwvep4
+            def _ai_ticker():
+                _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
+            def _ai_ticker():
+                _models = ["gemini-1.5-pro","gemini-2.0-flash","gemini-1.5-flash"]
+ main
                 _mi = 0
                 while not _ai_done_evt.wait(timeout=8):
                     _el = int(_time_seg.time() - _ai_start_t)
@@ -2048,6 +2083,8 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
 # ══ GENERATE DOCS ════════════════════════════════════════════════════════════
 @app.post("/generate-docs/{t247_id}")
 async def generate_docs(t247_id: str):
+@app.post("/generate-docs/{t247_id}")
+async def generate_docs(t247_id: str):
     tender = get_tender(t247_id)
     if not tender:
         raise HTTPException(404, "Tender not found. Analyse the tender first.")
@@ -2140,6 +2177,11 @@ async def documents_plan(t247_id: str):
             "coverage_pct": round((ready / max(len(matrix), 1)) * 100),
         },
     }
+
+
+@app.post("/generate-technical-proposal/{t247_id}")
+async def generate_technical_proposal(t247_id: str):
+        raise HTTPException(500, f"Document generation failed: {str(e)}\n{traceback.format_exc()[:400]}")
 
 
 @app.post("/generate-technical-proposal/{t247_id}")
@@ -2354,6 +2396,13 @@ async def get_config_route(request: Request):
     groq_key = config.get("groq_api_key", "")
     total_keys = len([k for k in keys if k and str(k).strip()])
     ai_active = bool(total_keys)
+codex/find-issues-with-api-keys-cwvep4
+    groq_key = config.get("groq_api_key", "")
+    total_keys = len([k for k in keys if k and str(k).strip()])
+    ai_active = bool(total_keys)
+
+    groq_key = config.get("groq_api_key", "")
+ main
     return {
         "gemini_api_key_set": bool(key),
         "gemini_api_key": key,
@@ -2365,6 +2414,19 @@ async def get_config_route(request: Request):
         "total_keys": total_keys,
         "ai_active": ai_active,
         "groq_api_key": groq_key,
+codex/find-issues-with-api-keys-cwvep4
+        "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
+        "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
+        "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "total_keys": total_keys,
+        "ai_active": ai_active,
+        "groq_api_key": groq_key,
+
+        "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
+        "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
+        "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "groq_api_key": groq_key,
+main
         "t247_username": config.get("t247_username", ""),
         "t247_auto_sync_enabled": bool(config.get("t247_auto_sync_enabled", True)),
         "t247_auto_sync_minutes": int(config.get("t247_auto_sync_minutes", 180) or 180),
@@ -3606,6 +3668,7 @@ async def t247_sync_status():
     }
 
 def _t247_doc_download_headers(token: str = "") -> dict:
+def _t247_doc_download_headers(token: str = "") -> dict:
     """Headers for documents.tender247.com — include Bearer if available."""
     h = {
         "accept": "application/json, text/plain, */*",
@@ -3683,6 +3746,7 @@ def _match_vault_docs(requirements: list, vault: list) -> list:
             "matched_files": hits[:5],
         })
     return matched
+    return h
 
 def _save_tender_doc_to_vault(t247_id: str, filename: str, content: bytes, mime: str, doc_hash: str = "") -> dict:
     """Persist downloaded Tender247 document bundle in vault and link to tender."""
@@ -3919,6 +3983,8 @@ async def vault_list():
 
 @app.post("/vault/upload")
 async def vault_upload(file: UploadFile = File(...), category: str = "general", tags: str = ""):
+@app.post("/vault/upload")
+async def vault_upload(file: UploadFile = File(...), category: str = "general"):
     import base64
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
@@ -3928,6 +3994,13 @@ async def vault_upload(file: UploadFile = File(...), category: str = "general", 
         "name": file.filename,
         "category": category,
         "tags": [_normalize_doc_tag(t) for t in tags.split(",") if t.strip()],
+        "size": len(data),
+        "uploaded_at": datetime.now().isoformat(),
+        "b64": base64.b64encode(data).decode(),
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": file.filename,
+        "category": category,
         "size": len(data),
         "uploaded_at": datetime.now().isoformat(),
         "b64": base64.b64encode(data).decode(),
