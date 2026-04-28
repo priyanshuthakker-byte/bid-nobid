@@ -953,22 +953,22 @@ select option{background:var(--bg2)}
       <div class="card-title">Select Tender</div>
       <select id="doc-select" onchange="loadDocs()"><option value="">-- Select a tender --</option></select>
     </div>
-    <div class="tab-row">
-      <div class="tab active" onclick="switchTab('docs','standard',event)">Standard Docs</div>
-      <div class="tab" onclick="switchTab('docs','technical',event)">Technical Proposal</div>
-      <div class="tab" onclick="switchTab('docs','merge',event)">Merge to PDF</div>
-    </div>
-    <div id="docs-tab-standard" class="tab-panel active">
-      <div class="card">
-        <div class="card-title">Submission Documents</div>
-        <p style="font-size:12.5px;color:var(--text2);margin-bottom:14px">Generate all standard documents — Cover Letter, Non-Blacklisting, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
-          <button class="btn btn-ghost" onclick="generateCompliancePlan()">🧠 Build RFP Compliance Plan</button>
-        </div>
-        <div id="docs-plan" style="margin-top:12px"></div>
+    <div class="card">
+      <div class="card-title">Manual ZIP Upload (When Tender247 is down)</div>
+      <p style="font-size:12.5px;color:var(--text2);margin-bottom:10px">Drop ZIP/PDF/DOC files here, run analysis, and auto-create a tender entry for document generation.</p>
+      <div class="upload-zone" id="docs-drop-zone" onclick="document.getElementById('docs-files').click()" ondragover="docsDragOver(event)" ondragleave="docsDragLeave(event)" ondrop="docsDropFiles(event)">
+        <input id="docs-files" type="file" multiple style="display:none" onchange="docsUpdateFileList()">
+        <div>📦 Drag & drop ZIP / tender docs here (or click to browse)</div>
       </div>
-      <div id="docs-list"></div>
+      <div id="docs-filelist" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+      <div id="docs-upload-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+        <div style="min-width:260px;flex:1">
+          <label style="font-size:11px;color:var(--text3)">Tender ID (optional)</label>
+          <input id="docs-upload-tid" class="input" placeholder="e.g. MANUAL-20260428-001 (auto if empty)">
+        </div>
+        <button class="btn btn-primary" onclick="analyseDocsUpload()">🚀 Analyze Upload & Prepare Tender</button>
+      </div>
     </div>
     <div id="docs-tab-technical" class="tab-panel">
       <div class="card">
