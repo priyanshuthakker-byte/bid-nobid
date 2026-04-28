@@ -151,7 +151,11 @@ def read_xlsx(path: Path) -> str:
                         parts.append(row_text)
             return "\n".join(parts)
         except Exception as e:
-            logger.warning(f"XLS read failed for {path.name}: {e}")
+            msg = str(e).lower()
+            if "encrypted" in msg or "password" in msg:
+                logger.info(f"XLS skipped (encrypted/password-protected): {path.name}")
+            else:
+                logger.warning(f"XLS read failed for {path.name}: {e}")
             return ""
     # Modern .xlsx format — use openpyxl
     try:
@@ -166,7 +170,11 @@ def read_xlsx(path: Path) -> str:
                     parts.append(row_text)
         return "\n".join(parts)
     except Exception as e:
-        logger.warning(f"XLSX read failed for {path.name}: {e}")
+        msg = str(e).lower()
+        if "encrypted" in msg or "password" in msg:
+            logger.info(f"XLSX skipped (encrypted/password-protected): {path.name}")
+        else:
+            logger.warning(f"XLSX read failed for {path.name}: {e}")
         return ""
 
 
