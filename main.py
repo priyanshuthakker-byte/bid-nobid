@@ -137,6 +137,7 @@ def _job_file(job_id: str) -> Path:
 def _set_job(job_id: str, **kwargs):
     with _jobs_lock:
         jf = _job_file(job_id)
+        safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
         try:
             existing = json.loads(jf.read_text()) if jf.exists() else {}
         except Exception:
@@ -154,19 +155,20 @@ def _set_job(job_id: str, **kwargs):
             pass
         if doc_b64:
             try:
-                (JOBS_DIR / f"{re.sub(r'[^a-zA-Z0-9_\\-]', '', job_id)}.b64").write_text(doc_b64)
+                (JOBS_DIR / f"{safe_job_id}.b64").write_text(doc_b64)
             except Exception:
                 pass
 
 def _get_job(job_id: str) -> dict:
     with _jobs_lock:
         jf = _job_file(job_id)
+        safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
         if not jf.exists():
             return {}
         try:
             data = json.loads(jf.read_text())
             # Re-attach b64 if result is being fetched and file exists
-            b64f = JOBS_DIR / f"{re.sub(r'[^a-zA-Z0-9_\\-]', '', job_id)}.b64"
+            b64f = JOBS_DIR / f"{safe_job_id}.b64"
             if data.get("status") == "done" and b64f.exists():
                 if data.get("result"):
                     data["result"]["doc_b64"] = b64f.read_text()
@@ -1509,7 +1511,8 @@ async def generate_prebid_letter(t247_id: str):
         doc_bytes = buf.getvalue()
         doc_b64 = base64.b64encode(doc_bytes).decode("utf-8")
 
-        fname = f"PreBid_{re.sub(r'[^\w\-]', '_', tender_no)[:40]}.docx"
+        safe_tender_no = re.sub(r"[^\w-]", "_", tender_no)[:40]
+        fname = f"PreBid_{safe_tender_no}.docx"
 
         # Also save to disk for /download/ fallback
         try:
@@ -3168,202 +3171,6 @@ def _t247_merge_tenders(tenders: list) -> dict:
             added_ids.append(tid)
     save_db(db)
     return {"added": added, "updated": updated, "added_ids": added_ids, "updated_ids": updated_ids}
-<<<<<<< Updated upstream
-
-def _auto_score_tender_v1(tender: dict) -> dict:
-    """Rule-based bid/no-bid scoring from Nascent profile."""
-    try:
-        from nascent_checker import load_profile
-        profile = load_profile() or {}
-    except Exception:
-        profile = {}
-
-    rules = profile.get("bid_rules", {}) or {}
-    preferred = [str(x).lower() for x in (rules.get("preferred_sectors", []) or []) if str(x).strip()]
-    do_not_bid = [str(x).lower() for x in (rules.get("do_not_bid", []) or []) if str(x).strip()]
-    conditional = [str(x).lower() for x in (rules.get("conditional", []) or []) if str(x).strip()]
-    min_v = float(rules.get("min_project_value_cr", 0) or 0)
-    max_v = float(rules.get("max_project_value_cr", 0) or 0)
-
-    text_blob = " ".join([
-        str(tender.get("brief", "") or ""),
-        str(tender.get("org_name", "") or ""),
-        str(tender.get("eligibility", "") or ""),
-    ]).lower()
-    value = float(tender.get("estimated_cost_cr", 0) or 0)
-    score = 50
-    reasons = []
-
-    pref_hits = [k for k in preferred if k and k in text_blob]
-    if pref_hits:
-        score += min(25, len(pref_hits) * 8)
-        reasons.append(f"sector match: {', '.join(pref_hits[:3])}")
-
-    dnb_hits = [k for k in do_not_bid if k and k in text_blob]
-    if dnb_hits:
-        score -= min(40, len(dnb_hits) * 15)
-        reasons.append(f"do-not-bid hit: {', '.join(dnb_hits[:3])}")
-
-    cond_hits = [k for k in conditional if k and k in text_blob]
-    if cond_hits:
-        score -= min(15, len(cond_hits) * 6)
-        reasons.append(f"conditional hit: {', '.join(cond_hits[:3])}")
-
-    if value:
-        if min_v and value < min_v:
-            score -= 12
-            reasons.append(f"value below min ({value} < {min_v} Cr)")
-        if max_v and value > max_v:
-            score -= 10
-            reasons.append(f"value above max ({value} > {max_v} Cr)")
-
-    score = max(0, min(100, int(round(score))))
-    if score >= 65:
-        verdict = "BID"
-    elif score >= 45:
-        verdict = "CONDITIONAL"
-    else:
-        verdict = "NO-BID"
-
-    tender["win_probability"] = score
-    tender["verdict"] = verdict
-    tender["auto_scored"] = True
-    tender["auto_scored_at"] = datetime.now().isoformat()
-    tender["reason"] = "; ".join(reasons[:4]) or "Rule-based profile fit scoring"
-    return tender
-
-def _try_enrich_tender_from_t247(tender: dict):
-    """Best-effort enrichment: doc count + corrigendum hint from document list API."""
-    tid = str(tender.get("t247_id", "")).strip()
-    if not tid:
-        return
-    import requests as _req
-    t_id_num = tid if tid.isdigit() else re.sub(r"\D", "", tid)
-    if not t_id_num:
-        return
-    url = f"https://t247_api.tender247.com/apigateway/T247Tender/api/tender/tender-document-list/{t_id_num}"
-    headers = {
-        "accept": "application/json",
-        "content-length": "0",
-        "origin": "https://www.tender247.com",
-        "referer": "https://www.tender247.com/",
-        "user-agent": "Mozilla/5.0",
-    }
-    try:
-        resp = _req.post(url, headers=headers, timeout=20, verify=False)
-        if resp.status_code != 200:
-            return
-        data = resp.json()
-        items = data if isinstance(data, list) else (data.get("data") or data.get("result") or data.get("documents") or [])
-        if isinstance(items, dict):
-            items = [items]
-        doc_count = len(items or [])
-        tender["t247_doc_count"] = doc_count
-        tender["docs_available"] = doc_count > 0
-        corr = 0
-        for it in (items or []):
-            if not isinstance(it, dict):
-                continue
-            blob = json.dumps(it).lower()
-            if "corrig" in blob:
-                corr += 1
-        tender["corrigendum_count"] = corr
-        tender["has_corrigendum"] = corr > 0
-    except Exception:
-        return
-
-def _run_t247_sync_once() -> dict:
-    """Run one Tender247 sync and return merge summary."""
-    cfg = load_config()
-    token = _t247_get_token(cfg)
-    payload = _t247_decode_jwt(token)
-    user_id = int(payload.get("UserId") or cfg.get("t247_user_id") or 0)
-    query_id = int(cfg.get("t247_query_id") or 328890)
-
-    import requests as _req
-    headers = _t247_api_headers(token)
-    request_body = {
-        "tab_id": 2, "tender_id": 0, "tender_number": "", "search_text": "",
-        "refine_search_text": "", "tender_value_operator": 0,
-        "tender_value_from": 0, "tender_value_to": 0,
-        "publication_date_from": "", "publication_date_to": "",
-        "closing_date_from": "", "closing_date_to": "",
-        "search_by_location": False, "statezone_ids": "", "city_ids": "",
-        "state_ids": "", "organization_ids": "", "organization_name": "",
-        "sort_by": 1, "sort_type": 2, "page_no": 1, "record_per_page": 500,
-        "keyword_id": "", "mfa": "", "nameof_website": "",
-        "tender_typeid": 0, "is_tender_doc_uploaded": False,
-        "user_id": user_id, "user_email_service_query_id": query_id,
-        "exact_search": False, "exact_search_text": False,
-        "search_by_split_word": False, "product_id": "",
-        "organization_type_id": "", "sub_industry_id": "",
-        "search_by": 0, "guest_user_id": 0, "quantity": "",
-        "quantity_operator": 0, "msme_exemption": 0,
-        "startup_exemption": 0, "gem": 0, "mail_date": "",
-        "tab_status": 0, "is_ai_summary": False, "boq": 0,
-        "is_grace": False, "surety_bond": False, "limited_tender": False,
-    }
-
-    r = _req.post(
-        "https://t247_api.tender247.com/apigateway/T247Tender/api/tender/auth/tender-excel-download",
-        headers=headers, json=request_body, timeout=120, verify=False,
-    )
-    if r.status_code == 401:
-        raise ValueError("T247 token expired. Refresh token in Settings.")
-    if r.status_code == 403:
-        raise ValueError("T247 access denied. Check subscription/account access.")
-    if r.status_code != 200:
-        raise RuntimeError(f"T247 API returned HTTP {r.status_code}: {r.text[:300]}")
-
-    ct = r.headers.get("Content-Type", "")
-    xl_bytes = r.content
-    if "json" in ct:
-        resp_json = r.json()
-        dl_url = resp_json.get("url") or resp_json.get("file_url") or resp_json.get("download_url")
-        if not dl_url:
-            raise RuntimeError(f"T247 returned JSON instead of Excel: {str(resp_json)[:300]}")
-        r2 = _req.get(dl_url, headers=headers, timeout=120)
-        xl_bytes = r2.content
-
-    if len(xl_bytes) < 100:
-        raise RuntimeError(f"T247 returned empty file ({len(xl_bytes)} bytes)")
-
-    LATEST_EXCEL_FILE.write_bytes(xl_bytes)
-    tmp = Path(tempfile.mktemp(suffix=".xlsx", dir=str(TEMP_DIR)))
-    tmp.write_bytes(xl_bytes)
-    try:
-        tenders = process_excel(str(tmp))
-    finally:
-        try:
-            tmp.unlink()
-        except Exception:
-            pass
-
-    result = _t247_merge_tenders(tenders)
-    touched_ids = (result.get("added_ids", []) + result.get("updated_ids", []))[:120]
-    if touched_ids:
-        db = load_db()
-        changed = 0
-        for tid in touched_ids:
-            t = db.get("tenders", {}).get(tid, {})
-            if not t:
-                continue
-            _try_enrich_tender_from_t247(t)
-            if not t.get("bid_no_bid_done"):
-                t = _auto_score_tender_v1(t)
-            db["tenders"][tid] = t
-            changed += 1
-        if changed:
-            save_db(db)
-    return {
-        "status": "success",
-        "total": len(tenders),
-        "added": result["added"],
-        "updated": result["updated"],
-        "enriched": len(touched_ids),
-        "file_size_kb": len(xl_bytes) // 1024,
-        "source": "T247 API (real-time)",
-=======
 
 def _auto_score_tender_v1(tender: dict) -> dict:
     """Rule-based bid/no-bid scoring from Nascent profile."""
@@ -3708,7 +3515,7 @@ async def t247_sync_status():
         "auto_sync_enabled": bool(cfg.get("t247_auto_sync_enabled", True)),
         "auto_sync_minutes": int(cfg.get("t247_auto_sync_minutes", 180) or 180),
         **_t247_sync_state,
->>>>>>> Stashed changes
+
     }
 
 def _update_t247_sync_state(status: str, message: str = "", total: int = 0, added: int = 0, updated: int = 0):
