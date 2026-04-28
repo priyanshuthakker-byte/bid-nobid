@@ -1649,11 +1649,35 @@ async def reclassify_tender(t247_id: str):
     t = db["tenders"].get(t247_id, {})
     if not t:
         raise HTTPException(404, "Not found")
+    if t.get("manual_verdict"):
+        return {"status": "skipped", "verdict": t["verdict"], "reason": "Manual verdict locked"}
     r = classify_tender(t.get("brief", ""), t.get("estimated_cost_raw", 0), t.get("eligibility", ""), t.get("checklist", ""))
     t.update({"verdict": r["verdict"], "verdict_color": r["verdict_color"], "reason": r["reason"]})
     db["tenders"][t247_id] = t
     save_db(db)
     return {"status": "reclassified", "verdict": r["verdict"], "reason": r["reason"]}
+
+@app.post("/tender/{t247_id}/set-verdict")
+async def set_verdict_manual(t247_id: str, payload: dict):
+    """Human override — lock verdict so AI reclassify cannot change it."""
+    verdict = (payload.get("verdict") or "").upper().strip()
+    if verdict not in ("BID", "NO-BID", "CONDITIONAL", "REVIEW"):
+        raise HTTPException(400, "verdict must be BID / NO-BID / CONDITIONAL / REVIEW")
+    db = load_db()
+    t = db["tenders"].get(t247_id)
+    if not t:
+        raise HTTPException(404, "Tender not found")
+    t["verdict"] = verdict
+    if payload.get("_clear_manual"):
+        t.pop("manual_verdict", None)
+        t.pop("manual_verdict_note", None)
+    else:
+        t["manual_verdict"] = True
+        t["manual_verdict_note"] = (payload.get("note") or "").strip()[:200]
+    db["tenders"][t247_id] = t
+    save_db(db)
+    asyncio.create_task(sync_to_drive_async())
+    return {"status": "ok", "verdict": verdict, "manual_verdict": not payload.get("_clear_manual")}
 
 @app.post("/reclassify-all")
 async def reclassify_all():
@@ -1661,7 +1685,7 @@ async def reclassify_all():
     db = load_db()
     counts = {}
     for tid, t in db["tenders"].items():
-        if t.get("bid_no_bid_done"):
+        if t.get("bid_no_bid_done") or t.get("manual_verdict"):
             continue
         r = classify_tender(t.get("brief", ""), t.get("estimated_cost_raw", 0), t.get("eligibility", ""), t.get("checklist", ""))
         t.update({"verdict": r["verdict"], "verdict_color": r["verdict_color"], "reason": r["reason"]})

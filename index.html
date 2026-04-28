@@ -595,7 +595,7 @@ select option{background:var(--bg2)}
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-boq" onchange="_dashPage=1;renderDash()"> Has BOQ</label>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-ai" onchange="_dashPage=1;renderDash()"> AI Analysed</label>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-starred2" onchange="_dashPage=1;renderDash()"> ★ Starred Only</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-hide-closed" onchange="_dashPage=1;renderDash()"> Hide Closed</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="af-hide-closed" checked onchange="_dashPage=1;renderDash()"> Hide Closed</label>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="resetAdvSearch()">✕ Clear All Filters</button>
@@ -1897,6 +1897,8 @@ function renderDash() {
         '<span class="mono">'+(t.t247_id||'—')+'</span>' +
         (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
         (t.bid_no_bid_done ? ' <span style="font-size:9px;color:#8b5cf6;font-weight:600">AI</span>' : '') +
+        (t.manual_verdict ? ' <span style="font-size:9px;color:#f59e0b;font-weight:600" title="Manual verdict set">👤</span>' : '') +
+        (t.has_corrigendum ? ' <span style="font-size:9px;color:#ef4444;font-weight:600" title="Corrigendum issued">⚠COR</span>' : '') +
       '</td>' +
       '<td class="brief-cell"><div class="brief">' + (t.brief || '—') + '</div><div class="org">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>' +
         (matchTags ? '<div style="margin-top:3px">' + matchTags + '</div>' : '') +
@@ -3573,55 +3575,155 @@ function buildSidePanelContent(t) {
   var v = getVerdict(t);
   var dl = getDaysLeft(t);
   var matchTags = buildMatchTags(t);
-  var html = '<div style="margin-bottom:10px">' +
+  var tid = t.t247_id || '';
+
+  // ── Header ──
+  var html = '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
     '<span class="badge badge-' + v + '" style="font-size:12px;padding:4px 10px">' + v + '</span>' +
+    (t.manual_verdict ? '<span style="font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;border-radius:4px;padding:2px 6px">👤 Manual</span>' : '') +
     (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
+    (t.has_corrigendum ? '<span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;border-radius:4px;padding:2px 6px">⚠ Corrigendum</span>' : '') +
   '</div>' +
   '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;line-height:1.4">' + (t.brief || '—') + '</div>' +
   '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>';
 
   if (matchTags) html += '<div style="margin-bottom:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Project Match</div>' + matchTags + '</div>';
 
+  // ── Key Data ──
   html += '<table style="width:100%;font-size:11.5px;border-collapse:collapse">';
-  var rows = [
-    ['T247 ID', t.t247_id || '—'],
-    ['Ref No', t.ref_no || '—'],
-    ['Value', t.estimated_cost_cr ? '₹' + t.estimated_cost_cr + ' Cr' : '—'],
-    ['EMD', t.emd || '—'],
-    ['Deadline', t.deadline || '—'],
-    ['Days Left', daysDisplay(dl)],
-    ['Status', t.status || '—'],
-    ['Win %', t.win_probability ? t.win_probability.toFixed(1) + '%' : '—'],
-  ];
-  rows.forEach(function(r) {
-    html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">' + r[0] + '</td><td style="padding:5px 0;color:var(--text)">' + r[1] + '</td></tr>';
+  [['T247 ID', tid], ['Ref No', t.ref_no||'—'], ['Value', t.estimated_cost_cr ? '₹'+t.estimated_cost_cr+' Cr' : '—'],
+   ['EMD', t.emd||'—'], ['Deadline', t.deadline||'—'], ['Days Left', daysDisplay(dl)],
+   ['Status', t.status||'—'], ['Win %', t.win_probability ? t.win_probability.toFixed(1)+'%' : '—']
+  ].forEach(function(r) {
+    html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">'+r[0]+'</td><td style="padding:5px 0;color:var(--text)">'+r[1]+'</td></tr>';
   });
   html += '</table>';
 
   if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
 
-  html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
-    '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">🔍 Analyse with AI</button>' +
-    '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">⬇ Download Docs</button>' +
+  // ── Manual Verdict Override ──
+  html += '<div style="margin-top:14px;padding:10px;background:var(--bg4);border:1px solid var(--border);border-radius:8px">' +
+    '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Override Verdict' +
+      (t.manual_verdict ? ' <span style="color:#f59e0b">• Locked</span>' : '') +
+    '</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">' +
+    ['BID','NO-BID','CONDITIONAL','REVIEW'].map(function(ov) {
+      var colors = {BID:'var(--green)',  'NO-BID':'var(--red)', CONDITIONAL:'var(--amber)', REVIEW:'var(--blue)'};
+      var bgs    = {BID:'rgba(34,197,94,.15)', 'NO-BID':'rgba(239,68,68,.15)', CONDITIONAL:'rgba(245,158,11,.15)', REVIEW:'rgba(59,130,246,.15)'};
+      var isActive = v === ov;
+      return '<button onclick="setManualVerdict(\''+tid+'\',\''+ov+'\')" style="flex:1;min-width:60px;padding:4px 6px;border-radius:5px;border:1px solid '+(isActive?colors[ov]:'var(--border)')+';background:'+(isActive?bgs[ov]:'none')+';color:'+(isActive?colors[ov]:'var(--text3)')+';font-size:11px;font-weight:'+(isActive?'700':'400')+';cursor:pointer;font-family:var(--font);transition:all .15s" title="Set verdict to '+ov+'">' + ov + '</button>';
+    }).join('') +
+    '</div>' +
+    '<input id="sp-note-'+tid+'" placeholder="Note (optional)…" value="'+(t.manual_verdict_note||'')+'" style="width:100%;padding:5px 8px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:11px;font-family:var(--font)">' +
+    (t.manual_verdict ? '<button onclick="clearManualVerdict(\''+tid+'\')" style="margin-top:6px;font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">↺ Restore AI verdict</button>' : '') +
   '</div>';
 
+  // ── PQ/TQ Summary (analysed tenders) ──
+  var pq = t.pq_criteria || [];
+  var tq = t.tq_criteria || [];
+  if (pq.length || tq.length) {
+    function _stUp2(c) { return (c.nascent_status||c.status||'').toUpperCase().replace(/ /g,'-'); }
+    var pqMet = pq.filter(function(c){return _stUp2(c)==='MET';}).length;
+    var pqFail = pq.filter(function(c){return ['NOT-MET','NOT MET','FAIL','NO'].includes(_stUp2(c));}).length;
+    var pqCond = pq.filter(function(c){return _stUp2(c)==='CONDITIONAL';}).length;
+    html += '<div style="margin-top:12px">';
+    html += '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">PQ / TQ Summary</div>';
+    // Scorecard row
+    html += '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+      '<span style="font-size:11px;color:var(--green)">✓ '+pqMet+' Met</span>' +
+      (pqCond ? '<span style="font-size:11px;color:var(--amber)">⚠ '+pqCond+' Cond</span>' : '') +
+      (pqFail ? '<span style="font-size:11px;color:var(--red)">✗ '+pqFail+' Fail</span>' : '') +
+      (tq.length ? '<span style="font-size:11px;color:var(--blue)">TQ: '+tq.length+' criteria</span>' : '') +
+    '</div>';
+    // Show first 5 PQ items
+    pq.slice(0, 5).forEach(function(c) {
+      var st = _stUp2(c);
+      var stColor = st==='MET' ? 'var(--green)' : st==='NOT-MET'||st==='NOT MET'||st==='FAIL' ? 'var(--red)' : st==='CONDITIONAL' ? 'var(--amber)' : 'var(--text3)';
+      var stIcon  = st==='MET' ? '✓' : st==='NOT-MET'||st==='NOT MET'||st==='FAIL' ? '✗' : '⚠';
+      html += '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:5px;padding:4px 6px;background:var(--bg4);border-radius:4px">' +
+        '<span style="color:'+stColor+';font-size:11px;font-weight:700;flex-shrink:0">'+stIcon+'</span>' +
+        '<span style="font-size:11px;color:var(--text2);line-height:1.4;flex:1">'+(c.criterion||c.description||'').substring(0,80)+'</span>' +
+      '</div>';
+    });
+    if (pq.length > 5) html += '<div style="font-size:10px;color:var(--text3);margin-top:2px">+ '+(pq.length-5)+' more criteria — open Analysis tab to see all</div>';
+    html += '</div>';
+  } else {
+    // Generic checklist for unanalysed tenders
+    html += '<div style="margin-top:12px">' +
+      '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Pre-Bid Checklist</div>' +
+      ['Read all tender documents carefully',
+       'Check EMD amount and validity',
+       'Verify eligibility criteria (turnover, experience)',
+       'Check MSME/GeM exemptions',
+       'Confirm work location feasibility',
+       'Review scope and timeline',
+       'Estimate project cost accurately',
+       'Check payment terms and milestones',
+       'Verify insurance and performance bond requirements',
+       'Submit AI analysis before final decision',
+      ].map(function(item) {
+        return '<label style="display:flex;gap:7px;align-items:flex-start;margin-bottom:5px;cursor:pointer;font-size:11.5px;color:var(--text2)">' +
+          '<input type="checkbox" style="margin-top:2px;flex-shrink:0"> ' + item + '</label>';
+      }).join('') +
+    '</div>';
+  }
+
+  // ── Action Buttons ──
+  html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
+    '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\''+tid+'\',\''+esc(t.brief)+'\')">🔍 Analyse with AI</button>' +
+    (t.bid_no_bid_done ? '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\''+tid+'\')">⬇ Download Report</button>' : '') +
+    '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\''+tid+'\')">📄 Download Docs</button>' +
+  '</div>';
+
+  // ── Attachments ──
   var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
   if (atts.length) {
-    html += '<div style="margin-top:12px">' +
-      '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
+    html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
     atts.slice().reverse().slice(0, 5).forEach(function(a) {
-      var sz = a.size ? (' (' + Math.round(a.size / 1024) + ' KB)') : '';
+      var sz = a.size ? (' ('+Math.round(a.size/1024)+' KB)') : '';
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
-        '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name || 'Document') + '">' + (a.name || 'Document') + sz + '</div>' +
-        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
+        '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(a.name||'Document')+'">'+(a.name||'Document')+sz+'</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\''+a.vault_id+'\')">Open</button>' +
       '</div>';
     });
     html += '</div>';
   }
 
-  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
+  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">'+(t.eligibility||'').substring(0,300)+'...</div></div>';
 
   return html;
+}
+
+async function setManualVerdict(tid, verdict) {
+  var note = (document.getElementById('sp-note-'+tid)||{}).value || '';
+  try {
+    var r = await fetch('/tender/'+encodeURIComponent(tid)+'/set-verdict', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({verdict: verdict, note: note})
+    });
+    var d = await r.json();
+    if (d.status === 'ok') {
+      toast('Verdict → ' + verdict + ' (locked)', 'success');
+      await loadDashboard();
+      // Re-open panel with updated data
+      var t2 = allTenders.find(function(x){return x.t247_id===tid;});
+      if (t2) openSidePanel(tid);
+    } else toast('Error: ' + (d.detail||'Unknown'), 'error');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function clearManualVerdict(tid) {
+  try {
+    // Clear the manual lock, then reclassify with AI rules
+    await fetch('/tender/'+encodeURIComponent(tid)+'/set-verdict', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({verdict:'REVIEW', note:'', _clear_manual: true})
+    });
+    await fetch('/tender/'+encodeURIComponent(tid)+'/reclassify', {method:'POST'});
+    toast('Manual verdict cleared — AI verdict restored', 'success');
+    await loadDashboard();
+    openSidePanel(tid);
+  } catch(e) { toast('Error: '+e.message,'error'); }
 }
 
 function downloadVaultFile(fileId) {
