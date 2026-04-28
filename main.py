@@ -28,7 +28,10 @@ from sqlalchemy import text
 from extractor import TenderExtractor, read_document
 from doc_generator import BidDocGenerator
 from nascent_checker import NascentChecker
+codex/find-issues-with-api-keys-cwvep4
+from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini
+main
 try:
     from ai_analyzer import analyze_with_gemini_parallel
     PARALLEL_ANALYST_AVAILABLE = True
@@ -1845,8 +1848,13 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
             import threading as _threading
             _ai_done_evt = _threading.Event()
             _ai_start_t = _time_seg.time()
+ codex/find-issues-with-api-keys-cwvep4
+            def _ai_ticker():
+                _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
             def _ai_ticker():
                 _models = ["gemini-1.5-pro","gemini-2.0-flash","gemini-1.5-flash"]
+ main
                 _mi = 0
                 while not _ai_done_evt.wait(timeout=8):
                     _el = int(_time_seg.time() - _ai_start_t)
@@ -2324,16 +2332,31 @@ async def get_config_route(request: Request):
     # Ensure primary key is first in list
     if key and key not in keys:
         keys = [key] + keys
+codex/find-issues-with-api-keys-cwvep4
     groq_key = config.get("groq_api_key", "")
+    total_keys = len([k for k in keys if k and str(k).strip()])
+    ai_active = bool(total_keys)
+
+    groq_key = config.get("groq_api_key", "")
+ main
     return {
         "gemini_api_key_set": bool(key),
         "gemini_api_key": key,
         "gemini_api_key_preview": (key[:8] + "..." + key[-4:]) if key else "",
         "gemini_api_keys": keys,
+codex/find-issues-with-api-keys-cwvep4
+        "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
+        "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
+        "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "total_keys": total_keys,
+        "ai_active": ai_active,
+        "groq_api_key": groq_key,
+
         "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
         "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
         "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
         "groq_api_key": groq_key,
+main
         "t247_username": config.get("t247_username", ""),
         "t247_auto_sync_enabled": bool(config.get("t247_auto_sync_enabled", True)),
         "t247_auto_sync_minutes": int(config.get("t247_auto_sync_minutes", 180) or 180),
