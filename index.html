@@ -2044,78 +2044,78 @@ function setStep(i) {
     var el = document.getElementById('ap-s-' + j);
     if (!el) return;
     el.className = 'ap-step ' + (j < i ? 'done' : j === i ? 'active' : 'pending');
-    var dot = el.querySelector('.ap-dot');
-    if (dot) dot.className = 'ap-dot';
-  });
-  document.getElementById('ap-bar').style.width = Math.round((i / AP_STEPS.length) * 100) + '%';
-  document.getElementById('ap-step-label').textContent = AP_STEPS[i] ? '· ' + AP_STEPS[i] : '';
+function docsUpdateFileList() {
+  var files = Array.from((document.getElementById('docs-files') || {}).files || []);
+  document.getElementById('docs-filelist').textContent = files.length ? '📎 ' + files.map(f => f.name).join(', ') : '';
+  var st = document.getElementById('docs-upload-status');
+  if (st) st.textContent = '';
 }
 
-// ────────────────────────────────────────────
-// ANALYSE TENDER
-// ────────────────────────────────────────────
-async function analyseTender() {
-  var files = document.getElementById('an-files').files;
-  if (!files.length) { toast('Please select files to analyse', 'error'); return; }
-  var tid = document.getElementById('an-tid').value.trim();
+function _autoDocsTenderId() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  return 'MANUAL-' + y + m + d + '-' + hh + mm;
+}
 
-  showProgress();
-  var stepTimer = 0;
-  function advanceStep(i, delay) { setTimeout(() => setStep(i), delay); }
-  advanceStep(0, 100); advanceStep(1, 800); advanceStep(2, 1600);
+async function analyseDocsUpload() {
+  var filesInput = document.getElementById('docs-files');
+  var files = filesInput ? filesInput.files : null;
+  if (!files || !files.length) { toast('Please upload ZIP/documents first', 'error'); return; }
+  var tidEl = document.getElementById('docs-upload-tid');
+  var tid = (tidEl && tidEl.value ? tidEl.value.trim() : '') || _autoDocsTenderId();
+  if (tidEl && !tidEl.value.trim()) tidEl.value = tid;
 
   var fd = new FormData();
   Array.from(files).forEach(f => fd.append('files', f));
-  if (tid) fd.append('t247_id', tid);
+  fd.append('t247_id', tid);
+  var st = document.getElementById('docs-upload-status');
+  if (st) st.textContent = 'Uploading files…';
 
+  showLoading('Uploading and analyzing tender documents...');
   try {
     var r = await fetch('/process-files', { method: 'POST', body: fd });
-    if (!r.ok) throw new Error('Server error ' + r.status);
     var d = await r.json();
-
-    // Poll analyse-status if async
-    if (d.job_id) {
-      await pollAnalysis(d.job_id);
-      return;
-    }
-
-    advanceStep(5, 0); advanceStep(6, 300); advanceStep(7, 600); advanceStep(8, 900);
-
-    setTimeout(() => {
-      document.getElementById('an-progress').style.display = 'none';
-      showAnalysisResult(d);
-      if (tid) { loadDashboard(); }
-    }, 1200);
-
-  } catch(e) {
-    document.getElementById('an-progress').style.display = 'none';
-    toast('Analysis failed: ' + e.message, 'error');
+    if (!r.ok) throw new Error(d.detail || ('Server error ' + r.status));
+    if (!d.job_id) throw new Error('No job id returned by server');
+    await _pollDocsUploadJob(d.job_id, tid);
+  } catch (e) {
+    hideLoading();
+    toast('Upload analysis failed: ' + e.message, 'error');
   }
 }
 
-var _streamSeenSegs = {};
-var _apElapsedTimer = null;
-var _apStartTime = 0;      // browser fallback
-var _apServerStart = 0;    // unix timestamp from server (accurate across refresh)
-
-function _startElapsedTimer(serverStartedAt) {
-  // Use server timestamp if provided — stays accurate even after page refresh
-  if (serverStartedAt) {
-    _apServerStart = serverStartedAt * 1000; // convert unix → ms
-  } else {
-    _apServerStart = Date.now();
-  }
-  _apStartTime = Date.now();
-  if (_apElapsedTimer) clearInterval(_apElapsedTimer);
-  _apElapsedTimer = setInterval(function() {
-    var el = document.getElementById('ap-elapsed-badge');
-    if (el) {
-      var origin = _apServerStart || _apStartTime;
-      var secs = Math.round((Date.now() - origin) / 1000);
-      var mins = Math.floor(secs / 60);
-      el.textContent = mins > 0 ? mins + 'm ' + (secs % 60) + 's' : secs + 's';
-    }
-  }, 1000);
+async function _pollDocsUploadJob(jobId, tid) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      var r = await fetch('/analyse-status/' + encodeURIComponent(jobId));
+      var d = await r.json();
+      var st = document.getElementById('docs-upload-status');
+      if (st && d.progress) st.textContent = '⏳ ' + d.progress;
+      if (d.status === 'done') {
+        hideLoading();
+        toast('Analysis complete. Tender is ready in Documents.', 'success');
+        await loadDashboard();
+        populateSelects();
+        var ds = document.getElementById('doc-select');
+        if (ds) ds.value = tid;
+        loadDocs();
+        generateCompliancePlan();
+        if (st) {
+          st.innerHTML = '✅ Analysis complete for <b>' + tid + '</b>. ' +
+            '<a href="#" onclick="generateDocs();return false" style="color:#60a5fa;text-decoration:underline">Generate standard docs now</a>';
+        }
+        return;
+      }
+      if (d.status === 'error') {
+        hideLoading();
+        toast('Analysis failed: ' + (d.error || 'Unknown error'), 'error');
+        if (st) st.textContent = '❌ ' + (d.error || 'Analysis failed');
+        return;
 }
 function _stopElapsedTimer() {
   if (_apElapsedTimer) { clearInterval(_apElapsedTimer); _apElapsedTimer = null; }
