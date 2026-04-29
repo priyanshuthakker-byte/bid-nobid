@@ -2181,6 +2181,100 @@ function dropFiles(e) {
   updateFileList(document.getElementById('an-files'));
 }
 
+// Backward-compatible alias used by a few inline links/messages.
+function showSection(name){
+  showPage(name);
+}
+
+function docsDragOver(e) { e.preventDefault(); document.getElementById('docs-drop-zone').classList.add('drag-over'); }
+function docsDragLeave(e) { document.getElementById('docs-drop-zone').classList.remove('drag-over'); }
+function docsDropFiles(e) {
+  e.preventDefault();
+  document.getElementById('docs-drop-zone').classList.remove('drag-over');
+  var dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+  document.getElementById('docs-files').files = dt.files;
+  docsUpdateFileList();
+}
+function docsUpdateFileList() {
+  var files = Array.from((document.getElementById('docs-files') || {}).files || []);
+  document.getElementById('docs-filelist').textContent = files.length ? '📎 ' + files.map(f => f.name).join(', ') : '';
+  var st = document.getElementById('docs-upload-status');
+  if (st) st.textContent = '';
+}
+
+function _autoDocsTenderId() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  return 'MANUAL-' + y + m + d + '-' + hh + mm;
+}
+
+async function analyseDocsUpload() {
+  var filesInput = document.getElementById('docs-files');
+  var files = filesInput ? filesInput.files : null;
+  if (!files || !files.length) { toast('Please upload ZIP/documents first', 'error'); return; }
+  var tidEl = document.getElementById('docs-upload-tid');
+  var tid = (tidEl && tidEl.value ? tidEl.value.trim() : '') || _autoDocsTenderId();
+  if (tidEl && !tidEl.value.trim()) tidEl.value = tid;
+
+  var fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  fd.append('t247_id', tid);
+  var st = document.getElementById('docs-upload-status');
+  if (st) st.textContent = 'Uploading files…';
+
+  showLoading('Uploading and analyzing tender documents...');
+  try {
+    var r = await fetch('/process-files', { method: 'POST', body: fd });
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.detail || ('Server error ' + r.status));
+    if (!d.job_id) throw new Error('No job id returned by server');
+    await _pollDocsUploadJob(d.job_id, tid);
+  } catch (e) {
+    hideLoading();
+    toast('Upload analysis failed: ' + e.message, 'error');
+  }
+}
+
+async function _pollDocsUploadJob(jobId, tid) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      var r = await fetch('/analyse-status/' + encodeURIComponent(jobId));
+      var d = await r.json();
+      var st = document.getElementById('docs-upload-status');
+      if (st && d.progress) st.textContent = '⏳ ' + d.progress;
+      if (d.status === 'done') {
+        hideLoading();
+        toast('Analysis complete. Tender is ready in Documents.', 'success');
+        await loadDashboard();
+        populateSelects();
+        var ds = document.getElementById('doc-select');
+        if (ds) ds.value = tid;
+        loadDocs();
+        generateCompliancePlan();
+        if (st) {
+          st.innerHTML = '✅ Analysis complete for <b>' + tid + '</b>. ' +
+            '<a href="#" onclick="generateDocs();return false" style="color:#60a5fa;text-decoration:underline">Generate standard docs now</a>';
+        }
+        return;
+      }
+      if (d.status === 'error') {
+        hideLoading();
+        toast('Analysis failed: ' + (d.error || 'Unknown error'), 'error');
+        if (st) st.textContent = '❌ ' + (d.error || 'Analysis failed');
+        return;
+      }
+    } catch (e) {
+      // Keep polling on temporary network issues
+    }
+  }
+}
+
 function docsDragOver(e) { e.preventDefault(); document.getElementById('docs-drop-zone').classList.add('drag-over'); }
 function docsDragLeave(e) { document.getElementById('docs-drop-zone').classList.remove('drag-over'); }
 function docsDropFiles(e) {
