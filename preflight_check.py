@@ -20,6 +20,7 @@ CONFLICT_SCAN_FILES = [
 ]
 
 CONFLICT_MARKERS = ("<<<<<<<", "=======", ">>>>>>>")
+FORBIDDEN_SNIPPETS = ("codex/find-issues-with-api-keys-",)
 
 
 def ensure_files_exist() -> None:
@@ -39,6 +40,9 @@ def scan_conflicts(rel: str) -> None:
     for marker in CONFLICT_MARKERS:
         if marker in text:
             raise SystemExit(f"Preflight failed: merge marker '{marker}' found in {rel}")
+    for snippet in FORBIDDEN_SNIPPETS:
+        if snippet in text:
+            raise SystemExit(f"Preflight failed: forbidden snippet '{snippet}' found in {rel}")
 
 
 def main() -> None:
