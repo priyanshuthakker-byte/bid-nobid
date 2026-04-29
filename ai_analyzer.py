@@ -29,9 +29,6 @@ CONFIG_PATH = Path(__file__).parent / "config.json"
 GEMINI_MODELS = [
     "gemini-2.0-flash",          # 15 RPM free — primary
     "gemini-2.0-flash-lite",     # 30 RPM free — fastest fallback
-    "gemini-1.5-flash",          # 15 RPM free — stable fallback
-    "gemini-1.5-flash-8b",       # 15 RPM free — small but works
-    "gemini-1.5-pro",            # 2 RPM free — slow but high quality
 ]
 
 GROQ_MODELS = [
@@ -240,8 +237,8 @@ def call_gemini(prompt: str, api_key: str) -> str:
             continue
 
     raise Exception(
-        f"All Gemini models quota exceeded. "
-        f"Add a new API key in Settings or wait until tomorrow. "
+        "All configured Gemini models failed (rate-limited, unavailable, or invalid key). "
+        "Add a fresh Gemini API key in Settings, or configure Groq fallback. "
         f"Last error: {last_error}"
     )
 
@@ -720,9 +717,9 @@ def analyze_with_gemini(full_text: str,
 
     return {
         "error": (
-            "All API keys quota exceeded. "
+            "All API keys failed (rate-limited, model unavailable, or invalid). "
             "Options: (1) Add a new Gemini key at aistudio.google.com, "
             "(2) Add free Groq key at console.groq.com — 14,400 requests/day, "
-            "or (3) Wait until tomorrow (quota resets at midnight)."
+            "or (3) wait and retry later if rate limits reset."
         )
     }
