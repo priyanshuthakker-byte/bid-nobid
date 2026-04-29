@@ -1093,6 +1093,47 @@ select option{background:var(--bg2)}
         <button class="btn btn-primary" onclick="analyseDocsUpload()">🚀 Analyze Upload & Prepare Tender</button>
       </div>
     </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchTab('docs','standard',event)">Standard Docs</div>
+      <div class="tab" onclick="switchTab('docs','technical',event)">Technical Proposal</div>
+      <div class="tab" onclick="switchTab('docs','merge',event)">Merge to PDF</div>
+    </div>
+    <div id="docs-tab-standard" class="tab-panel active">
+      <div class="card">
+        <div class="card-title">Submission Documents</div>
+        <p style="font-size:12.5px;color:var(--text2);margin-bottom:14px">Generate all standard documents — Cover Letter, Non-Blacklisting, MSME EMD Exemption, Financial Standing, MII Declaration, Employee Strength, CA Turnover Certificate.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="generateDocs()">📄 Generate All Documents</button>
+          <button class="btn btn-ghost" onclick="generateCompliancePlan()">🧠 Build RFP Compliance Plan</button>
+        </div>
+        <div id="docs-plan" style="margin-top:12px"></div>
+      </div>
+      <div id="docs-list"></div>
+    </div>
+<div id="page-documents" class="page">
+  <div class="topbar"><h1>Documents</h1></div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Select Tender</div>
+      <select id="doc-select" onchange="loadDocs()"><option value="">-- Select a tender --</option></select>
+    </div>
+    <div class="card">
+      <div class="card-title">Manual ZIP Upload (When Tender247 is down)</div>
+      <p style="font-size:12.5px;color:var(--text2);margin-bottom:10px">Drop ZIP/PDF/DOC files here, run analysis, and auto-create a tender entry for document generation.</p>
+      <div class="upload-zone" id="docs-drop-zone" onclick="document.getElementById('docs-files').click()" ondragover="docsDragOver(event)" ondragleave="docsDragLeave(event)" ondrop="docsDropFiles(event)">
+        <input id="docs-files" type="file" multiple style="display:none" onchange="docsUpdateFileList()">
+        <div>📦 Drag & drop ZIP / tender docs here (or click to browse)</div>
+      </div>
+      <div id="docs-filelist" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+      <div id="docs-upload-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+        <div style="min-width:260px;flex:1">
+          <label style="font-size:11px;color:var(--text3)">Tender ID (optional)</label>
+          <input id="docs-upload-tid" class="input" placeholder="e.g. MANUAL-20260428-001 (auto if empty)">
+        </div>
+        <button class="btn btn-primary" onclick="analyseDocsUpload()">🚀 Analyze Upload & Prepare Tender</button>
+      </div>
+    </div>
     <div id="docs-tab-technical" class="tab-panel">
       <div class="card">
         <div class="card-title">Technical Proposal</div>
@@ -2138,6 +2179,95 @@ function dropFiles(e) {
   Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
   document.getElementById('an-files').files = dt.files;
   updateFileList(document.getElementById('an-files'));
+}
+
+function docsDragOver(e) { e.preventDefault(); document.getElementById('docs-drop-zone').classList.add('drag-over'); }
+function docsDragLeave(e) { document.getElementById('docs-drop-zone').classList.remove('drag-over'); }
+function docsDropFiles(e) {
+  e.preventDefault();
+  document.getElementById('docs-drop-zone').classList.remove('drag-over');
+  var dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+  document.getElementById('docs-files').files = dt.files;
+  docsUpdateFileList();
+}
+function docsUpdateFileList() {
+  var files = Array.from((document.getElementById('docs-files') || {}).files || []);
+  document.getElementById('docs-filelist').textContent = files.length ? '📎 ' + files.map(f => f.name).join(', ') : '';
+  var st = document.getElementById('docs-upload-status');
+  if (st) st.textContent = '';
+}
+
+function _autoDocsTenderId() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  return 'MANUAL-' + y + m + d + '-' + hh + mm;
+}
+
+async function analyseDocsUpload() {
+  var filesInput = document.getElementById('docs-files');
+  var files = filesInput ? filesInput.files : null;
+  if (!files || !files.length) { toast('Please upload ZIP/documents first', 'error'); return; }
+  var tidEl = document.getElementById('docs-upload-tid');
+  var tid = (tidEl && tidEl.value ? tidEl.value.trim() : '') || _autoDocsTenderId();
+  if (tidEl && !tidEl.value.trim()) tidEl.value = tid;
+
+  var fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  fd.append('t247_id', tid);
+  var st = document.getElementById('docs-upload-status');
+  if (st) st.textContent = 'Uploading files…';
+
+  showLoading('Uploading and analyzing tender documents...');
+  try {
+    var r = await fetch('/process-files', { method: 'POST', body: fd });
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.detail || ('Server error ' + r.status));
+    if (!d.job_id) throw new Error('No job id returned by server');
+    await _pollDocsUploadJob(d.job_id, tid);
+  } catch (e) {
+    hideLoading();
+    toast('Upload analysis failed: ' + e.message, 'error');
+  }
+}
+
+async function _pollDocsUploadJob(jobId, tid) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      var r = await fetch('/analyse-status/' + encodeURIComponent(jobId));
+      var d = await r.json();
+      var st = document.getElementById('docs-upload-status');
+      if (st && d.progress) st.textContent = '⏳ ' + d.progress;
+      if (d.status === 'done') {
+        hideLoading();
+        toast('Analysis complete. Tender is ready in Documents.', 'success');
+        await loadDashboard();
+        populateSelects();
+        var ds = document.getElementById('doc-select');
+        if (ds) ds.value = tid;
+        loadDocs();
+        generateCompliancePlan();
+        if (st) {
+          st.innerHTML = '✅ Analysis complete for <b>' + tid + '</b>. ' +
+            '<a href="#" onclick="generateDocs();return false" style="color:#60a5fa;text-decoration:underline">Generate standard docs now</a>';
+        }
+        return;
+      }
+      if (d.status === 'error') {
+        hideLoading();
+        toast('Analysis failed: ' + (d.error || 'Unknown error'), 'error');
+        if (st) st.textContent = '❌ ' + (d.error || 'Analysis failed');
+        return;
+      }
+    } catch (e) {
+      // Keep polling on temporary network issues
+    }
+  }
 }
 
 function docsDragOver(e) { e.preventDefault(); document.getElementById('docs-drop-zone').classList.add('drag-over'); }
@@ -3939,6 +4069,51 @@ async function generateCompliancePlan() {
 }
 
 async function generateDocs() {
+async function loadDocs() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) return;
+  document.getElementById('docs-list').innerHTML = '<div style="font-size:13px;color:var(--text2)">Select document type and generate.</div>';
+  var plan = document.getElementById('docs-plan');
+  if (plan) plan.innerHTML = '<div style="font-size:12px;color:var(--text3)">Tip: click <b>Build RFP Compliance Plan</b> to auto-map required docs vs Vault.</div>';
+}
+
+async function generateCompliancePlan() {
+  var tid = document.getElementById('doc-select').value;
+  if (!tid) { toast('Select a tender', 'error'); return; }
+  var holder = document.getElementById('docs-plan');
+  if (!holder) return;
+  holder.innerHTML = '<div style="font-size:12px;color:var(--text2)">Analyzing RFP requirements and matching vault files...</div>';
+  try {
+    var r = await fetch('/documents-plan/' + encodeURIComponent(tid));
+    var d = await r.json();
+    if (!r.ok) { holder.innerHTML = '<div class="empty-state">' + (d.detail || 'Unable to build plan') + '</div>'; return; }
+    var s = d.summary || {};
+    var hdr = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<span class="badge badge-BID">Ready: ' + (s.ready || 0) + '</span>' +
+      '<span class="badge badge-NO-BID">Missing: ' + (s.missing || 0) + '</span>' +
+      '<span class="badge badge-REVIEW">Coverage: ' + (s.coverage_pct || 0) + '%</span>' +
+    '</div>';
+    var rows = (d.requirements || []).map(function(x) {
+      var ready = x.status === 'ready';
+      var files = (x.matched_files || []).map(function(f) {
+        return '<div style="font-size:11px;color:var(--text3)">• ' + (f.name || 'Document') + '</div>';
+      }).join('');
+      return '<div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--bg2)">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">' +
+          '<div style="font-size:13px;color:var(--text);font-weight:600">' + (x.title || x.id || 'Requirement') + '</div>' +
+          '<span class="badge badge-' + (ready ? 'BID' : 'NO-BID') + '">' + (ready ? 'READY' : 'MISSING') + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Priority: ' + (x.priority || 'medium').toUpperCase() + '</div>' +
+        (files ? '<div style="margin-top:6px">' + files + '</div>' : '<div style="font-size:11px;color:#f59e0b;margin-top:6px">No matching file in vault. Upload supporting document.</div>') +
+      '</div>';
+    }).join('');
+    holder.innerHTML = hdr + (rows || '<div class="empty-state">No requirements inferred.</div>');
+  } catch(e) {
+    holder.innerHTML = '<div class="empty-state">Error: ' + e.message + '</div>';
+  }
+}
+
+async function generateDocs() {
   var tid = document.getElementById('doc-select').value;
   if (!tid) { toast('Select a tender', 'error'); return; }
   showLoading('Generating documents...');
@@ -4197,6 +4372,9 @@ function buildSidePanelContent(t) {
   // ── PQ/TQ Summary (analysed tenders) ──
   var pq = t.pq_criteria || [];
   var tq = t.tq_criteria || [];
+  // ── PQ/TQ Summary (analysed tenders) ──
+  var pq = t.pq_criteria || [];
+  var tq = t.tq_criteria || [];
   if (pq.length || tq.length) {
     function _stUp2(c) { return (c.nascent_status||c.status||'').toUpperCase().replace(/ /g,'-'); }
     var pqMet = pq.filter(function(c){return _stUp2(c)==='MET';}).length;
@@ -4264,11 +4442,28 @@ function buildSidePanelContent(t) {
   var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
   if (atts.length) {
     html += '<div style="margin-top:12px">' +
+  var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
+  if (atts.length) {
+    html += '<div style="margin-top:12px">' +
       '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Saved Documents</div>';
     atts.slice().reverse().slice(0, 5).forEach(function(a) {
       var sz = a.size ? (' (' + Math.round(a.size / 1024) + ' KB)') : '';
       html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">' +
         '<div style="flex:1;min-width:0;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name || 'Document') + '">' + (a.name || 'Document') + sz + '</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
+
+  return html;
+}
+
+async function setManualVerdict(tid, verdict) {
+  var note = (document.getElementById('sp-note-'+tid)||{}).value || '';
+  try {
         '<button class="btn btn-ghost btn-sm" onclick="downloadVaultFile(\'' + a.vault_id + '\')">Open</button>' +
       '</div>';
     });
@@ -4351,6 +4546,11 @@ async function clearManualVerdict(tid) {
     toast('Manual verdict cleared — AI verdict restored', 'success');
     await loadDashboard();
     openSidePanel(tid);
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+function downloadVaultFile(fileId) {
+  window.location.href = '/vault/download/' + encodeURIComponent(fileId);
+}
   } catch(e) { toast('Error: '+e.message,'error'); }
 }
 function downloadVaultFile(fileId) {
@@ -5532,10 +5732,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   await loadT247SyncStatus();
   await loadT247ConnectionStatus();
   await loadOpsDailyReport();
+  await loadDashboard();
+  await loadT247SyncStatus();
+  await loadT247ConnectionStatus();
+  await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
   setInterval(updateStatusBar, 30000);
   setInterval(checkDeadlineNotifications, 60000);
+  setInterval(updateTokenMeter, 120000);
+  setInterval(loadT247SyncStatus, 60000);
+  setInterval(loadT247ConnectionStatus, 300000);
+  setInterval(loadOpsDailyReport, 120000);
   setInterval(updateTokenMeter, 120000);
   setInterval(loadT247SyncStatus, 60000);
   setInterval(loadT247ConnectionStatus, 300000);

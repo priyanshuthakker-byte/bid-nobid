@@ -31,6 +31,7 @@ from nascent_checker import NascentChecker
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
+from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
 codex/find-issues-with-api-keys-96skiq
 from ai_analyzer import analyze_with_gemini, merge_results, load_config, save_config, get_all_api_keys, call_gemini, GEMINI_MODELS
 
@@ -179,6 +180,12 @@ def _set_job(job_id: str, **kwargs):
                 (JOBS_DIR / f"{safe_job_id}.b64").write_text(doc_b64)
             except Exception:
                 pass
+        if doc_b64:
+            try:
+                safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
+                (JOBS_DIR / f"{safe_job_id}.b64").write_text(doc_b64)
+            except Exception:
+                pass
  codex/find-issues-with-api-keys-96skiq
         if doc_b64:
             try:
@@ -200,6 +207,14 @@ def _get_job(job_id: str) -> dict:
         jf = _job_file(job_id)
         if not jf.exists():
             return {}
+        try:
+            data = json.loads(jf.read_text())
+            # Re-attach b64 if result is being fetched and file exists
+            safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
+            b64f = JOBS_DIR / f"{safe_job_id}.b64"
+            if data.get("status") == "done" and b64f.exists():
+                if data.get("result"):
+                    data["result"]["doc_b64"] = b64f.read_text()
         try:
             data = json.loads(jf.read_text())
             # Re-attach b64 if result is being fetched and file exists
@@ -1592,6 +1607,8 @@ async def generate_prebid_letter(t247_id: str):
         fname = f"PreBid_{safe_tender_no}.docx"
         safe_tender_no = re.sub(r"[^\w-]", "_", tender_no)[:40]
         fname = f"PreBid_{safe_tender_no}.docx"
+        safe_tender_no = re.sub(r"[^\w-]", "_", tender_no)[:40]
+        fname = f"PreBid_{safe_tender_no}.docx"
 
         # Also save to disk for /download/ fallback
         try:
@@ -1932,6 +1949,8 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
             def _ai_ticker():
                 _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+            def _ai_ticker():
+                _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
  codex/find-issues-with-api-keys-cwvep4
             def _ai_ticker():
                 _models = GEMINI_MODELS or ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
@@ -2148,6 +2167,8 @@ async def generate_docs(t247_id: str):
 async def generate_docs(t247_id: str):
 @app.post("/generate-docs/{t247_id}")
 async def generate_docs(t247_id: str):
+@app.post("/generate-docs/{t247_id}")
+async def generate_docs(t247_id: str):
     tender = get_tender(t247_id)
     if not tender:
         raise HTTPException(404, "Tender not found. Analyse the tender first.")
@@ -2212,6 +2233,38 @@ async def generate_docs(t247_id: str):
         }
     except Exception as e:
         import traceback
+        raise HTTPException(500, f"Document generation failed: {str(e)}\n{traceback.format_exc()[:400]}")
+
+@app.get("/documents-plan/{t247_id}")
+async def documents_plan(t247_id: str):
+    """AI-assisted compliance plan:
+    - infers likely required submission docs from tender text
+    - matches current Document Vault files
+    - returns missing/ready matrix for operator approval."""
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found")
+    requirements = _infer_required_doc_items(tender)
+    vault = _load_vault()
+    matrix = _match_vault_docs(requirements, vault)
+    ready = sum(1 for x in matrix if x.get("status") == "ready")
+    missing = len(matrix) - ready
+    return {
+        "status": "ok",
+        "t247_id": t247_id,
+        "tender_name": tender.get("brief", ""),
+        "requirements": matrix,
+        "summary": {
+            "total": len(matrix),
+            "ready": ready,
+            "missing": missing,
+            "coverage_pct": round((ready / max(len(matrix), 1)) * 100),
+        },
+    }
+
+
+@app.post("/generate-technical-proposal/{t247_id}")
+async def generate_technical_proposal(t247_id: str):
         raise HTTPException(500, f"Document generation failed: {str(e)}\n{traceback.format_exc()[:400]}")
 
 @app.get("/documents-plan/{t247_id}")
@@ -2564,6 +2617,9 @@ async def get_config_route(request: Request):
     groq_key = config.get("groq_api_key", "")
     total_keys = len([k for k in keys if k and str(k).strip()])
     ai_active = bool(total_keys)
+    groq_key = config.get("groq_api_key", "")
+    total_keys = len([k for k in keys if k and str(k).strip()])
+    ai_active = bool(total_keys)
 codex/find-issues-with-api-keys-cwvep4
     groq_key = config.get("groq_api_key", "")
     total_keys = len([k for k in keys if k and str(k).strip()])
@@ -2576,6 +2632,12 @@ codex/find-issues-with-api-keys-cwvep4
         "gemini_api_key": key,
         "gemini_api_key_preview": (key[:8] + "..." + key[-4:]) if key else "",
         "gemini_api_keys": keys,
+        "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
+        "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
+        "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "total_keys": total_keys,
+        "ai_active": ai_active,
+        "groq_api_key": groq_key,
         "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
         "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
         "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
@@ -3858,6 +3920,7 @@ def _t247_doc_download_headers(token: str = "") -> dict:
 def _t247_doc_download_headers(token: str = "") -> dict:
 def _t247_doc_download_headers(token: str = "") -> dict:
 def _t247_doc_download_headers(token: str = "") -> dict:
+def _t247_doc_download_headers(token: str = "") -> dict:
     """Headers for documents.tender247.com — include Bearer if available."""
     h = {
         "accept": "application/json, text/plain, */*",
@@ -3867,6 +3930,74 @@ def _t247_doc_download_headers(token: str = "") -> dict:
     }
     if token:
         h["authorization"] = f"Bearer {token}"
+    return h
+
+def _normalize_doc_tag(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (s or "").lower()).strip("_")
+
+def _infer_required_doc_items(tender: dict) -> list:
+    """Build a practical RFP document requirement matrix from extracted tender fields.
+    Non-breaking heuristic layer: always returns a sane default list even if AI output is sparse."""
+    text_blob = " ".join([
+        str(tender.get("brief", "") or ""),
+        str(tender.get("eligibility", "") or ""),
+        str(tender.get("checklist", "") or ""),
+        str(tender.get("submission_deadline", "") or ""),
+    ]).lower()
+
+    requirements = [
+        {"id": "cover_letter", "title": "Cover Letter / Bid Submission Letter", "priority": "high", "tags": ["cover_letter", "letterhead", "signatory"]},
+        {"id": "non_blacklisting", "title": "Non-Blacklisting Declaration", "priority": "high", "tags": ["non_blacklisting", "declaration"]},
+        {"id": "company_profile", "title": "Company Profile", "priority": "medium", "tags": ["company_profile", "brochure"]},
+        {"id": "experience", "title": "Relevant Experience / Work Orders", "priority": "high", "tags": ["experience", "work_order", "completion_certificate"]},
+        {"id": "turnover", "title": "CA Turnover Certificate", "priority": "high", "tags": ["turnover", "ca_certificate", "financial"]},
+        {"id": "employee_strength", "title": "Employee Strength Declaration", "priority": "medium", "tags": ["employee_strength", "declaration"]},
+        {"id": "pan_gst", "title": "PAN / GST / Registration Documents", "priority": "high", "tags": ["pan", "gst", "registration"]},
+    ]
+
+    if "msme" in text_blob:
+        requirements.append({"id": "msme", "title": "MSME / UDYAM Certificate", "priority": "high", "tags": ["msme", "udyam"]})
+    if any(k in text_blob for k in ["emd", "earnest money"]):
+        requirements.append({"id": "emd", "title": "EMD Instrument / Exemption Proof", "priority": "high", "tags": ["emd", "bg", "exemption"]})
+    if "power of attorney" in text_blob or "poa" in text_blob:
+        requirements.append({"id": "poa", "title": "Power of Attorney / Authorization", "priority": "high", "tags": ["poa", "authorization", "board_resolution"]})
+    if any(k in text_blob for k in ["iso", "cmmi", "certificate"]):
+        requirements.append({"id": "certifications", "title": "Quality / Security Certifications", "priority": "medium", "tags": ["iso", "cmmi", "certification"]})
+    if any(k in text_blob for k in ["technical presentation", "presentation", "ppt"]):
+        requirements.append({"id": "ppt", "title": "Technical Presentation (PPT)", "priority": "medium", "tags": ["ppt", "presentation", "technical_proposal"]})
+
+    # Deduplicate by id
+    seen = set()
+    out = []
+    for r in requirements:
+        if r["id"] in seen:
+            continue
+        seen.add(r["id"])
+        out.append(r)
+    return out
+
+def _match_vault_docs(requirements: list, vault: list) -> list:
+    matched = []
+    for req in requirements:
+        req_tags = [_normalize_doc_tag(t) for t in req.get("tags", [])]
+        hits = []
+        for f in vault:
+            name = (f.get("name", "") or "").lower()
+            category = (f.get("category", "") or "").lower()
+            file_tags = [_normalize_doc_tag(t) for t in (f.get("tags") or [])]
+            if any(t in name or t in category or t in file_tags for t in req_tags):
+                hits.append({
+                    "id": f.get("id"),
+                    "name": f.get("name", "Document"),
+                    "category": f.get("category", "general"),
+                    "uploaded_at": f.get("uploaded_at", ""),
+                })
+        matched.append({
+            **req,
+            "status": "ready" if hits else "missing",
+            "matched_files": hits[:5],
+        })
+    return matched
     return h
 
 def _normalize_doc_tag(s: str) -> str:
@@ -4383,11 +4514,21 @@ async def vault_upload(file: UploadFile = File(...), category: str = "general", 
 @app.post("/vault/upload")
 async def vault_upload(file: UploadFile = File(...), category: str = "general", tags: str = ""):
 @app.post("/vault/upload")
+async def vault_upload(file: UploadFile = File(...), category: str = "general", tags: str = ""):
+@app.post("/vault/upload")
 async def vault_upload(file: UploadFile = File(...), category: str = "general"):
     import base64
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "File too large (max 50MB)")
+    entry = {
+        "id": str(uuid.uuid4()),
+        "name": file.filename,
+        "category": category,
+        "tags": [_normalize_doc_tag(t) for t in tags.split(",") if t.strip()],
+        "size": len(data),
+        "uploaded_at": datetime.now().isoformat(),
+        "b64": base64.b64encode(data).decode(),
     entry = {
         "id": str(uuid.uuid4()),
         "name": file.filename,
