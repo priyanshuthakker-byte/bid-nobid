@@ -176,6 +176,40 @@ def _get_job(job_id: str) -> dict:
         except Exception:
             return {}
 
+def _fallback_extract_criteria_from_text(text: str) -> tuple[list, list]:
+    """
+    Heuristic fallback when AI is unavailable.
+    Builds basic PQ/TQ lists from tender text so report is not snapshot-only.
+    """
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln and ln.strip()]
+    pq_keywords = ("eligibility", "turnover", "experience", "emd", "bid security",
+                   "msme", "certificate", "registration", "gst", "pan", "audited")
+    tq_keywords = ("technical", "specification", "compliance", "scope", "boq",
+                   "methodology", "timeline", "manpower", "sla", "performance")
+
+    def pick(keywords, cap=10):
+        out, seen = [], set()
+        for ln in lines:
+            low = ln.lower()
+            if any(k in low for k in keywords):
+                crit = re.sub(r"\s+", " ", ln)[:180]
+                if len(crit) < 12:
+                    continue
+                sig = crit.lower()
+                if sig in seen:
+                    continue
+                seen.add(sig)
+                out.append({
+                    "criterion": crit,
+                    "status": "Under Review",
+                    "nascent_remark": "AI unavailable — fallback extraction"
+                })
+                if len(out) >= cap:
+                    break
+        return out
+
+    return pick(pq_keywords, cap=12), pick(tq_keywords, cap=12)
+
 
 
 # ── FIX 3: Admin token for sensitive endpoints ───────────────────────────────
@@ -1952,6 +1986,13 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                 else:
                     warn = f"AI error: {err_msg[:200]}"
                 tender_data["ai_warning"] = warn
+                # Keep report useful even when AI is unavailable.
+                if not tender_data.get("pq_criteria") and not tender_data.get("tq_criteria"):
+                    _pq_fb, _tq_fb = _fallback_extract_criteria_from_text(all_text)
+                    if _pq_fb:
+                        tender_data["pq_criteria"] = _pq_fb
+                    if _tq_fb:
+                        tender_data["tq_criteria"] = _tq_fb
                 _set_job(job_id, progress=f"AI unavailable: {err_msg[:80]}")
         elif not api_key:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add key from aistudio.google.com (free)."
