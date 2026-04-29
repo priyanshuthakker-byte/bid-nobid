@@ -4618,9 +4618,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 });
-</script>
-</body>
-</html>// Backward-compatible alias used by inline warning links.
+
+// Backward-compatible alias used by inline warning links.
+function showSection(name){ showPage(name); }
 function docsDragOver(e) { e.preventDefault(); document.getElementById('docs-drop-zone').classList.add('drag-over'); }
 function docsDragLeave(e) { document.getElementById('docs-drop-zone').classList.remove('drag-over'); }
 function docsDropFiles(e) {
@@ -4693,4 +4693,6 @@ async function _pollDocsUploadJob(jobId, tenderId) {
   }
 }
 
-function showSection(name){ showPage(name); }
+</script>
+</body>
+</html>
