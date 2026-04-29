@@ -50,7 +50,6 @@ def main() -> None:
     render_text = Path("render.yaml").read_text(encoding="utf-8", errors="ignore")
     expected = "python preflight_check.py && uvicorn main:app --host 0.0.0.0 --port $PORT"
     if expected not in render_text:
-        print("Preflight warning: render.yaml startCommand does not include preflight-first startup command.")
         raise SystemExit("Preflight failed: render.yaml startCommand must run preflight before uvicorn.")
     print("Preflight passed: syntax and conflict checks are clean.")
 
