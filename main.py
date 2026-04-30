@@ -19,7 +19,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request, BackgroundTasks, Depends
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,15 +146,20 @@ def _set_job(job_id: str, **kwargs):
             if merge_key in kwargs:
                 existing[merge_key] = {**existing.get(merge_key, {}), **kwargs.pop(merge_key)}
         existing.update(kwargs)
-        # Don't persist huge base64 doc inline — store separately
         doc_b64 = existing.pop("doc_b64", None)
+        result_dict = existing.get("result")
+        if isinstance(result_dict, dict) and not doc_b64:
+            doc_b64 = result_dict.pop("doc_b64", None)
+        elif isinstance(result_dict, dict):
+            result_dict.pop("doc_b64", None)
         try:
             jf.write_text(json.dumps(existing))
         except Exception:
             pass
         if doc_b64:
             try:
-                (JOBS_DIR / f"{re.sub(r'[^a-zA-Z0-9_\\-]', '', job_id)}.b64").write_text(doc_b64)
+                safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
+                (JOBS_DIR / f"{safe_job_id}.b64").write_text(doc_b64)
             except Exception:
                 pass
 
@@ -166,13 +171,109 @@ def _get_job(job_id: str) -> dict:
         try:
             data = json.loads(jf.read_text())
             # Re-attach b64 if result is being fetched and file exists
-            b64f = JOBS_DIR / f"{re.sub(r'[^a-zA-Z0-9_\\-]', '', job_id)}.b64"
+            safe_job_id = re.sub(r"[^a-zA-Z0-9_-]", "", job_id)
+            b64f = JOBS_DIR / f"{safe_job_id}.b64"
             if data.get("status") == "done" and b64f.exists():
                 if data.get("result"):
                     data["result"]["doc_b64"] = b64f.read_text()
             return data
         except Exception:
             return {}
+
+
+def _extract_basic_no_ai(all_text: str) -> dict:
+    """Lightweight, rules-only extraction for no-AI mode."""
+    lines = [ln.strip() for ln in (all_text or "").splitlines() if ln.strip()]
+
+    def _pick(keyword_groups, limit=8):
+        out = []
+        for ln in lines:
+            ll = ln.lower()
+            if any(any(k in ll for k in group) for group in keyword_groups):
+                if 20 <= len(ln) <= 500:
+                    out.append(ln)
+            if len(out) >= limit:
+                break
+        return out
+
+    def _extract_scope_headers():
+        out, in_scope = [], False
+        stop_words = ["payment terms", "eligibility", "technical criteria", "general conditions", "commercial bid"]
+        for ln in lines:
+            ll = ln.lower()
+            if "scope of work" in ll or "scope" == ll.strip(":.- "):
+                in_scope = True
+                continue
+            if in_scope and any(sw in ll for sw in stop_words):
+                break
+            if in_scope and 3 <= len(ln) <= 160:
+                if re.match(r"^(\d+(\.\d+)*|[ivx]+\.|[a-z]\)|[-•])\s+", ln, re.I) or ln.isupper():
+                    out.append(ln)
+            if len(out) >= 20:
+                break
+        return out
+
+    def _parse_mark(ln: str) -> int:
+        m = re.search(r"(\d{1,3})(?:\s*/\s*\d{1,3}|\s*marks?)", ln, re.I)
+        if not m:
+            return 0
+        try:
+            return int(m.group(1))
+        except Exception:
+            return 0
+
+    pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=20)
+    tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=20)
+    scope_lines = _extract_scope_headers() or _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=12)
+    pay_lines = _pick([["payment", "milestone", "invoice", "terms", "schedule"]], limit=10)
+
+    return {
+        "pq_criteria": [
+            {"criterion": x, "clause": x, "documents_required": "Refer tender", "status": "REVIEW", "nascent_remark": "No-AI extract"}
+            for x in pq_lines
+        ],
+        "tq_criteria": [
+            {
+                "criterion": x,
+                "clause": x,
+                "max_marks": _parse_mark(x),
+                "nascent_marks": 0,
+                "status": "REVIEW",
+                "nascent_remark": "No-AI extract",
+            }
+            for x in tq_lines
+        ],
+        "scope_items": scope_lines,
+        "payment_terms": pay_lines,
+    }
+
+
+def _extract_basic_no_ai(all_text: str) -> dict:
+    """Lightweight, rules-only extraction for no-AI mode."""
+    lines = [ln.strip() for ln in (all_text or "").splitlines() if ln.strip()]
+
+    def _pick(keyword_groups, limit=8):
+        out = []
+        for ln in lines:
+            ll = ln.lower()
+            if any(any(k in ll for k in group) for group in keyword_groups):
+                if 20 <= len(ln) <= 500:
+                    out.append(ln)
+            if len(out) >= limit:
+                break
+        return out
+
+    pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=12)
+    tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=12)
+    scope_lines = _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=10)
+    pay_lines = _pick([["payment", "milestone", "invoice", "terms", "schedule"]], limit=10)
+
+    return {
+        "pq_criteria": [{"criterion": x, "status": "REVIEW", "nascent_remark": "No-AI extract"} for x in pq_lines],
+        "tq_criteria": [{"criterion": x, "status": "REVIEW", "nascent_remark": "No-AI extract"} for x in tq_lines],
+        "scope_items": scope_lines,
+        "payment_terms": pay_lines,
+    }
 
 
 
@@ -1509,7 +1610,8 @@ async def generate_prebid_letter(t247_id: str):
         doc_bytes = buf.getvalue()
         doc_b64 = base64.b64encode(doc_bytes).decode("utf-8")
 
-        fname = f"PreBid_{re.sub(r'[^\w\-]', '_', tender_no)[:40]}.docx"
+        safe_tender_no = re.sub(r"[^\w-]", "_", tender_no)[:40]
+        fname = f"PreBid_{safe_tender_no}.docx"
 
         # Also save to disk for /download/ fallback
         try:
@@ -1695,7 +1797,12 @@ async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
     return await process_files(files=[file], t247_id=t247_id)
 
 @app.post("/process-files")
-async def process_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), t247_id: str = ""):
+async def process_files(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    t247_id: str = "",
+    no_ai: bool = Form(False),
+):
     if not files:
         raise HTTPException(400, "No files uploaded")
 
@@ -1709,8 +1816,17 @@ async def process_files(background_tasks: BackgroundTasks, files: List[UploadFil
 
     job_id = str(uuid.uuid4())[:12]
     import time
-    _set_job(job_id, status="running", progress="Starting…", result=None, error=None, t247_id=t247_id, started_at=time.time())
-    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id)
+    _set_job(
+        job_id,
+        status="running",
+        progress="Starting…",
+        result=None,
+        error=None,
+        t247_id=t247_id,
+        started_at=time.time(),
+        no_ai=no_ai,
+    )
+    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id, no_ai)
     return {"job_id": job_id, "status": "running"}
 
 
@@ -1729,7 +1845,7 @@ async def analyse_status(job_id: str):
     return job
 
 
-def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
+def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: bool = False):
     """Runs in background thread — full analysis pipeline.
     Acquires a JobSlot so Render stays within RAM ceiling while
     multiple tenders are analyzed concurrently."""
@@ -1806,7 +1922,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         del doc_files
 
         config = load_config()
-        api_key = config.get("gemini_api_key", "")
+        api_key = "" if no_ai else config.get("gemini_api_key", "")
         ai_used = False
         passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
@@ -1970,8 +2086,12 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                     warn = f"AI error: {err_msg[:200]}"
                 tender_data["ai_warning"] = warn
                 _set_job(job_id, progress=f"AI unavailable: {err_msg[:80]}")
-        elif not api_key:
+        elif not api_key and not no_ai:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add key from aistudio.google.com (free)."
+        elif no_ai:
+            tender_data["ai_warning"] = ""
+            tender_data["analysis_mode"] = "no_ai"
+            tender_data["analysis_note"] = "No-AI mode: generated using document extraction and rules."
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
@@ -2350,6 +2470,8 @@ async def get_config_route(request: Request):
         "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
         "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
         "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "gemini_api_key_5": keys[4] if len(keys) > 4 else "",
+        "gemini_api_key_6": keys[5] if len(keys) > 5 else "",
         "groq_api_key": groq_key,
         "t247_username": config.get("t247_username", ""),
         "t247_auto_sync_enabled": bool(config.get("t247_auto_sync_enabled", True)),
@@ -2372,7 +2494,7 @@ async def update_config_route(request: Request, data: dict = Body(...)):
             config["gemini_api_key"] = keys[0]
     # Also accept individual key fields from UI (key1/key2/key3/key4)
     ui_keys = []
-    for field in ["gemini_api_key", "gemini_api_key_2", "gemini_api_key_3", "gemini_api_key_4"]:
+    for field in ["gemini_api_key", "gemini_api_key_2", "gemini_api_key_3", "gemini_api_key_4", "gemini_api_key_5", "gemini_api_key_6"]:
         v = str(data.get(field, "") or "").strip()
         if v and len(v) > 20:
             ui_keys.append(v)
@@ -4080,13 +4202,34 @@ async def tender_doc_save(t247_id: str, body: dict = Body(...)):
 
 @app.get("/tender/{t247_id}/analysis-doc-download")
 async def tender_doc_download_local(t247_id: str):
-    """Explicit local-download button endpoint — streams docx with correct filename."""
-    docx_path = _locate_tender_docx(t247_id)
-    return FileResponse(
-        path=str(docx_path),
-        filename=docx_path.name,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+    """Download analysis report — regenerates from saved tender data if file not on disk."""
+    try:
+        docx_path = _locate_tender_docx(t247_id)
+        return FileResponse(
+            path=str(docx_path),
+            filename=docx_path.name,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except HTTPException:
+        pass
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found — run Analyse first.")
+    if not tender.get("bid_no_bid_done"):
+        raise HTTPException(404, "No analysis found for this tender — run Analyse first.")
+    try:
+        generator = BidDocGenerator()
+        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:50]
+        fname = f"BidNoBid_{safe_no}.docx"
+        out_path = str(OUTPUT_DIR / fname)
+        generator.generate(tender, out_path)
+        return FileResponse(
+            path=out_path,
+            filename=fname,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Report regeneration failed: {str(e)[:200]}")
 
 
 @app.get("/tender/{t247_id}/doc-versions")
