@@ -181,6 +181,34 @@ def _get_job(job_id: str) -> dict:
             return {}
 
 
+def _extract_basic_no_ai(all_text: str) -> dict:
+    """Lightweight, rules-only extraction for no-AI mode."""
+    lines = [ln.strip() for ln in (all_text or "").splitlines() if ln.strip()]
+
+    def _pick(keyword_groups, limit=8):
+        out = []
+        for ln in lines:
+            ll = ln.lower()
+            if any(any(k in ll for k in group) for group in keyword_groups):
+                if 20 <= len(ln) <= 500:
+                    out.append(ln)
+            if len(out) >= limit:
+                break
+        return out
+
+    pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=12)
+    tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=12)
+    scope_lines = _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=10)
+    pay_lines = _pick([["payment", "milestone", "invoice", "terms", "schedule"]], limit=10)
+
+    return {
+        "pq_criteria": [{"criterion": x, "status": "REVIEW", "nascent_remark": "No-AI extract"} for x in pq_lines],
+        "tq_criteria": [{"criterion": x, "status": "REVIEW", "nascent_remark": "No-AI extract"} for x in tq_lines],
+        "scope_items": scope_lines,
+        "payment_terms": pay_lines,
+    }
+
+
 
 # ── FIX 3: Admin token for sensitive endpoints ───────────────────────────────
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
