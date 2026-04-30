@@ -623,6 +623,24 @@ def merge_results(regex_data: Dict, ai_data: Dict,
 # PUBLIC ENTRY POINT
 # ─────────────────────────────────────────
 
+def _rule_fallback(full_text: str, prebid_passed: bool, reason: str) -> Dict[str, Any]:
+    """Invoke rule-based analyzer and tag the result with the fallback reason."""
+    try:
+        from rule_analyzer import analyze_with_rules
+        result = analyze_with_rules(full_text, prebid_passed)
+        result["_fallback_reason"] = reason
+        logger.info(f"Rule-based fallback used: {reason}")
+        return result
+    except Exception as e:
+        logger.error(f"Rule-based fallback also failed: {e}")
+        return {
+            "error": (
+                f"AI analysis unavailable ({reason}) and rule-based fallback failed: {e}. "
+                "Add a Gemini or Groq API key in Settings."
+            )
+        }
+
+
 def analyze_with_gemini(full_text: str,
                          prebid_passed: bool = False,
                          progress_cb=None) -> Dict[str, Any]:
@@ -630,7 +648,7 @@ def analyze_with_gemini(full_text: str,
 
     all_keys = get_all_api_keys()
     if not all_keys:
-        return {"error": "No Gemini API key configured. Go to Settings to add it."}
+        return _rule_fallback(full_text, prebid_passed, "No API key configured — using rule-based analysis")
 
     text_chunk = smart_chunk(full_text)
     prompt = build_prompt(text_chunk, prebid_passed)
@@ -718,11 +736,8 @@ def analyze_with_gemini(full_text: str,
         except Exception as e:
             logger.error(f"Groq fallback failed: {e}")
 
-    return {
-        "error": (
-            "All API keys quota exceeded. "
-            "Options: (1) Add a new Gemini key at aistudio.google.com, "
-            "(2) Add free Groq key at console.groq.com — 14,400 requests/day, "
-            "or (3) Wait until tomorrow (quota resets at midnight)."
-        )
-    }
+    # All AI options exhausted — fall back to rule-based analysis (zero API calls)
+    return _rule_fallback(
+        full_text, prebid_passed,
+        "All Gemini + Groq keys exhausted — using rule-based analysis"
+    )

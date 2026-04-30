@@ -1592,15 +1592,11 @@ async def reanalyse_tender(t247_id: str):
     if not saved_text or len(str(saved_text).strip()) < 100:
         raise HTTPException(400, "No saved document text found. Upload and analyse again.")
 
-    cfg = load_config()
-    api_key = cfg.get("gemini_api_key", "")
-    if not api_key:
-        raise HTTPException(400, "Gemini API key not configured. Go to Settings.")
-
     prebid_flag = bool(tender.get("prebid_passed", False))
+    # analyze_with_gemini auto-falls back to rule_analyzer when no keys present
     ai_result = analyze_with_gemini(saved_text, prebid_flag)
     if "error" in ai_result:
-        raise HTTPException(502, ai_result.get("error", "AI reanalysis failed"))
+        raise HTTPException(502, ai_result.get("error", "Analysis failed"))
 
     merged = merge_results(tender, ai_result, prebid_flag)
     merged["bid_no_bid_done"] = True
