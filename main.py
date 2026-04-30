@@ -19,7 +19,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request, BackgroundTasks, Depends
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -145,7 +145,7 @@ def _set_job(job_id: str, **kwargs):
         for merge_key in ("segments", "seg_log"):
             if merge_key in kwargs:
                 existing[merge_key] = {**existing.get(merge_key, {}), **kwargs.pop(merge_key)}
-              existing.update(kwargs)
+        existing.update(kwargs)
         doc_b64 = existing.pop("doc_b64", None)
         result_dict = existing.get("result")
         if isinstance(result_dict, dict) and not doc_b64:
@@ -179,6 +179,73 @@ def _get_job(job_id: str) -> dict:
             return data
         except Exception:
             return {}
+
+
+def _extract_basic_no_ai(all_text: str) -> dict:
+    """Lightweight, rules-only extraction for no-AI mode."""
+    lines = [ln.strip() for ln in (all_text or "").splitlines() if ln.strip()]
+
+    def _pick(keyword_groups, limit=8):
+        out = []
+        for ln in lines:
+            ll = ln.lower()
+            if any(any(k in ll for k in group) for group in keyword_groups):
+                if 20 <= len(ln) <= 500:
+                    out.append(ln)
+            if len(out) >= limit:
+                break
+        return out
+
+    def _extract_scope_headers():
+        out, in_scope = [], False
+        stop_words = ["payment terms", "eligibility", "technical criteria", "general conditions", "commercial bid"]
+        for ln in lines:
+            ll = ln.lower()
+            if "scope of work" in ll or "scope" == ll.strip(":.- "):
+                in_scope = True
+                continue
+            if in_scope and any(sw in ll for sw in stop_words):
+                break
+            if in_scope and 3 <= len(ln) <= 160:
+                if re.match(r"^(\d+(\.\d+)*|[ivx]+\.|[a-z]\)|[-•])\s+", ln, re.I) or ln.isupper():
+                    out.append(ln)
+            if len(out) >= 20:
+                break
+        return out
+
+    def _parse_mark(ln: str) -> int:
+        m = re.search(r"(\d{1,3})(?:\s*/\s*\d{1,3}|\s*marks?)", ln, re.I)
+        if not m:
+            return 0
+        try:
+            return int(m.group(1))
+        except Exception:
+            return 0
+
+    pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=20)
+    tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=20)
+    scope_lines = _extract_scope_headers() or _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=12)
+    pay_lines = _pick([["payment", "milestone", "invoice", "terms", "schedule"]], limit=10)
+
+    return {
+        "pq_criteria": [
+            {"criterion": x, "clause": x, "documents_required": "Refer tender", "status": "REVIEW", "nascent_remark": "No-AI extract"}
+            for x in pq_lines
+        ],
+        "tq_criteria": [
+            {
+                "criterion": x,
+                "clause": x,
+                "max_marks": _parse_mark(x),
+                "nascent_marks": 0,
+                "status": "REVIEW",
+                "nascent_remark": "No-AI extract",
+            }
+            for x in tq_lines
+        ],
+        "scope_items": scope_lines,
+        "payment_terms": pay_lines,
+    }
 
 
 
@@ -1682,7 +1749,12 @@ async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
     return await process_files(files=[file], t247_id=t247_id)
 
 @app.post("/process-files")
-async def process_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), t247_id: str = ""):
+async def process_files(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    t247_id: str = "",
+    no_ai: bool = Form(False),
+):
     if not files:
         raise HTTPException(400, "No files uploaded")
 
@@ -1696,8 +1768,17 @@ async def process_files(background_tasks: BackgroundTasks, files: List[UploadFil
 
     job_id = str(uuid.uuid4())[:12]
     import time
-    _set_job(job_id, status="running", progress="Starting…", result=None, error=None, t247_id=t247_id, started_at=time.time())
-    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id)
+    _set_job(
+        job_id,
+        status="running",
+        progress="Starting…",
+        result=None,
+        error=None,
+        t247_id=t247_id,
+        started_at=time.time(),
+        no_ai=no_ai,
+    )
+    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id, no_ai)
     return {"job_id": job_id, "status": "running"}
 
 
@@ -1716,7 +1797,7 @@ async def analyse_status(job_id: str):
     return job
 
 
-def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
+def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: bool = False):
     """Runs in background thread — full analysis pipeline.
     Acquires a JobSlot so Render stays within RAM ceiling while
     multiple tenders are analyzed concurrently."""
@@ -1793,7 +1874,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         del doc_files
 
         config = load_config()
-        api_key = config.get("gemini_api_key", "")
+        api_key = "" if no_ai else config.get("gemini_api_key", "")
         ai_used = False
         passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
@@ -1957,8 +2038,21 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
                     warn = f"AI error: {err_msg[:200]}"
                 tender_data["ai_warning"] = warn
                 _set_job(job_id, progress=f"AI unavailable: {err_msg[:80]}")
-        elif not api_key:
+        elif not api_key and not no_ai:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add key from aistudio.google.com (free)."
+        elif no_ai:
+            tender_data["ai_warning"] = ""
+            tender_data["analysis_mode"] = "no_ai"
+            tender_data["analysis_note"] = "No-AI mode: generated using document extraction and rules."
+            basic = _extract_basic_no_ai(all_text)
+            if not tender_data.get("pq_criteria"):
+                tender_data["pq_criteria"] = basic.get("pq_criteria", [])
+            if not tender_data.get("tq_criteria"):
+                tender_data["tq_criteria"] = basic.get("tq_criteria", [])
+            if not tender_data.get("scope_items"):
+                tender_data["scope_items"] = basic.get("scope_items", [])
+            if not tender_data.get("payment_terms"):
+                tender_data["payment_terms"] = basic.get("payment_terms", [])
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
