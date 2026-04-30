@@ -2337,6 +2337,8 @@ async def get_config_route(request: Request):
         "gemini_api_key_2": keys[1] if len(keys) > 1 else "",
         "gemini_api_key_3": keys[2] if len(keys) > 2 else "",
         "gemini_api_key_4": keys[3] if len(keys) > 3 else "",
+        "gemini_api_key_5": keys[4] if len(keys) > 4 else "",
+        "gemini_api_key_6": keys[5] if len(keys) > 5 else "",
         "groq_api_key": groq_key,
         "t247_username": config.get("t247_username", ""),
         "t247_auto_sync_enabled": bool(config.get("t247_auto_sync_enabled", True)),
@@ -2359,7 +2361,7 @@ async def update_config_route(request: Request, data: dict = Body(...)):
             config["gemini_api_key"] = keys[0]
     # Also accept individual key fields from UI (key1/key2/key3/key4)
     ui_keys = []
-    for field in ["gemini_api_key", "gemini_api_key_2", "gemini_api_key_3", "gemini_api_key_4"]:
+    for field in ["gemini_api_key", "gemini_api_key_2", "gemini_api_key_3", "gemini_api_key_4", "gemini_api_key_5", "gemini_api_key_6"]:
         v = str(data.get(field, "") or "").strip()
         if v and len(v) > 20:
             ui_keys.append(v)
