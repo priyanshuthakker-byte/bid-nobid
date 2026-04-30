@@ -2746,9 +2746,8 @@ function buildDocPreview(td, verdict) {
 // DOWNLOAD REPORT
 // ────────────────────────────────────────────
 function downloadReport(filename) {
-  // Try base64 first (survives Render ephemeral restarts), fallback to /download/
   var b64 = lastAnalysisResult && (lastAnalysisResult.doc_b64 || (lastAnalysisResult.result && lastAnalysisResult.result.doc_b64));
-  var fname = lastAnalysisResult && (lastAnalysisResult.doc_filename || lastAnalysisResult.download_file || filename) || filename;
+  var fname = (lastAnalysisResult && (lastAnalysisResult.doc_filename || lastAnalysisResult.download_file)) || filename || 'BidNoBid_Report.docx';
   if (b64) {
     try {
       var bytes = atob(b64);
@@ -2757,40 +2756,31 @@ function downloadReport(filename) {
       for (var i = 0; i < bytes.length; i++) view[i] = bytes.charCodeAt(i);
       var blob = new Blob([ab], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = fname || 'BidNoBid_Report.docx'; a.click();
+      a.download = fname; a.click();
       URL.revokeObjectURL(a.href);
       return;
-    } catch(e) { /* fallthrough to server */ }
+    } catch(e) { }
+  }
+  if (lastAnalysisTid) {
+    fetch('/tender/' + lastAnalysisTid + '/analysis-doc-download')
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(function(blob) {
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = fname; a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(function(e) {
+        if (filename) { window.location.href = '/download/' + filename; }
+        else { toast('No report — analyse a tender first', 'error'); }
+      });
+    return;
   }
   if (!filename) { toast('No report available — analyse a tender first', 'error'); return; }
   window.location.href = '/download/' + filename;
 }
-
-async function downloadTenderDoc(tid) {
-  if (!tid) { toast('No tender selected', 'info'); return; }
-  try {
-    var r = await fetch('/tender/' + tid + '/doc-download');
-    if (!r.ok) { toast('Download failed: HTTP ' + r.status, 'error'); return; }
-    var blob = await r.blob();
-    var cd = r.headers.get('Content-Disposition') || '';
-    var fname = (cd.match(/filename="?([^";\n]+)"?/) || [])[1] || ('BidNoBid_' + tid + '.docx');
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  } catch(e) { toast('Download error: ' + e.message, 'error'); }
-}
-
-function generatePrebidFromResult() {
-  if (!lastAnalysisResult) { toast('Analyse a tender first', 'error'); return; }
-  document.getElementById('prebid-section').style.display = 'block';
-  document.getElementById('prebid-section').scrollIntoView({behavior:'smooth'});
-}
-
-function togglePreviewSize() {
-  var body = document.getElementById('doc-preview-content');
-  if (body) body.style.maxHeight = body.style.maxHeight === 'none' ? '580px' : 'none';
 }
 
 // ────────────────────────────────────────────
