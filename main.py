@@ -19,7 +19,7 @@ import uuid
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request, BackgroundTasks, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request, BackgroundTasks, Depends
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -145,7 +145,7 @@ def _set_job(job_id: str, **kwargs):
         for merge_key in ("segments", "seg_log"):
             if merge_key in kwargs:
                 existing[merge_key] = {**existing.get(merge_key, {}), **kwargs.pop(merge_key)}
-              existing.update(kwargs)
+        existing.update(kwargs)
         doc_b64 = existing.pop("doc_b64", None)
         result_dict = existing.get("result")
         if isinstance(result_dict, dict) and not doc_b64:
@@ -1682,7 +1682,12 @@ async def process_zip(file: UploadFile = File(...), t247_id: str = ""):
     return await process_files(files=[file], t247_id=t247_id)
 
 @app.post("/process-files")
-async def process_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), t247_id: str = ""):
+async def process_files(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    t247_id: str = "",
+    no_ai: bool = Form(False),
+):
     if not files:
         raise HTTPException(400, "No files uploaded")
 
@@ -1696,8 +1701,17 @@ async def process_files(background_tasks: BackgroundTasks, files: List[UploadFil
 
     job_id = str(uuid.uuid4())[:12]
     import time
-    _set_job(job_id, status="running", progress="Starting…", result=None, error=None, t247_id=t247_id, started_at=time.time())
-    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id)
+    _set_job(
+        job_id,
+        status="running",
+        progress="Starting…",
+        result=None,
+        error=None,
+        t247_id=t247_id,
+        started_at=time.time(),
+        no_ai=no_ai,
+    )
+    background_tasks.add_task(_run_analysis_job, job_id, file_contents, t247_id, no_ai)
     return {"job_id": job_id, "status": "running"}
 
 
@@ -1716,7 +1730,7 @@ async def analyse_status(job_id: str):
     return job
 
 
-def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
+def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: bool = False):
     """Runs in background thread — full analysis pipeline.
     Acquires a JobSlot so Render stays within RAM ceiling while
     multiple tenders are analyzed concurrently."""
@@ -1793,7 +1807,7 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str):
         del doc_files
 
         config = load_config()
-        api_key = config.get("gemini_api_key", "")
+        api_key = "" if no_ai else config.get("gemini_api_key", "")
         ai_used = False
         passed = prebid_passed(tender_data.get("prebid_query_date", ""))
 
