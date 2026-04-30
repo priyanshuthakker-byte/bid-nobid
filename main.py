@@ -2087,11 +2087,31 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: boo
                 tender_data["ai_warning"] = warn
                 _set_job(job_id, progress=f"AI unavailable: {err_msg[:80]}")
         elif not api_key and not no_ai:
-            tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add key from aistudio.google.com (free)."
+            # No key + user wanted AI → run rule-based as fallback
+            _set_job(job_id, progress="No API key — running rule-based analysis…", step=3)
+            try:
+                from rule_analyzer import analyze_with_rules
+                rule_result = analyze_with_rules(all_text, passed)
+                tender_data = merge_results(tender_data, rule_result, passed)
+                tender_data["analysis_mode"] = "rule_based"
+                tender_data["ai_warning"] = "No Gemini/Groq API key configured — rule-based analysis used instead. Add a key in Settings for full AI analysis."
+                _set_job(job_id, progress="Rule analysis complete", step=6)
+            except Exception as _re:
+                tender_data["ai_warning"] = f"No API key configured and rule-based fallback failed: {_re}"
         elif no_ai:
-            tender_data["ai_warning"] = ""
-            tender_data["analysis_mode"] = "no_ai"
-            tender_data["analysis_note"] = "No-AI mode: generated using document extraction and rules."
+            # User explicitly chose No-AI mode → run rule_analyzer directly
+            _set_job(job_id, progress="Running rule-based bid/no-bid analysis…", step=3)
+            try:
+                from rule_analyzer import analyze_with_rules
+                rule_result = analyze_with_rules(all_text, passed)
+                tender_data = merge_results(tender_data, rule_result, passed)
+                tender_data["analysis_mode"] = "rule_based"
+                tender_data["ai_warning"] = ""
+                tender_data["analysis_note"] = "Rule-based analysis — zero API cost. Bid/No-Bid verdict, PQ criteria, pre-bid queries generated from document text using keyword matching and Nascent eligibility rules."
+                _set_job(job_id, progress="Rule analysis complete", step=6)
+            except Exception as _re:
+                tender_data["ai_warning"] = f"Rule-based analysis error: {_re}"
+                tender_data["analysis_mode"] = "no_ai"
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check

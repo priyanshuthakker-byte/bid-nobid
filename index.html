@@ -698,7 +698,7 @@ select option{background:var(--bg2)}
     <!-- Analysis Progress -->
     <div id="an-progress" class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0">AI Analysis Running <span id="ap-step-label" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+        <div class="card-title" style="margin:0"><span id="ap-mode-label">AI Analysis Running</span> <span id="ap-step-label" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
         <div id="ap-elapsed-badge" style="font-size:11px;color:var(--text3);font-family:var(--mono)">0s</div>
       </div>
       <div class="ap-progress-bar"><div class="ap-progress-fill" id="ap-bar" style="width:0%"></div></div>
@@ -1971,6 +1971,8 @@ function setStep(i) {
 async function analyseTender() {
   var files = document.getElementById('an-files').files;
   if (!files.length) { toast('Please select files to analyse', 'error'); return; }
+  var ml = document.getElementById('ap-mode-label');
+  if (ml) ml.textContent = '🤖 AI Analysis Running';
   var tid = document.getElementById('an-tid').value.trim();
 
   showProgress();
@@ -2011,6 +2013,8 @@ async function analyseTenderNoAI() {
   var files = document.getElementById('an-files').files;
   if (!files.length) { toast('Please select files to analyse', 'error'); return; }
   var tid = document.getElementById('an-tid').value.trim();
+  var ml = document.getElementById('ap-mode-label');
+  if (ml) ml.textContent = '⚡ Rule Analysis Running (No AI)';
 
   showProgress();
   setStep(0);
