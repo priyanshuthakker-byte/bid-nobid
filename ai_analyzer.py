@@ -55,7 +55,7 @@ def load_config() -> Dict:
         cfg["groq_api_key"] = os.environ["GROQ_API_KEY"]
 
     extra_keys = []
-    for i in range(2, 6):
+    for i in range(2, 8):
         k = os.environ.get(f"GEMINI_API_KEY_{i}")
         if k:
             extra_keys.append(k)
