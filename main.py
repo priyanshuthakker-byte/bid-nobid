@@ -248,6 +248,34 @@ def _extract_basic_no_ai(all_text: str) -> dict:
     }
 
 
+def _extract_basic_no_ai(all_text: str) -> dict:
+    """Lightweight, rules-only extraction for no-AI mode."""
+    lines = [ln.strip() for ln in (all_text or "").splitlines() if ln.strip()]
+
+    def _pick(keyword_groups, limit=8):
+        out = []
+        for ln in lines:
+            ll = ln.lower()
+            if any(any(k in ll for k in group) for group in keyword_groups):
+                if 20 <= len(ln) <= 500:
+                    out.append(ln)
+            if len(out) >= limit:
+                break
+        return out
+
+    pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=12)
+    tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=12)
+    scope_lines = _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=10)
+    pay_lines = _pick([["payment", "milestone", "invoice", "terms", "schedule"]], limit=10)
+
+    return {
+        "pq_criteria": [{"criterion": x, "status": "REVIEW", "nascent_remark": "No-AI extract"} for x in pq_lines],
+        "tq_criteria": [{"criterion": x, "status": "REVIEW", "nascent_remark": "No-AI extract"} for x in tq_lines],
+        "scope_items": scope_lines,
+        "payment_terms": pay_lines,
+    }
+
+
 
 # ── FIX 3: Admin token for sensitive endpoints ───────────────────────────────
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
@@ -2044,15 +2072,6 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: boo
             tender_data["ai_warning"] = ""
             tender_data["analysis_mode"] = "no_ai"
             tender_data["analysis_note"] = "No-AI mode: generated using document extraction and rules."
-            basic = _extract_basic_no_ai(all_text)
-            if not tender_data.get("pq_criteria"):
-                tender_data["pq_criteria"] = basic.get("pq_criteria", [])
-            if not tender_data.get("tq_criteria"):
-                tender_data["tq_criteria"] = basic.get("tq_criteria", [])
-            if not tender_data.get("scope_items"):
-                tender_data["scope_items"] = basic.get("scope_items", [])
-            if not tender_data.get("payment_terms"):
-                tender_data["payment_terms"] = basic.get("payment_terms", [])
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
