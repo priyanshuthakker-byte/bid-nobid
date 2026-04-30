@@ -761,3 +761,109 @@ class BidDocGenerator:
                     "color":  C["red_text"] if sc == "RED" else C["amber_text"],
                     "bg":     "red_bg"   if sc == "RED" else "amber_bg",
                 })
+    def _section_notes(self, data):
+        self._sec_heading("6", "Notes & Action Items",
+                          "Items to be resolved before committing to bid.")
+        action_items = []
+
+        for item in data.get("pq_criteria", []):
+            sc = item.get("nascent_color", "BLUE")
+            if sc in ["RED", "AMBER"]:
+                priority = "URGENT" if sc == "RED" else "ACTION"
+                crit   = strip_emojis(item.get("criteria", ""))[:80]
+                remark = strip_emojis(item.get("nascent_remark", ""))[:200]
+                action_items.append({
+                    "priority": priority,
+                    "text":   crit,
+                    "detail": remark,
+                    "color":  C["red_text"] if sc == "RED" else C["amber_text"],
+                    "bg":     "red_bg"   if sc == "RED" else "amber_bg",
+                })
+
+        for note in data.get("notes", []):
+            if isinstance(note, dict):
+                note_text = strip_emojis(str(note.get("detail", note.get("title", str(note)))))
+                priority = note.get("priority", "INFO")
+            else:
+                note_text = strip_emojis(str(note))
+                priority = "AWARENESS"
+            is_risk = any(k in note_text.lower() for k in ["penalty", "blacklist", "disqualif", "liquidated", "poa", "power of attorney"])
+            action_items.append({
+                "priority": "RISK" if is_risk else priority,
+                "text":     note_text[:200],
+                "detail":   "",
+                "color":    C["red_text"] if is_risk else C["dark_blue"],
+                "bg":       "red_bg"  if is_risk else "blue_bg",
+            })
+
+        if not action_items:
+            action_items.append({
+                "priority": "NOTE",
+                "text": "No specific risk flags detected. Please review the tender document manually before bidding.",
+                "detail": "",
+                "color": C["dark_blue"],
+                "bg": "blue_bg",
+            })
+
+        table = self.doc.add_table(rows=0, cols=1)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        set_table_borders(table, color=C["mid_blue"])
+
+        for i, item in enumerate(action_items[:15]):
+            row = table.add_row()
+            cell = row.cells[0]
+            set_bg(cell, C[item["bg"]])
+            set_borders(cell, color="9DC3E6")
+            p = cell.paragraphs[0]
+            p.paragraph_format.space_before = Pt(4)
+            p.paragraph_format.space_after = Pt(2)
+            p.paragraph_format.left_indent = Pt(6)
+            label = str(i + 1) + ". " + item["priority"] + " — "
+            add_run(p, label, bold=True, size=9, color=item["color"])
+            add_run(p, item["text"], bold=False, size=9)
+            if item.get("detail"):
+                p2 = cell.add_paragraph()
+                p2.paragraph_format.left_indent = Pt(20)
+                p2.paragraph_format.space_after = Pt(4)
+                add_run(p2, item["detail"], size=8, italic=True)
+
+        self.doc.add_paragraph()
+
+    def _section_authorization(self):
+        self._sec_heading("7", "Authorization")
+        table = self.doc.add_table(rows=2, cols=3)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        set_table_borders(table, color=C["mid_blue"])
+        for cell, hdr in zip(table.rows[0].cells, ["Prepared By", "Reviewed By", "Approved By"]):
+            set_bg(cell, C["dark_blue"])
+            set_borders(cell, color="FFFFFF")
+            cell_write(cell, hdr, bold=True, size=10, color="FFFFFF",
+                       align=WD_ALIGN_PARAGRAPH.CENTER)
+        names = ["Parthav Thakkar\nBid Executive\nNascent Info Technologies Pvt. Ltd.", "—", "—"]
+        for cell, name in zip(table.rows[1].cells, names):
+            set_bg(cell, C["alt_row"])
+            set_borders(cell)
+            cell_write(cell, name, size=9, align=WD_ALIGN_PARAGRAPH.CENTER)
+        row3 = table.add_row()
+        for cell in row3.cells:
+            set_bg(cell, C["white"])
+            set_borders(cell)
+            cell_write(cell, "Date: _______________", size=9, color=C["gray"],
+                       align=WD_ALIGN_PARAGRAPH.CENTER)
+        self.doc.add_paragraph()
+
+    def _footer(self, data):
+        footer = self.doc.sections[0].footer
+        fp = footer.paragraphs[0]
+        fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = fp.add_run(
+            "CONFIDENTIAL — Bid/No-Bid Form | " +
+            field_value(data.get("tender_no", "—")) + " | " +
+            "Nascent Info Technologies Pvt. Ltd. | " +
+            datetime.now().strftime("%d %b %Y") +
+            " | For Internal Use Only"
+        )
+        r.font.size = Pt(7)
+        r.font.name = "Calibri"
+        r.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
+        r.font.italic = True
