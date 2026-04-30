@@ -1252,10 +1252,13 @@ select option{background:var(--bg2)}
       <div class="card">
         <div class="card-title">Gemini AI Keys</div>
         <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Get free keys at aistudio.google.com — add up to 4 for rotation</p>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Get free keys at aistudio.google.com — add up to 6 for rotation</p>
         <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
         <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
         <label>Backup Key 3</label><input type="password" id="key3" placeholder="AIza...">
         <label>Backup Key 4</label><input type="password" id="key4" placeholder="AIza...">
+        <label>Backup Key 5</label><input type="password" id="key5" placeholder="AIza...">
+        <label>Backup Key 6</label><input type="password" id="key6" placeholder="AIza...">
         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="saveKeys()">Save Keys</button>
           <button class="btn btn-ghost" onclick="testAllKeys()">⚡ Live Key Health</button>
@@ -3984,7 +3987,7 @@ async function loadSettings() {
     } else {
       var d = await r.json();
       var keys = d.gemini_api_keys || [];
-      ['key1','key2','key3','key4'].forEach((id, i) => {
+      ['key1','key2','key3','key4','key5','key6'].forEach((id, i) => {
         var el = document.getElementById(id);
         if (el) el.placeholder = keys[i] ? '●●●●' + keys[i].slice(-4) : 'AIza...';
       });
@@ -4015,7 +4018,7 @@ async function loadSettings() {
 }
 
 async function saveKeys() {
-  var keys = ['key1','key2','key3','key4'].map(id => document.getElementById(id).value.trim()).filter(k => k && !k.startsWith('●'));
+  var keys = ['key1','key2','key3','key4','key5','key6'].map(id => document.getElementById(id).value.trim()).filter(k => k && !k.startsWith('●'));
   if (!keys.length) { toast('Enter at least one key', 'error'); return; }
   try {
     var r = await fetch('/config', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({gemini_api_keys: keys}) });
