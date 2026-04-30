@@ -2235,7 +2235,7 @@ function showAnalysisResult(d) {
     aiWarnEl.innerHTML = '⚠ ' + aiWarn + (aiWarn.includes('key') || aiWarn.includes('quota') ?
       ' &nbsp;<a href="#" onclick="showSection(\'settings\');return false" style="color:#60a5fa;text-decoration:underline">→ Go to Settings</a>' : '');
   } else { aiWarnEl.style.display = 'none'; }
-   document.getElementById('dl-btn').onclick = () => downloadReport(lastAnalysisFilename););
+ document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);;
 
   // ── KPI Row ──
   var kpis = [
@@ -2747,7 +2747,7 @@ function buildDocPreview(td, verdict) {
 // ────────────────────────────────────────────
 function downloadReport(filename) {
   var b64 = lastAnalysisResult && (lastAnalysisResult.doc_b64 || (lastAnalysisResult.result && lastAnalysisResult.result.doc_b64));
-  var fname = (lastAnalysisResult && (lastAnalysisResult.doc_filename || lastAnalysisResult.download_file)) || filename || 'BidNoBid_Report.docx';
+  var fname = lastAnalysisResult && (lastAnalysisResult.doc_filename || lastAnalysisResult.download_file || filename) || filename;
   if (b64) {
     try {
       var bytes = atob(b64);
@@ -2756,31 +2756,13 @@ function downloadReport(filename) {
       for (var i = 0; i < bytes.length; i++) view[i] = bytes.charCodeAt(i);
       var blob = new Blob([ab], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = fname; a.click();
+      a.download = fname || 'BidNoBid_Report.docx'; a.click();
       URL.revokeObjectURL(a.href);
       return;
-    } catch(e) { }
-  }
-  if (lastAnalysisTid) {
-    fetch('/tender/' + lastAnalysisTid + '/analysis-doc-download')
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
-      })
-      .then(function(blob) {
-        var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = fname; a.click();
-        URL.revokeObjectURL(a.href);
-      })
-      .catch(function(e) {
-        if (filename) { window.location.href = '/download/' + filename; }
-        else { toast('No report — analyse a tender first', 'error'); }
-      });
-    return;
+    } catch(e) { /* fallthrough to server */ }
   }
   if (!filename) { toast('No report available — analyse a tender first', 'error'); return; }
   window.location.href = '/download/' + filename;
-}
 }
 
 // ────────────────────────────────────────────
