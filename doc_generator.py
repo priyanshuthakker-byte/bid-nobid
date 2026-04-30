@@ -16,23 +16,25 @@ from typing import Dict, Any, List
 import re as _re
 
 C = {
-    "dark_blue": "1F497D",
-    "mid_blue": "2E75B6",
-    "light_blue": "BDD7EE",
-    "label_col": "D6E4F0",
-    "alt_row": "F2F7FB",
-    "white": "FFFFFF",
-    "green_bg": "E2EFDA",
-    "green_text": "375623",
-    "amber_bg": "FFF2CC",
-    "amber_text": "7F6000",
-    "red_bg": "FCE4D6",
-    "red_text": "C00000",
-    "blue_bg": "DEEAF1",
-    "blue_text": "1F497D",
-    "orange": "C55A11",
-    "gray": "808080",
-    "dark": "262626",
+    "dark_blue": "0A1F3D",   # deep navy
+    "mid_blue":  "1A5276",   # rich blue
+    "light_blue":"C8DDEF",
+    "label_col": "D0E8F7",
+    "alt_row":   "F0F7FD",
+    "white":     "FFFFFF",
+    "green_bg":  "E6F4EA",
+    "green_text":"1E5631",
+    "amber_bg":  "FFF8E1",
+    "amber_text":"7A5800",
+    "red_bg":    "FDECE8",
+    "red_text":  "9B1C1C",
+    "blue_bg":   "EBF4FB",
+    "blue_text": "0A1F3D",
+    "orange":    "C2560B",
+    "gray":      "6B7280",
+    "dark":      "1A1A2E",
+    "gold":      "C9A800",
+    "navy_mid":  "1B3F6E",
 }
 
 STATUS_STYLE = {
@@ -144,11 +146,6 @@ def status_color(status_text):
 
 
 def field_value(v):
-    """
-    AI v7 may return snapshot fields as dict:
-    {"value": "...", "clause_ref": "...", "page_no": "..."}.
-    Normalizes to plain display text.
-    """
     if isinstance(v, dict):
         return str(v.get("value", "—") or "—")
     if v is None:
@@ -157,10 +154,6 @@ def field_value(v):
 
 
 def scope_item_text(item) -> str:
-    """
-    FIXED: scope_items can be dicts (from AI v7 scope_sections) or plain strings.
-    Extracts readable text in both cases.
-    """
     if isinstance(item, dict):
         parts = []
         sec_no = item.get("section_no", "")
@@ -169,26 +162,20 @@ def scope_item_text(item) -> str:
         phase = item.get("phase", "")
         tech = item.get("tech_specified", "")
         deliverables = item.get("deliverables", [])
-
         if sec_no and title:
             parts.append(f"[{sec_no}] {title}")
         elif title:
             parts.append(title)
-
         if phase and phase not in ("—", ""):
             parts.append(f"Phase: {phase}")
-
         if prose:
             parts.append(prose)
-
         if tech and tech not in ("—", ""):
             parts.append(f"Technology: {tech}")
-
         if deliverables:
             dl = [str(d) for d in deliverables if d]
             if dl:
                 parts.append("Deliverables: " + " | ".join(dl))
-
         return " — ".join(parts) if parts else str(item)
     return strip_emojis(str(item)) if item else ""
 
@@ -214,15 +201,44 @@ class BidDocGenerator:
         sec.page_width = Cm(29.7)
         sec.page_height = Cm(21.0)
         sec.left_margin = sec.right_margin = Cm(1.8)
-        sec.top_margin = sec.bottom_margin = Cm(1.5)
+        sec.top_margin = Cm(1.8)
+        sec.bottom_margin = Cm(1.8)
         self.doc.styles["Normal"].font.name = "Calibri"
         self.doc.styles["Normal"].font.size = Pt(10)
+        hdr = sec.header
+        hp = hdr.paragraphs[0]
+        hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        hr = hp.add_run("Nascent Info Technologies Pvt. Ltd.  |  BID / NO-BID ANALYSIS  |  CONFIDENTIAL")
+        hr.font.name = "Calibri"
+        hr.font.size = Pt(7)
+        hr.font.color.rgb = RGBColor(*hex_rgb("6B7280"))
+        hr.font.italic = True
+        ftr = sec.footer
+        fp = ftr.paragraphs[0]
+        fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        fr = fp.add_run("Page ")
+        fr.font.size = Pt(7); fr.font.name = "Calibri"; fr.font.color.rgb = RGBColor(*hex_rgb("6B7280"))
+        fld = OxmlElement("w:fldChar"); fld.set(qn("w:fldCharType"), "begin")
+        fp.runs[-1]._r.append(fld)
+        instrText = OxmlElement("w:instrText"); instrText.text = "PAGE"
+        run2 = OxmlElement("w:r"); run2.append(instrText)
+        fp._p.append(run2)
+        fld2 = OxmlElement("w:fldChar"); fld2.set(qn("w:fldCharType"), "end")
+        run3 = OxmlElement("w:r"); run3.append(fld2)
+        fp._p.append(run3)
+        fr2 = fp.add_run("  |  Nascent Info Technologies Pvt. Ltd.  |  For Internal Use Only")
+        fr2.font.size = Pt(7); fr2.font.name = "Calibri"; fr2.font.color.rgb = RGBColor(*hex_rgb("6B7280")); fr2.font.italic = True
 
     def _sec_heading(self, number, title, source_note=None):
         p = self.doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(10)
-        p.paragraph_format.space_after = Pt(2)
-        r = p.add_run(" " + number + ". " + title + " ")
+        p.paragraph_format.space_before = Pt(14)
+        p.paragraph_format.space_after = Pt(0)
+        rn = p.add_run("  " + number + "  ")
+        rn.font.name = "Calibri"
+        rn.font.size = Pt(11)
+        rn.font.bold = True
+        rn.font.color.rgb = RGBColor(*hex_rgb("C9A800"))
+        r = p.add_run("  " + title.upper() + "  ")
         r.font.name = "Calibri"
         r.font.size = Pt(12)
         r.font.bold = True
@@ -232,11 +248,20 @@ class BidDocGenerator:
         shd.set(qn("w:fill"), C["dark_blue"])
         shd.set(qn("w:val"), "clear")
         pPr.append(shd)
+        p_line = self.doc.add_paragraph()
+        p_line.paragraph_format.space_before = Pt(0)
+        p_line.paragraph_format.space_after = Pt(4)
+        pPr2 = p_line._p.get_or_add_pPr()
+        pBdr = OxmlElement("w:pBdr")
+        bot = OxmlElement("w:bottom")
+        bot.set(qn("w:val"), "single"); bot.set(qn("w:sz"), "6")
+        bot.set(qn("w:color"), "C9A800")
+        pBdr.append(bot); pPr2.append(pBdr)
         if source_note:
             p2 = self.doc.add_paragraph()
             p2.paragraph_format.space_before = Pt(0)
             p2.paragraph_format.space_after = Pt(4)
-            add_run(p2, source_note, size=8, italic=True, color=C["mid_blue"])
+            add_run(p2, source_note, size=8, italic=True, color=C["navy_mid"])
 
     def _header_block(self, data):
         table = self.doc.add_table(rows=1, cols=2)
@@ -260,34 +285,39 @@ class BidDocGenerator:
 
         c1 = table.rows[0].cells[1]
         c1.width = Cm(15.5)
-        set_bg(c1, C["mid_blue"])
+        set_bg(c1, C["navy_mid"])
         set_borders(c1, color="FFFFFF", size=6)
         p = c1.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.space_before = Pt(6)
-        add_run(p, "BID / NO-BID FORM", bold=True, size=16, color="FFFFFF")
+        p.paragraph_format.space_before = Pt(4)
+        add_run(p, "BID / NO-BID ANALYSIS REPORT", bold=True, size=18, color="FFFFFF")
 
-        tender_title = strip_emojis(field_value(data.get("tender_name", data.get("org_name", ""))))[:80]
+        tender_title = strip_emojis(field_value(data.get("tender_name", data.get("org_name", ""))))[:100]
         p2 = c1.add_paragraph()
         p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        add_run(p2, tender_title, bold=False, size=10, color="DEEAF1")
+        p2.paragraph_format.space_before = Pt(2)
+        add_run(p2, tender_title, bold=False, size=9, color="C8DDEF")
 
         verdict_data = data.get("overall_verdict", {})
         verdict = strip_emojis(verdict_data.get("verdict", "PENDING REVIEW"))
-
         vcolor = verdict_data.get("color") or data.get("verdict_color", "BLUE")
+        v_bg  = {"GREEN": "1E5631", "AMBER": "7A5800", "RED": "9B1C1C", "BLUE": "1A5276"}.get(vcolor, "1A5276")
+        v_txt = {"GREEN": "E6F4EA", "AMBER": "FFF8E1", "RED": "FDECE8", "BLUE": "EBF4FB"}.get(vcolor, "EBF4FB")
 
-        v_txt = {"GREEN": "FFF2CC", "AMBER": "FFF2CC", "RED": "FCE4D6", "BLUE": "DEEAF1"}.get(vcolor, "DEEAF1")
         p3 = c1.add_paragraph()
         p3.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p3.paragraph_format.space_after = Pt(6)
-        add_run(p3, verdict, bold=True, size=12, color=v_txt)
+        p3.paragraph_format.space_before = Pt(6)
+        p3.paragraph_format.space_after = Pt(2)
+        pPr3 = p3._p.get_or_add_pPr()
+        shd3 = OxmlElement("w:shd"); shd3.set(qn("w:fill"), v_bg); shd3.set(qn("w:val"), "clear")
+        pPr3.append(shd3)
+        add_run(p3, "  " + verdict + "  ", bold=True, size=15, color=v_txt)
 
         p4 = c1.add_paragraph()
         p4.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p4.paragraph_format.space_after = Pt(4)
-        add_run(p4, "Prepared: " + datetime.now().strftime("%d-%b-%Y") + " | Nascent Bid Team",
-                size=8, color="DEEAF1")
+        add_run(p4, "Prepared: " + datetime.now().strftime("%d-%b-%Y") + "  |  Nascent Bid Team",
+                size=8, color="C8DDEF")
 
         self.doc.add_paragraph()
 
@@ -385,7 +415,6 @@ class BidDocGenerator:
             c = row.cells[1]
             set_bg(c, bg)
             set_borders(c)
-            # Show clause ref + page no together
             ref = item.get("clause_ref", "—")
             page = item.get("page_no", "")
             ref_text = f"{ref}\n{page}" if page and page != "—" else ref
@@ -411,7 +440,6 @@ class BidDocGenerator:
             set_bg(c, C[s_bg] if sc != "BLUE" else bg)
             set_borders(c)
             remark = strip_emojis(item.get("nascent_remark", ""))
-            # Add calculation if present
             calc = item.get("calculation_shown", "")
             if calc and calc != "—":
                 remark = remark + ("\n" if remark else "") + f"Calc: {calc}"
@@ -431,7 +459,6 @@ class BidDocGenerator:
         col_w = [Cm(0.9), Cm(2.3), Cm(8.5), Cm(5.0), Cm(2.0), Cm(6.8)]
         self._criteria_table(data.get("pq_criteria", []), headers, col_w)
 
-        # TQ criteria if present
         tq = data.get("tq_criteria", [])
         if tq:
             self._sec_heading("2B", "Technical Qualification (TQ) Criteria",
@@ -444,7 +471,6 @@ class BidDocGenerator:
                 "Score",
                 "Remarks / Calculation",
             ]
-            # Reuse criteria table but map tq fields
             mapped = []
             for item in tq:
                 if not isinstance(item, dict):
@@ -472,14 +498,10 @@ class BidDocGenerator:
         self._sec_heading("3", "Scope of Work",
                           "Source: Tender document — key deliverables and phases")
 
-        # Try scope_sections (AI v7 format) first, fallback to scope_items
         scope_sections = data.get("scope_sections", [])
         scope_items = data.get("scope_items", [])
-
-        # Use scope_sections if present, else scope_items
         items_to_render = scope_sections if scope_sections else scope_items
 
-        # Background if present
         bg = data.get("scope_background", "")
         if bg and isinstance(bg, str) and len(bg) > 10:
             p = self.doc.add_paragraph()
@@ -493,7 +515,7 @@ class BidDocGenerator:
             return
 
         for item in items_to_render:
-            text = scope_item_text(item)  # FIXED: handles both dict and str
+            text = scope_item_text(item)
             if not text:
                 continue
             p = self.doc.add_paragraph()
@@ -502,7 +524,6 @@ class BidDocGenerator:
             add_run(p, "• ", size=9)
             add_run(p, text, size=9)
 
-        # Key integrations if present
         integrations = data.get("key_integrations", [])
         if integrations:
             p = self.doc.add_paragraph()
@@ -522,12 +543,10 @@ class BidDocGenerator:
         self._sec_heading("4", "Payment Terms & Timeline",
                           "Note: Detailed payment schedule from tender document.")
 
-        # Try structured payment_schedule first
         sched = data.get("payment_schedule", [])
         items = data.get("payment_terms", [])
 
         if sched:
-            # Render as table
             table = self.doc.add_table(rows=1, cols=5)
             table.alignment = WD_TABLE_ALIGNMENT.CENTER
             set_table_borders(table, color=C["mid_blue"])
@@ -575,7 +594,6 @@ class BidDocGenerator:
                 add_run(p, "• ", size=9)
                 add_run(p, strip_emojis(str(item)), size=9)
 
-        # Penalty clauses if present
         penalties = data.get("penalty_clauses", [])
         if penalties:
             p = self.doc.add_paragraph()
@@ -628,7 +646,17 @@ class BidDocGenerator:
         verdict = strip_emojis(verdict_data.get("verdict", "PENDING REVIEW"))
         reason  = strip_emojis(verdict_data.get("reason", ""))
 
-        # Read company facts from profile
+        v_fill = {"GREEN":"1E5631","AMBER":"7A5800","RED":"9B1C1C","BLUE":"1A5276"}.get(vcolor,"1A5276")
+        v_fc   = {"GREEN":"E6F4EA","AMBER":"FFF8E1","RED":"FDECE8","BLUE":"EBF4FB"}.get(vcolor,"EBF4FB")
+        pv = self.doc.add_paragraph()
+        pv.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        pv.paragraph_format.space_before = Pt(8)
+        pv.paragraph_format.space_after  = Pt(4)
+        pPrv = pv._p.get_or_add_pPr()
+        shdv = OxmlElement("w:shd"); shdv.set(qn("w:fill"), v_fill); shdv.set(qn("w:val"), "clear")
+        pPrv.append(shdv)
+        add_run(pv, "   " + verdict + "   ", bold=True, size=22, color=v_fc)
+
         try:
             from nascent_checker import load_profile
             p = load_profile()
@@ -644,7 +672,6 @@ class BidDocGenerator:
             emp_str = "67 employees — 11 GIS, 21 IT/Dev, plus QA, PM, BA teams."
             cmmi_str = "CMMI V2.0 Level 3 — valid till 19-Dec-2026."
 
-        # Project matches
         proj_matches = data.get("project_matches", [])
         proj_str = ""
         if proj_matches:
@@ -653,7 +680,6 @@ class BidDocGenerator:
                 for pm in proj_matches[:3] if isinstance(pm, dict)
             ])
 
-        # Key strengths / risks
         strengths = data.get("key_strengths", [])
         strengths_str = " | ".join([strip_emojis(str(s))[:80] for s in strengths[:3]]) if strengths else ""
 
@@ -695,7 +721,6 @@ class BidDocGenerator:
                        size=11 if is_final else 9,
                        color=(C[s_tc] if is_final else None))
 
-        # Action items from assessment
         action_items = data.get("action_items", [])
         if action_items:
             self.doc.add_paragraph()
@@ -736,91 +761,3 @@ class BidDocGenerator:
                     "color":  C["red_text"] if sc == "RED" else C["amber_text"],
                     "bg":     "red_bg"   if sc == "RED" else "amber_bg",
                 })
-
-        for note in data.get("notes", []):
-            if isinstance(note, dict):
-                note_text = strip_emojis(str(note.get("detail", note.get("title", str(note)))))
-                priority = note.get("priority", "INFO")
-            else:
-                note_text = strip_emojis(str(note))
-                priority = "AWARENESS"
-            is_risk = any(k in note_text.lower() for k in ["penalty", "blacklist", "disqualif", "liquidated", "poa", "power of attorney"])
-            action_items.append({
-                "priority": "RISK" if is_risk else priority,
-                "text":     note_text[:200],
-                "detail":   "",
-                "color":    C["red_text"] if is_risk else C["dark_blue"],
-                "bg":       "red_bg"  if is_risk else "blue_bg",
-            })
-
-        if not action_items:
-            action_items.append({
-                "priority": "NOTE",
-                "text": "No specific risk flags detected. Please review the tender document manually before bidding.",
-                "detail": "",
-                "color": C["dark_blue"],
-                "bg": "blue_bg",
-            })
-
-        table = self.doc.add_table(rows=0, cols=1)
-        table.alignment = WD_TABLE_ALIGNMENT.CENTER
-        set_table_borders(table, color=C["mid_blue"])
-
-        for i, item in enumerate(action_items[:15]):
-            row = table.add_row()
-            cell = row.cells[0]
-            set_bg(cell, C[item["bg"]])
-            set_borders(cell, color="9DC3E6")
-            p = cell.paragraphs[0]
-            p.paragraph_format.space_before = Pt(4)
-            p.paragraph_format.space_after = Pt(2)
-            p.paragraph_format.left_indent = Pt(6)
-            label = str(i + 1) + ". " + item["priority"] + " — "
-            add_run(p, label, bold=True, size=9, color=item["color"])
-            add_run(p, item["text"], bold=False, size=9)
-            if item.get("detail"):
-                p2 = cell.add_paragraph()
-                p2.paragraph_format.left_indent = Pt(20)
-                p2.paragraph_format.space_after = Pt(4)
-                add_run(p2, item["detail"], size=8, italic=True)
-
-        self.doc.add_paragraph()
-
-    def _section_authorization(self):
-        self._sec_heading("7", "Authorization")
-        table = self.doc.add_table(rows=2, cols=3)
-        table.alignment = WD_TABLE_ALIGNMENT.CENTER
-        set_table_borders(table, color=C["mid_blue"])
-        for cell, hdr in zip(table.rows[0].cells, ["Prepared By", "Reviewed By", "Approved By"]):
-            set_bg(cell, C["dark_blue"])
-            set_borders(cell, color="FFFFFF")
-            cell_write(cell, hdr, bold=True, size=10, color="FFFFFF",
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
-        names = ["Parthav Thakkar\nBid Executive\nNascent Info Technologies Pvt. Ltd.", "—", "—"]
-        for cell, name in zip(table.rows[1].cells, names):
-            set_bg(cell, C["alt_row"])
-            set_borders(cell)
-            cell_write(cell, name, size=9, align=WD_ALIGN_PARAGRAPH.CENTER)
-        row3 = table.add_row()
-        for cell in row3.cells:
-            set_bg(cell, C["white"])
-            set_borders(cell)
-            cell_write(cell, "Date: _______________", size=9, color=C["gray"],
-                       align=WD_ALIGN_PARAGRAPH.CENTER)
-        self.doc.add_paragraph()
-
-    def _footer(self, data):
-        footer = self.doc.sections[0].footer
-        fp = footer.paragraphs[0]
-        fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = fp.add_run(
-                "CONFIDENTIAL — Bid/No-Bid Form | " +
-            field_value(data.get("tender_no", "—")) + " | " +
-            "Nascent Info Technologies Pvt. Ltd. | " +
-            datetime.now().strftime("%d %b %Y") +
-            " | For Internal Use Only"
-        )
-        r.font.size = Pt(7)
-        r.font.name = "Calibri"
-        r.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
-        r.font.italic = True
