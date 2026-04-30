@@ -5,10 +5,6 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python preflight_check.py && uvicorn main:app --host 0.0.0.0 --port $PORT
-    startCommand: python preflight_check.py && uvicorn main:app --host 0.0.0.0 --port $PORT
-    startCommand: python preflight_check.py && uvicorn main:app --host 0.0.0.0 --port $PORT
-    startCommand: python preflight_check.py && uvicorn main:app --host 0.0.0.0 --port $PORT
-    startCommand: python preflight_check.py && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
