@@ -2005,15 +2005,6 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: boo
             tender_data["ai_warning"] = ""
             tender_data["analysis_mode"] = "no_ai"
             tender_data["analysis_note"] = "No-AI mode: generated using document extraction and rules."
-            basic = _extract_basic_no_ai(all_text)
-            if not tender_data.get("pq_criteria"):
-                tender_data["pq_criteria"] = basic.get("pq_criteria", [])
-            if not tender_data.get("tq_criteria"):
-                tender_data["tq_criteria"] = basic.get("tq_criteria", [])
-            if not tender_data.get("scope_items"):
-                tender_data["scope_items"] = basic.get("scope_items", [])
-            if not tender_data.get("payment_terms"):
-                tender_data["payment_terms"] = basic.get("payment_terms", [])
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
