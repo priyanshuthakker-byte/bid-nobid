@@ -2235,7 +2235,7 @@ function showAnalysisResult(d) {
     aiWarnEl.innerHTML = '⚠ ' + aiWarn + (aiWarn.includes('key') || aiWarn.includes('quota') ?
       ' &nbsp;<a href="#" onclick="showSection(\'settings\');return false" style="color:#60a5fa;text-decoration:underline">→ Go to Settings</a>' : '');
   } else { aiWarnEl.style.display = 'none'; }
-  document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);
+   document.getElementById('dl-btn').onclick = () => downloadReport(lastAnalysisFilename););
 
   // ── KPI Row ──
   var kpis = [
