@@ -1971,8 +1971,12 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: boo
                     warn = f"AI error: {err_msg[:200]}"
                 tender_data["ai_warning"] = warn
                 _set_job(job_id, progress=f"AI unavailable: {err_msg[:80]}")
-        elif not api_key:
+        elif not api_key and not no_ai:
             tender_data["ai_warning"] = "Gemini API key not configured. Go to Settings → add key from aistudio.google.com (free)."
+        elif no_ai:
+            tender_data["ai_warning"] = ""
+            tender_data["analysis_mode"] = "no_ai"
+            tender_data["analysis_note"] = "No-AI mode: generated using document extraction and rules."
 
         raw_text_preview = all_text[:20000]
         del all_text  # free corpus memory before eligibility check
