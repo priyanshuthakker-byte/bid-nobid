@@ -145,9 +145,14 @@ def _set_job(job_id: str, **kwargs):
         for merge_key in ("segments", "seg_log"):
             if merge_key in kwargs:
                 existing[merge_key] = {**existing.get(merge_key, {}), **kwargs.pop(merge_key)}
-        existing.update(kwargs)
-        # Don't persist huge base64 doc inline — store separately
+          existing.update(kwargs)
+        # Strip doc_b64 from wherever it lives — top-level OR inside result dict
         doc_b64 = existing.pop("doc_b64", None)
+        result_dict = existing.get("result")
+        if isinstance(result_dict, dict) and not doc_b64:
+            doc_b64 = result_dict.pop("doc_b64", None)
+        elif isinstance(result_dict, dict):
+            result_dict.pop("doc_b64", None)
         try:
             jf.write_text(json.dumps(existing))
         except Exception:
@@ -4063,13 +4068,34 @@ async def tender_doc_save(t247_id: str, body: dict = Body(...)):
 
 @app.get("/tender/{t247_id}/analysis-doc-download")
 async def tender_doc_download_local(t247_id: str):
-    """Explicit local-download button endpoint — streams docx with correct filename."""
-    docx_path = _locate_tender_docx(t247_id)
-    return FileResponse(
-        path=str(docx_path),
-        filename=docx_path.name,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+    """Download analysis report — regenerates from saved tender data if file not on disk."""
+    try:
+        docx_path = _locate_tender_docx(t247_id)
+        return FileResponse(
+            path=str(docx_path),
+            filename=docx_path.name,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except HTTPException:
+        pass
+    tender = get_tender(t247_id)
+    if not tender:
+        raise HTTPException(404, "Tender not found — run Analyse first.")
+    if not tender.get("bid_no_bid_done"):
+        raise HTTPException(404, "No analysis found for this tender — run Analyse first.")
+    try:
+        generator = BidDocGenerator()
+        safe_no = re.sub(r'[^\w\-]', '_', tender.get("tender_no", t247_id))[:50]
+        fname = f"BidNoBid_{safe_no}.docx"
+        out_path = str(OUTPUT_DIR / fname)
+        generator.generate(tender, out_path)
+        return FileResponse(
+            path=out_path,
+            filename=fname,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Report regeneration failed: {str(e)[:200]}")
 
 
 @app.get("/tender/{t247_id}/doc-versions")
