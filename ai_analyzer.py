@@ -620,6 +620,19 @@ def merge_results(regex_data: Dict, ai_data: Dict,
 # PUBLIC ENTRY POINT
 # ─────────────────────────────────────────
 
+def _rule_fallback(full_text: str, prebid_passed: bool, reason: str) -> Dict[str, Any]:
+    """Run rule-based analyzer when no API keys available — zero API cost."""
+    try:
+        from rule_analyzer import analyze_with_rules
+        result = analyze_with_rules(full_text, prebid_passed)
+        result["_fallback_reason"] = reason
+        logger.info(f"Rule-based fallback used: {reason}")
+        return result
+    except Exception as e:
+        logger.error(f"Rule-based fallback failed: {e}")
+        return {"error": f"No API keys available and rule-based fallback failed: {e}"}
+
+
 def analyze_with_gemini(full_text: str,
                          prebid_passed: bool = False,
                          progress_cb=None) -> Dict[str, Any]:
@@ -627,7 +640,7 @@ def analyze_with_gemini(full_text: str,
 
     all_keys = get_all_api_keys()
     if not all_keys:
-        return {"error": "No Gemini API key configured. Go to Settings to add it."}
+        return _rule_fallback(full_text, prebid_passed, "No API key configured — using rule-based analysis")
 
     text_chunk = smart_chunk(full_text)
     prompt = build_prompt(text_chunk, prebid_passed)
@@ -715,11 +728,8 @@ def analyze_with_gemini(full_text: str,
         except Exception as e:
             logger.error(f"Groq fallback failed: {e}")
 
-    return {
-        "error": (
-            "All API keys failed (rate-limited, model unavailable, or invalid). "
-            "Options: (1) Add a new Gemini key at aistudio.google.com, "
-            "(2) Add free Groq key at console.groq.com — 14,400 requests/day, "
-            "or (3) wait and retry later if rate limits reset."
-        )
-    }
+    # All AI keys exhausted — fall back to rule-based (zero API calls)
+    return _rule_fallback(
+        full_text, prebid_passed,
+        "All Gemini + Groq keys exhausted — using rule-based analysis"
+    )
