@@ -690,6 +690,7 @@ select option{background:var(--bg2)}
       <div id="an-filelist" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="analyseTender()">🔍 Analyse with AI</button>
+        <button class="btn btn-ghost" onclick="analyseTenderNoAI()">📌 Bid/No-Bid (No AI)</button>
         <button class="btn btn-ghost" onclick="reanalyseDrive()">♻ Re-analyse from Drive</button>
       </div>
     </div>
@@ -2003,6 +2004,35 @@ async function analyseTender() {
   } catch(e) {
     document.getElementById('an-progress').style.display = 'none';
     toast('Analysis failed: ' + e.message, 'error');
+  }
+}
+
+async function analyseTenderNoAI() {
+  var files = document.getElementById('an-files').files;
+  if (!files.length) { toast('Please select files to analyse', 'error'); return; }
+  var tid = document.getElementById('an-tid').value.trim();
+
+  showProgress();
+  setStep(0);
+
+  var fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  if (tid) fd.append('t247_id', tid);
+  fd.append('no_ai', 'true');
+
+  try {
+    var r = await fetch('/process-files', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    var d = await r.json();
+    if (d.job_id) {
+      await pollAnalysis(d.job_id);
+      return;
+    }
+    document.getElementById('an-progress').style.display = 'none';
+    showAnalysisResult(d);
+  } catch (e) {
+    document.getElementById('an-progress').style.display = 'none';
+    toast('No-AI analysis failed: ' + e.message, 'error');
   }
 }
 
