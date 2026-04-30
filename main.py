@@ -145,7 +145,7 @@ def _set_job(job_id: str, **kwargs):
         for merge_key in ("segments", "seg_log"):
             if merge_key in kwargs:
                 existing[merge_key] = {**existing.get(merge_key, {}), **kwargs.pop(merge_key)}
-              existing.update(kwargs)
+        existing.update(kwargs)
         doc_b64 = existing.pop("doc_b64", None)
         result_dict = existing.get("result")
         if isinstance(result_dict, dict) and not doc_b64:
