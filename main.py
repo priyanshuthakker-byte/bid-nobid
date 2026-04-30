@@ -196,6 +196,73 @@ def _extract_basic_no_ai(all_text: str) -> dict:
                 break
         return out
 
+    def _extract_scope_headers():
+        out, in_scope = [], False
+        stop_words = ["payment terms", "eligibility", "technical criteria", "general conditions", "commercial bid"]
+        for ln in lines:
+            ll = ln.lower()
+            if "scope of work" in ll or "scope" == ll.strip(":.- "):
+                in_scope = True
+                continue
+            if in_scope and any(sw in ll for sw in stop_words):
+                break
+            if in_scope and 3 <= len(ln) <= 160:
+                if re.match(r"^(\d+(\.\d+)*|[ivx]+\.|[a-z]\)|[-•])\s+", ln, re.I) or ln.isupper():
+                    out.append(ln)
+            if len(out) >= 20:
+                break
+        return out
+
+    def _parse_mark(ln: str) -> int:
+        m = re.search(r"(\d{1,3})(?:\s*/\s*\d{1,3}|\s*marks?)", ln, re.I)
+        if not m:
+            return 0
+        try:
+            return int(m.group(1))
+        except Exception:
+            return 0
+
+    pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=20)
+    tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=20)
+    scope_lines = _extract_scope_headers() or _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=12)
+    pay_lines = _pick([["payment", "milestone", "invoice", "terms", "schedule"]], limit=10)
+
+    return {
+        "pq_criteria": [
+            {"criterion": x, "clause": x, "documents_required": "Refer tender", "status": "REVIEW", "nascent_remark": "No-AI extract"}
+            for x in pq_lines
+        ],
+        "tq_criteria": [
+            {
+                "criterion": x,
+                "clause": x,
+                "max_marks": _parse_mark(x),
+                "nascent_marks": 0,
+                "status": "REVIEW",
+                "nascent_remark": "No-AI extract",
+            }
+            for x in tq_lines
+        ],
+        "scope_items": scope_lines,
+        "payment_terms": pay_lines,
+    }
+
+
+def _extract_basic_no_ai(all_text: str) -> dict:
+    """Lightweight, rules-only extraction for no-AI mode."""
+    lines = [ln.strip() for ln in (all_text or "").splitlines() if ln.strip()]
+
+    def _pick(keyword_groups, limit=8):
+        out = []
+        for ln in lines:
+            ll = ln.lower()
+            if any(any(k in ll for k in group) for group in keyword_groups):
+                if 20 <= len(ln) <= 500:
+                    out.append(ln)
+            if len(out) >= limit:
+                break
+        return out
+
     pq_lines = _pick([["turnover", "experience", "eligibility", "emd", "solvency", "iso", "gst", "pan", "bidder"]], limit=12)
     tq_lines = _pick([["technical", "methodology", "team", "qualification", "marks", "scoring", "evaluation"]], limit=12)
     scope_lines = _pick([["scope", "work", "supply", "implementation", "deliverable", "services"]], limit=10)
