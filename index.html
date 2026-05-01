@@ -1412,7 +1412,6 @@ select option{background:var(--bg2)}
     <div class="row">
       <div class="card">
         <div class="card-title">Gemini AI Keys</div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Get free keys at aistudio.google.com — add up to 4 for rotation</p>
         <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Get free keys at aistudio.google.com — add up to 6 for rotation</p>
         <label>Primary Key</label><input type="password" id="key1" placeholder="AIza...">
         <label>Backup Key 2</label><input type="password" id="key2" placeholder="AIza...">
@@ -4689,35 +4688,76 @@ function removeProject(i) {
 async function saveProfile() {
   var lines = id => { var el = document.getElementById(id); return el ? el.value.split('\n').map(s=>s.trim()).filter(Boolean) : []; };
   var gv = id => { var el = document.getElementById(id); return el ? el.value : ''; };
+  var gchk = id => { var el = document.getElementById(id); return el ? el.checked : false; };
+  var gnum = id => { var el = document.getElementById(id); return el && el.value ? (parseFloat(el.value) || 0) : null; };
+  var gint = id => { var el = document.getElementById(id); return el && el.value ? (parseInt(el.value) || 0) : null; };
 
   _profileData.company = Object.assign(_profileData.company || {}, {
-    name: gv('prof-name'), short_name: gv('prof-short'), cin: gv('prof-cin'),
-    pan: gv('prof-pan'), gstin: gv('prof-gst'), msme_udyam: gv('prof-udyam'), udyam: gv('prof-udyam'),
-    msme_type: gv('prof-msme-type'), incorporated: gv('prof-incorporated'),
-    type: gv('prof-type'), gem_seller_id: gv('prof-gem-id'), address: gv('prof-address'),
+    name: gv('prof-name'), short_name: gv('prof-short'), alias: gv('prof-short'),
+    legal_status: gv('prof-legal-status'), year_of_incorporation: gv('prof-incorporated'), incorporated: gv('prof-incorporated'),
+    cin: gv('prof-cin'), pan: gv('prof-pan'), gstin: gv('prof-gst'),
+    msme_udyam: gv('prof-udyam'), udyam: gv('prof-udyam'), msme_type: gv('prof-msme-type'),
+    gem_seller_id: gv('prof-gem-id'), gem_id: gv('prof-gem-id'),
+    type: gv('prof-type'), years_in_operation: gv('prof-years-op'), years_op: gv('prof-years-op'),
+    address: gv('prof-address'), city: gv('prof-city'), state: gv('prof-state'), pin: gv('prof-pin'), pincode: gv('prof-pin'),
     phone: gv('prof-phone'), email: gv('prof-email'),
     tender_email: gv('prof-tender-email'), website: gv('prof-website'),
+    poa_validity: gv('prof-as-poa'),
   });
+  // Save MD as both top-level object AND company.md string for backward compat
+  var mdName = gv('prof-md-name');
   _profileData.managing_director = Object.assign(_profileData.managing_director || {}, {
-    name: gv('prof-md-name'), din: gv('prof-md-din'), mobile: gv('prof-md-mobile'),
+    name: mdName, din: gv('prof-md-din'), mobile: gv('prof-md-mobile'),
+    email: gv('prof-md-email'), linkedin: gv('prof-md-linkedin'),
   });
+  _profileData.company.md = mdName; // string format in original JSON
+  // Save AS as both top-level AND company.authorised_signatory
+  var asName = gv('prof-as-name'), asDesg = gv('prof-as-desg');
   _profileData.authorised_signatory = Object.assign(_profileData.authorised_signatory || {}, {
-    name: gv('prof-as-name'), designation: gv('prof-as-desg'),
+    name: asName, designation: asDesg,
     email: gv('prof-as-email'), mobile: gv('prof-as-mobile'), poa_validity: gv('prof-as-poa'),
   });
-  if (!_profileData.finance) _profileData.finance = {};
-  _profileData.finance.net_worth_cr = parseFloat(gv('prof-networth')) || 0;
-  _profileData.finance.net_worth_latest_cr = parseFloat(gv('prof-networth')) || 0;
-  _profileData.finance.ca_name = gv('prof-ca-name');
-  _profileData.finance['ca_udin_2024_25'] = gv('prof-ca-udin');
-  if (!_profileData.employees) _profileData.employees = {};
-  _profileData.employees.total = parseInt(gv('prof-emp-total')) || 0;
-  _profileData.employees.total_confirmed = parseInt(gv('prof-emp-total')) || 0;
-  _profileData.employees.gis_staff = parseInt(gv('prof-emp-gis')) || 0;
-  _profileData.employees.gis_specialists = parseInt(gv('prof-emp-gis')) || 0;
-  _profileData.employees.it_dev_staff = parseInt(gv('prof-emp-it')) || 0;
-  _profileData.employees.it_developers = parseInt(gv('prof-emp-it')) || 0;
-  _profileData.employees.epf_registered = gv('prof-emp-epf') === 'true';
+  _profileData.company.authorised_signatory = asName + (asDesg ? ', ' + asDesg : '');
+
+  // Finance — preserve turnover_by_year (updated inline)
+  var prevFin = _profileData.finance || {};
+  _profileData.finance = Object.assign(prevFin, {
+    net_worth_cr: gnum('prof-networth') || prevFin.net_worth_cr,
+    net_worth_latest_cr: gnum('prof-networth') || prevFin.net_worth_cr,
+    solvency_amount_cr: gnum('prof-solvency'),
+    ca_name: gv('prof-ca-name'),
+    ca_udin_2024_25: gv('prof-ca-udin'),
+    avg_turnover_last_2_fy: gnum('prof-avg-2yr'),
+    avg_turnover_last_3_fy: gnum('prof-avg-3yr'),
+    avg_turnover_last_5_fy: gnum('prof-avg-5yr'),
+  });
+
+  // Employees
+  var prevEmp = _profileData.employees || {};
+  var empListed = gint('prof-emp-total');
+  var empConfirmed = gint('prof-emp-confirmed');
+  var empGis = gint('prof-emp-gis');
+  var empIt = gint('prof-emp-it');
+  _profileData.employees = Object.assign(prevEmp, {
+    total_listed: empListed, total: empListed,
+    total_confirmed: empConfirmed !== null ? empConfirmed : empListed,
+    gis_staff: empGis, gis_specialists: empGis,
+    it_dev_staff: empIt, it_developers: empIt,
+    epf_registered: gv('prof-emp-epf') === 'true',
+  });
+
+  // Certifications — save boolean checkboxes back
+  if (!_profileData.certifications) _profileData.certifications = {};
+  if (typeof _profileData.certifications === 'object' && !Array.isArray(_profileData.certifications)) {
+    _profileData.certifications.gstin_active = gchk('cert-gstin');
+    _profileData.certifications.msme_udyam = gchk('cert-msme-udyam');
+    _profileData.certifications.cert_in = gchk('cert-cert-in');
+    _profileData.certifications.stqc = gchk('cert-stqc');
+    _profileData.certifications.sap_partner = gchk('cert-sap');
+    _profileData.certifications.oracle_partner = gchk('cert-oracle');
+    _profileData.certifications.esri_partner = gchk('cert-esri');
+  }
+
   _profileData.bid_rules = {
     min_project_value_cr: parseFloat(gv('prof-min')) || 0.25,
     max_project_value_cr: parseFloat(gv('prof-max')) || 100,
@@ -4726,13 +4766,9 @@ async function saveProfile() {
     conditional: lines('prof-cond'),
   };
   _profileData.bank = {
-    name: document.getElementById('prof-bank-name').value,
-    branch: document.getElementById('prof-bank-branch').value,
-    acc: document.getElementById('prof-bank-acc').value,
-    ifsc: document.getElementById('prof-bank-ifsc').value,
-    type: document.getElementById('prof-bank-type').value,
-    micr: document.getElementById('prof-bank-micr').value,
-    addr: document.getElementById('prof-bank-addr').value
+    name: gv('prof-bank-name'), branch: gv('prof-bank-branch'),
+    acc: gv('prof-bank-acc'), ifsc: gv('prof-bank-ifsc'),
+    type: gv('prof-bank-type'), micr: gv('prof-bank-micr'), addr: gv('prof-bank-addr'),
   };
   _profileData.empanelments = collectEmpanelments();
   _profileData.awards = collectAwards();
@@ -4740,7 +4776,8 @@ async function saveProfile() {
     var r = await fetch('/profile', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_profileData) });
     if (r.ok) {
       toast('✅ Profile saved', 'success');
-      document.getElementById('profile-status').textContent = 'Saved ' + new Date().toLocaleTimeString();
+      var ps = document.getElementById('profile-status');
+      if (ps) ps.textContent = 'Saved ' + new Date().toLocaleTimeString();
       _profileKeywords = null; refreshProfileKeywords();
     } else { var er = await r.json().catch(()=>{}); toast('Save failed: ' + (er && er.detail || r.status), 'error'); }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
