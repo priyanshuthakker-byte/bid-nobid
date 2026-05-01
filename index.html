@@ -2265,7 +2265,7 @@ function renderDash() {
   list = _sortList(list);
 
   // Pagination
-  var pageSize = parseInt((document.getElementById('page-size-sel')||{}).value || 100);
+  var pageSize = parseInt((document.getElementById('page-size-sel')||{}).value || 25);
   var totalPages = Math.max(1, Math.ceil(list.length / pageSize));
   _currentPage = Math.min(_currentPage, totalPages - 1);
   var pgLabel = document.getElementById('pg-label');
