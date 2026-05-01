@@ -463,8 +463,15 @@ select option{background:var(--bg2)}
   <button class="nav-btn" onclick="showPage('skipped')"><span class="nav-icon">🚫</span>Skipped</button>
   <button class="nav-btn" onclick="showPage('letterhead')"><span class="nav-icon">🏢</span>Letterhead</button>
 
+  <div class="nav-section">Trackers</div>
+  <button class="nav-btn" onclick="showPage('alerts')"><span class="nav-icon">🔔</span>Deadline Alerts</button>
+  <button class="nav-btn" onclick="showPage('emd')"><span class="nav-icon">💰</span>EMD Tracker</button>
+  <button class="nav-btn" onclick="showPage('winloss')"><span class="nav-icon">📊</span>Win / Loss</button>
+  <button class="nav-btn" onclick="showPage('vault')"><span class="nav-icon">🗄</span>Vault</button>
+
   <div class="nav-section">System</div>
   <button class="nav-btn" onclick="showPage('profile')"><span class="nav-icon">🏢</span>Company Profile</button>
+  <button class="nav-btn" onclick="showPage('diagnose')"><span class="nav-icon">🩺</span>Self-Diagnose</button>
   <button class="nav-btn" onclick="showPage('settings')"><span class="nav-icon">⚙</span>Settings</button>
 
   <div id="nav-footer">
@@ -1451,6 +1458,176 @@ select option{background:var(--bg2)}
         <span style="font-size:11px;color:var(--text3)">Used as header/footer on all generated documents</span>
       </div>
       <input type="file" id="lh-file" accept=".docx" style="display:none" onchange="uploadLetterhead(this)">
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DEADLINE ALERTS ═══ -->
+<div id="page-alerts" class="page">
+  <div class="topbar"><h1>Deadline Alerts</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadAlertsPage()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div id="alerts-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-ghost btn-sm alerts-flt active" onclick="alertsFilter('all',this)">All BID/Conditional</button>
+      <button class="btn btn-ghost btn-sm alerts-flt" onclick="alertsFilter('today',this)">Due Today</button>
+      <button class="btn btn-ghost btn-sm alerts-flt" onclick="alertsFilter('3days',this)">≤3 Days</button>
+      <button class="btn btn-ghost btn-sm alerts-flt" onclick="alertsFilter('7days',this)">≤7 Days</button>
+      <button class="btn btn-ghost btn-sm alerts-flt" onclick="alertsFilter('bid',this)">BID Only</button>
+      <button class="btn btn-ghost btn-sm alerts-flt" onclick="alertsFilter('conditional',this)">Conditional Only</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Tender</th><th>Org</th><th>Deadline</th><th>Days Left</th><th>Verdict</th><th>Stage</th><th>Action</th></tr></thead>
+        <tbody id="alerts-tbody"></tbody>
+      </table>
+    </div>
+    <div id="alerts-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">🔔</div><p>No BID/Conditional tenders with upcoming deadlines.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EMD TRACKER ═══ -->
+<div id="page-emd" class="page">
+  <div class="topbar"><h1>EMD Tracker</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadEMDPage()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div style="padding:10px 14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;margin-bottom:12px;font-size:11px;color:#fca5a5">
+      ⚠ <strong>POA EXPIRES 31-Mar-2026</strong> — Check renewal before signing any EMD instruments or bid documents.
+    </div>
+    <div id="emd-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-ghost btn-sm emd-flt active" onclick="emdFilter('all',this)">All BID Tenders</button>
+      <button class="btn btn-ghost btn-sm emd-flt" onclick="emdFilter('due',this)">≤7 Days</button>
+      <button class="btn btn-ghost btn-sm emd-flt" onclick="emdFilter('exempt',this)">MSME Exempt</button>
+      <button class="btn btn-ghost btn-sm emd-flt" onclick="emdFilter('required',this)">EMD Required</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Tender</th><th>Deadline</th><th>EMD Amount</th><th>MSME Exempt</th><th>Stage</th><th>Action</th></tr></thead>
+        <tbody id="emd-tbody"></tbody>
+      </table>
+    </div>
+    <div id="emd-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">💰</div><p>No BID/Conditional tenders with EMD data. Analyse tenders first.</p>
+    </div>
+    <div style="margin-top:16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:6px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">MSME EMD Rules</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.8">
+        • Nascent is MSME (UDYAM-GJ-01-0007420) — exempt from EMD under PPP-MSME Gazette SR.No.462/2012<br>
+        • Attach EMD Exemption Letter on company letterhead signed by authorised signatory with each bid<br>
+        • Where BG required: validity = Bid validity + 60 days · only scheduled bank · not cooperative<br>
+        • EMD refund follow-up: within 15 days of L1 announcement for non-L1 bidders
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ WIN / LOSS ═══ -->
+<div id="page-winloss" class="page">
+  <div class="topbar"><h1>Win / Loss Tracker</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadWinLoss()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div id="wl-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <div class="card-title">Results by Organization</div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Organization</th><th>Won</th><th>Lost</th><th>Submitted</th></tr></thead>
+          <tbody id="wl-org-tbody"><tr><td colspan="4" class="empty-state">No outcomes recorded yet.</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Record Outcome</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div><label style="font-size:11px;color:var(--text3)">T247 ID</label>
+            <input id="wl-t247-input" placeholder="Enter T247 ID" style="width:100%;margin-top:4px"></div>
+          <div><label style="font-size:11px;color:var(--text3)">Outcome</label>
+            <select id="wl-outcome-select" style="width:100%;margin-top:4px">
+              <option value="Won">Won</option>
+              <option value="Lost">Lost</option>
+              <option value="Submitted">Submitted — Awaiting Result</option>
+              <option value="Under Evaluation">Under Evaluation</option>
+            </select></div>
+          <div><label style="font-size:11px;color:var(--text3)">Contract Value (Rs. Cr) if Won</label>
+            <input id="wl-value-input" type="number" placeholder="0.00" style="width:100%;margin-top:4px"></div>
+          <div><label style="font-size:11px;color:var(--text3)">Notes (competitor, reason, etc.)</label>
+            <textarea id="wl-notes-input" rows="3" placeholder="Reason for win/loss, competitor info..." style="width:100%;margin-top:4px;resize:vertical"></textarea></div>
+          <button class="btn btn-primary" onclick="saveWinLossOutcome()">Save Outcome</button>
+          <div id="wl-save-status" style="font-size:12px;color:var(--text3)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">All Recorded Outcomes</div>
+      <div class="table-wrap">
+        <table><thead><tr><th>T247 ID</th><th>Tender</th><th>Outcome</th><th>Value (Cr)</th><th>Date</th><th>Notes</th></tr></thead>
+        <tbody id="wl-all-tbody"><tr><td colspan="6" class="empty-state">No outcomes recorded yet.</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VAULT ═══ -->
+<div id="page-vault" class="page">
+  <div class="topbar"><h1>Document Vault</h1>
+    <div class="topbar-actions">
+      <select id="vault-cat-select" style="padding:5px 8px;font-size:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px">
+        <option value="general">General</option>
+        <option value="certificate">Certificates</option>
+        <option value="financial">Financial</option>
+        <option value="legal">Legal</option>
+        <option value="technical">Technical</option>
+        <option value="experience">Experience</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('vault-upload-input').click()">+ Upload</button>
+      <input type="file" id="vault-upload-input" style="display:none" onchange="vaultUpload(this)" multiple>
+    </div>
+  </div>
+  <div class="page-body">
+    <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-bottom:12px;font-size:11px;color:var(--text3)">
+      Store company documents (certificates, financials, past work orders) here. These survive server restarts via Google Drive sync.
+    </div>
+    <div id="vault-stats" style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;color:var(--text3)"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-ghost btn-sm vault-flt active" onclick="vaultFilter('all',this)">All</button>
+      <button class="btn btn-ghost btn-sm vault-flt" onclick="vaultFilter('certificate',this)">Certificates</button>
+      <button class="btn btn-ghost btn-sm vault-flt" onclick="vaultFilter('financial',this)">Financial</button>
+      <button class="btn btn-ghost btn-sm vault-flt" onclick="vaultFilter('legal',this)">Legal</button>
+      <button class="btn btn-ghost btn-sm vault-flt" onclick="vaultFilter('technical',this)">Technical</button>
+      <button class="btn btn-ghost btn-sm vault-flt" onclick="vaultFilter('experience',this)">Experience</button>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>File Name</th><th>Category</th><th>Size</th><th>Uploaded</th><th>Action</th></tr></thead>
+      <tbody id="vault-tbody"><tr><td colspan="5" class="empty-state">Loading vault...</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELF-DIAGNOSE ═══ -->
+<div id="page-diagnose" class="page">
+  <div class="topbar"><h1>Self-Diagnose</h1>
+    <div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="runDiagnose()">▶ Run System Check</button></div>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">System Health Check</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:14px">Checks database, Google Drive, AI keys, BOQ engine, company profile. Shows what's working and what needs fixing.</p>
+      <div id="diagnose-results"><div class="empty-state"><div class="empty-icon">🩺</div>Click "Run System Check" to start.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">AI Error Diagnosis <span style="font-size:11px;font-weight:400;color:var(--text3)">(uses 1 API call)</span></div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Paste any error from Render logs — AI will diagnose root cause and tell you exactly what to fix.</p>
+      <textarea id="error-log-input" rows="7" placeholder="Paste Render error log or any error message here..." style="width:100%;resize:vertical"></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="aiDiagnose()">🤖 AI Diagnose</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('error-log-input').value=''">Clear</button>
+      </div>
+      <div id="ai-diagnose-result" style="margin-top:14px"></div>
     </div>
   </div>
 </div>
@@ -4701,6 +4878,401 @@ async function _pollDocsUploadJob(jobId, tenderId) {
     }
   }
 }
+
+// ════════════════════════════════════════════════
+// DEADLINE ALERTS
+// ════════════════════════════════════════════════
+var _alertsData = [];
+var _alertsFilter = 'all';
+
+async function loadAlertsPage() {
+  try {
+    var r = await fetch('/alerts');
+    var d = await r.json();
+    _alertsData = d.alerts || [];
+    renderAlertStats();
+    renderAlertsTable();
+  } catch(e) {
+    document.getElementById('alerts-tbody').innerHTML = '<tr><td colspan="8" style="color:#f87171;padding:12px">Failed to load: ' + e.message + '</td></tr>';
+  }
+}
+
+function renderAlertStats() {
+  var today = _alertsData.filter(function(a){ return parseInt(a.days_left||999) <= 0; }).length;
+  var d3 = _alertsData.filter(function(a){ var d=parseInt(a.days_left||999); return d>0&&d<=3; }).length;
+  var d7 = _alertsData.filter(function(a){ var d=parseInt(a.days_left||999); return d>0&&d<=7; }).length;
+  var bid = _alertsData.filter(function(a){ return (a.verdict||'').toUpperCase()==='BID'; }).length;
+  var el = document.getElementById('alerts-stats');
+  if (!el) return;
+  el.innerHTML = [
+    {n:_alertsData.length, l:'Total Alerts', c:'var(--blue)'},
+    {n:today, l:'Due Today', c:'#ef4444'},
+    {n:d3, l:'Due ≤3 Days', c:'#f97316'},
+    {n:bid, l:'BID Decisions', c:'#4ade80'},
+  ].map(function(s){
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">' +
+           '<div style="font-size:20px;font-weight:700;color:'+s.c+'">'+s.n+'</div>' +
+           '<div style="font-size:10px;color:var(--text3);margin-top:3px">'+s.l+'</div></div>';
+  }).join('');
+}
+
+function alertsFilter(f, btn) {
+  _alertsFilter = f;
+  document.querySelectorAll('.alerts-flt').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderAlertsTable();
+}
+
+function renderAlertsTable() {
+  var list = _alertsData.slice();
+  if (_alertsFilter === 'today') list = list.filter(function(a){ return parseInt(a.days_left||999) <= 0; });
+  else if (_alertsFilter === '3days') list = list.filter(function(a){ var d=parseInt(a.days_left||999); return d>=0&&d<=3; });
+  else if (_alertsFilter === '7days') list = list.filter(function(a){ var d=parseInt(a.days_left||999); return d>=0&&d<=7; });
+  else if (_alertsFilter === 'bid') list = list.filter(function(a){ return (a.verdict||'').toUpperCase()==='BID'; });
+  else if (_alertsFilter === 'conditional') list = list.filter(function(a){ return (a.verdict||'').toUpperCase()==='CONDITIONAL'; });
+
+  var tbody = document.getElementById('alerts-tbody');
+  var empty = document.getElementById('alerts-empty');
+  if (!list.length) {
+    if (tbody) tbody.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  if (tbody) tbody.innerHTML = list.map(function(a) {
+    var dl = parseInt(a.days_left || 999);
+    var dlColor = dl <= 0 ? '#ef4444' : dl <= 3 ? '#f97316' : dl <= 7 ? '#fbbf24' : '#9ca3af';
+    var dlStr = dl <= 0 ? 'TODAY / EXPIRED' : dl + 'd left';
+    var verdict = (a.verdict || '—').toUpperCase();
+    var vColor = verdict === 'BID' ? '#4ade80' : verdict === 'CONDITIONAL' ? '#fbbf24' : '#9ca3af';
+    return '<tr>' +
+      '<td style="font-family:monospace;font-size:11px">' + (a.t247_id || '—') + '</td>' +
+      '<td style="max-width:260px"><div style="font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (a.brief || a.tender_name || '—') + '</div></td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (a.org_name || '—') + '</td>' +
+      '<td style="font-size:11px">' + (a.deadline || '—') + '</td>' +
+      '<td><span style="font-weight:700;color:' + dlColor + ';font-size:12px">' + dlStr + '</span></td>' +
+      '<td><span style="font-size:10px;font-weight:700;color:' + vColor + '">' + verdict + '</span></td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + (a.status || '—') + '</td>' +
+      '<td><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="setActive(\'' + a.t247_id + '\',\'\');showPage(\'analyse\')">Analyse</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+// EMD TRACKER
+// ════════════════════════════════════════════════
+var _emdActiveFilter = 'all';
+
+function loadEMDPage() {
+  var tenders = (window.allTenders || []).filter(function(t) {
+    var v = (t.verdict || t.overall_verdict || '').toString().toUpperCase();
+    if (v.includes('{')) { try { v = JSON.parse(v).verdict || ''; } catch(e) { v = ''; } }
+    return (v.includes('BID') || v.includes('CONDITIONAL')) && (t.emd || t.emd_amount || t.emd_exemption);
+  });
+  var exempt = tenders.filter(function(t){ return !!(t.emd_exemption && t.emd_exemption !== 'Not mentioned' && t.emd_exemption !== 'Not stated'); });
+  var due7 = tenders.filter(function(t){ var d = getDaysLeft(t); return d >= 0 && d <= 7; });
+  var statsEl = document.getElementById('emd-stats');
+  if (statsEl) statsEl.innerHTML = [
+    {n: tenders.length, l: 'BID Tenders w/ EMD', c: 'var(--blue)'},
+    {n: exempt.length, l: 'MSME Exempt', c: '#4ade80'},
+    {n: due7.length, l: 'Due ≤7 Days', c: '#fb923c'},
+    {n: tenders.length - exempt.length, l: 'EMD Required', c: '#f87171'},
+  ].map(function(s){
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">' +
+           '<div style="font-size:20px;font-weight:700;color:'+s.c+'">'+s.n+'</div>' +
+           '<div style="font-size:10px;color:var(--text3);margin-top:3px">'+s.l+'</div></div>';
+  }).join('');
+  renderEMDTable(tenders);
+}
+
+function emdFilter(f, btn) {
+  _emdActiveFilter = f;
+  document.querySelectorAll('.emd-flt').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var tenders = (window.allTenders || []).filter(function(t){
+    var v = (t.verdict || t.overall_verdict || '').toString().toUpperCase();
+    return (v.includes('BID') || v.includes('CONDITIONAL')) && (t.emd || t.emd_amount || t.emd_exemption);
+  });
+  renderEMDTable(tenders);
+}
+
+function getDaysLeft(t) {
+  var dl = t.deadline || t.bid_submission_date || '';
+  if (!dl) return 999;
+  var fmts = ['%d-%m-%Y','%d/%m/%Y','%Y-%m-%d'];
+  var parts;
+  if (dl.match(/\d{2}-\d{2}-\d{4}/)) { parts = dl.split('-'); return Math.floor((new Date(parts[2]+'-'+parts[1]+'-'+parts[0]) - new Date()) / 86400000); }
+  if (dl.match(/\d{2}\/\d{2}\/\d{4}/)) { parts = dl.split('/'); return Math.floor((new Date(parts[2]+'-'+parts[1]+'-'+parts[0]) - new Date()) / 86400000); }
+  if (dl.match(/\d{4}-\d{2}-\d{2}/)) { return Math.floor((new Date(dl) - new Date()) / 86400000); }
+  return 999;
+}
+
+function renderEMDTable(list) {
+  var f = _emdActiveFilter;
+  var isExempt = function(t){ return !!(t.emd_exemption && t.emd_exemption !== 'Not mentioned' && t.emd_exemption !== 'Not stated' && t.emd_exemption !== ''); };
+  if (f === 'due') list = list.filter(function(t){ var d = getDaysLeft(t); return d >= 0 && d <= 7; });
+  if (f === 'exempt') list = list.filter(function(t){ return isExempt(t); });
+  if (f === 'required') list = list.filter(function(t){ return !isExempt(t); });
+  list.sort(function(a,b){ return getDaysLeft(a) - getDaysLeft(b); });
+  var tbody = document.getElementById('emd-tbody');
+  var empty = document.getElementById('emd-empty');
+  if (!list.length) { if(tbody) tbody.innerHTML=''; if(empty) empty.style.display=''; return; }
+  if (empty) empty.style.display = 'none';
+  if (tbody) tbody.innerHTML = list.map(function(t) {
+    var d = getDaysLeft(t);
+    var dlStr = d === 999 ? '—' : d < 0 ? 'Expired' : d === 0 ? 'TODAY' : d + 'd';
+    var dlColor = d <= 0 ? '#ef4444' : d <= 3 ? '#fb923c' : d <= 7 ? '#fbbf24' : '#9ca3af';
+    var exempt = isExempt(t);
+    return '<tr>' +
+      '<td style="font-family:monospace;font-size:11px">' + t.t247_id + '</td>' +
+      '<td style="max-width:240px"><div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.brief || t.tender_name || '—') + '</div><div style="font-size:10px;color:var(--text3)">' + (t.org_name || '') + '</div></td>' +
+      '<td><span style="font-weight:600;color:' + dlColor + ';font-size:11px">' + (t.deadline || '—') + '</span> <span style="font-size:9px;color:var(--text3)">(' + dlStr + ')</span></td>' +
+      '<td style="font-family:monospace;font-size:11px;font-weight:600">' + (t.emd || t.emd_amount || '—') + '</td>' +
+      '<td>' + (exempt ? '<span style="color:#4ade80;font-size:10px;font-weight:700">✓ MSME Exempt</span>' : '<span style="color:#f87171;font-size:10px">✗ Required</span>') + '</td>' +
+      '<td style="font-size:10px;color:var(--text3)">' + (t.status || 'Identified') + '</td>' +
+      '<td><button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="setActive(\'' + t.t247_id + '\',\'\');showPage(\'analyse\')">Open</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ════════════════════════════════════════════════
+// WIN / LOSS TRACKER
+// ════════════════════════════════════════════════
+async function loadWinLoss() {
+  try {
+    var r = await fetch('/win-loss');
+    var d = await r.json();
+    var stats = document.getElementById('wl-stats');
+    if (stats) {
+      var total = (d.total_bids || 0), won = (d.won || 0), lost = (d.lost || 0), sub = (d.submitted || 0);
+      var rate = total > 0 ? Math.round(won / Math.max(won + lost, 1) * 100) : 0;
+      stats.innerHTML = [
+        {n: total, l: 'Total Bids', c: 'var(--blue)'},
+        {n: won, l: 'Won', c: '#4ade80'},
+        {n: lost, l: 'Lost', c: '#f87171'},
+        {n: rate + '%', l: 'Win Rate', c: '#fbbf24'},
+      ].map(function(s){
+        return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center">' +
+               '<div style="font-size:22px;font-weight:700;color:'+s.c+'">'+s.n+'</div>' +
+               '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+s.l+'</div></div>';
+      }).join('');
+    }
+    var orgBody = document.getElementById('wl-org-tbody');
+    if (orgBody && d.by_org && d.by_org.length) {
+      orgBody.innerHTML = d.by_org.map(function(o){
+        return '<tr><td style="font-size:12px">' + (o.org || '—') + '</td>' +
+               '<td style="color:#4ade80;font-weight:700">' + (o.won || 0) + '</td>' +
+               '<td style="color:#f87171">' + (o.lost || 0) + '</td>' +
+               '<td style="color:var(--text3)">' + (o.submitted || 0) + '</td></tr>';
+      }).join('');
+    }
+    var allBody = document.getElementById('wl-all-tbody');
+    if (allBody && d.records && d.records.length) {
+      allBody.innerHTML = d.records.map(function(rec){
+        var ocColor = rec.outcome === 'Won' ? '#4ade80' : rec.outcome === 'Lost' ? '#f87171' : '#fbbf24';
+        return '<tr>' +
+          '<td style="font-family:monospace;font-size:11px">' + (rec.t247_id || '—') + '</td>' +
+          '<td style="font-size:11px">' + (rec.brief || '—') + '</td>' +
+          '<td><span style="color:' + ocColor + ';font-weight:700;font-size:11px">' + (rec.outcome || '—') + '</span></td>' +
+          '<td style="font-size:11px">' + (rec.outcome_value ? 'Rs.' + rec.outcome_value + ' Cr' : '—') + '</td>' +
+          '<td style="font-size:11px;color:var(--text3)">' + (rec.outcome_date ? rec.outcome_date.substring(0,10) : '—') + '</td>' +
+          '<td style="font-size:11px;color:var(--text3)">' + (rec.outcome_notes || '—') + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+  } catch(e) { toast('Win/Loss load failed: ' + e.message, 'error'); }
+}
+
+async function saveWinLossOutcome() {
+  var tid = document.getElementById('wl-t247-input').value.trim();
+  var outcome = document.getElementById('wl-outcome-select').value;
+  var value = document.getElementById('wl-value-input').value;
+  var notes = document.getElementById('wl-notes-input').value.trim();
+  if (!tid) { toast('Enter a T247 ID', 'error'); return; }
+  var status = document.getElementById('wl-save-status');
+  if (status) status.textContent = 'Saving...';
+  try {
+    var r = await fetch('/bid-result/' + tid, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({outcome: outcome, value: value, notes: notes, t247_id: tid})
+    });
+    var d = await r.json();
+    if (status) status.textContent = '✓ Saved';
+    toast('Outcome saved for ' + tid, 'success');
+    document.getElementById('wl-t247-input').value = '';
+    document.getElementById('wl-value-input').value = '';
+    document.getElementById('wl-notes-input').value = '';
+    await loadWinLoss();
+    await loadDashboard();
+  } catch(e) {
+    if (status) status.textContent = 'Failed: ' + e.message;
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════
+// VAULT
+// ════════════════════════════════════════════════
+var _vaultFilter = 'all';
+var _vaultData = [];
+
+async function loadVault() {
+  try {
+    var r = await fetch('/vault/list');
+    var d = await r.json();
+    _vaultData = d.files || [];
+    renderVaultTable();
+    var stats = document.getElementById('vault-stats');
+    if (stats) {
+      var totalKB = _vaultData.reduce(function(s,f){ return s + (f.size||0); }, 0);
+      stats.innerHTML = '<span>' + _vaultData.length + ' files</span>' +
+                        '<span style="color:var(--text3)">·</span>' +
+                        '<span>' + (totalKB/1024).toFixed(1) + ' KB total</span>';
+    }
+  } catch(e) {
+    var tbody = document.getElementById('vault-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="color:#f87171;padding:12px">Failed: ' + e.message + '</td></tr>';
+  }
+}
+
+function vaultFilter(f, btn) {
+  _vaultFilter = f;
+  document.querySelectorAll('.vault-flt').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderVaultTable();
+}
+
+function renderVaultTable() {
+  var list = _vaultFilter === 'all' ? _vaultData : _vaultData.filter(function(f){ return f.category === _vaultFilter; });
+  var tbody = document.getElementById('vault-tbody');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No files in this category. Click + Upload to add documents.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(function(f) {
+    var kb = f.size ? (f.size/1024).toFixed(1) + ' KB' : '—';
+    var date = f.uploaded_at ? f.uploaded_at.substring(0,10) : '—';
+    return '<tr>' +
+      '<td style="font-size:12px;font-weight:600">' + (f.name || '—') + '</td>' +
+      '<td><span style="font-size:10px;background:var(--bg3);padding:2px 7px;border-radius:4px;color:var(--text2)">' + (f.category || 'general') + '</span></td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + kb + '</td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + date + '</td>' +
+      '<td style="display:flex;gap:6px">' +
+        '<a class="btn btn-ghost btn-sm" style="font-size:10px;text-decoration:none" href="/vault/download/' + f.id + '" download="' + f.name + '">⬇ Download</a>' +
+        '<button class="btn btn-ghost btn-sm" style="font-size:10px;color:#f87171" onclick="vaultDelete(\'' + f.id + '\')">✕ Delete</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function vaultUpload(input) {
+  var files = input.files;
+  if (!files.length) return;
+  var cat = document.getElementById('vault-cat-select').value || 'general';
+  for (var i = 0; i < files.length; i++) {
+    var fd = new FormData();
+    fd.append('file', files[i]);
+    fd.append('category', cat);
+    try {
+      await fetch('/vault/upload', {method: 'POST', body: fd});
+      toast('Uploaded: ' + files[i].name, 'success');
+    } catch(e) { toast('Upload failed: ' + e.message, 'error'); }
+  }
+  input.value = '';
+  await loadVault();
+}
+
+async function vaultDelete(fileId) {
+  if (!confirm('Delete this file from vault?')) return;
+  try {
+    await fetch('/vault/delete/' + fileId, {method: 'DELETE'});
+    toast('File deleted', 'success');
+    await loadVault();
+  } catch(e) { toast('Delete failed: ' + e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════
+// SELF-DIAGNOSE
+// ════════════════════════════════════════════════
+async function runDiagnose() {
+  var el = document.getElementById('diagnose-results');
+  if (el) el.innerHTML = '<div class="empty-state"><div class="spinner"></div><p style="margin-top:10px">Running checks...</p></div>';
+  try {
+    var r = await fetch('/diagnose');
+    var d = await r.json();
+    var overall = d.overall || 'UNKNOWN';
+    var checks = d.checks || [];
+    var summary = d.summary || {};
+    var oColor = overall === 'OK' ? '#4ade80' : overall === 'WARN' ? '#fbbf24' : '#f87171';
+    var html = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">' +
+      '<div style="font-size:26px;font-weight:800;color:' + oColor + '">' + overall + '</div>' +
+      '<div style="font-size:12px;color:var(--text3)">✓ ' + (summary.ok||0) + ' OK &nbsp;△ ' + (summary.warn||0) + ' Warnings &nbsp;✗ ' + (summary.error||0) + ' Errors</div>' +
+    '</div>';
+    html += checks.map(function(c){
+      var icon = c.status === 'OK' ? '✅' : c.status === 'WARN' ? '⚠' : '❌';
+      var bColor = c.status === 'OK' ? 'rgba(74,222,128,.1)' : c.status === 'WARN' ? 'rgba(251,191,36,.1)' : 'rgba(248,113,113,.1)';
+      var bBorder = c.status === 'OK' ? 'rgba(74,222,128,.2)' : c.status === 'WARN' ? 'rgba(251,191,36,.2)' : 'rgba(248,113,113,.2)';
+      return '<div style="display:flex;gap:12px;padding:10px 12px;border-radius:6px;margin-bottom:6px;background:' + bColor + ';border:1px solid ' + bBorder + '">' +
+        '<div style="font-size:16px;padding-top:1px">' + icon + '</div>' +
+        '<div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">' + c.name + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">' + c.detail + '</div>' +
+        (c.fix ? '<div style="font-size:10px;color:#fbbf24;margin-top:4px">Fix: ' + c.fix + '</div>' : '') +
+        '</div></div>';
+    }).join('');
+    if (el) el.innerHTML = html;
+    toast(overall === 'OK' ? 'All systems healthy' : overall === 'WARN' ? 'Some warnings found' : 'Errors found', overall === 'OK' ? 'success' : 'error');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:#f87171;padding:12px">Diagnose failed: ' + e.message + '</div>';
+  }
+}
+
+async function aiDiagnose() {
+  var errorText = (document.getElementById('error-log-input').value || '').trim();
+  if (!errorText) { toast('Paste an error log first', 'info'); return; }
+  var result = document.getElementById('ai-diagnose-result');
+  if (result) result.innerHTML = '<div class="empty-state"><div class="spinner"></div><p style="margin-top:10px">AI diagnosing...</p></div>';
+  try {
+    var r = await fetch('/diagnose/ai', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({error: errorText})});
+    var d = await r.json();
+    var sev = d.severity || 'WARN';
+    var sevColor = sev === 'CRASH' ? '#ef4444' : sev === 'WARN' ? '#fbbf24' : '#9ca3af';
+    var html = '<div style="background:var(--bg2);border-radius:8px;padding:16px;border-left:3px solid ' + sevColor + '">' +
+      '<div style="font-size:13px;font-weight:700;color:' + sevColor + ';margin-bottom:6px">' + sev + ' — ' + (d.root_cause||'Unknown') + '</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Affected: <b style="color:var(--text2)">' + (d.affected_file||'unknown') + '</b></div>';
+    if (d.fixes && d.fixes.length) {
+      html += '<div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">Fix Steps:</div>';
+      html += d.fixes.map(function(f){
+        return '<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">' +
+          '<span style="color:var(--blue);font-weight:700;white-space:nowrap;font-size:11px">Step ' + f.step + '</span>' +
+          '<span style="flex:1;color:var(--text);font-size:11px">' + f.action + '</span>' +
+          '<span style="color:var(--text3);font-size:10px;white-space:nowrap">' + (f.where||'') + '</span></div>';
+      }).join('');
+    }
+    html += '</div>';
+    if (result) result.innerHTML = html;
+  } catch(e) {
+    if (result) result.innerHTML = '<div style="color:#f87171">AI diagnosis failed: ' + e.message + '</div>';
+    toast('AI diagnosis failed: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════
+// AUTO-LOAD WHEN PAGE SHOWN
+// ════════════════════════════════════════════════
+(function() {
+  var _origShowPage = window.showPage;
+  if (typeof _origShowPage === 'function') {
+    window.showPage = function(name) {
+      _origShowPage(name);
+      if (name === 'alerts') loadAlertsPage();
+      else if (name === 'emd') loadEMDPage();
+      else if (name === 'winloss') loadWinLoss();
+      else if (name === 'vault') loadVault();
+    };
+  }
+})();
 
 </script>
 </body>
