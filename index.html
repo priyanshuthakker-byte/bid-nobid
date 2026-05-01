@@ -623,6 +623,27 @@ select option{background:var(--bg2)}
     <div id="dash-count" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
     <div id="dash-sync-meta" style="font-size:11px;color:var(--text3);margin-bottom:6px"></div>
     <div id="dash-ops-meta" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
+    <!-- Sort + Page controls -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text3)">Sort:</span>
+      <button class="fbtn active" id="sort-deadline" onclick="setSort('deadline')" style="font-size:11px;padding:3px 10px">⏰ Deadline</button>
+      <button class="fbtn" id="sort-value" onclick="setSort('value')" style="font-size:11px;padding:3px 10px">💰 Value</button>
+      <button class="fbtn" id="sort-verdict" onclick="setSort('verdict')" style="font-size:11px;padding:3px 10px">📊 Verdict</button>
+      <button class="fbtn" id="sort-org" onclick="setSort('org')" style="font-size:11px;padding:3px 10px">🏛 Org</button>
+      <button class="fbtn" id="sort-added" onclick="setSort('added')" style="font-size:11px;padding:3px 10px">🕐 Recent</button>
+      <span id="sort-dir-btn" onclick="toggleSortDir()" style="cursor:pointer;font-size:13px;color:var(--blue);padding:3px 6px;border:1px solid var(--border);border-radius:4px" title="Toggle asc/desc">↑</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">Show:
+        <select id="page-size-sel" onchange="renderDash()" style="background:var(--bg3);border:1px solid var(--border);color:#fff;border-radius:4px;padding:2px 5px;font-size:11px">
+          <option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="500">500</option>
+        </select>
+        per page
+      </span>
+      <div style="display:flex;gap:4px">
+        <button class="fbtn" id="pg-prev" onclick="changePage(-1)" style="font-size:11px;padding:3px 8px">‹</button>
+        <span id="pg-label" style="font-size:11px;color:var(--text3);align-self:center"></span>
+        <button class="fbtn" id="pg-next" onclick="changePage(1)" style="font-size:11px;padding:3px 8px">›</button>
+      </div>
+    </div>
     <div style="display:flex;gap:14px;min-width:0">
       <div class="table-wrap" id="dash-table-wrap" style="flex:1;min-width:0">
         <table>
@@ -1919,6 +1940,43 @@ function fmtCr(v) {
 }
 
 // ────────────────────────────────────────────
+// SORT + PAGINATION
+// ────────────────────────────────────────────
+var _sortKey = 'deadline';
+var _sortAsc = true;
+var _currentPage = 0;
+
+function setSort(key) {
+  if (_sortKey === key) { _sortAsc = !_sortAsc; }
+  else { _sortKey = key; _sortAsc = (key !== 'value'); }
+  _currentPage = 0;
+  document.querySelectorAll('[id^="sort-"]').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.getElementById('sort-' + key);
+  if (btn) btn.classList.add('active');
+  var dirBtn = document.getElementById('sort-dir-btn');
+  if (dirBtn) dirBtn.textContent = _sortAsc ? '↑' : '↓';
+  renderDash();
+}
+function toggleSortDir() { _sortAsc = !_sortAsc; _currentPage = 0; var d = document.getElementById('sort-dir-btn'); if(d) d.textContent = _sortAsc ? '↑' : '↓'; renderDash(); }
+function changePage(delta) { _currentPage = Math.max(0, _currentPage + delta); renderDash(); }
+
+function _sortList(list) {
+  var verdictOrder = {'BID':0,'CONDITIONAL':1,'REVIEW':2,'NO-BID':3};
+  return list.slice().sort(function(a, b) {
+    var av, bv;
+    if (_sortKey === 'deadline') { av = getDaysLeft(a); bv = getDaysLeft(b); if(av<0&&bv>=0) return 1; if(bv<0&&av>=0) return -1; }
+    else if (_sortKey === 'value') { av = parseFloat(a.estimated_cost_cr)||0; bv = parseFloat(b.estimated_cost_cr)||0; }
+    else if (_sortKey === 'verdict') { av = verdictOrder[getVerdict(a)]??4; bv = verdictOrder[getVerdict(b)]??4; }
+    else if (_sortKey === 'org') { av = (a.org_name||'').toLowerCase(); bv = (b.org_name||'').toLowerCase(); }
+    else if (_sortKey === 'added') { av = -(a._idx||0); bv = -(b._idx||0); }
+    else { av = getDaysLeft(a); bv = getDaysLeft(b); }
+    if (av < bv) return _sortAsc ? -1 : 1;
+    if (av > bv) return _sortAsc ? 1 : -1;
+    return 0;
+  });
+}
+
+// ────────────────────────────────────────────
 // DASHBOARD
 // ────────────────────────────────────────────
 async function loadDashboard() {
@@ -2105,11 +2163,23 @@ function renderDash() {
   var el2= document.getElementById('s-closed');  if (el2) el2.textContent = closedCount;
 
   var countEl = document.getElementById('dash-count');
-  if (countEl) countEl.textContent = list.length + ' tender' + (list.length !== 1 ? 's' : '') + (list.length < allTenders.length ? ' (filtered from ' + allTenders.length + ')' : '');
+  if (countEl) countEl.textContent = list.length + ' tender' + (list.length !== 1 ? 's' : '') + (list.length < allTenders.length ? ' (filtered from ' + allTenders.length + ' total, ' + allTenders.filter(function(x){return getDaysLeft(x)<0}).length + ' expired hidden)' : '');
   var matchEl = document.getElementById('adv-match-count');
   if (matchEl) matchEl.textContent = list.length + ' match' + (list.length!==1?'es':'');
 
-  var rows = list.slice(0, 300).map(function(t) {
+  // Sort
+  list = _sortList(list);
+
+  // Pagination
+  var pageSize = parseInt((document.getElementById('page-size-sel')||{}).value || 100);
+  var totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  _currentPage = Math.min(_currentPage, totalPages - 1);
+  var pgLabel = document.getElementById('pg-label');
+  if (pgLabel) pgLabel.textContent = 'Page ' + (_currentPage+1) + ' / ' + totalPages;
+  var pgPrev = document.getElementById('pg-prev'); if(pgPrev) pgPrev.disabled = _currentPage === 0;
+  var pgNext = document.getElementById('pg-next'); if(pgNext) pgNext.disabled = _currentPage >= totalPages-1;
+
+  var rows = list.slice(_currentPage * pageSize, (_currentPage+1) * pageSize).map(function(t) {
     var v = getVerdict(t);
     var dl = getDaysLeft(t);
     var matchTags = buildMatchTags(t);
@@ -2536,23 +2606,52 @@ function showAnalysisResult(d) {
   var pq = td.pq_criteria || [];
   var tq = td.tq_criteria || [];
 
+  // ── INCOMPLETE ANALYSIS GUARD — most dangerous bug ──
+  var pqCount = (td.pq_criteria || []).length;
+  var aiIncomplete = !d.ai_used && pqCount === 0;
+  var incompleteEl = document.getElementById('res-incomplete-banner');
+  if (!incompleteEl) {
+    incompleteEl = document.createElement('div');
+    incompleteEl.id = 'res-incomplete-banner';
+    incompleteEl.style.cssText = 'display:none;background:rgba(239,68,68,.15);border:2px solid #ef4444;border-radius:10px;padding:16px 20px;margin-bottom:16px;text-align:center';
+    document.getElementById('an-result-wrap').insertBefore(incompleteEl, document.getElementById('an-result-wrap').firstChild);
+  }
+  if (aiIncomplete) {
+    v = 'REVIEW'; // Force verdict to REVIEW — never show BID/NO-BID when 0 PQ extracted
+    incompleteEl.style.display = 'block';
+    incompleteEl.innerHTML = '<div style="font-size:16px;font-weight:700;color:#ef4444;margin-bottom:8px">⛔ ANALYSIS INCOMPLETE — DO NOT BID BASED ON THIS</div>' +
+      '<div style="font-size:13px;color:#fca5a5;margin-bottom:10px">AI did not run. Zero PQ criteria were extracted. This result is unreliable.<br>You could bid on a tender Nascent is not eligible for.</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+        '<a href="#" onclick="showPage(\'settings\');return false" style="background:#ef4444;color:#fff;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">→ Check API Keys in Settings</a>' +
+        '<a href="#" onclick="reclassifyOne(\'' + (lastAnalysisTid||'') + '\',null);return false" style="background:var(--bg4);color:#fff;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none">↺ Retry Analysis</a>' +
+      '</div>';
+  } else {
+    incompleteEl.style.display = 'none';
+  }
+
   // ── Verdict Bar ──
   var bar = document.getElementById('res-verdict-bar');
   bar.className = 'verdict-bar ' + v;
   var stamp = document.getElementById('res-verdict-stamp');
   stamp.className = 'verdict-stamp-big ' + v;
-  stamp.textContent = v;
-  document.getElementById('res-conf').textContent = conf ? 'Confidence: ' + conf : '';
-  document.getElementById('res-reason').textContent = reason;
+  stamp.textContent = aiIncomplete ? 'INCOMPLETE' : v;
+
+  // ── Confidence with criteria count ──
+  var pqMet2 = (td.pq_criteria||[]).filter(c => (c.nascent_status||c.status||'').toUpperCase() === 'MET').length;
+  var confDisplay = '';
+  if (pqCount > 0) confDisplay = pqMet2 + '/' + pqCount + ' criteria met';
+  else if (conf) confDisplay = 'Confidence: ' + conf;
+  document.getElementById('res-conf').textContent = confDisplay;
+  document.getElementById('res-reason').textContent = aiIncomplete ? 'AI did not run — check Gemini API keys in Settings' : reason;
   document.getElementById('res-ai-badge').textContent = d.ai_used ? '✓ AI Analysed' : '⚠ Basic Extract';
   document.getElementById('res-ai-badge').style.background = d.ai_used ? 'rgba(34,197,94,.15)' : 'rgba(251,191,36,.15)';
   document.getElementById('res-ai-badge').style.color = d.ai_used ? '#4ade80' : '#fbbf24';
   var aiWarnEl = document.getElementById('res-ai-warning');
   var aiWarn = td.ai_warning || '';
-  if (aiWarn && !d.ai_used) {
+  if (aiWarn && !d.ai_used && !aiIncomplete) {
     aiWarnEl.style.display = 'block';
     aiWarnEl.innerHTML = '⚠ ' + aiWarn + (aiWarn.includes('key') || aiWarn.includes('quota') ?
-      ' &nbsp;<a href="#" onclick="showSection(\'settings\');return false" style="color:#60a5fa;text-decoration:underline">→ Go to Settings</a>' : '');
+      ' &nbsp;<a href="#" onclick="showPage(\'settings\');return false" style="color:#60a5fa;text-decoration:underline">→ Go to Settings</a>' : '');
   } else { aiWarnEl.style.display = 'none'; }
  document.getElementById('dl-btn').onclick = () => lastAnalysisTid ? downloadTenderDoc(lastAnalysisTid) : downloadReport(lastAnalysisFilename);;
 
@@ -3751,15 +3850,24 @@ async function loadOpsDailyReport() {
 // ────────────────────────────────────────────
 var _sidePanelTid = '';
 
-function openSidePanel(tid) {
-  var t = allTenders.find(x => x.t247_id === tid);
-  if (!t) return;
+async function openSidePanel(tid) {
+  var t = allTenders.find(x => x.t247_id === tid) || {t247_id: tid};
   _sidePanelTid = tid;
   var panel = document.getElementById('side-panel');
   var content = document.getElementById('side-panel-content');
   panel.style.display = 'block';
   document.getElementById('dash-table-wrap').style.maxWidth = 'calc(100% - 354px)';
+  // Show basic data immediately, then load rich data
   content.innerHTML = buildSidePanelContent(t);
+  try {
+    var r = await fetch('/tender-quickview/' + encodeURIComponent(tid));
+    if (r.ok) {
+      var rich = await r.json();
+      // Merge rich fields into local object — don't replace, just enrich
+      var merged = Object.assign({}, t, rich);
+      content.innerHTML = buildSidePanelContent(merged);
+    }
+  } catch(e) { /* keep basic view */ }
 }
 
 function closeSidePanel() {
@@ -3798,8 +3906,6 @@ function buildSidePanelContent(t) {
     html += '<tr><td style="padding:5px 0;color:var(--text3);width:40%">' + r[0] + '</td><td style="padding:5px 0;color:var(--text)">' + r[1] + '</td></tr>';
   });
   html += '</table>';
-
-  if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
 
   // Corrigendum alert
   if (t.has_corrigendum || t.corrigendum_count > 0) {
@@ -3861,6 +3967,30 @@ function buildSidePanelContent(t) {
   }
 
   if (t.eligibility) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Eligibility (excerpt)</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:80px;overflow:hidden">' + (t.eligibility||'').substring(0,300) + '...</div></div>';
+
+  // Scope of work (from quickview)
+  if (t.scope_of_work) html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Scope of Work</div><div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:100px;overflow:hidden">' + (t.scope_of_work||'').substring(0,400) + '</div></div>';
+
+  // PQ criteria inline (from quickview)
+  var pq = t.pq_criteria || [];
+  if (pq.length) {
+    html += '<div style="margin-top:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">PQ Eligibility (' + pq.length + ' criteria)</div>';
+    pq.slice(0, 5).forEach(function(c) {
+      var st = (c.nascent_status||c.status||'Review').toUpperCase().replace(/ /g,'-');
+      var col = st === 'MET' ? 'var(--green)' : st === 'CONDITIONAL' ? 'var(--amber)' : st.includes('NOT') ? 'var(--red)' : 'var(--text3)';
+      var icon = st === 'MET' ? '✓' : st === 'CONDITIONAL' ? '⚠' : st.includes('NOT') ? '✗' : '?';
+      html += '<div style="display:flex;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);align-items:flex-start">' +
+        '<span style="color:' + col + ';font-size:12px;flex-shrink:0;margin-top:1px">' + icon + '</span>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:11px;color:var(--text)">' + (c.criterion||c.description||'').substring(0,60) + '</div>' +
+        (c.remark ? '<div style="font-size:10px;color:var(--text3)">' + c.remark.substring(0,80) + '</div>' : '') + '</div>' +
+      '</div>';
+    });
+    if (pq.length > 5) html += '<div style="font-size:10px;color:var(--text3);padding:4px 0">+' + (pq.length-5) + ' more — click Analyse to see all</div>';
+    html += '</div>';
+  }
+
+  // Reason / AI verdict note
+  if (t.reason && !t.reason.includes('AI did not')) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11px;color:var(--text2);line-height:1.5"><b>AI note:</b> ' + t.reason.substring(0,200) + '</div>';
 
   return html;
 }
