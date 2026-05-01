@@ -1740,6 +1740,47 @@ async def restore_tender(t247_id: str):
     save_db(db)
     return {"status": "restored"}
 
+@app.get("/tender/{t247_id}/excel-snapshot")
+async def tender_excel_snapshot(t247_id: str):
+    """Return structured snapshot from T247 Excel data — zero API cost, instant."""
+    t = get_tender(t247_id)
+    if not t:
+        raise HTTPException(404, "Tender not found — run T247 sync first")
+    snap = {
+        "t247_id": t247_id,
+        "source": "excel_db",
+        "brief": t.get("brief", ""),
+        "org_name": t.get("org_name", ""),
+        "ref_no": t.get("ref_no", ""),
+        "location": t.get("location", ""),
+        "estimated_cost_cr": t.get("estimated_cost_cr", ""),
+        "emd": t.get("emd", ""),
+        "doc_fee": t.get("doc_fee", ""),
+        "deadline": t.get("deadline", ""),
+        "days_left": t.get("days_left", 999),
+        "deadline_status": t.get("deadline_status", ""),
+        "bid_opening_date": t.get("bid_opening_date", ""),
+        "bid_validity": t.get("bid_validity", ""),
+        "contract_period": t.get("contract_period", ""),
+        "msme_exemption": t.get("msme_exemption", ""),
+        "startup_exemption": t.get("startup_exemption", ""),
+        "turnover_required": t.get("turnover_required", ""),
+        "experience_years": t.get("experience_years", ""),
+        "similar_category": t.get("similar_category", ""),
+        "evaluation_method": t.get("evaluation_method", ""),
+        "pbg_percentage": t.get("pbg_percentage", ""),
+        "eligibility": t.get("eligibility", ""),
+        "checklist": t.get("checklist", ""),
+        "verdict": t.get("verdict", ""),
+        "reason": t.get("reason", ""),
+        "auto_scored": t.get("auto_scored", False),
+        "is_gem": t.get("is_gem", False),
+        "has_corrigendum": t.get("has_corrigendum", False),
+        "bid_no_bid_done": t.get("bid_no_bid_done", False),
+        "imported_at": t.get("imported_at", ""),
+    }
+    return snap
+
 @app.post("/tender/{t247_id}/reclassify")
 async def reclassify_tender(t247_id: str):
     from excel_processor import classify_tender
@@ -1907,6 +1948,40 @@ def _run_analysis_job(job_id: str, file_contents: list, t247_id: str, no_ai: boo
                     tender_data[field] = val
             tender_data["has_corrigendum"] = True
             tender_data["corrigendum_files"] = [f.name for f in corr]
+
+        # ── EXCEL-FIRST: pre-seed from T247 DB (no API cost) ──────────────────
+        if t247_id:
+            _db_snap = get_tender(t247_id)
+            if _db_snap:
+                _BLANK = {"", "—", "Refer document", "Not specified", None}
+                _excel_map = {
+                    "org_name":          _db_snap.get("org_name", ""),
+                    "location":          _db_snap.get("location", ""),
+                    "emd":               _db_snap.get("emd", ""),
+                    "tender_fee":        _db_snap.get("doc_fee", ""),
+                    "bid_submission_date": _db_snap.get("deadline", ""),
+                    "bid_opening_date":  _db_snap.get("bid_opening_date", ""),
+                    "contract_period":   _db_snap.get("contract_period", ""),
+                    "msme_exemption":    _db_snap.get("msme_exemption", ""),
+                    "turnover_required": _db_snap.get("turnover_required", ""),
+                    "experience_years":  _db_snap.get("experience_years", ""),
+                    "similar_category":  _db_snap.get("similar_category", ""),
+                    "evaluation_method": _db_snap.get("evaluation_method", ""),
+                    "pbg_percentage":    _db_snap.get("pbg_percentage", ""),
+                }
+                for _k, _v in _excel_map.items():
+                    if _v and _v not in _BLANK and tender_data.get(_k, "") in _BLANK:
+                        tender_data[_k] = str(_v)
+                # Pre-seed eligibility text for rule-based PQ parsing
+                if _db_snap.get("eligibility") and not tender_data.get("_excel_eligibility"):
+                    tender_data["_excel_eligibility"] = _db_snap["eligibility"]
+                if _db_snap.get("checklist") and not tender_data.get("_excel_checklist"):
+                    tender_data["_excel_checklist"] = _db_snap["checklist"]
+                # Estimated cost (Excel stores in Cr; extractor uses raw string)
+                if _db_snap.get("estimated_cost_cr") and tender_data.get("estimated_cost", "") in _BLANK:
+                    tender_data["estimated_cost"] = f"Rs. {_db_snap['estimated_cost_cr']} Cr"
+                tender_data["excel_pre_seeded"] = True
+        # ── END EXCEL-FIRST ────────────────────────────────────────────────────
 
         _set_job(job_id, progress="Reading full text…", step=1)
         all_text = ""
@@ -3021,6 +3096,36 @@ async def export_tenders(verdict: str = "", search: str = ""):
         return FileResponse(str(fpath), filename=fname, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except Exception as e:
         raise HTTPException(500, f"Export failed: {str(e)}")
+
+# ══ API KEY USAGE MAP ════════════════════════════════════════════════════════
+@app.get("/api/key-usage-map")
+async def api_key_usage_map():
+    """Returns complete map of which features use Gemini API keys and when."""
+    return {
+        "summary": "Gemini API keys are ONLY used for manual user-triggered actions. All background auto-tasks are rule-based (zero API cost).",
+        "auto_background_no_api": [
+            {"name": "T247 Excel Sync", "schedule": "Every 180 min (configurable)", "endpoint": "/_internal/t247-sync", "api": False, "note": "Downloads Excel, classifies via rule-based keywords. Zero AI calls."},
+            {"name": "Drive Backup", "schedule": "Every 5 min", "endpoint": "/_internal/drive-sync", "api": False, "note": "Saves DB JSON to Google Drive. No AI."},
+            {"name": "Daily Digest", "schedule": "Daily at configured hour", "endpoint": "/_internal/daily-digest", "api": False, "note": "Builds email/WhatsApp digest from DB stats. No AI."},
+        ],
+        "manual_uses_api": [
+            {"name": "Analyse Tender (upload RFP)", "endpoint": "POST /process-files", "trigger": "User uploads PDF/DOCX", "api": True, "note": "Main Gemini call — PQ/TQ/risk/scope extraction from document text. Excel data pre-seeded first (cost, org, EMD, deadline) to reduce AI workload."},
+            {"name": "Re-analyse Tender", "endpoint": "POST /tender/{id}/reanalyse", "trigger": "User clicks Re-analyse", "api": True, "note": "Same as above but on saved raw text."},
+            {"name": "Bid Assistant Chat", "endpoint": "POST /chat", "trigger": "User sends message in chat panel", "api": True, "note": "Conversational AI about tender."},
+            {"name": "Doc Editor AI Edit", "endpoint": "POST /tender/{id}/draft/chat-edit", "trigger": "User uses AI edit in Doc Editor", "api": True, "note": "Gemini edits draft sections."},
+            {"name": "Self-Diagnose", "endpoint": "POST /self-diagnose", "trigger": "User clicks Self-Diagnose in Settings", "api": True, "note": "AI explains system errors."},
+            {"name": "Test API Keys", "endpoint": "GET /test-ai-keys", "trigger": "User clicks Test in Settings", "api": True, "note": "Tiny 5-token ping per key to check health."},
+            {"name": "Quick AI Test", "endpoint": "GET /test-ai", "trigger": "Settings / manual URL", "api": True, "note": "Legacy single-key test."},
+        ],
+        "zero_api_endpoints": [
+            "GET /tenders", "GET /tender-quickview/{id}", "GET /tender/{id}/excel-snapshot",
+            "POST /tender/{id}/skip", "POST /tender/{id}/restore", "POST /tender/{id}/reclassify",
+            "POST /tender/{id}/set-verdict", "GET /ops/daily-digest", "POST /import-excel",
+            "GET /prebid-queries/{id}", "GET /profile", "POST /profile",
+            "POST /sync-excel-latest", "GET /api/key-usage-map",
+        ],
+        "excel_first_note": "Since v6.3: /process-files pre-seeds org, cost, EMD, deadline, turnover, experience, checklist from T247 Excel DB before calling AI. AI only fills what Excel doesn't have, reducing token usage per analysis.",
+    }
 
 # ══ TEST ════════════════════════════════════════════════════════════════════
 @app.get("/test-ai")
