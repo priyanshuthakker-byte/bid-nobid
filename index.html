@@ -464,6 +464,7 @@ select option{background:var(--bg2)}
   <button class="nav-btn" onclick="showPage('letterhead')"><span class="nav-icon">🏢</span>Letterhead</button>
 
   <div class="nav-section">Trackers</div>
+  <button class="nav-btn" onclick="showPage('corrigendum')"><span class="nav-icon">📋</span>Corrigendum</button>
   <button class="nav-btn" onclick="showPage('alerts')"><span class="nav-icon">🔔</span>Deadline Alerts</button>
   <button class="nav-btn" onclick="showPage('emd')"><span class="nav-icon">💰</span>EMD Tracker</button>
   <button class="nav-btn" onclick="showPage('winloss')"><span class="nav-icon">📊</span>Win / Loss</button>
@@ -545,6 +546,7 @@ select option{background:var(--bg2)}
       <button class="fbtn" id="fb-gem" onclick="setFilter('gem')">💎 GeM</button>
       <button class="fbtn" id="fb-starred" onclick="setFilter('starred')">★ Starred</button>
       <button class="fbtn" id="fb-closed" onclick="setFilter('closed')" style="color:#6b7280">⊠ Closed</button>
+      <button class="fbtn" id="fb-corr" onclick="setFilter('corrigendum')" style="color:#f59e0b">📋 Corrigendum</button>
       <button class="fbtn" style="margin-left:auto;border-color:var(--blue);color:var(--blue)" onclick="toggleAdvSearch()">⚙ Advanced Search</button>
     </div>
 
@@ -1073,13 +1075,54 @@ select option{background:var(--bg2)}
 
 <!-- ═══ BOQ ═══ -->
 <div id="page-boq" class="page">
-  <div class="topbar"><h1>BOQ Price History</h1></div>
-  <div class="page-body">
-    <div class="card">
-      <div class="card-title">Search BOQ Items</div>
-      <div class="search-wrap"><span class="search-icon">🔍</span><input id="boq-search" placeholder="Search item, category..." oninput="searchBOQ()"></div>
+  <div class="topbar"><h1>BOQ / Costing Tool</h1>
+    <div class="topbar-actions">
+      <select id="boq-tid-select" onchange="loadBOQ(this.value)" style="width:220px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);color:#fff;border-radius:6px;font-size:12px">
+        <option value="">— Select a tender —</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="boqRegenerate()">↺ Regenerate from RFP</button>
+      <button class="btn btn-primary btn-sm" onclick="boqSave()">💾 Save BOQ</button>
     </div>
-    <div id="boq-results"><div class="empty-state"><div class="empty-icon">💰</div>Search for BOQ items to see price history</div></div>
+  </div>
+  <div class="page-body">
+    <div class="row" style="align-items:flex-start;gap:14px">
+      <div style="flex:1;min-width:0">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:600;color:#fff;font-size:13px">Line Items</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <div class="search-wrap" style="margin:0"><span class="search-icon">🔍</span><input id="boq-search" placeholder="Search items..." oninput="boqFilter()" style="width:160px"></div>
+              <button class="btn btn-ghost btn-sm" onclick="boqAddRow()">+ Add Row</button>
+            </div>
+          </div>
+          <div class="table-wrap" style="margin:0">
+            <table id="boq-table">
+              <thead><tr><th>Item / Description</th><th>Category</th><th>Unit</th><th>Qty</th><th>Unit Cost (₹)</th><th>Total</th><th>Margin%</th><th>GST%</th><th>Final</th><th></th></tr></thead>
+              <tbody id="boq-tbody"><tr><td colspan="10" class="empty-state">Select a tender to load BOQ</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Price Search -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Price History Search</div>
+          <div class="search-wrap"><span class="search-icon">🔍</span><input id="boq-hist-search" placeholder="Search item across all tenders..." oninput="searchBOQ()"></div>
+          <div id="boq-results" style="margin-top:10px"><div class="empty-state">Search above to find price history</div></div>
+        </div>
+      </div>
+      <div style="flex:0 0 240px">
+        <div class="card card-sm" id="boq-summary-card">
+          <div class="card-title">BOQ Summary</div>
+          <div id="boq-summary"><div class="muted" style="font-size:12px">No BOQ loaded</div></div>
+        </div>
+        <div class="card card-sm" style="margin-top:10px">
+          <div class="card-title">Global Settings</div>
+          <label style="font-size:11px">Default Margin %</label>
+          <input type="number" id="boq-default-margin" value="20" min="0" max="100" step="1" style="width:100%;margin-bottom:8px" oninput="boqRecalc()">
+          <label style="font-size:11px">Default GST %</label>
+          <input type="number" id="boq-default-gst" value="18" min="0" max="28" step="1" style="width:100%" oninput="boqRecalc()">
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1222,6 +1265,37 @@ select option{background:var(--bg2)}
         <button class="btn btn-ghost btn-xs" onclick="addCertification()">+ Add</button>
       </div>
       <div id="certifications-list"></div>
+    </div>
+
+    <!-- BANK DETAILS -->
+    <div class="card">
+      <div class="card-title">Bank Details (for EMD / Financial Docs)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div><label>Bank Name</label><input id="prof-bank-name" placeholder="State Bank of India"></div>
+        <div><label>Branch</label><input id="prof-bank-branch" placeholder="Ahmedabad Main Branch"></div>
+        <div><label>Account No</label><input id="prof-bank-acc" placeholder="XXXXXXXXXXXXXXX"></div>
+        <div><label>IFSC Code</label><input id="prof-bank-ifsc" placeholder="SBIN0000001"></div>
+        <div><label>Account Type</label><select id="prof-bank-type"><option>Current</option><option>Savings</option></select></div>
+        <div><label>MICR Code</label><input id="prof-bank-micr" placeholder="380002001"></div>
+        <div style="grid-column:1/-1"><label>Bank Address</label><textarea id="prof-bank-addr" rows="2" placeholder="Bank branch full address"></textarea></div>
+      </div>
+    </div>
+
+    <!-- EMPANELMENTS / REGISTRATIONS -->
+    <div class="card">
+      <div class="card-title">Empanelments & Registrations
+        <button class="btn btn-ghost btn-xs" onclick="addEmpanelment()">+ Add</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">CERT-In, STQC, NIC, ISRO, Survey of India, GeM, State portals etc.</div>
+      <div id="empanelments-list"></div>
+    </div>
+
+    <!-- AWARDS & RECOGNITIONS -->
+    <div class="card">
+      <div class="card-title">Awards & Recognitions
+        <button class="btn btn-ghost btn-xs" onclick="addAward()">+ Add</button>
+      </div>
+      <div id="awards-list"></div>
     </div>
 
     <!-- BID RULES -->
@@ -1632,6 +1706,28 @@ select option{background:var(--bg2)}
   </div>
 </div>
 
+
+<!-- ═══ CORRIGENDUM TRACKER ═══ -->
+<div id="page-corrigendum" class="page">
+  <div class="topbar"><h1>Corrigendum Tracker</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadCorrigendum()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div class="card" style="margin-bottom:12px;background:var(--amber-bg);border-color:var(--amber)">
+      <div style="font-size:12.5px;color:var(--amber);line-height:1.6">
+        <b>📋 What is a Corrigendum?</b> An amendment/addendum issued after original tender publication. It changes scope, quantities, deadlines, or eligibility criteria. Always check for corrigendum before final submission.
+      </div>
+    </div>
+    <div id="corr-stats" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Brief</th><th>Org</th><th>Deadline</th><th>Days Left</th><th>Corrigendum Files</th><th>Actions</th></tr></thead>
+        <tbody id="corr-tbody"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </div><!-- end #main -->
 
 <div id="toast"></div>
@@ -1725,6 +1821,8 @@ function showPage(name, opts) {
   if (name === 'pipeline') loadPipeline();
   if (name === 'reports') loadReports();
   if (name === 'analytics') loadAnalytics();
+  if (name === 'boq') populateBOQSelect();
+  if (name === 'corrigendum') loadCorrigendum();
   if (name === 'settings') { loadSettings(); loadT247ConnectionStatus(); _startUsageMeterAutoRefresh(); }
   if (name === 'profile') loadProfile();
   if (name === 'doc-editor') populateEditorSelect();
@@ -1932,13 +2030,17 @@ function renderDash() {
     var v  = getVerdict(t);
     var isClosed = dl < 0;
 
-    // Quick filter
-    if (currentFilter === 'urgent')   return dl <= 7 && dl >= 0;
-    if (currentFilter === 'analysed') return t.bid_no_bid_done;
-    if (currentFilter === 'gem')      return t.is_gem;
-    if (currentFilter === 'starred')  return isStarred(t.t247_id);
-    if (currentFilter === 'closed')   return isClosed;
-    if (currentFilter)                return v === currentFilter;
+    // Auto-hide expired (closed) by default unless explicitly showing closed
+    if (currentFilter !== 'closed' && !afHideClosed && isClosed) return false;
+
+    // Quick filter (combined with advanced — don't early-return, just add constraint)
+    if (currentFilter === 'urgent')   { if (!(dl <= 7 && dl >= 0)) return false; }
+    else if (currentFilter === 'analysed') { if (!t.bid_no_bid_done) return false; }
+    else if (currentFilter === 'gem')      { if (!t.is_gem) return false; }
+    else if (currentFilter === 'starred')  { if (!isStarred(t.t247_id)) return false; }
+    else if (currentFilter === 'closed')   { return isClosed; }
+    else if (currentFilter === 'corrigendum') { if (!t.has_corrigendum && !t.corrigendum_count) return false; }
+    else if (currentFilter)                { if (v !== currentFilter) return false; }
 
     // Advanced filters
     if (afGem && !t.is_gem) return false;
@@ -2019,6 +2121,7 @@ function renderDash() {
         '<span class="mono">'+(t.t247_id||'—')+'</span>' +
         (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
         (t.bid_no_bid_done ? ' <span style="font-size:9px;color:#8b5cf6;font-weight:600">AI</span>' : '') +
+        ((t.has_corrigendum || t.corrigendum_count > 0) ? ' <span style="font-size:9px;color:#f59e0b;font-weight:600" title="Has Corrigendum">COR</span>' : '') +
       '</td>' +
       '<td class="brief-cell"><div class="brief">' + (t.brief || '—') + '</div><div class="org">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>' +
         (matchTags ? '<div style="margin-top:3px">' + matchTags + '</div>' : '') +
@@ -2032,6 +2135,8 @@ function renderDash() {
         '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
         (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">Report</button>' : '') +
         (t.bid_no_bid_done ? '<button class="action-btn amber" onclick="openEditorForTender(\'' + t.t247_id + '\')">Edit</button>' : '') +
+        '<button class="action-btn" style="background:var(--bg4);color:var(--text3)" onclick="skipTender(\'' + t.t247_id + '\',event)" title="Skip this tender">Skip</button>' +
+        (t.bid_no_bid_done ? '<button class="action-btn" style="background:var(--purple-bg);color:var(--purple)" onclick="reclassifyOne(\'' + t.t247_id + '\',event)" title="Re-run analysis">↺</button>' : '') +
       '</td>' +
     '</tr>';
   }).join('');
@@ -3128,23 +3233,20 @@ async function sendEditorChat() {
   var thinkingEl = appendEditorMsg('Thinking...', 'ai');
 
   try {
-    var r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: 'You are a bid document editor assistant for Nascent Info Technologies, an IT company in India that bids on government tenders. The user will ask you to modify sections of a Bid/No-Bid analysis report. Respond with the specific text changes to make, clearly and concisely. When changing verdict, explain the new verdict with reasoning. Keep responses focused and actionable.',
-        messages: [
-          { role: 'user', content: 'Current report content (excerpt):\n\n' + currentContent + '\n\nUser request: ' + msg }
-        ]
-      })
-    });
+    var tid = document.getElementById('de-tender-select').value;
+    var endpoint = tid
+      ? '/tender/' + tid + '/draft/chat-edit'
+      : '/chat';
+    var payload = tid
+      ? {instruction: msg, content: currentContent, doc_type: 'analysis'}
+      : {message: msg};
+    var r = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     var d = await r.json();
-    var reply = d.content && d.content[0] ? d.content[0].text : 'Sorry, could not process that.';
+    var reply = d.content || d.reply || d.message || 'Done.';
     thinkingEl.innerHTML = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-
-    // Apply changes if verdict change detected
+    if (d.content && tid) {
+      document.getElementById('editor-content').innerHTML = d.content.replace(/\n/g,'<br>');
+    }
     applyEditorChange(msg, reply);
   } catch(e) {
     thinkingEl.innerHTML = 'Error: ' + e.message;
@@ -3343,21 +3445,12 @@ async function sendAssistantMsg() {
     'Answer concisely and practically. If asked about specific tenders, use the data provided.';
 
   try {
-    var r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: context,
-        messages: [{ role: 'user', content: msg }]
-      })
-    });
+    var r = await fetch('/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message: msg})});
     var d = await r.json();
-    var reply = d.content && d.content[0] ? d.content[0].text : 'Sorry, could not process.';
+    var reply = d.reply || d.message || d.response || d.content || 'No response from assistant.';
     thinkingEl.innerHTML = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
   } catch(e) {
-    thinkingEl.innerHTML = 'Error connecting to AI: ' + e.message;
+    thinkingEl.innerHTML = 'Error: ' + e.message;
   }
 }
 
@@ -3398,8 +3491,14 @@ async function loadPipeline() {
           var v = getVerdict(t);
           html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px">' +
             '<div class="mono" style="font-size:10px;color:var(--text3)">' + t.t247_id + '</div>' +
-            '<div style="color:var(--text);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (t.brief||'—').substring(0,40) + '</div>' +
-            '<span class="badge badge-' + v + '" style="font-size:10px;margin-top:3px">' + v + '</span>' +
+            '<div style="color:var(--text);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px">' + (t.brief||'—').substring(0,40) + '</div>' +
+            '<span class="badge badge-' + v + '" style="font-size:10px">' + v + '</span>' +
+            '<div style="margin-top:5px;display:flex;gap:4px">' +
+              '<select id="pip-stage-' + t.t247_id + '" style="font-size:10px;padding:2px 4px;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:4px;flex:1">' +
+                ['Identified','Pre-bid Sent','Bid Submitted','L1 Awaited','Won','Lost','Not Interested'].map(function(s){ return '<option value="'+s+'" '+(s===(t.status||'Identified')?'selected':'')+'>'+s+'</option>'; }).join('') +
+              '</select>' +
+              '<button onclick="pipelineMoveStage(\'' + t.t247_id + '\')" style="font-size:10px;padding:2px 6px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer">→</button>' +
+            '</div>' +
           '</div>';
         });
         html += '</div>';
@@ -3702,9 +3801,49 @@ function buildSidePanelContent(t) {
 
   if (t.reason) html += '<div style="margin-top:10px;padding:8px;background:var(--bg4);border-radius:6px;font-size:11.5px;color:var(--text2);line-height:1.5">' + t.reason + '</div>';
 
+  // Corrigendum alert
+  if (t.has_corrigendum || t.corrigendum_count > 0) {
+    html += '<div style="background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11.5px;color:var(--amber)">📋 <b>Corrigendum Issued</b> — check latest documents before bidding. Files: ' + (t.corrigendum_files||[]).join(', ') + '</div>';
+  }
+
   html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px">' +
     '<button class="btn btn-primary" style="width:100%" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">🔍 Analyse with AI</button>' +
     '<button class="btn btn-ghost" style="width:100%" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">⬇ Download Docs</button>' +
+    (t.bid_no_bid_done ? '<button class="btn btn-ghost" style="width:100%" onclick="openEditorForTender(\'' + t.t247_id + '\')">✏️ Edit Report</button>' : '') +
+    '<button class="btn btn-ghost" style="width:100%;color:var(--purple)" onclick="reclassifyOne(\'' + t.t247_id + '\',event)">↺ Re-run Analysis</button>' +
+  '</div>' +
+  '<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+    '<button class="btn btn-ghost btn-sm" style="color:var(--amber)" onclick="markPrebidSent(\'' + t.t247_id + '\')">📬 Prebid Sent</button>' +
+    '<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="skipTender(\'' + t.t247_id + '\',null)">🚫 Skip</button>' +
+  '</div>' +
+  '<div style="margin-top:8px">' +
+    '<label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">OVERRIDE VERDICT</label>' +
+    '<div style="display:flex;gap:6px">' +
+      '<select id="sp-verdict-' + t.t247_id + '" style="flex:1;padding:5px 8px;font-size:11px;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:6px">' +
+        '<option value="">— Keep current —</option>' +
+        '<option value="BID">✅ BID</option>' +
+        '<option value="CONDITIONAL">⚠ CONDITIONAL</option>' +
+        '<option value="NO-BID">❌ NO-BID</option>' +
+        '<option value="REVIEW">? REVIEW</option>' +
+      '</select>' +
+      '<button class="btn btn-ghost btn-sm" onclick="setVerdict(\'' + t.t247_id + '\')">Set</button>' +
+    '</div>' +
+  '</div>' +
+  '<div style="margin-top:8px">' +
+    '<label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">MOVE STAGE</label>' +
+    '<div style="display:flex;gap:6px">' +
+      '<select id="sp-stage-' + t.t247_id + '" style="flex:1;padding:5px 8px;font-size:11px;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:6px">' +
+        '<option value="">— Keep current —</option>' +
+        '<option value="Identified">Identified</option>' +
+        '<option value="Pre-bid Sent">Pre-bid Sent</option>' +
+        '<option value="Bid Submitted">Bid Submitted</option>' +
+        '<option value="L1 Awaited">L1 Awaited</option>' +
+        '<option value="Won">Won</option>' +
+        '<option value="Lost">Lost</option>' +
+        '<option value="Not Interested">Skipped</option>' +
+      '</select>' +
+      '<button class="btn btn-ghost btn-sm" onclick="setStage(\'' + t.t247_id + '\')">Move</button>' +
+    '</div>' +
   '</div>';
 
   var atts = (t.attachments || []).filter(function(a){ return a && a.vault_id; });
@@ -3891,10 +4030,145 @@ async function saveBidResult() {
 // BOQ
 // ────────────────────────────────────────────
 async function initBOQ() {
-  document.getElementById('boq-results').innerHTML = '<div class="empty-state"><div class="empty-icon">💰</div>Search for BOQ items above</div>';
+  populateBOQSelect();
 }
+
+// ── BOQ FULL TOOL ────────────────────────────────────────────────────────────
+var _boqItems = [];
+var _boqTid = '';
+
+function populateBOQSelect() {
+  var sel = document.getElementById('boq-tid-select');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">— Select a tender —</option>' +
+    allTenders.filter(t => t.bid_no_bid_done || t.boq || t.has_boq).map(t =>
+      '<option value="' + t.t247_id + '" ' + (t.t247_id === cur ? 'selected' : '') + '>' + t.t247_id + ' — ' + (t.brief||'').substring(0,45) + '</option>'
+    ).join('');
+}
+
+async function loadBOQ(tid) {
+  if (!tid) return;
+  _boqTid = tid;
+  showLoading('Loading BOQ...');
+  try {
+    var r = await fetch('/boq/' + tid);
+    var d = await r.json();
+    hideLoading();
+    _boqItems = (d.items || []).map(function(item, i) {
+      return Object.assign({_id: i}, item);
+    });
+    boqRender();
+    boqRecalc();
+  } catch(e) { hideLoading(); toast('Error loading BOQ: ' + e.message, 'error'); }
+}
+
+async function boqSave() {
+  if (!_boqTid) { toast('Select a tender first', 'error'); return; }
+  try {
+    await fetch('/boq/' + _boqTid, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({items: _boqItems})});
+    toast('BOQ saved', 'success');
+  } catch(e) { toast('Save error: ' + e.message, 'error'); }
+}
+
+async function boqRegenerate() {
+  if (!_boqTid) { toast('Select a tender first', 'error'); return; }
+  showLoading('Regenerating BOQ from RFP...');
+  try {
+    var r = await fetch('/boq/' + _boqTid + '/regenerate', {method:'POST'});
+    var d = await r.json();
+    hideLoading();
+    _boqItems = (d.items || []).map(function(item, i) { return Object.assign({_id: i}, item); });
+    boqRender();
+    boqRecalc();
+    toast('BOQ regenerated', 'success');
+  } catch(e) { hideLoading(); toast('Regenerate error: ' + e.message, 'error'); }
+}
+
+function boqAddRow() {
+  var defaultMargin = parseFloat(document.getElementById('boq-default-margin').value) || 20;
+  var defaultGST = parseFloat(document.getElementById('boq-default-gst').value) || 18;
+  _boqItems.push({_id: Date.now(), item: 'New Item', category: '', unit: 'LS', qty: 1, unit_cost: 0, margin: defaultMargin, gst: defaultGST});
+  boqRender();
+  boqRecalc();
+}
+
+function boqDeleteRow(id) {
+  _boqItems = _boqItems.filter(function(x) { return x._id !== id; });
+  boqRender();
+  boqRecalc();
+}
+
+function boqEditField(id, field, val) {
+  var item = _boqItems.find(function(x) { return x._id === id; });
+  if (!item) return;
+  item[field] = isNaN(parseFloat(val)) ? val : parseFloat(val);
+  boqRecalc();
+}
+
+function boqRecalc() {
+  var defaultMargin = parseFloat(document.getElementById('boq-default-margin').value) || 20;
+  var defaultGST = parseFloat(document.getElementById('boq-default-gst').value) || 18;
+  var totalBase = 0, totalFinal = 0;
+  _boqItems.forEach(function(item) {
+    var qty = parseFloat(item.qty) || 1;
+    var unitCost = parseFloat(item.unit_cost) || 0;
+    var margin = parseFloat(item.margin != null ? item.margin : defaultMargin) || 0;
+    var gst = parseFloat(item.gst != null ? item.gst : defaultGST) || 0;
+    var base = qty * unitCost;
+    var withMargin = base * (1 + margin / 100);
+    var final = withMargin * (1 + gst / 100);
+    item._total = base;
+    item._final = final;
+    totalBase += base;
+    totalFinal += final;
+  });
+  // Update summary
+  var sumEl = document.getElementById('boq-summary');
+  if (sumEl) {
+    sumEl.innerHTML =
+      '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Base Cost</span><span style="color:#fff;font-weight:600">₹' + totalBase.toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">With Margin</span><span style="color:var(--amber);font-weight:600">₹' + (totalFinal / (1 + (parseFloat(document.getElementById('boq-default-gst').value)||18)/100)).toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--text3)">Total (incl. GST)</span><span style="color:var(--green);font-weight:700;font-size:14px">₹' + totalFinal.toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
+      '<div style="color:var(--text3);font-size:11px">' + _boqItems.length + ' line items</div>';
+  }
+  boqUpdateRows();
+}
+
+function boqFilter() {
+  boqRender();
+}
+
+function boqRender() {
+  var q = (document.getElementById('boq-search').value||'').toLowerCase();
+  var items = q ? _boqItems.filter(function(x){ return (x.item||'').toLowerCase().includes(q) || (x.category||'').toLowerCase().includes(q); }) : _boqItems;
+  var html = items.map(function(item) {
+    var defaultMargin = parseFloat(document.getElementById('boq-default-margin').value) || 20;
+    var defaultGST = parseFloat(document.getElementById('boq-default-gst').value) || 18;
+    var margin = item.margin != null ? item.margin : defaultMargin;
+    var gst = item.gst != null ? item.gst : defaultGST;
+    var base = (parseFloat(item.qty)||1) * (parseFloat(item.unit_cost)||0);
+    var final = base * (1 + margin/100) * (1 + gst/100);
+    return '<tr>' +
+      '<td><input value="' + (item.item||'') + '" oninput="boqEditField(' + item._id + ',\'item\',this.value)" style="width:100%;background:transparent;border:none;color:#fff;font-size:12px"></td>' +
+      '<td><input value="' + (item.category||'') + '" oninput="boqEditField(' + item._id + ',\'category\',this.value)" style="width:100%;background:transparent;border:none;color:var(--text2);font-size:12px"></td>' +
+      '<td><input value="' + (item.unit||'LS') + '" oninput="boqEditField(' + item._id + ',\'unit\',this.value)" style="width:50px;background:transparent;border:none;color:var(--text2);font-size:12px"></td>' +
+      '<td><input type="number" value="' + (item.qty||1) + '" oninput="boqEditField(' + item._id + ',\'qty\',this.value);boqRecalc()" style="width:55px;background:transparent;border:none;color:#fff;font-size:12px"></td>' +
+      '<td><input type="number" value="' + (item.unit_cost||0) + '" oninput="boqEditField(' + item._id + ',\'unit_cost\',this.value);boqRecalc()" style="width:90px;background:transparent;border:none;color:#fff;font-size:12px"></td>' +
+      '<td style="color:var(--text2);font-size:11px;white-space:nowrap">₹' + base.toLocaleString('en-IN',{maximumFractionDigits:0}) + '</td>' +
+      '<td><input type="number" value="' + margin + '" oninput="boqEditField(' + item._id + ',\'margin\',this.value);boqRecalc()" style="width:50px;background:transparent;border:none;color:var(--amber);font-size:12px"></td>' +
+      '<td><input type="number" value="' + gst + '" oninput="boqEditField(' + item._id + ',\'gst\',this.value);boqRecalc()" style="width:50px;background:transparent;border:none;color:var(--cyan);font-size:12px"></td>' +
+      '<td style="color:var(--green);font-size:11px;white-space:nowrap;font-weight:600">₹' + final.toLocaleString('en-IN',{maximumFractionDigits:0}) + '</td>' +
+      '<td><button class="btn-icon btn-xs" onclick="boqDeleteRow(' + item._id + ')" style="color:var(--red)" title="Delete">✕</button></td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('boq-tbody').innerHTML = html || '<tr><td colspan="10" class="empty-state">No items — add row or regenerate from RFP</td></tr>';
+}
+
+function boqUpdateRows() { boqRender(); }
+
 async function searchBOQ() {
-  var q = document.getElementById('boq-search').value.trim();
+  var q = document.getElementById('boq-hist-search').value.trim();
   if (q.length < 2) return;
   try {
     var r = await fetch('/boq-search?q=' + encodeURIComponent(q));
@@ -3990,6 +4264,16 @@ async function loadProfile() {
 
     // Certifications
     renderCertifications(p.certifications || []);
+    // Bank details
+    var bank = d.bank || {};
+    ['name','branch','acc','ifsc','type','micr','addr'].forEach(function(f) {
+      var el = document.getElementById('prof-bank-' + f);
+      if (el) el.value = bank[f] || '';
+    });
+    // Empanelments
+    renderEmpanelments(d.empanelments || []);
+    // Awards
+    renderAwards(d.awards || []);
 
     // Bid rules
     _pset('prof-min', rules.min_project_value_cr); _pset('prof-max', rules.max_project_value_cr);
@@ -4151,6 +4435,17 @@ async function saveProfile() {
     do_not_bid: lines('prof-dnb'),
     conditional: lines('prof-cond'),
   };
+  _profileData.bank = {
+    name: document.getElementById('prof-bank-name').value,
+    branch: document.getElementById('prof-bank-branch').value,
+    acc: document.getElementById('prof-bank-acc').value,
+    ifsc: document.getElementById('prof-bank-ifsc').value,
+    type: document.getElementById('prof-bank-type').value,
+    micr: document.getElementById('prof-bank-micr').value,
+    addr: document.getElementById('prof-bank-addr').value
+  };
+  _profileData.empanelments = collectEmpanelments();
+  _profileData.awards = collectAwards();
   try {
     var r = await fetch('/profile', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_profileData) });
     if (r.ok) {
@@ -4720,7 +5015,7 @@ async function loadSkipped() {
   try {
     var r = await fetch('/skipped');
     var d = await r.json();
-    var rows = (d.tenders || []).map(t =>
+    var rows = (d.skipped || []).map(t =>
       '<tr>' +
         '<td class="mono">' + (t.t247_id||'—') + '</td>' +
         '<td>' + (t.brief||'—').substring(0,60) + '</td>' +
@@ -5273,6 +5568,158 @@ async function aiDiagnose() {
     };
   }
 })();
+
+// ────────────────────────────────────────────
+// SKIP TENDER
+// ────────────────────────────────────────────
+async function skipTender(tid, e) {
+  if (e) e.stopPropagation();
+  if (!confirm('Skip tender ' + tid + '? It will move to Skipped list.')) return;
+  try {
+    await fetch('/tender/' + tid + '/skip', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({reason: 'Manually skipped'})});
+    toast('Tender ' + tid + ' skipped', 'success');
+    closeSidePanel();
+    loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// SET VERDICT (override)
+// ────────────────────────────────────────────
+async function setVerdict(tid) {
+  var sel = document.getElementById('sp-verdict-' + tid);
+  if (!sel || !sel.value) { toast('Select a verdict first', 'error'); return; }
+  try {
+    var r = await fetch('/tender/' + tid + '/set-verdict', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({verdict: sel.value, manual: true})});
+    var d = await r.json();
+    toast('Verdict set to ' + sel.value, 'success');
+    await loadDashboard();
+    openSidePanel(tid);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// SET STAGE (pipeline move)
+// ────────────────────────────────────────────
+async function setStage(tid) {
+  var sel = document.getElementById('sp-stage-' + tid);
+  if (!sel || !sel.value) { toast('Select a stage first', 'error'); return; }
+  try {
+    await fetch('/tender/' + tid + '/stage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status: sel.value})});
+    toast('Stage updated to ' + sel.value, 'success');
+    await loadDashboard();
+    openSidePanel(tid);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// MARK PREBID SENT
+// ────────────────────────────────────────────
+async function markPrebidSent(tid) {
+  try {
+    await fetch('/prebid-sent/' + tid, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: 'manual'})});
+    toast('Pre-bid marked sent — stage updated', 'success');
+    await loadDashboard();
+    openSidePanel(tid);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// RECLASSIFY ONE TENDER
+// ────────────────────────────────────────────
+async function reclassifyOne(tid, e) {
+  if (e) e.stopPropagation();
+  showLoading('Re-analysing tender ' + tid + '...');
+  try {
+    var r = await fetch('/tender/' + tid + '/reanalyse', {method:'POST'});
+    var d = await r.json();
+    hideLoading();
+    if (d.error) { toast('Error: ' + d.error, 'error'); return; }
+    toast('Re-analysis complete for ' + tid, 'success');
+    await loadDashboard();
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, 'error'); }
+}
+
+// ────────────────────────────────────────────
+// CORRIGENDUM TRACKER
+// ────────────────────────────────────────────
+function loadCorrigendum() {
+  var corrTenders = allTenders.filter(function(t) { return t.has_corrigendum || (t.corrigendum_count && t.corrigendum_count > 0); });
+  var stats = document.getElementById('corr-stats');
+  if (stats) {
+    stats.innerHTML =
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--amber)">' + corrTenders.length + '</div><div style="font-size:11px;color:var(--text3)">With Corrigendum</div></div>' +
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--green)">' + corrTenders.filter(function(t){return getDaysLeft(t)>=0}).length + '</div><div style="font-size:11px;color:var(--text3)">Still Active</div></div>' +
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--blue)">' + corrTenders.filter(function(t){return getVerdict(t)==='BID'}).length + '</div><div style="font-size:11px;color:var(--text3)">BID with Corrigendum</div></div>';
+  }
+  var rows = corrTenders.map(function(t) {
+    var dl = getDaysLeft(t);
+    var files = (t.corrigendum_files || []).join(', ') || (t.corrigendum_count ? t.corrigendum_count + ' file(s)' : '—');
+    return '<tr>' +
+      '<td class="mono">' + (t.t247_id||'—') + '</td>' +
+      '<td class="brief-cell"><div class="brief">' + (t.brief||'—').substring(0,60) + '</div></td>' +
+      '<td>' + (t.org_name||'—').substring(0,30) + '</td>' +
+      '<td style="font-size:11px">' + (t.deadline||'—') + '</td>' +
+      '<td>' + daysDisplay(dl) + '</td>' +
+      '<td style="font-size:11px;color:var(--amber)">' + files + '</td>' +
+      '<td class="actions-cell">' +
+        '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
+        '<button class="action-btn amber" onclick="reclassifyOne(\'' + t.t247_id + '\',null)">↺ Re-run</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('corr-tbody').innerHTML = rows || '<tr><td colspan="7" class="empty-state">No corrigendum found in current tenders</td></tr>';
+}
+
+// ── EMPANELMENTS ─────────────────────────────
+var _empanelments = [];
+function renderEmpanelments(list) {
+  _empanelments = list || [];
+  var el = document.getElementById('empanelments-list');
+  if (!el) return;
+  if (!_empanelments.length) { el.innerHTML = '<div class="muted" style="font-size:12px">No empanelments added yet</div>'; return; }
+  el.innerHTML = _empanelments.map(function(e, i) {
+    return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:end">' +
+      '<div><label style="font-size:10px;color:var(--text3)">Agency / Portal</label><input value="' + (e.agency||'') + '" oninput="_empanelments['+i+'].agency=this.value" placeholder="e.g. CERT-In, GeM"></div>' +
+      '<div><label style="font-size:10px;color:var(--text3)">Reg No / ID</label><input value="' + (e.reg_no||'') + '" oninput="_empanelments['+i+'].reg_no=this.value" placeholder="Registration number"></div>' +
+      '<div><label style="font-size:10px;color:var(--text3)">Valid Until</label><input type="date" value="' + (e.valid_until||'') + '" oninput="_empanelments['+i+'].valid_until=this.value"></div>' +
+      '<button class="btn btn-ghost btn-xs" style="color:var(--red);margin-bottom:2px" onclick="_empanelments.splice('+i+',1);renderEmpanelments(_empanelments)">✕</button>' +
+    '</div>';
+  }).join('');
+}
+function addEmpanelment() { _empanelments.push({agency:'',reg_no:'',valid_until:''}); renderEmpanelments(_empanelments); }
+function collectEmpanelments() { return _empanelments; }
+
+// ── AWARDS ──────────────────────────────────
+var _awards = [];
+function renderAwards(list) {
+  _awards = list || [];
+  var el = document.getElementById('awards-list');
+  if (!el) return;
+  if (!_awards.length) { el.innerHTML = '<div class="muted" style="font-size:12px">No awards added yet</div>'; return; }
+  el.innerHTML = _awards.map(function(a, i) {
+    return '<div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px;margin-bottom:6px;align-items:end">' +
+      '<div><label style="font-size:10px;color:var(--text3)">Award Name</label><input value="' + (a.name||'') + '" oninput="_awards['+i+'].name=this.value" placeholder="Award or recognition name"></div>' +
+      '<div><label style="font-size:10px;color:var(--text3)">Awarded By</label><input value="' + (a.by||'') + '" oninput="_awards['+i+'].by=this.value" placeholder="Issuing body"></div>' +
+      '<div><label style="font-size:10px;color:var(--text3)">Year</label><input type="number" value="' + (a.year||'') + '" oninput="_awards['+i+'].year=this.value" style="width:70px" placeholder="2024"></div>' +
+      '<button class="btn btn-ghost btn-xs" style="color:var(--red);margin-bottom:2px" onclick="_awards.splice('+i+',1);renderAwards(_awards)">✕</button>' +
+    '</div>';
+  }).join('');
+}
+function addAward() { _awards.push({name:'',by:'',year:''}); renderAwards(_awards); }
+function collectAwards() { return _awards; }
+
+async function pipelineMoveStage(tid) {
+  var sel = document.getElementById('pip-stage-' + tid);
+  if (!sel) return;
+  var newStage = sel.value;
+  try {
+    await fetch('/tender/' + tid + '/stage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status: newStage})});
+    toast(tid + ' moved to ' + newStage, 'success');
+    loadPipeline();
+    loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
 
 </script>
 </body>
