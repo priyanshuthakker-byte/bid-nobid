@@ -23,6 +23,17 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;font-size:13px}
+body.light-mode{
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8edf3;--bg4:#dde4ee;--bg5:#c9d3e0;
+  --border:#c8d4e0;--border2:#b0bed0;
+  --text:#1a2535;--text2:#4a5a6e;--text3:#8090a0;
+  --blue:#2563eb;--blue2:#1d4ed8;--blue-glow:rgba(37,99,235,.12);
+  --green:#16a34a;--green-bg:rgba(22,163,74,.1);
+  --red:#dc2626;--red-bg:rgba(220,38,38,.1);
+  --amber:#d97706;--amber-bg:rgba(217,119,6,.1);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,.1);
+  --shadow:0 4px 24px rgba(0,0,0,.12);
+}
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -434,46 +445,52 @@ select option{background:var(--bg2)}
 ══════════════════════════════════════════════ -->
 <div id="nav">
   <div id="nav-brand">
-    <h2>TENDER<span style="color:var(--blue)">IQ</span></h2>
-    <p>Nascent Info Technologies</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h2>TENDER<span style="color:var(--blue)">IQ</span></h2>
+        <p>Nascent Info Technologies</p>
+      </div>
+      <button onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);cursor:pointer;padding:4px 7px;font-size:13px;line-height:1">🌙</button>
+    </div>
   </div>
 
   <div class="nav-section">Main</div>
-  <button class="nav-btn active" onclick="showPage('dashboard')"><span class="nav-icon">⬛</span>Dashboard<span class="nav-badge" id="nb-total">0</span></button>
-  <button class="nav-btn" onclick="showPage('tenders')"><span class="nav-icon">📋</span>All Tenders</button>
+  <button class="nav-btn active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard<span class="nav-badge" id="nb-total">0</span></button>
+  <button class="nav-btn" onclick="showPage('calendar')"><span class="nav-icon">📅</span>Calendar<span class="nav-badge" id="nb-cal" style="display:none"></span></button>
   <button class="nav-btn" onclick="showPage('pipeline')"><span class="nav-icon">⟶</span>Pipeline</button>
+  <button class="nav-btn" onclick="showPage('tenders')"><span class="nav-icon">📋</span>All Tenders</button>
 
-  <div class="nav-section">Analysis</div>
+  <div class="nav-section">Bid Analysis</div>
   <button class="nav-btn" onclick="showPage('analyse')"><span class="nav-icon">🔍</span>Analyse Tender</button>
-  <button class="nav-btn" onclick="showPage('doc-editor')"><span class="nav-icon">✏️</span>Doc Editor</button>
+  <button class="nav-btn" onclick="showPage('risk')"><span class="nav-icon">⚠</span>Risk Scanner</button>
   <button class="nav-btn" onclick="showPage('checklist')"><span class="nav-icon">✅</span>Checklist</button>
-  <button class="nav-btn" onclick="showPage('documents')"><span class="nav-icon">📄</span>Documents</button>
+  <button class="nav-btn" onclick="showPage('boq')"><span class="nav-icon">💰</span>BOQ / Costing</button>
+
+  <div class="nav-section">Bid Documents</div>
+  <button class="nav-btn" onclick="showPage('documents')"><span class="nav-icon">📄</span>Generate Docs</button>
+  <button class="nav-btn" onclick="showPage('doc-editor')"><span class="nav-icon">✏️</span>Doc Editor</button>
+  <button class="nav-btn" onclick="showPage('assistant')"><span class="nav-icon">💬</span>Bid Assistant</button>
+  <button class="nav-btn" onclick="showPage('letterhead')"><span class="nav-icon">🏢</span>Letterhead</button>
 
   <div class="nav-section">Intelligence</div>
-  <button class="nav-btn" onclick="showPage('risk')"><span class="nav-icon">⚠</span>Risk Scanner</button>
-  <button class="nav-btn" onclick="showPage('assistant')"><span class="nav-icon">💬</span>Bid Assistant</button>
-  <button class="nav-btn" onclick="showPage('boq')"><span class="nav-icon">💰</span>BOQ</button>
-
-  <div class="nav-section">Reports</div>
-  <button class="nav-btn" onclick="showPage('reports')"><span class="nav-icon">📑</span>Reports</button>
   <button class="nav-btn" onclick="showPage('analytics')"><span class="nav-icon">📈</span>Analytics</button>
+  <button class="nav-btn" onclick="showPage('winloss')"><span class="nav-icon">🏅</span>Win / Loss</button>
+  <button class="nav-btn" onclick="showPage('reports')"><span class="nav-icon">📑</span>Reports</button>
+
+  <div class="nav-section">Trackers</div>
+  <button class="nav-btn" onclick="showPage('alerts')"><span class="nav-icon">🔔</span>Deadline Alerts<span class="nav-badge red" id="nb-alerts" style="display:none"></span></button>
+  <button class="nav-btn" onclick="showPage('corrigendum')"><span class="nav-icon">📋</span>Corrigendum<span class="nav-badge" id="nb-corr" style="display:none"></span></button>
+  <button class="nav-btn" onclick="showPage('emd')"><span class="nav-icon">🏦</span>EMD Tracker</button>
+  <button class="nav-btn" onclick="showPage('vault')"><span class="nav-icon">🗄</span>Document Vault</button>
 
   <div class="nav-section">Post-Award</div>
   <button class="nav-btn" onclick="showPage('postaward')"><span class="nav-icon">🏆</span>Post-Award</button>
   <button class="nav-btn" onclick="showPage('skipped')"><span class="nav-icon">🚫</span>Skipped</button>
-  <button class="nav-btn" onclick="showPage('letterhead')"><span class="nav-icon">🏢</span>Letterhead</button>
-
-  <div class="nav-section">Trackers</div>
-  <button class="nav-btn" onclick="showPage('corrigendum')"><span class="nav-icon">📋</span>Corrigendum</button>
-  <button class="nav-btn" onclick="showPage('alerts')"><span class="nav-icon">🔔</span>Deadline Alerts</button>
-  <button class="nav-btn" onclick="showPage('emd')"><span class="nav-icon">💰</span>EMD Tracker</button>
-  <button class="nav-btn" onclick="showPage('winloss')"><span class="nav-icon">📊</span>Win / Loss</button>
-  <button class="nav-btn" onclick="showPage('vault')"><span class="nav-icon">🗄</span>Vault</button>
 
   <div class="nav-section">System</div>
-  <button class="nav-btn" onclick="showPage('profile')"><span class="nav-icon">🏢</span>Company Profile</button>
-  <button class="nav-btn" onclick="showPage('diagnose')"><span class="nav-icon">🩺</span>Self-Diagnose</button>
+  <button class="nav-btn" onclick="showPage('profile')"><span class="nav-icon">🏛</span>Company Profile</button>
   <button class="nav-btn" onclick="showPage('settings')"><span class="nav-icon">⚙</span>Settings</button>
+  <button class="nav-btn" onclick="showPage('diagnose')"><span class="nav-icon">🩺</span>Self-Diagnose</button>
 
   <div id="nav-footer">
     <div class="status-row"><span class="dot dot-gray" id="drive-dot"></span><span id="drive-label">Drive: checking...</span></div>
@@ -522,6 +539,15 @@ select option{background:var(--bg2)}
   </div>
   <div class="page-body">
     <div id="alert-container"></div>
+    <!-- Today's Snapshot -->
+    <div id="today-snapshot" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:600;color:#fff">📅 Today — <span id="today-date-label"></span></span>
+        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('today-snapshot').style.display='none'">✕</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="today-stats"></div>
+      <div id="today-due-list" style="margin-top:8px;font-size:11px;color:var(--text3)"></div>
+    </div>
     <!-- Stats Row -->
     <div class="stats">
       <div class="stat" id="stat-all" onclick="setFilter('')"><div class="stat-num c-white" id="s-total">—</div><div class="stat-lbl">Total</div></div>
@@ -634,7 +660,7 @@ select option{background:var(--bg2)}
       <span id="sort-dir-btn" onclick="toggleSortDir()" style="cursor:pointer;font-size:13px;color:var(--blue);padding:3px 6px;border:1px solid var(--border);border-radius:4px" title="Toggle asc/desc">↑</span>
       <span style="margin-left:auto;font-size:11px;color:var(--text3)">Show:
         <select id="page-size-sel" onchange="renderDash()" style="background:var(--bg3);border:1px solid var(--border);color:#fff;border-radius:4px;padding:2px 5px;font-size:11px">
-          <option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="500">500</option>
+          <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option>
         </select>
         per page
       </span>
@@ -1200,145 +1226,177 @@ select option{background:var(--bg2)}
 <div id="page-profile" class="page">
   <div class="topbar"><h1>Company Profile</h1>
     <div class="topbar-actions">
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Import projects from Excel">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer">
         📥 Import Excel <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importProfileExcel(this)">
       </label>
       <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
     </div>
   </div>
   <div class="page-body">
-    <!-- COMPANY INFO -->
-    <div class="row">
-      <div class="card" style="flex:2;min-width:320px">
-        <div class="card-title">Company Info</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><label>Company Name</label><input id="prof-name" placeholder="Nascent Info Technologies Pvt. Ltd."></div>
-          <div><label>Short Name</label><input id="prof-short" placeholder="NIT"></div>
-          <div><label>CIN</label><input id="prof-cin" placeholder="U72200GJ2006PTC048723"></div>
-          <div><label>PAN</label><input id="prof-pan" placeholder="AACCN3670J"></div>
-          <div><label>GST / GSTIN</label><input id="prof-gst" placeholder="24AACCN3670J1ZG"></div>
-          <div><label>MSME / Udyam</label><input id="prof-udyam" placeholder="UDYAM-GJ-01-0007420"></div>
-          <div><label>MSME Type</label><input id="prof-msme-type" placeholder="MSME - Lifetime"></div>
-          <div><label>Incorporated</label><input id="prof-incorporated" placeholder="23-Jun-2006"></div>
-          <div><label>Type / Sector</label><input id="prof-type" placeholder="IT / GIS / Smart City"></div>
-          <div><label>GeM Seller ID</label><input id="prof-gem-id" placeholder="nascentinfo2"></div>
-          <div style="grid-column:1/-1"><label>Address</label><textarea id="prof-address" rows="2" placeholder="Registered address"></textarea></div>
-          <div><label>Phone</label><input id="prof-phone" placeholder="+91-79-40200400"></div>
-          <div><label>Email</label><input id="prof-email" placeholder="info@nascentinfo.com"></div>
-          <div><label>Tender Email</label><input id="prof-tender-email" placeholder="nascent.tender@nascentinfo.com"></div>
-          <div><label>Website</label><input id="prof-website" placeholder="www.nascentinfo.com"></div>
-        </div>
-      </div>
-      <div class="col" style="flex:1;min-width:260px">
-        <div class="card">
-          <div class="card-title">Managing Director</div>
-          <label>Name</label><input id="prof-md-name" placeholder="Maulik Bhagat">
-          <label>DIN</label><input id="prof-md-din" placeholder="01449881">
-          <label>Mobile</label><input id="prof-md-mobile" placeholder="9825307127">
-        </div>
-        <div class="card">
-          <div class="card-title">Authorised Signatory</div>
-          <label>Name</label><input id="prof-as-name" placeholder="Hitesh Patel">
-          <label>Designation</label><input id="prof-as-desg" placeholder="Chief Administrative Officer">
-          <label>Email</label><input id="prof-as-email" placeholder="hitesh.patel@nascentinfo.com">
-          <label>Mobile</label><input id="prof-as-mobile" placeholder="9099011792">
-          <label>POA Validity</label><input id="prof-as-poa" placeholder="01/04/2026 - 31/03/2027">
-        </div>
+
+    <!-- POA ALERT if near expiry -->
+    <div id="poa-alert-bar" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:12.5px;color:var(--red)"></div>
+
+    <!-- ── COMPANY INFO ── -->
+    <div class="card">
+      <div class="card-title">🏛 Company Information</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+        <div><label>Company Name</label><input id="prof-name" placeholder="Nascent Info Technologies Pvt. Ltd."></div>
+        <div><label>Short Name / Alias</label><input id="prof-short" placeholder="NIT"></div>
+        <div><label>Legal Status</label><input id="prof-legal-status" placeholder="Private Limited Company"></div>
+        <div><label>Year of Incorporation</label><input id="prof-incorporated" placeholder="2006"></div>
+        <div><label>CIN</label><input id="prof-cin" placeholder="U72200GJ2006PTC048723"></div>
+        <div><label>PAN</label><input id="prof-pan" placeholder="AACCN3670J"></div>
+        <div><label>GSTIN</label><input id="prof-gst" placeholder="24AACCN3670J1ZG"></div>
+        <div><label>MSME / Udyam No.</label><input id="prof-udyam" placeholder="UDYAM-GJ-01-0007420"></div>
+        <div><label>MSME Category</label><input id="prof-msme-type" placeholder="MSME - Micro/Small/Medium"></div>
+        <div><label>GeM Seller ID</label><input id="prof-gem-id" placeholder="nascentinfo2"></div>
+        <div><label>Sector / Type</label><input id="prof-type" placeholder="IT / GIS / Smart City"></div>
+        <div><label>Years in Operation</label><input id="prof-years-op" placeholder="19"></div>
+        <div style="grid-column:1/-1"><label>Registered Address</label><textarea id="prof-address" rows="2" placeholder="Full registered address"></textarea></div>
+        <div><label>City</label><input id="prof-city" placeholder="Ahmedabad"></div>
+        <div><label>State</label><input id="prof-state" placeholder="Gujarat"></div>
+        <div><label>PIN Code</label><input id="prof-pin" placeholder="380015"></div>
+        <div><label>Phone</label><input id="prof-phone" placeholder="+91-79-40200400"></div>
+        <div><label>Email</label><input id="prof-email" placeholder="info@nascentinfo.com"></div>
+        <div><label>Tender Email</label><input id="prof-tender-email" placeholder="nascent.tender@nascentinfo.com"></div>
+        <div><label>Website</label><input id="prof-website" placeholder="www.nascentinfo.com"></div>
       </div>
     </div>
 
-    <!-- FINANCE -->
+    <!-- ── KEY PERSONS ── -->
+    <div class="row">
+      <div class="card" style="flex:1;min-width:280px">
+        <div class="card-title">👤 Managing Director</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="grid-column:1/-1"><label>Full Name</label><input id="prof-md-name" placeholder="Maulik Bhagat"></div>
+          <div><label>DIN</label><input id="prof-md-din" placeholder="01449881"></div>
+          <div><label>Mobile</label><input id="prof-md-mobile" placeholder="9825307127"></div>
+          <div><label>Email</label><input id="prof-md-email" placeholder="md@company.com"></div>
+          <div><label>LinkedIn / Profile</label><input id="prof-md-linkedin" placeholder="Optional"></div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;min-width:280px">
+        <div class="card-title">✍️ Authorised Signatory</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="grid-column:1/-1"><label>Full Name</label><input id="prof-as-name" placeholder="Hitesh Patel"></div>
+          <div><label>Designation</label><input id="prof-as-desg" placeholder="Chief Administrative Officer"></div>
+          <div><label>Email</label><input id="prof-as-email" placeholder="hitesh.patel@nascentinfo.com"></div>
+          <div><label>Mobile</label><input id="prof-as-mobile" placeholder="9099011792"></div>
+          <div style="grid-column:1/-1"><label>POA Validity Period</label><input id="prof-as-poa" placeholder="01/04/2026 - 31/03/2027"></div>
+        </div>
+        <div id="poa-validity-check" style="margin-top:8px;font-size:11px"></div>
+      </div>
+    </div>
+
+    <!-- ── FINANCE ── -->
     <div class="card">
-      <div class="card-title">Finance
+      <div class="card-title">💰 Financial Details
         <button class="btn btn-ghost btn-xs" onclick="addTurnoverRow()">+ Add Year</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div><label>Net Worth (Cr)</label><input id="prof-networth" type="number" step="0.01" placeholder="26.09"></div>
-        <div><label>CA Name</label><input id="prof-ca-name" placeholder="CA Name"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:14px">
+        <div><label>Net Worth (₹ Cr)</label><input id="prof-networth" type="number" step="0.01" placeholder="26.09"></div>
+        <div><label>Solvency Amount (₹ Cr)</label><input id="prof-solvency" type="number" step="0.01" placeholder="2.61"></div>
+        <div><label>CA / Auditor Name</label><input id="prof-ca-name" placeholder="Anuj J. Sharedalal"></div>
         <div><label>CA UDIN (Latest FY)</label><input id="prof-ca-udin" placeholder="UDIN number"></div>
+        <div><label>Avg Turnover 2yr (₹ Cr)</label><input id="prof-avg-2yr" type="number" step="0.01" placeholder="17.60"></div>
+        <div><label>Avg Turnover 3yr (₹ Cr)</label><input id="prof-avg-3yr" type="number" step="0.01" placeholder="17.18"></div>
+        <div><label>Avg Turnover 5yr (₹ Cr)</label><input id="prof-avg-5yr" type="number" step="0.01" placeholder="16.23"></div>
       </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Annual Turnover by Year (₹ Cr)</div>
-      <div id="turnover-table" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px"></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Annual Turnover by Year (₹ Cr)</div>
+      <div id="turnover-table" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px"></div>
+      <div id="turnover-chart" style="margin-top:14px;display:flex;align-items:flex-end;gap:6px;height:80px;padding:0 4px"></div>
     </div>
 
-    <!-- EMPLOYEES -->
+    <!-- ── EMPLOYEES ── -->
     <div class="row">
-      <div class="card" style="flex:1;min-width:220px">
-        <div class="card-title">Employee Strength</div>
+      <div class="card" style="flex:0 0 auto;min-width:240px">
+        <div class="card-title">👥 Employee Strength</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><label>Total Staff</label><input id="prof-emp-total" type="number" placeholder="67"></div>
+          <div><label>Total (Listed)</label><input id="prof-emp-total" type="number" placeholder="66"></div>
+          <div><label>Total (Confirmed)</label><input id="prof-emp-confirmed" type="number" placeholder="67"></div>
           <div><label>GIS Staff</label><input id="prof-emp-gis" type="number" placeholder="11"></div>
           <div><label>IT / Dev Staff</label><input id="prof-emp-it" type="number" placeholder="21"></div>
-          <div><label>EPF Registered</label><select id="prof-emp-epf"><option value="true">Yes</option><option value="false">No</option></select></div>
+          <div style="grid-column:1/-1"><label>EPF Registered</label>
+            <select id="prof-emp-epf" style="width:100%"><option value="true">Yes</option><option value="false">No</option></select>
+          </div>
         </div>
       </div>
-      <div class="card" style="flex:2;min-width:320px">
-        <div class="card-title">Key Technical Staff
+      <div class="card" style="flex:1;min-width:320px">
+        <div class="card-title">🎓 Key Technical Staff
           <button class="btn btn-ghost btn-xs" onclick="addKeyStaff()">+ Add</button>
         </div>
         <div id="key-staff-list"></div>
       </div>
     </div>
 
-    <!-- CERTIFICATIONS -->
+    <!-- ── CERTIFICATIONS ── -->
     <div class="card">
-      <div class="card-title">Certifications
-        <button class="btn btn-ghost btn-xs" onclick="addCertification()">+ Add</button>
-      </div>
+      <div class="card-title">🏅 Certifications & Compliance</div>
       <div id="certifications-list"></div>
-    </div>
-
-    <!-- BANK DETAILS -->
-    <div class="card">
-      <div class="card-title">Bank Details (for EMD / Financial Docs)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div><label>Bank Name</label><input id="prof-bank-name" placeholder="State Bank of India"></div>
-        <div><label>Branch</label><input id="prof-bank-branch" placeholder="Ahmedabad Main Branch"></div>
-        <div><label>Account No</label><input id="prof-bank-acc" placeholder="XXXXXXXXXXXXXXX"></div>
-        <div><label>IFSC Code</label><input id="prof-bank-ifsc" placeholder="SBIN0000001"></div>
-        <div><label>Account Type</label><select id="prof-bank-type"><option>Current</option><option>Savings</option></select></div>
-        <div><label>MICR Code</label><input id="prof-bank-micr" placeholder="380002001"></div>
-        <div style="grid-column:1/-1"><label>Bank Address</label><textarea id="prof-bank-addr" rows="2" placeholder="Bank branch full address"></textarea></div>
+      <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-gstin" style="width:14px;height:14px"> GSTIN Active</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-msme-udyam"> MSME / Udyam</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-cert-in"> CERT-In Empanelled</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-stqc"> STQC Certified</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-sap"> SAP Partner</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-oracle"> Oracle Partner</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-esri"> Esri/ArcGIS Partner</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px;background:var(--bg4);border-radius:6px;border:1px solid var(--border)"><input type="checkbox" id="cert-gem-seller"> GeM Seller</label>
       </div>
     </div>
 
-    <!-- EMPANELMENTS / REGISTRATIONS -->
+    <!-- ── BANK DETAILS ── -->
     <div class="card">
-      <div class="card-title">Empanelments & Registrations
+      <div class="card-title">🏦 Bank Details (for EMD / Financial Documents)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        <div><label>Bank Name</label><input id="prof-bank-name" placeholder="State Bank of India"></div>
+        <div><label>Branch Name</label><input id="prof-bank-branch" placeholder="SG Highway Branch, Ahmedabad"></div>
+        <div><label>Account Number</label><input id="prof-bank-acc" placeholder="XXXXXXXXXXXXXXX"></div>
+        <div><label>IFSC Code</label><input id="prof-bank-ifsc" placeholder="SBIN0001234"></div>
+        <div><label>Account Type</label><select id="prof-bank-type" style="width:100%"><option>Current</option><option>Savings</option><option>OD / CC</option></select></div>
+        <div><label>MICR Code</label><input id="prof-bank-micr" placeholder="380002001"></div>
+        <div style="grid-column:1/-1"><label>Bank Full Address</label><textarea id="prof-bank-addr" rows="2" placeholder="Complete bank branch address"></textarea></div>
+      </div>
+    </div>
+
+    <!-- ── EMPANELMENTS ── -->
+    <div class="card">
+      <div class="card-title">📋 Empanelments & Registrations
         <button class="btn btn-ghost btn-xs" onclick="addEmpanelment()">+ Add</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">CERT-In, STQC, NIC, ISRO, Survey of India, GeM, State portals etc.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Government portals, CERT-In, NIC, ISRO, Survey of India, state agency registrations, etc.</div>
       <div id="empanelments-list"></div>
     </div>
 
-    <!-- AWARDS & RECOGNITIONS -->
+    <!-- ── AWARDS ── -->
     <div class="card">
-      <div class="card-title">Awards & Recognitions
+      <div class="card-title">🏆 Awards & Recognitions
         <button class="btn btn-ghost btn-xs" onclick="addAward()">+ Add</button>
       </div>
       <div id="awards-list"></div>
     </div>
 
-    <!-- BID RULES -->
+    <!-- ── BID RULES + PROJECTS ── -->
     <div class="row">
-      <div class="card" style="flex:1">
-        <div class="card-title">Bid Rules</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div><label>Min Project Value (Cr)</label><input type="number" id="prof-min" step="0.1" placeholder="0.25"></div>
-          <div><label>Max Project Value (Cr)</label><input type="number" id="prof-max" step="1" placeholder="100"></div>
+      <div class="card" style="flex:1;min-width:280px">
+        <div class="card-title">📏 Bid Rules</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div><label>Min Project Value (₹ Cr)</label><input type="number" id="prof-min" step="0.1" placeholder="0.25"></div>
+          <div><label>Max Project Value (₹ Cr)</label><input type="number" id="prof-max" step="1" placeholder="100"></div>
         </div>
         <label>Preferred Sectors (one per line)</label>
-        <textarea id="prof-sectors" rows="5" placeholder="GIS&#10;Surveying&#10;Smart City&#10;Mapping"></textarea>
-        <label>Do Not Bid Keywords</label>
-        <textarea id="prof-dnb" rows="4" placeholder="construction&#10;civil works"></textarea>
-        <label>Conditional Keywords</label>
-        <textarea id="prof-cond" rows="3" placeholder="joint venture&#10;consortium"></textarea>
+        <textarea id="prof-sectors" rows="5" placeholder="GIS&#10;Surveying&#10;Smart City&#10;Mapping&#10;Software Development"></textarea>
+        <label style="margin-top:8px">Do-Not-Bid Keywords</label>
+        <textarea id="prof-dnb" rows="3" placeholder="construction&#10;civil works&#10;hardware supply"></textarea>
+        <label style="margin-top:8px">Conditional Keywords</label>
+        <textarea id="prof-cond" rows="3" placeholder="joint venture&#10;consortium&#10;foreign company"></textarea>
       </div>
-      <div class="card" style="flex:1">
-        <div class="card-title">Past Projects
+      <div class="card" style="flex:1;min-width:280px">
+        <div class="card-title">🗂 Past Projects
           <button class="btn btn-ghost btn-xs" onclick="addProject()">+ Add</button>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">These keywords power match-tags on dashboard</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">These keywords power the match-tags on the dashboard</div>
         <div id="projects-list"></div>
       </div>
     </div>
@@ -1728,6 +1786,41 @@ select option{background:var(--bg2)}
 </div>
 
 
+<!-- ═══ CALENDAR ═══ -->
+<div id="page-calendar" class="page">
+  <div class="topbar"><h1>Deadline Calendar</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="calPrev()">‹ Prev</button>
+      <span id="cal-month-label" style="font-size:14px;font-weight:600;color:#fff;padding:0 12px"></span>
+      <button class="btn btn-ghost btn-sm" onclick="calNext()">Next ›</button>
+      <button class="btn btn-primary btn-sm" onclick="calToday()">Today</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px">
+      <!-- Days header -->
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">SUN</div>
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">MON</div>
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">TUE</div>
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">WED</div>
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">THU</div>
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">FRI</div>
+      <div style="text-align:center;font-size:10px;color:var(--text3);font-weight:600;padding:6px">SAT</div>
+    </div>
+    <div id="cal-cells" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
+    <div id="cal-day-detail" style="margin-top:16px;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span id="cal-day-title" style="font-size:14px;font-weight:600;color:#fff"></span>
+        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('cal-day-detail').style.display='none'">✕</button>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>T247 ID</th><th>Brief</th><th>Org</th><th>Value</th><th>Verdict</th><th>Actions</th></tr></thead>
+        <tbody id="cal-day-tenders"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ CORRIGENDUM TRACKER ═══ -->
 <div id="page-corrigendum" class="page">
   <div class="topbar"><h1>Corrigendum Tracker</h1>
@@ -1844,6 +1937,7 @@ function showPage(name, opts) {
   if (name === 'analytics') loadAnalytics();
   if (name === 'boq') populateBOQSelect();
   if (name === 'corrigendum') loadCorrigendum();
+  if (name === 'calendar') loadCalendar();
   if (name === 'settings') { loadSettings(); loadT247ConnectionStatus(); _startUsageMeterAutoRefresh(); }
   if (name === 'profile') loadProfile();
   if (name === 'doc-editor') populateEditorSelect();
@@ -1995,6 +2089,7 @@ async function loadDashboard() {
     _populateAdvDropdowns(allTenders);
     renderDash();
     renderAlerts(s);
+    renderTodaySnapshot();
     updateStatusBar();
   } catch(e) { console.error(e); }
 }
@@ -4358,61 +4453,117 @@ async function loadProfile() {
     var p = await r.json();
     _profileData = p;
     var co = p.company || {};
-    var md = p.managing_director || {};
-    var as = p.authorised_signatory || {};
+    // MD and AS can be objects (new format) or strings (old JSON format)
+    var md = (typeof p.managing_director === 'object' && p.managing_director) ? p.managing_director : {};
+    var as_obj = (typeof p.authorised_signatory === 'object' && p.authorised_signatory) ? p.authorised_signatory : {};
     var fin = p.finance || {};
     var emp = p.employees || {};
     var rules = p.bid_rules || {};
+    var certs = p.certifications || {};
+    var bank = p.bank || {};
 
-    // Company
-    _pset('prof-name', co.name); _pset('prof-short', co.short_name);
+    // ── Company fields ──
+    _pset('prof-name', co.name); _pset('prof-short', co.short_name || co.alias);
+    _pset('prof-legal-status', co.legal_status);
+    _pset('prof-incorporated', co.year_of_incorporation || co.incorporated);
     _pset('prof-cin', co.cin); _pset('prof-pan', co.pan);
-    _pset('prof-gst', co.gstin); _pset('prof-udyam', co.msme_udyam || co.udyam);
-    _pset('prof-msme-type', co.msme_type); _pset('prof-incorporated', co.incorporated);
-    _pset('prof-type', co.type); _pset('prof-gem-id', co.gem_seller_id);
-    _pset('prof-address', [co.address, co.city, co.state, co.pin].filter(Boolean).join(', '));
+    _pset('prof-gst', co.gstin || co.gst); _pset('prof-udyam', co.udyam || co.msme_udyam);
+    _pset('prof-msme-type', co.msme_type || (co.msme ? 'MSME' : ''));
+    _pset('prof-gem-id', co.gem_seller_id || co.gem_id);
+    _pset('prof-type', co.type);
+    _pset('prof-years-op', co.years_in_operation || co.years_op);
+    _pset('prof-address', co.address);
+    _pset('prof-city', co.city); _pset('prof-state', co.state); _pset('prof-pin', co.pin || co.pincode);
     _pset('prof-phone', co.phone); _pset('prof-email', co.email);
     _pset('prof-tender-email', co.tender_email); _pset('prof-website', co.website);
 
-    // MD & Signatory
-    _pset('prof-md-name', md.name); _pset('prof-md-din', md.din); _pset('prof-md-mobile', md.mobile);
-    _pset('prof-as-name', as.name); _pset('prof-as-desg', as.designation);
-    _pset('prof-as-email', as.email); _pset('prof-as-mobile', as.mobile);
-    _pset('prof-as-poa', as.poa_validity);
+    // ── MD — handle string or object ──
+    if (typeof co.md === 'string') { _pset('prof-md-name', co.md); }
+    else if (typeof co.md === 'object' && co.md) { _pset('prof-md-name', co.md.name); _pset('prof-md-din', co.md.din); _pset('prof-md-mobile', co.md.mobile); _pset('prof-md-email', co.md.email); }
+    if (md.name) { _pset('prof-md-name', md.name); _pset('prof-md-din', md.din); _pset('prof-md-mobile', md.mobile); _pset('prof-md-email', md.email); }
 
-    // Finance
+    // ── Authorised Signatory — handle string or object ──
+    if (typeof co.authorised_signatory === 'string') {
+      var asParts = co.authorised_signatory.split(',');
+      _pset('prof-as-name', (asParts[0]||'').trim());
+      _pset('prof-as-desg', (asParts[1]||'').trim());
+    }
+    if (as_obj.name) { _pset('prof-as-name', as_obj.name); _pset('prof-as-desg', as_obj.designation); _pset('prof-as-email', as_obj.email); _pset('prof-as-mobile', as_obj.mobile); }
+    _pset('prof-as-poa', co.poa_validity || as_obj.poa_validity);
+
+    // POA alert
+    if (co.poa_validity || co.poa_alert) {
+      var poaAlert = document.getElementById('poa-validity-check');
+      var alertBar = document.getElementById('poa-alert-bar');
+      if (co.poa_alert) { if(alertBar){alertBar.style.display='block';alertBar.textContent='⚠ '+co.poa_alert;} if(poaAlert){poaAlert.textContent=co.poa_alert;poaAlert.style.color='var(--red)';} }
+    }
+
+    // ── Finance ──
     _pset('prof-networth', fin.net_worth_cr || fin.net_worth_latest_cr);
-    _pset('prof-ca-name', fin.ca_name); _pset('prof-ca-udin', fin.ca_udin_2024_25);
+    _pset('prof-solvency', fin.solvency_amount_cr);
+    _pset('prof-ca-name', fin.ca_name); _pset('prof-ca-udin', fin.ca_udin || fin.ca_udin_2024_25);
+    _pset('prof-avg-2yr', fin.avg_turnover_last_2_fy); _pset('prof-avg-3yr', fin.avg_turnover_last_3_fy); _pset('prof-avg-5yr', fin.avg_turnover_last_5_fy);
     renderTurnoverTable(fin.turnover_by_year || {});
+    renderTurnoverChart(fin.turnover_by_year || {});
 
-    // Employees
-    _pset('prof-emp-total', emp.total); _pset('prof-emp-gis', emp.gis_staff || emp.gis_specialists);
+    // ── Employees ──
+    _pset('prof-emp-total', emp.total_listed || emp.total);
+    _pset('prof-emp-confirmed', emp.total_confirmed || emp.total);
+    _pset('prof-emp-gis', emp.gis_staff || emp.gis_specialists);
     _pset('prof-emp-it', emp.it_dev_staff || emp.it_developers);
     var epfEl = document.getElementById('prof-emp-epf');
-    if (epfEl) epfEl.value = emp.epf_registered ? 'true' : 'false';
+    if (epfEl) epfEl.value = emp.epf_registered !== false ? 'true' : 'false';
     renderKeyStaff(emp.key_technical_staff || []);
 
-    // Certifications
-    renderCertifications(p.certifications || []);
-    // Bank details
-    var bank = d.bank || {};
-    ['name','branch','acc','ifsc','type','micr','addr'].forEach(function(f) {
-      var el = document.getElementById('prof-bank-' + f);
-      if (el) el.value = bank[f] || '';
+    // ── Certifications (object format from JSON) ──
+    // Convert object to array for render
+    var certArr = [];
+    ['cmmi','iso_9001','iso_27001','iso_20000','ogc'].forEach(function(key) {
+      if (certs[key] && typeof certs[key] === 'object') {
+        certArr.push(Object.assign({_key: key}, certs[key]));
+      }
     });
-    // Empanelments
-    renderEmpanelments(d.empanelments || []);
-    // Awards
-    renderAwards(d.awards || []);
+    renderCertifications(certArr.length ? certArr : (Array.isArray(certs) ? certs : []));
+    // Boolean cert checkboxes
+    var chk = {'cert-gstin': certs.gstin_active, 'cert-msme-udyam': certs.msme_udyam, 'cert-cert-in': certs.cert_in, 'cert-stqc': certs.stqc, 'cert-sap': certs.sap_partner, 'cert-oracle': certs.oracle_partner, 'cert-esri': certs.esri_partner, 'cert-gem-seller': !!(co.gem_seller_id||co.gem_id)};
+    Object.entries(chk).forEach(function([id, val]) { var el=document.getElementById(id); if(el) el.checked = !!val; });
 
-    // Bid rules
-    _pset('prof-min', rules.min_project_value_cr); _pset('prof-max', rules.max_project_value_cr);
+    // ── Bank ──
+    ['name','branch','acc','ifsc','type','micr','addr'].forEach(function(f) {
+      var el = document.getElementById('prof-bank-' + f); if (el) el.value = bank[f] || '';
+    });
+
+    // ── Empanelments + Awards ──
+    renderEmpanelments(p.empanelments || []);
+    renderAwards(p.awards || []);
+
+    // ── Bid Rules ──
+    _pset('prof-min', rules.min_project_value_cr || rules.min_value_cr);
+    _pset('prof-max', rules.max_project_value_cr || rules.max_value_cr);
     _pset('prof-sectors', (rules.preferred_sectors || []).join('\n'));
-    _pset('prof-dnb', (rules.do_not_bid || []).join('\n'));
-    _pset('prof-cond', (rules.conditional || []).join('\n'));
+    _pset('prof-dnb', (rules.do_not_bid || rules.dnb_keywords || []).join('\n'));
+    _pset('prof-cond', (rules.conditional || rules.conditional_keywords || []).join('\n'));
 
+    // ── Projects ──
     renderProjects(p.projects || []);
+
+    document.getElementById('profile-status').textContent = 'Profile loaded — ' + new Date().toLocaleTimeString();
   } catch(e) { console.error('Profile load error:', e); toast('Profile load error: ' + e.message, 'error'); }
+}
+
+function renderTurnoverChart(byYear) {
+  var el = document.getElementById('turnover-chart'); if (!el) return;
+  var entries = Object.entries(byYear).sort();
+  if (!entries.length) { el.innerHTML = ''; return; }
+  var max = Math.max.apply(null, entries.map(function(e){ return e[1]; }));
+  el.innerHTML = entries.map(function(e) {
+    var pct = max > 0 ? (e[1]/max*100) : 0;
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">' +
+      '<span style="font-size:9px;color:var(--text3)">' + e[1].toFixed(1) + '</span>' +
+      '<div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:' + pct.toFixed(0) + '%;min-height:2px"></div>' +
+      '<span style="font-size:9px;color:var(--text3);transform:rotate(-40deg);transform-origin:top left;margin-top:4px;white-space:nowrap">' + (e[0]||'').replace('-','–') + '</span>' +
+    '</div>';
+  }).join('');
 }
 
 function renderTurnoverTable(byYear) {
@@ -4478,16 +4629,25 @@ function _removeKeyStaff(i) {
 }
 
 function renderCertifications(list) {
-  var el = document.getElementById('certifications-list');
-  if (!el) return;
-  if (!list.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3)">No certifications. Click + Add.</div>'; return; }
-  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + list.map((c, i) => {
-    var label = typeof c === 'string' ? c : (c.name || JSON.stringify(c));
-    return '<div style="display:flex;align-items:center;gap:4px;background:var(--bg4);border-radius:4px;padding:4px 8px">' +
-      '<span style="font-size:12px">' + label + '</span>' +
-      '<button class="btn-icon" style="padding:2px 4px;font-size:10px" onclick="_removeCert(' + i + ')">✕</button>' +
-      '</div>';
-  }).join('') + '</div>';
+  var el = document.getElementById('certifications-list'); if (!el) return;
+  if (!list || !list.length) { el.innerHTML = '<div style="font-size:11px;color:var(--text3)">No certifications added. Click + Add below.</div>'; return; }
+  var certNames = {'cmmi':'CMMI','iso_9001':'ISO 9001','iso_27001':'ISO 27001','iso_20000':'ISO 20000','ogc':'OGC Compliance'};
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">' + list.map(function(c, i) {
+    var name = c.standard || certNames[c._key] || c.name || 'Certificate ' + (i+1);
+    var isActive = (c.status||'').toUpperCase() === 'ACTIVE';
+    var validTo = c.valid_to || c.expiry || '';
+    return '<div style="background:var(--bg4);border:1px solid ' + (isActive?'var(--green)':'var(--border)') + ';border-radius:8px;padding:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+        '<div style="font-size:12.5px;font-weight:600;color:#fff">' + name + '</div>' +
+        '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:' + (isActive?'var(--green-bg)':'var(--bg3)') + ';color:' + (isActive?'var(--green)':'var(--text3)') + ';font-weight:600">' + (isActive?'✓ ACTIVE':'○ INACTIVE') + '</span>' +
+      '</div>' +
+      (c.level ? '<div style="font-size:11px;color:var(--text2)">Level: <b style="color:#fff">' + c.level + '</b>' + (c.version?' ('+c.version+')':'') + '</div>' : '') +
+      (c.cert_no ? '<div style="font-size:11px;color:var(--text3)">Cert No: ' + c.cert_no + '</div>' : '') +
+      (c.issuer ? '<div style="font-size:11px;color:var(--text3)">Issuer: ' + c.issuer + '</div>' : '') +
+      (validTo ? '<div style="font-size:11px;color:' + (isActive?'var(--green)':'var(--red)') + ';margin-top:4px">Valid until: ' + validTo + '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>' +
+  '<button class="btn btn-ghost btn-xs" style="margin-top:10px" onclick="addCertification()">+ Add Certificate</button>';
 }
 function addCertification() {
   var cert = prompt('Enter certification name:');
@@ -5849,6 +6009,186 @@ async function pipelineMoveStage(tid) {
     loadPipeline();
     loadDashboard();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ── THEME TOGGLE ─────────────────────────────
+function toggleTheme() {
+  var isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('tiq_theme', isLight ? 'light' : 'dark');
+  document.getElementById('theme-btn').textContent = isLight ? '☀️' : '🌙';
+}
+(function() {
+  if (localStorage.getItem('tiq_theme') === 'light') {
+    document.body.classList.add('light-mode');
+    var btn = document.getElementById('theme-btn');
+    if (btn) btn.textContent = '☀️';
+  }
+})();
+
+// ── TODAY'S SNAPSHOT ─────────────────────────
+function renderTodaySnapshot() {
+  var today = new Date();
+  var todayStr = today.toISOString().split('T')[0];
+  var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var label = dayNames[today.getDay()] + ', ' + today.getDate() + ' ' + monthNames[today.getMonth()] + ' ' + today.getFullYear();
+  var el = document.getElementById('today-date-label');
+  if (el) el.textContent = label;
+
+  // Tenders due today
+  var dueToday = allTenders.filter(function(t) {
+    var dl = getDaysLeft(t);
+    return dl === 0;
+  });
+  // Tenders due this week (1-7 days)
+  var dueWeek = allTenders.filter(function(t) {
+    var dl = getDaysLeft(t);
+    return dl >= 1 && dl <= 7;
+  });
+  // BID verdict active
+  var activeBID = allTenders.filter(function(t) {
+    return getVerdict(t) === 'BID' && getDaysLeft(t) >= 0;
+  });
+  // Tenders with corrigendum
+  var corrCount = allTenders.filter(function(t) { return t.has_corrigendum || t.corrigendum_count > 0; }).length;
+
+  var statsEl = document.getElementById('today-stats');
+  if (!statsEl) return;
+
+  var pills = [
+    { n: dueToday.length, label: 'Due TODAY', color: dueToday.length > 0 ? 'var(--red)' : 'var(--text3)', bg: dueToday.length > 0 ? 'var(--red-bg)' : 'var(--bg4)', filter: function(){ setFilter('urgent'); } },
+    { n: dueWeek.length,  label: 'Due this week', color: 'var(--amber)', bg: 'var(--amber-bg)', filter: function(){ setFilter('urgent'); } },
+    { n: activeBID.length, label: 'Active BID', color: 'var(--green)', bg: 'var(--green-bg)', filter: function(){ setFilter('BID'); } },
+    { n: allTenders.filter(function(t){ return !t.bid_no_bid_done && getDaysLeft(t)>=0; }).length, label: 'Pending Analysis', color: 'var(--blue)', bg: 'var(--blue-glow)', filter: function(){ setFilter('REVIEW'); } },
+    { n: corrCount, label: 'Corrigendum', color: 'var(--amber)', bg: 'var(--amber-bg)', filter: function(){ setFilter('corrigendum'); } },
+  ];
+
+  statsEl.innerHTML = pills.map(function(p) {
+    return '<div onclick="(' + p.filter.toString() + ')()" style="cursor:pointer;background:' + p.bg + ';border:1px solid ' + p.color + ';border-radius:8px;padding:6px 14px;display:flex;flex-direction:column;align-items:center;min-width:80px">' +
+      '<span style="font-size:18px;font-weight:700;color:' + p.color + '">' + p.n + '</span>' +
+      '<span style="font-size:10px;color:var(--text3);white-space:nowrap">' + p.label + '</span>' +
+    '</div>';
+  }).join('');
+
+  // List due-today tenders briefly
+  var dueEl = document.getElementById('today-due-list');
+  if (dueToday.length && dueEl) {
+    dueEl.innerHTML = '🔴 Due today: ' + dueToday.slice(0,4).map(function(t){ return '<b style="color:#fff">' + t.t247_id + '</b> ' + (t.brief||'').substring(0,30); }).join(' | ') + (dueToday.length>4?' +' + (dueToday.length-4) + ' more':'');
+  } else if (dueEl) {
+    dueEl.innerHTML = '';
+  }
+
+  // Update nav badges
+  var nbAlerts = document.getElementById('nb-alerts');
+  if (nbAlerts) { nbAlerts.style.display = (dueToday.length+dueWeek.length)>0?'':'none'; nbAlerts.textContent = dueToday.length+dueWeek.length; }
+  var nbCorr = document.getElementById('nb-corr');
+  if (nbCorr) { nbCorr.style.display = corrCount>0?'':'none'; nbCorr.textContent = corrCount; }
+
+  document.getElementById('today-snapshot').style.display = 'block';
+}
+
+// ────────────────────────────────────────────
+// CALENDAR
+// ────────────────────────────────────────────
+var _calYear = new Date().getFullYear();
+var _calMonth = new Date().getMonth(); // 0-indexed
+
+function calToday() { _calYear = new Date().getFullYear(); _calMonth = new Date().getMonth(); loadCalendar(); }
+function calPrev() { _calMonth--; if(_calMonth<0){_calMonth=11;_calYear--;} loadCalendar(); }
+function calNext() { _calMonth++; if(_calMonth>11){_calMonth=0;_calYear++;} loadCalendar(); }
+
+function _parseTenderDate(t) {
+  var raw = t.deadline || t.bid_submission_date || '';
+  if (!raw) return null;
+  var s = raw.split(' ')[0];
+  // Try DD-MM-YYYY
+  var m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
+  // Try YYYY-MM-DD
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+  // Try DD/MM/YYYY
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
+  return null;
+}
+
+function loadCalendar() {
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = months[_calMonth] + ' ' + _calYear;
+
+  // Build date → tenders map
+  var dateMap = {};
+  allTenders.forEach(function(t) {
+    var d = _parseTenderDate(t);
+    if (!d) return;
+    if (d.getFullYear() !== _calYear || d.getMonth() !== _calMonth) return;
+    var key = d.getDate();
+    if (!dateMap[key]) dateMap[key] = [];
+    dateMap[key].push(t);
+  });
+
+  // Build cells
+  var firstDay = new Date(_calYear, _calMonth, 1).getDay(); // 0=Sun
+  var daysInMonth = new Date(_calYear, _calMonth+1, 0).getDate();
+  var today = new Date(); var todayKey = (today.getFullYear()===_calYear&&today.getMonth()===_calMonth) ? today.getDate() : -1;
+
+  var html = '';
+  // Empty cells before first day
+  for (var i=0; i<firstDay; i++) html += '<div></div>';
+
+  for (var d=1; d<=daysInMonth; d++) {
+    var tenders = dateMap[d] || [];
+    var isToday = d === todayKey;
+    var hasBid = tenders.some(function(t){ return getVerdict(t)==='BID'; });
+    var hasCond = tenders.some(function(t){ return getVerdict(t)==='CONDITIONAL'; });
+    var dotColor = hasBid ? 'var(--green)' : hasCond ? 'var(--amber)' : tenders.length ? 'var(--blue)' : 'transparent';
+    var bg = isToday ? 'var(--blue-glow)' : tenders.length ? 'var(--bg3)' : 'var(--bg2)';
+    var border = isToday ? '1px solid var(--blue)' : '1px solid var(--border)';
+    html += '<div onclick="calDayClick(' + d + ')" style="cursor:' + (tenders.length?'pointer':'default') + ';background:' + bg + ';border:' + border + ';border-radius:8px;padding:8px;min-height:60px;position:relative;transition:background .15s" onmouseover="if(' + (tenders.length>0) + ')this.style.background=\'var(--bg4)\'" onmouseout="this.style.background=\'' + bg + '\'">' +
+      '<div style="font-size:12px;font-weight:' + (isToday?'700':'400') + ';color:' + (isToday?'var(--blue)':'var(--text)') + '">' + d + '</div>' +
+      (tenders.length ? '<div style="margin-top:4px">' +
+        '<div style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;margin-right:4px"></div>' +
+        '<span style="font-size:10px;color:var(--text3)">' + tenders.length + ' tender' + (tenders.length>1?'s':'') + '</span>' +
+      '</div>' : '') +
+      (tenders.length ? '<div style="margin-top:3px">' + tenders.slice(0,2).map(function(t){ var v=getVerdict(t); return '<div style="font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + (v==='BID'?'var(--green)':v==='CONDITIONAL'?'var(--amber)':'var(--text3)') + '" title="'+esc(t.brief)+'">' + (t.brief||t.t247_id||'').substring(0,18) + '</div>'; }).join('') + (tenders.length>2?'<div style="font-size:9px;color:var(--text3)">+' + (tenders.length-2) + ' more</div>':'') + '</div>' : '') +
+    '</div>';
+  }
+  document.getElementById('cal-cells').innerHTML = html;
+}
+
+function calDayClick(d) {
+  var dateMap = {};
+  allTenders.forEach(function(t) {
+    var dt = _parseTenderDate(t);
+    if (!dt) return;
+    if (dt.getFullYear() !== _calYear || dt.getMonth() !== _calMonth) return;
+    var key = dt.getDate();
+    if (!dateMap[key]) dateMap[key] = [];
+    dateMap[key].push(t);
+  });
+  var tenders = dateMap[d] || [];
+  if (!tenders.length) return;
+
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('cal-day-title').textContent = d + ' ' + months[_calMonth] + ' ' + _calYear + ' — ' + tenders.length + ' tender(s) due';
+  var rows = tenders.map(function(t) {
+    var v = getVerdict(t);
+    return '<tr>' +
+      '<td class="mono" style="font-size:11px">' + (t.t247_id||'—') + '</td>' +
+      '<td class="brief-cell"><div class="brief">' + (t.brief||'—').substring(0,50) + '</div></td>' +
+      '<td>' + (t.org_name||'—').substring(0,25) + '</td>' +
+      '<td>' + fmtCr(t.estimated_cost_cr) + '</td>' +
+      '<td><span class="badge badge-' + v + '">' + v + '</span></td>' +
+      '<td class="actions-cell">' +
+        '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
+        '<button class="action-btn green" onclick="openSidePanel(\'' + t.t247_id + '\')">Detail</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('cal-day-tenders').innerHTML = rows;
+  document.getElementById('cal-day-detail').style.display = 'block';
+  document.getElementById('cal-day-detail').scrollIntoView({behavior:'smooth'});
 }
 
 </script>
