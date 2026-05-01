@@ -464,6 +464,7 @@ select option{background:var(--bg2)}
   <button class="nav-btn" onclick="showPage('analyse')"><span class="nav-icon">🔍</span>Analyse Tender</button>
   <button class="nav-btn" onclick="showPage('risk')"><span class="nav-icon">⚠</span>Risk Scanner</button>
   <button class="nav-btn" onclick="showPage('checklist')"><span class="nav-icon">✅</span>Checklist</button>
+  <button class="nav-btn" onclick="showPage('prebid-page')"><span class="nav-icon">❓</span>Pre-bid Queries</button>
   <button class="nav-btn" onclick="showPage('boq')"><span class="nav-icon">💰</span>BOQ / Costing</button>
 
   <div class="nav-section">Bid Documents</div>
@@ -900,14 +901,27 @@ select option{background:var(--bg2)}
 
     <!-- Pre-bid -->
     <div id="prebid-section" style="display:none" class="card">
-      <div class="card-title">Pre-bid Queries
-        <div style="display:flex;gap:6px">
+      <div class="card-title">❓ Pre-bid Queries
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="loadPrebidQueries()">↺ Refresh</button>
           <button class="btn btn-primary btn-sm" onclick="generatePrebidLetter()">📄 Generate Letter</button>
           <button class="btn btn-ghost btn-sm" onclick="copyPrebidEmail()">📧 Copy Email</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportPrebidExcel()">⬇ CSV</button>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">
+        Codes: <code style="color:var(--blue)">PBQ-ELG</code> Eligibility · <code style="color:var(--blue)">PBQ-FIN</code> Financial · <code style="color:var(--blue)">PBQ-TEC</code> Technical · <code style="color:var(--blue)">PBQ-SCO</code> Scope · <code style="color:var(--blue)">PBQ-EMD</code> EMD · Status tracked per browser
+      </div>
       <div id="prebid-list"><div class="empty-state">Analyse a tender to generate pre-bid queries.</div></div>
+    </div>
+
+    <!-- Eligibility Quick-Check -->
+    <div id="eligibility-check-section" style="display:none" class="card">
+      <div class="card-title">🎯 Eligibility Quick-Check
+        <button class="btn btn-primary btn-sm" onclick="runEligibilityCheck()">▶ Run Check</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Compares company profile (turnover, certifications, staff count) against this tender's PQ criteria.</div>
+      <div id="eligibility-result"><div class="empty-state">Click "Run Check" to compare profile vs PQ criteria.</div></div>
     </div>
 
     <!-- Compliance -->
@@ -915,6 +929,37 @@ select option{background:var(--bg2)}
       <div class="card-title">⚖ Compliance Check <button class="btn btn-ghost btn-sm" onclick="runCompliance()">Analyse</button></div>
       <div id="compliance-result"><div class="empty-state">Click Analyse to check RFP against Indian procurement laws.</div></div>
     </div>
+  </div>
+</div>
+
+<!-- ═══ PRE-BID QUERIES PAGE ═══ -->
+<div id="page-prebid-page" class="page">
+  <div class="topbar"><h1>Pre-bid Queries</h1>
+    <div class="topbar-actions">
+      <select id="pbp-tender-sel" style="padding:5px 10px;font-size:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px;min-width:240px">
+        <option value="">— Select tender —</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="pbpLoad()">Load Queries</button>
+      <button class="btn btn-ghost btn-sm" onclick="generatePrebidLetter()">📄 Generate Letter</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyPrebidEmail()">📧 Copy Email</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="card" style="margin-bottom:12px;background:var(--blue-glow);border-color:rgba(59,130,246,.25)">
+      <div style="font-size:12px;color:var(--text2);line-height:1.8">
+        <b style="color:#fff">📋 Pre-bid Query Codes:</b>&nbsp;&nbsp;
+        <code style="color:var(--blue)">PBQ-ELG</code> Eligibility &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-FIN</code> Financial &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-TEC</code> Technical &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-SCO</code> Scope &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-COM</code> Compliance &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-EMD</code> EMD &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-TIM</code> Timeline &nbsp;·&nbsp;
+        <code style="color:var(--blue)">PBQ-GEN</code> General<br>
+        <span style="font-size:11px;color:var(--text3)">Status is saved per-browser. Export CSV for submission records. Guidelines auto-cited from GFR/CVC/PPP-MSME database.</span>
+      </div>
+    </div>
+    <div id="pbp-list"><div class="empty-state"><div class="empty-icon">❓</div><p>Select a tender and click "Load Queries" to view pre-bid queries.</p></div></div>
   </div>
 </div>
 
@@ -1942,6 +1987,7 @@ function showPage(name, opts) {
   if (name === 'doc-editor') populateEditorSelect();
   if (name === 'assistant') updateAssistantContext();
   if (name === 'boq') initBOQ();
+  if (name === 'prebid-page') pbpPopulateSelect();
 }
 
 window.addEventListener('popstate', function(e) {
@@ -2326,7 +2372,7 @@ function renderTenders() {
       '<td><span class="badge badge-' + v + '">' + v + '</span></td>' +
       '<td class="actions-cell">' +
         '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
-        (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadReport(\'' + (t.report_file||'') + '\')">Report</button>' : '') +
+        (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">Report</button>' : '') +
       '</td>' +
     '</tr>';
   }).join('');
@@ -2358,6 +2404,53 @@ function clearCtx() {
   document.getElementById('ctx-banner').style.display = 'none';
   document.getElementById('an-tid').value = '';
 }
+
+// ── Download analysis .docx for any tender ───────────────────────
+async function downloadTenderDoc(tid) {
+  if (!tid) { toast('No tender ID', 'error'); return; }
+  showLoading('Downloading report...');
+  try {
+    var r = await fetch('/tender/' + encodeURIComponent(tid) + '/analysis-doc-download');
+    if (r.ok) {
+      var blob = await r.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url;
+      a.download = 'Analysis_' + tid + '.docx'; a.click();
+      URL.revokeObjectURL(url);
+      toast('✅ Report downloaded', 'success');
+    } else {
+      var t2 = allTenders.find(function(x){ return x.t247_id === tid; });
+      if (t2 && t2.report_file) { hideLoading(); downloadReport(t2.report_file); return; }
+      else { toast('No report for ' + tid + ' — analyse first', 'error'); }
+    }
+  } catch(e) { toast('Download error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
+// ── Generate pre-bid queries from current analysis result ─────────
+async function generatePrebidFromResult() {
+  var tid = lastAnalysisTid || (document.getElementById('an-tid') ? document.getElementById('an-tid').value.trim() : '');
+  if (!tid) { toast('Analyse a tender first', 'error'); return; }
+  showLoading('Generating pre-bid queries...');
+  try {
+    var payload = Object.assign({t247_id: tid}, lastAnalysisResult || {});
+    var r = await fetch('/prebid-queries', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    var queries = d.queries || [];
+    var sec = document.getElementById('prebid-section');
+    if (sec) sec.style.display = 'block';
+    renderPrebidList(queries);
+    if (sec) sec.scrollIntoView({behavior: 'smooth'});
+    toast(queries.length ? '✅ ' + queries.length + ' pre-bid queries generated' : 'No gaps found — no queries raised', queries.length ? 'success' : 'info');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
+// ── setActive alias used in alerts/vault pages ────────────────────
+function setActive(tid, brief) { setCtxAndAnalyse(tid, brief || ''); }
 
 // ────────────────────────────────────────────
 // FILE UPLOAD
@@ -2979,6 +3072,9 @@ function showAnalysisResult(d) {
     document.getElementById('prebid-section').style.display = 'block';
     renderPrebidList(td.prebid_queries);
   }
+  // Show eligibility quick-check section if PQ criteria available
+  var elSec = document.getElementById('eligibility-check-section');
+  if (elSec && td.pq_criteria && td.pq_criteria.length) { elSec.style.display = 'block'; }
 
   switchAnTab('pq');
   toast('Analysis complete — Verdict: ' + v, v === 'BID' ? 'success' : v === 'NO-BID' ? 'error' : 'info');
@@ -3295,6 +3391,116 @@ async function reanalyseDrive() {
 
 // ────────────────────────────────────────────
 // PRE-BID
+// ── Eligibility Quick-Check ───────────────────────────────────────
+async function runEligibilityCheck() {
+  var el = document.getElementById('eligibility-result');
+  var sec = document.getElementById('eligibility-check-section');
+  if (!el) return;
+  if (sec) sec.style.display = 'block';
+  el.innerHTML = '<div style="font-size:12px;color:var(--text2)">Checking...</div>';
+  var profile = _profileData || {};
+  var fin = profile.finance || {};
+  var emp = profile.employees || {};
+  var certs = profile.certifications || {};
+  var profT2 = parseFloat(fin.avg_turnover_last_2_fy) || 0;
+  var profT3 = parseFloat(fin.avg_turnover_last_3_fy) || 0;
+  var profNW  = parseFloat(fin.net_worth_cr || fin.net_worth_latest_cr) || 0;
+  var profEmp = parseInt(emp.total_listed || emp.total) || 0;
+  var isMSME  = !!(profile.company||{}).msme_udyam;
+  var isCMMI  = !!(certs.cmmi && (certs.cmmi.status||'').toUpperCase()==='ACTIVE');
+  var isISO9  = !!(certs.iso_9001 && (certs.iso_9001.status||'').toUpperCase()==='ACTIVE');
+  var pqCriteria = [];
+  if (lastAnalysisResult && lastAnalysisResult.pq_criteria) {
+    pqCriteria = lastAnalysisResult.pq_criteria;
+  } else {
+    var tid0 = lastAnalysisTid || (document.getElementById('an-tid') ? document.getElementById('an-tid').value.trim() : '');
+    if (tid0) {
+      try { var rr = await fetch('/tender-quickview/' + encodeURIComponent(tid0)); if (rr.ok) { var qd = await rr.json(); pqCriteria = qd.pq_criteria || []; } } catch(e) {}
+    }
+  }
+  if (!pqCriteria.length) { el.innerHTML = '<div class="empty-state">No PQ criteria found. Analyse a tender first.</div>'; return; }
+  var rows = pqCriteria.map(function(c) {
+    if (typeof c === 'string') c = {criteria: c};
+    var crit = c.criteria || c.criterion || c.header || '';
+    var status = (c.nascent_status || '').toUpperCase();
+    var remark = c.nascent_remark || c.remark || '';
+    var lc = (crit + ' ' + remark).toLowerCase();
+    var profileVal = '', matchCls = '';
+    if (status === 'MET')         { matchCls = 'green';  profileVal = '✓ Met'; }
+    else if (status === 'NOT MET'){ matchCls = 'red';    profileVal = '✗ Not Met'; }
+    else if (status === 'CONDITIONAL') { matchCls = 'amber'; profileVal = '⚠ Conditional'; }
+    else {
+      if (lc.includes('turnover')) {
+        var need = parseFloat((crit.match(/([\d.]+)\s*cr/i)||['0','0'])[1]) || 0;
+        var have = Math.max(profT2, profT3);
+        profileVal = have ? '₹'+have.toFixed(1)+'Cr avg' : '—';
+        matchCls = (!need || have >= need) ? 'green' : 'amber';
+      } else if (lc.includes('msme') || lc.includes('emd exempt')) {
+        profileVal = isMSME ? 'MSME ✓' : 'Not MSME'; matchCls = isMSME ? 'green' : 'amber';
+      } else if (lc.includes('net worth') || lc.includes('networth')) {
+        profileVal = profNW ? '₹'+profNW.toFixed(1)+'Cr' : '—'; matchCls = 'amber';
+      } else if (lc.includes('cmmi')) {
+        profileVal = isCMMI ? 'CMMI Active ✓' : 'No CMMI'; matchCls = isCMMI ? 'green' : 'red';
+      } else if (lc.includes('iso 9001')) {
+        profileVal = isISO9 ? 'ISO 9001 ✓' : 'No ISO 9001'; matchCls = isISO9 ? 'green' : 'amber';
+      } else if (lc.includes('employee') || lc.includes('manpower') || lc.includes('staff')) {
+        profileVal = profEmp + ' staff'; matchCls = profEmp >= 10 ? 'green' : 'amber';
+      } else { matchCls = 'amber'; profileVal = 'Review needed'; }
+    }
+    var bg = matchCls==='green'?'var(--green-bg)':matchCls==='red'?'var(--red-bg)':'var(--amber-bg)';
+    var color = matchCls==='green'?'var(--green)':matchCls==='red'?'var(--red)':'var(--amber)';
+    return '<tr><td style="font-size:12px;max-width:280px">'+crit.substring(0,120)+'</td>' +
+      '<td><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:'+bg+';color:'+color+';font-weight:600;white-space:nowrap">'+profileVal+'</span></td>' +
+      '<td style="font-size:11px;color:var(--text3);max-width:200px">'+remark.substring(0,100)+'</td></tr>';
+  }).join('');
+  var metC = pqCriteria.filter(function(c){ return (c.nascent_status||'').toUpperCase()==='MET'; }).length;
+  var notMetC = pqCriteria.filter(function(c){ return (c.nascent_status||'').toUpperCase()==='NOT MET'; }).length;
+  var condC = pqCriteria.filter(function(c){ return (c.nascent_status||'').toUpperCase()==='CONDITIONAL'; }).length;
+  el.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">' +
+    '<span style="font-size:12px;color:var(--green)">✓ '+metC+' Met</span>' +
+    '<span style="font-size:12px;color:var(--amber)">⚠ '+condC+' Conditional</span>' +
+    '<span style="font-size:12px;color:var(--red)">✗ '+notMetC+' Not Met</span>' +
+    '<span style="font-size:12px;color:var(--text3)">'+pqCriteria.length+' total criteria</span>' +
+  '</div>' +
+  '<div class="table-wrap"><table class="crit-table"><thead><tr><th>PQ Criterion</th><th>Profile Match</th><th>AI Remark</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+// ── Standalone Pre-bid Queries Page ──────────────────────────────
+function pbpPopulateSelect() {
+  var sel = document.getElementById('pbp-tender-sel'); if (!sel) return;
+  var opts = '<option value="">— Select tender —</option>' +
+    allTenders.filter(function(t){ return t.bid_no_bid_done; })
+    .map(function(t){ return '<option value="'+t.t247_id+'">'+t.t247_id+' — '+(t.brief||'').substring(0,50)+'</option>'; }).join('');
+  sel.innerHTML = opts;
+  if (lastAnalysisTid) sel.value = lastAnalysisTid;
+}
+
+async function pbpLoad() {
+  var sel = document.getElementById('pbp-tender-sel');
+  var tid = sel ? sel.value : '';
+  if (!tid) { toast('Select a tender first', 'error'); return; }
+  showLoading('Loading pre-bid queries...');
+  try {
+    var r = await fetch('/prebid-queries/' + encodeURIComponent(tid));
+    var d = await r.json();
+    var queries = d.queries || [];
+    var listEl = document.getElementById('pbp-list');
+    if (!listEl) { hideLoading(); return; }
+    if (!queries.length) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">❓</div><p>No pre-bid queries for this tender. Analyse it first, then click "📝 Pre-bid" in the result.</p></div>';
+      hideLoading(); return;
+    }
+    // Temporarily render into pbp-list using renderPrebidList (which targets #prebid-list)
+    var oldTid = lastAnalysisTid; lastAnalysisTid = tid;
+    listEl.setAttribute('id', 'prebid-list');
+    renderPrebidList(queries);
+    listEl.setAttribute('id', 'pbp-list');
+    lastAnalysisTid = oldTid;
+    toast(queries.length + ' queries loaded', 'success');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  hideLoading();
+}
+
 // ────────────────────────────────────────────
 async function loadPrebidQueries() {
   var tid = document.getElementById('an-tid').value.trim();
@@ -3306,16 +3512,97 @@ async function loadPrebidQueries() {
   } catch(e) {}
 }
 
+var _pbqCurrentQueries = [];
+var _pbqStatusStore = {};
+
+function _pbqLoadStatus(tid) {
+  try { _pbqStatusStore = JSON.parse(localStorage.getItem('pbq_' + tid) || '{}'); } catch(e) { _pbqStatusStore = {}; }
+}
+function _pbqSetStatus(tid, code, status) {
+  _pbqStatusStore[code] = status;
+  localStorage.setItem('pbq_' + tid, JSON.stringify(_pbqStatusStore));
+  renderPrebidList(_pbqCurrentQueries);
+}
+function exportPrebidExcel() {
+  var tid = lastAnalysisTid || 'queries';
+  _pbqLoadStatus(tid);
+  var SLABEL = {pending:'Pending',submitted:'Submitted',answered:'Answered'};
+  var header = ['Code','Category','Priority','Clause Ref','Query','Guideline Cited','Status'];
+  var rows = _pbqCurrentQueries.map(function(q,i){
+    var code = q._code || ('PBQ-' + String(i+1).padStart(3,'0'));
+    var text = q._text || q.query || (typeof q === 'string' ? q : '');
+    return [code, q._cat||'General', q.priority||'MEDIUM', q.clause_ref||'', text, q.guideline_cited||'', SLABEL[_pbqStatusStore[code]||'pending']];
+  });
+  var csv = [header].concat(rows).map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv],{type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url; a.download='PreBid_'+tid+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Pre-bid queries exported', 'success');
+}
+
 function renderPrebidList(queries) {
-  if (!queries.length) { document.getElementById('prebid-list').innerHTML = '<div class="empty-state">No queries generated.</div>'; return; }
-  document.getElementById('prebid-list').innerHTML = queries.map((q, i) => {
-    var text = typeof q === 'string' ? q : q.query || JSON.stringify(q);
-    var cat = typeof q === 'object' ? q.category || '' : '';
-    return '<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start">' +
-      '<span style="font-family:var(--mono);color:var(--text3);font-size:11px;min-width:20px">' + (i+1) + '</span>' +
-      '<div style="flex:1"><div style="font-size:12.5px">' + text + '</div>' + (cat ? '<span style="font-size:10px;color:var(--text3)">' + cat + '</span>' : '') + '</div>' +
+  var el = document.getElementById('prebid-list'); if (!el) return;
+  _pbqCurrentQueries = queries || [];
+  if (!_pbqCurrentQueries.length) { el.innerHTML = '<div class="empty-state">No pre-bid queries. Click "📝 Pre-bid" after analysis to generate.</div>'; return; }
+  var tid = lastAnalysisTid || (document.getElementById('an-tid') ? document.getElementById('an-tid').value.trim() : '') || 'x';
+  _pbqLoadStatus(tid);
+  var CAT = {Eligibility:'ELG',Financial:'FIN',Technical:'TEC',Scope:'SCO',Timeline:'TIM',Compliance:'COM',EMD:'EMD',General:'GEN'};
+  var PCOLOR = {HIGH:'var(--red)',MEDIUM:'var(--amber)',LOW:'var(--green)'};
+  var SCOLOR = {pending:'var(--text3)',submitted:'var(--blue)',answered:'var(--green)'};
+  var SLABEL = {pending:'⏳ Pending',submitted:'📤 Submitted',answered:'✅ Answered'};
+  var catCnt = {};
+  var coded = _pbqCurrentQueries.map(function(q) {
+    var rawGap = (typeof q === 'string') ? '' : (q.gap_addressed || q.category || 'General');
+    var rawCat = rawGap.split('—')[0].trim();
+    var cat = 'General';
+    Object.keys(CAT).forEach(function(k){ if (rawCat.toLowerCase().includes(k.toLowerCase())) cat = k; });
+    var prefix = CAT[cat];
+    catCnt[prefix] = (catCnt[prefix]||0) + 1;
+    var code = 'PBQ-' + prefix + '-' + String(catCnt[prefix]).padStart(3,'0');
+    var text = (typeof q === 'string') ? q : (q.query || JSON.stringify(q));
+    return { _code:code, _cat:cat, _text:text,
+      priority:(typeof q==='object'&&q.priority)||'MEDIUM',
+      clause_ref:(typeof q==='object'&&q.clause_ref)||'',
+      page_no:(typeof q==='object'&&q.page_no)||'',
+      rfp_text:(typeof q==='object'&&q.rfp_text)||'',
+      guideline_cited:(typeof q==='object'&&q.guideline_cited)||'',
+    };
+  });
+  var cnt = {pending:0,submitted:0,answered:0};
+  coded.forEach(function(q){ cnt[_pbqStatusStore[q._code]||'pending']++; });
+  var summary = '<div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 12px;background:var(--bg4);border-radius:8px;margin-bottom:12px;align-items:center">' +
+    '<span style="font-size:11px;font-weight:700;color:#fff">'+coded.length+' Queries</span>' +
+    '<span style="font-size:11px;color:var(--text3)">⏳ '+cnt.pending+' Pending</span>' +
+    '<span style="font-size:11px;color:var(--blue)">📤 '+cnt.submitted+' Submitted</span>' +
+    '<span style="font-size:11px;color:var(--green)">✅ '+cnt.answered+' Answered</span>' +
+    '<button class="btn btn-ghost btn-xs" style="margin-left:auto" onclick="exportPrebidExcel()">⬇ Export CSV</button>' +
+  '</div>';
+  var rows = coded.map(function(q) {
+    var status = _pbqStatusStore[q._code]||'pending';
+    var pcolor = PCOLOR[q.priority]||'var(--text3)';
+    var scolor = SCOLOR[status];
+    var clRef = q.clause_ref && q.clause_ref!=='—' ? q.clause_ref : '';
+    var pgNo  = q.page_no && q.page_no!=='—' ? q.page_no : '';
+    var hasGuide = q.guideline_cited && q.guideline_cited!=='None' && q.guideline_cited.length>3;
+    return '<div style="border:1px solid '+(status==='answered'?'var(--green)':status==='submitted'?'rgba(59,130,246,.35)':'var(--border)')+';border-radius:8px;padding:12px 14px;margin-bottom:8px;background:var(--bg2)">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<code style="font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-glow);padding:2px 8px;border-radius:4px;border:1px solid rgba(59,130,246,.25)">'+q._code+'</code>' +
+          '<span style="font-size:9px;padding:2px 6px;border-radius:10px;color:'+pcolor+';border:1px solid '+pcolor+';font-weight:700">'+q.priority+'</span>' +
+          '<span style="font-size:10px;color:var(--text3);background:var(--bg4);padding:1px 6px;border-radius:4px">'+q._cat+'</span>' +
+          (clRef ? '<span style="font-size:10px;color:var(--text3)">Cl. '+clRef+(pgNo?' · p.'+pgNo:'')+'</span>' : '') +
+        '</div>' +
+        '<select onchange="_pbqSetStatus(\''+tid+'\',\''+q._code+'\',this.value)" style="font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--border);color:'+scolor+';border-radius:4px;cursor:pointer">' +
+          Object.keys(SLABEL).map(function(s){ return '<option value="'+s+'" '+(s===status?'selected':'')+'>'+SLABEL[s]+'</option>'; }).join('') +
+        '</select>' +
+      '</div>' +
+      (q.rfp_text ? '<div style="font-size:11px;color:var(--text3);background:var(--bg4);padding:6px 10px;border-radius:4px;margin-bottom:8px;border-left:3px solid var(--border2);line-height:1.5"><b style="color:var(--text2)">RFP:</b> '+q.rfp_text.substring(0,250)+(q.rfp_text.length>250?'…':'')+'</div>' : '') +
+      '<div style="font-size:12.5px;color:var(--text);line-height:1.6;margin-bottom:6px"><b style="color:rgba(255,255,255,.5);font-size:10px">QUERY </b>'+q._text+'</div>' +
+      (hasGuide ? '<div style="font-size:10.5px;color:var(--blue);background:var(--blue-glow);padding:4px 10px;border-radius:4px;margin-top:6px;line-height:1.5">📜 '+q.guideline_cited+'</div>' : '') +
     '</div>';
   }).join('');
+  el.innerHTML = summary + rows;
 }
 
 async function generatePrebidLetter() {
