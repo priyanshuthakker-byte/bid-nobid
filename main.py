@@ -3098,6 +3098,22 @@ async def export_tenders(verdict: str = "", search: str = ""):
     except Exception as e:
         raise HTTPException(500, f"Export failed: {str(e)}")
 
+# ══ OFFLINE MODE STATUS (public — no admin guard) ════════════════════════════
+@app.get("/api/mode")
+async def get_api_mode():
+    """Public endpoint — tells frontend if AI key is configured (no key value exposed)."""
+    cfg = load_config()
+    has_key = bool(cfg.get("gemini_api_key","").strip())
+    has_groq = bool(cfg.get("groq_api_key","").strip())
+    return {
+        "has_gemini_key": has_key,
+        "has_groq_key": has_groq,
+        "offline_mode": not has_key and not has_groq,
+        "analysis_mode": "ai" if has_key else "rule_based",
+        "gemini_api_key": "***configured***" if has_key else "",
+    }
+
+
 # ══ API KEY USAGE MAP ════════════════════════════════════════════════════════
 @app.get("/api/key-usage-map")
 async def api_key_usage_map():

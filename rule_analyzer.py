@@ -647,6 +647,355 @@ def _determine_verdict(
     return verdict, final_score, reason
 
 
+# ─── CHECKLIST BUILDER ────────────────────────────────────────────────────────
+
+# Standard documents always needed in govt tenders
+_STANDARD_DOCS = [
+    ("Company Registration Certificate / MoA", True,
+     "Certificate of Incorporation + MoA/AoA (self-attested copy)"),
+    ("PAN Card", True, "Company PAN — self-attested Xerox"),
+    ("GST Registration Certificate", True, "GSTIN 24AACCN3670J1ZG — self-attested"),
+    ("Audited Balance Sheet + P&L (last 3 FY)", True,
+     "FY 2022-23, 2023-24, 2024-25 — signed by CA Anuj J. Sharedalal"),
+    ("CA Certificate for Turnover", True,
+     "Annual turnover certificate on CA letterhead with UDIN"),
+    ("MSME / Udyam Registration Certificate", True,
+     "UDYAM-GJ-01-0007420 — Lifetime validity"),
+    ("CMMI Level 3 Certificate", True,
+     "CMMI V2.0 Dev, Benchmark 68617, valid till 19-Dec-2026"),
+    ("ISO 9001:2015 Certificate", True,
+     "Cert No. 25EQPE64, valid till 08-Sep-2028"),
+    ("ISO/IEC 27001:2022 Certificate", True,
+     "Cert No. 25EQPG58, valid till 08-Sep-2028"),
+    ("Work Order Copies (similar projects)", True,
+     "Scan copies — WO from client on letterhead"),
+    ("Completion / Satisfactory Performance Certificate", True,
+     "From client — per tender format or plain letter"),
+    ("Employee Strength Certificate", True,
+     "On company letterhead — signed by authorized signatory"),
+    ("Self-Declaration / Non-Blacklisting Affidavit", True,
+     "Notarized on stamp paper — signed by Hitesh Patel (POA valid till 31-Mar-2026)"),
+    ("Power of Attorney / Authorization", True,
+     "Authorizing Hitesh Patel (CAO) to sign bid documents — expires 31-Mar-2026"),
+    ("Solvency Certificate from Banker", False,
+     "From SBI, SG Highway Branch — obtain on demand"),
+    ("Net Worth Certificate from CA", False,
+     "Net worth Rs. 26.09 Cr as of latest FY — on CA letterhead"),
+]
+
+_CONDITIONAL_DOCS = [
+    ("emd", "EMD Demand Draft / Bank Guarantee or Udyam EMD Exemption Certificate",
+     "Nascent is MSME — raise pre-bid query for EMD exemption first"),
+    ("iso 20000", "ISO/IEC 20000-1:2018 Certificate",
+     "Cert No. 25ZQZQ030409IT, valid till 08-Sep-2028"),
+    ("stqc", "STQC Certificate (or raise pre-bid query on ISO equivalence)", "Nascent does not hold STQC"),
+    ("cert-in", "CERT-In Empanelment Certificate (or pre-bid query)", "Nascent is NOT CERT-In empanelled"),
+    ("consortium", "JV / Consortium Agreement (signed by all partners)", "Required if bidding as consortium"),
+    ("jv", "JV Agreement — registered or unregistered as required", "All partners to sign"),
+    ("performance security", "Performance Bank Guarantee (PBG)", "Typically 5-10% of contract value"),
+    ("bid validity", "EMD / Bid Security validity certificate", "Check validity period in tender"),
+    ("msme", "MSME / Udyam Certificate for EMD exemption claim", "UDYAM-GJ-01-0007420"),
+    ("nda", "Non-Disclosure Agreement (if required)", "To be signed before document access"),
+    ("integrity pact", "Integrity Pact (signed)", "Some tenders require IP with independent monitor"),
+    ("local office", "Undertaking to open local/state office within 30 days of award",
+     "Nascent office only in Ahmedabad — provide undertaking"),
+    ("annual report", "Annual Report (last 3 years)", "For certain large value tenders"),
+    ("bank details", "Bank Account Details — IFSC, Account No.", "For payment processing at contract stage"),
+]
+
+
+def _build_checklist(text: str, profile: Dict) -> List[Dict]:
+    """Build submission checklist from standard docs + conditional triggers from text."""
+    t_lower = text.lower()
+    sl = 1
+    items = []
+
+    # Always-required documents
+    for doc_name, mandatory, hint in _STANDARD_DOCS:
+        items.append({
+            "sl_no": str(sl),
+            "document": doc_name,
+            "mandatory": mandatory,
+            "status": "Prepare",
+            "hint": hint,
+        })
+        sl += 1
+
+    # Conditional documents triggered by text
+    for kw, doc_name, hint in _CONDITIONAL_DOCS:
+        if kw in t_lower:
+            items.append({
+                "sl_no": str(sl),
+                "document": doc_name,
+                "mandatory": kw not in ("stqc","cert-in","nda","integrity pact","annual report","bank details"),
+                "status": "Verify",
+                "hint": hint,
+            })
+            sl += 1
+
+    # Project-specific additions
+    if "mobile" in t_lower or "android" in t_lower:
+        items.append({
+            "sl_no": str(sl), "mandatory": False,
+            "document": "Screenshots / App Demo Link (mobile GIS experience)",
+            "status": "Optional",
+            "hint": "Show AMC/BMC/KVIC mobile app links if available",
+        }); sl += 1
+
+    if "ogc" in t_lower or "citylayers" in t_lower:
+        items.append({
+            "sl_no": str(sl), "mandatory": True,
+            "document": "OGC CityLayers 2.0 Compliance Certificate",
+            "status": "Prepare",
+            "hint": "PID 1600 — OGC compliance certificate for CityLayers 2.0",
+        }); sl += 1
+
+    return items
+
+
+# ─── WORK SCHEDULE BUILDER ────────────────────────────────────────────────────
+
+def _build_work_schedule(text: str) -> List[Dict]:
+    """Extract or estimate work schedule milestones from text."""
+    t_lower = text.lower()
+    schedule = []
+
+    # Try to extract milestones from text (numbered list items near schedule section)
+    section = _extract_section(text, [
+        "work schedule", "implementation schedule", "project schedule",
+        "deployment schedule", "milestone", "deliverable timeline",
+        "activity schedule", "time schedule"
+    ], 5000)
+
+    if section:
+        lines = section.split("\n")
+        milestone_re = re.compile(
+            r"(?:^\s*(?:\d+(?:\.\d+)?\.?|[a-z]\.|[-•*▪])\s+)(.{20,200})",
+            re.IGNORECASE | re.MULTILINE
+        )
+        week_re = re.compile(r"(\d+)\s*(?:weeks?|wks?)", re.IGNORECASE)
+        month_re = re.compile(r"(\d+)\s*(?:months?|mths?)", re.IGNORECASE)
+        day_re = re.compile(r"(\d+)\s*(?:days?)", re.IGNORECASE)
+
+        for m in milestone_re.finditer(section):
+            item = m.group(1).strip()
+            if not item or len(item) < 15: continue
+            timeline = ""
+            for pat, unit in [(week_re, "weeks"), (month_re, "months"), (day_re, "days")]:
+                tm = pat.search(item)
+                if tm:
+                    timeline = f"{tm.group(1)} {unit}"
+                    break
+            schedule.append({
+                "sl": str(len(schedule) + 1),
+                "activity": item[:200],
+                "timeline": timeline or "—",
+            })
+            if len(schedule) >= 12: break
+
+    # Fallback: generate standard GIS/IT project schedule based on domain detection
+    if not schedule:
+        # Detect contract period
+        period_text = _find_contract_period(text)
+        months = 12  # default
+        m_months = re.search(r"(\d+)\s*months?", period_text, re.IGNORECASE)
+        m_years  = re.search(r"(\d+)\s*years?", period_text, re.IGNORECASE)
+        if m_months: months = int(m_months.group(1))
+        elif m_years: months = int(m_years.group(1)) * 12
+
+        # Build domain-specific milestones
+        t_lower2 = text.lower()
+        ms_list = []
+        if any(x in t_lower2 for x in ["gis","geospatial","mapping"]):
+            ms_list = [
+                ("Project Kickoff & Team Mobilization", "1 month"),
+                ("Requirement Gathering & Gap Analysis", "1-2 months"),
+                ("GIS Data Collection & Field Survey", f"1-{min(months//3,4)} months"),
+                ("GIS Database Setup & Layer Creation", f"{min(months//4,3)}-{min(months//2,6)} months"),
+                ("Web GIS / Application Development", f"{min(months//3,4)}-{min(months*2//3,8)} months"),
+                ("UAT (User Acceptance Testing)", "1 month"),
+                ("Data Migration & Integration", "1 month"),
+                ("Training & Handholding", "1 month"),
+                ("Go-Live & Stabilization", "1 month"),
+                ("AMC / O&M Support", f"Post go-live ({max(0,months-10)} months remaining)"),
+            ]
+        elif any(x in t_lower2 for x in ["portal","web","egovernance","citizen"]):
+            ms_list = [
+                ("Project Kickoff & Requirement Study", "1 month"),
+                ("System Design & Architecture", "1 month"),
+                ("Module Development (Phase 1)", f"1-{min(months//3,4)} months"),
+                ("Module Development (Phase 2)", f"{min(months//3,4)}-{min(months//2,6)} months"),
+                ("Integration & API Development", "1-2 months"),
+                ("QA / Testing & Bug Fixing", "1-2 months"),
+                ("UAT with Client Team", "1 month"),
+                ("Deployment & Go-Live", "1 month"),
+                ("Training & Documentation", "1 month"),
+                ("AMC / Support Period", f"Post go-live"),
+            ]
+        else:
+            ms_list = [
+                ("Project Kickoff & Mobilization", "Month 1"),
+                ("Requirement Analysis & Design", f"Month 1-{min(2,months//5+1)}"),
+                ("Development Phase 1", f"Month {min(3,months//4+1)}-{min(months//2,6)}"),
+                ("Development Phase 2", f"Month {min(months//2,7)}-{min(months*2//3,9)}"),
+                ("Testing & QA", f"Month {min(months*2//3,10)}-{min(months-2,11)}"),
+                ("UAT & Acceptance", f"Month {max(months-2,5)}-{max(months-1,6)}"),
+                ("Go-Live & Support", f"Month {max(months-1,6)} onwards"),
+            ]
+
+        for i, (act, tl) in enumerate(ms_list, 1):
+            schedule.append({"sl": str(i), "activity": act, "timeline": tl})
+
+    return schedule
+
+
+# ─── CORRIGENDUM DETECTOR ─────────────────────────────────────────────────────
+
+def _detect_corrigendum(text: str) -> Dict:
+    """Detect if document is a corrigendum / amendment."""
+    t_lower = text.lower()
+    is_corrigendum = any(x in t_lower for x in [
+        "corrigendum", "addendum", "amendment", "erratum", "modification to",
+        "revised tender", "change in tender", "revised nit", "revised rfp",
+        "extension of date", "extension of time", "date extension"
+    ])
+    if not is_corrigendum:
+        return {"detected": False, "type": None, "notes": []}
+
+    corr_type = (
+        "Corrigendum" if "corrigendum" in t_lower else
+        "Addendum" if "addendum" in t_lower else
+        "Amendment" if "amendment" in t_lower else
+        "Date Extension" if "extension" in t_lower else
+        "Erratum"
+    )
+
+    # Extract what changed
+    change_section = _extract_section(text, [
+        "amendment", "change", "modification", "revised", "revised as follows",
+        "new date", "extended date", "corrected", "replaced with"
+    ], 3000)
+
+    notes = []
+    if "date" in t_lower or "deadline" in t_lower:
+        new_date = _find_date(text, [
+            "new date", "revised date", "extended date", "extended to",
+            "submission date", "last date", "closing date"
+        ])
+        if new_date and new_date != "Not stated":
+            notes.append(f"Revised submission date: {new_date}")
+        notes.append("Update deadline in system to reflect revised date.")
+
+    if any(x in t_lower for x in ["eligibility", "criteria", "qualification"]):
+        notes.append("Eligibility criteria may have changed — re-check PQ criteria.")
+
+    if any(x in t_lower for x in ["scope", "specification", "bill of quantity", "boq"]):
+        notes.append("Scope/BOQ may have changed — re-check scope of work.")
+
+    if any(x in t_lower for x in ["emd", "earnest money"]):
+        notes.append("EMD amount may have changed — verify in corrigendum.")
+
+    if not notes:
+        notes.append("Review corrigendum carefully — changes may affect bid strategy.")
+
+    return {
+        "detected": True,
+        "type": corr_type,
+        "notes": notes,
+        "action": "Update tender record with revised dates/conditions before bid submission.",
+    }
+
+
+# ─── SIMILAR PROJECT MATCHER ──────────────────────────────────────────────────
+
+def _find_similar_projects(text: str, profile: Dict) -> List[Dict]:
+    """Match tender requirements to Nascent's past projects (for experience certificates)."""
+    t_lower = text.lower()
+    projects = profile.get("projects", [])
+    if not projects:
+        return []
+
+    # Score each project against tender text
+    scored = []
+    for proj in projects:
+        proj_text = " ".join([
+            proj.get("name",""),
+            proj.get("client",""),
+            " ".join(proj.get("tags",[])),
+        ]).lower()
+
+        score = 0
+        matched_on = []
+
+        # Tag-based matching
+        for tag in proj.get("tags",[]):
+            tag_kws = tag.lower().split()
+            if all(kw in t_lower for kw in tag_kws if len(kw) > 3):
+                score += 20
+                matched_on.append(tag)
+
+        # Domain keyword matching
+        domain_pairs = [
+            (["gis","geospatial","geographic","mapping"], ["gis survey","gis mapping","web gis","gis portal","utility mapping"]),
+            (["mobile app","android","ios","mobile application"], ["mobile app","mobile gis"]),
+            (["smart city","ulb","municipal","urban"], ["smart city"]),
+            (["erp","enterprise resource"], ["erp"]),
+            (["egovernance","citizen portal","government portal"], ["egovernance","web portal"]),
+            (["tourism"], ["tourism"]),
+            (["survey","field data"], ["gis survey","field survey"]),
+        ]
+        for tender_kws, proj_tags in domain_pairs:
+            tender_match = any(kw in t_lower for kw in tender_kws)
+            proj_match = any(pt.lower() in proj_text for pt in proj_tags)
+            if tender_match and proj_match:
+                score += 15
+                matched_on.append(tender_kws[0])
+
+        # Client type preference
+        required_cr = _extract_amount_cr(text)
+        if required_cr:
+            val = proj.get("value_cr", 0) or 0
+            if val >= required_cr:
+                score += 25
+                matched_on.append(f"meets value threshold Rs.{required_cr}Cr")
+            elif val >= required_cr * 0.5:
+                score += 10
+                matched_on.append(f"partially meets value Rs.{required_cr}Cr")
+
+        # Web GIS / Mobile GIS bonus
+        if "web gis" in t_lower and proj.get("web_gis"):
+            score += 15
+            matched_on.append("web GIS")
+        if any(x in t_lower for x in ["mobile","android","ios"]) and proj.get("mobile_gis"):
+            score += 15
+            matched_on.append("mobile GIS")
+        if "central server" in t_lower and proj.get("central_server"):
+            score += 10
+            matched_on.append("central server")
+
+        if score > 0:
+            scored.append((score, proj, list(set(matched_on))))
+
+    scored.sort(key=lambda x: -x[0])
+
+    result = []
+    for score, proj, matched in scored[:5]:
+        result.append({
+            "project": proj.get("name",""),
+            "client": proj.get("client",""),
+            "client_type": proj.get("client_type",""),
+            "state": proj.get("state",""),
+            "value_cr": proj.get("value_cr",0),
+            "status": proj.get("status",""),
+            "role": proj.get("role","Solo"),
+            "matched_on": ", ".join(matched) if matched else "General domain match",
+            "relevance_score": score,
+            "use_for": "Similar work certificate — work order + completion certificate",
+        })
+
+    return result
+
+
 # ─── MAIN ANALYSIS FUNCTION ───────────────────────────────────────────────────
 
 def analyze_with_rules(text: str, prebid_passed: bool = False) -> Dict[str, Any]:
@@ -773,6 +1122,18 @@ def analyze_with_rules(text: str, prebid_passed: bool = False) -> Dict[str, Any]
         r"(?:development|implementation|supply|provision)\s+of\s+([^\n]{20,150})",
     ], 200)
 
+    # Submission checklist — rule-based
+    checklist = _build_checklist(text, profile)
+
+    # Work schedule — rule-based
+    work_schedule = _build_work_schedule(text)
+
+    # Corrigendum detection
+    corrigendum = _detect_corrigendum(text)
+
+    # Similar work from profile
+    similar_work = _find_similar_projects(text, profile)
+
     # Build final result
     result = {
         "tender_no": tender_no,
@@ -812,6 +1173,10 @@ def analyze_with_rules(text: str, prebid_passed: bool = False) -> Dict[str, Any]
         "pq_criteria": pq_criteria,
         "tq_criteria": tq_criteria,
         "payment_terms": payment_terms,
+        "checklist": checklist,
+        "work_schedule": work_schedule,
+        "corrigendum": corrigendum,
+        "similar_projects": similar_work,
         "overall_recommendation": verdict,
         "recommendation_reason": verdict_reason,
         "notes": notes,
