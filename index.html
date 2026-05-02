@@ -476,13 +476,22 @@ select option{background:var(--bg2)}
   <div class="nav-section">Intelligence</div>
   <button class="nav-btn" onclick="showPage('analytics')"><span class="nav-icon">📈</span>Analytics</button>
   <button class="nav-btn" onclick="showPage('winloss')"><span class="nav-icon">🏅</span>Win / Loss</button>
+  <button class="nav-btn" onclick="showPage('competitors')"><span class="nav-icon">🥊</span>Competitors</button>
+  <button class="nav-btn" onclick="showPage('financial-pipeline')"><span class="nav-icon">💹</span>Financial Pipeline</button>
   <button class="nav-btn" onclick="showPage('reports')"><span class="nav-icon">📑</span>Reports</button>
 
   <div class="nav-section">Trackers</div>
   <button class="nav-btn" onclick="showPage('alerts')"><span class="nav-icon">🔔</span>Deadline Alerts<span class="nav-badge red" id="nb-alerts" style="display:none"></span></button>
   <button class="nav-btn" onclick="showPage('corrigendum')"><span class="nav-icon">📋</span>Corrigendum<span class="nav-badge" id="nb-corr" style="display:none"></span></button>
   <button class="nav-btn" onclick="showPage('emd')"><span class="nav-icon">🏦</span>EMD Tracker</button>
+  <button class="nav-btn" onclick="showPage('compliance')"><span class="nav-icon">🛡</span>Compliance<span class="nav-badge red" id="nb-compliance" style="display:none"></span></button>
+  <button class="nav-btn" onclick="showPage('watchlist')"><span class="nav-icon">⭐</span>Watchlist</button>
   <button class="nav-btn" onclick="showPage('vault')"><span class="nav-icon">🗄</span>Document Vault</button>
+
+  <div class="nav-section">Portals & Partners</div>
+  <button class="nav-btn" onclick="showPage('portals')"><span class="nav-icon">🌐</span>Portal Hub</button>
+  <button class="nav-btn" onclick="showPage('gem')"><span class="nav-icon">💎</span>GeM Tenders</button>
+  <button class="nav-btn" onclick="showPage('consortium')"><span class="nav-icon">🤝</span>Consortium / JV</button>
 
   <div class="nav-section">Post-Award</div>
   <button class="nav-btn" onclick="showPage('postaward')"><span class="nav-icon">🏆</span>Post-Award</button>
@@ -1881,6 +1890,247 @@ select option{background:var(--bg2)}
       <table>
         <thead><tr><th>T247 ID</th><th>Brief</th><th>Org</th><th>Deadline</th><th>Days Left</th><th>Corrigendum Files</th><th>Actions</th></tr></thead>
         <tbody id="corr-tbody"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ COMPLIANCE CENTER ═══ -->
+<div id="page-compliance" class="page">
+  <div class="topbar"><h1>Compliance Center</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadCompliance()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div id="comp-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+    <div class="card">
+      <div class="card-title">Certificate & Authorization Expiry Tracker</div>
+      <div id="comp-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Actions</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="https://udyamregistration.gov.in" target="_blank" class="btn btn-ghost btn-sm">📜 Udyam Portal</a>
+        <a href="https://cmmiinstitute.com" target="_blank" class="btn btn-ghost btn-sm">🏅 CMMI Registry</a>
+        <a href="https://gem.gov.in" target="_blank" class="btn btn-ghost btn-sm">💎 GeM Portal</a>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('vault')">🗄 Document Vault</button>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('profile')">✏ Update Profile</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Indian Procurement Compliance Checklist</div>
+      <div style="display:grid;gap:8px;font-size:12.5px">
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">✓</span><span>MSME Udyam Registration (UDYAM-GJ-01-0007420) — Active</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">✓</span><span>CMMI Level 3 V2.0 — Active till Dec 2026</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">✓</span><span>ISO 9001:2015 — Active till Sep 2028</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">✓</span><span>ISO 27001:2022 — Active till Sep 2028</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green)">✓</span><span>GST Registration (24AACCN3670J1ZG) — Active</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--amber)">!</span><span>POA — Hitesh Patel expires 31-Mar-2026 — Renew before bidding</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--amber)">!</span><span>Annual Udyam Self-Declaration — Required by 31-Mar each year</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--amber)">!</span><span>CA Solvency Certificate — Renew annually with financials</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0"><span style="color:var(--text3)">○</span><span>CERT-IN Empanelment — Not registered (conditional requirement for some tenders)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PORTAL HUB ═══ -->
+<div id="page-portals" class="page">
+  <div class="topbar"><h1>Portal Hub</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadPortals()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div class="alert-bar blue" style="margin-bottom:14px">
+      T247 auto-syncs every 3 hrs. All other portals — download Excel/CSV and import via Dashboard → Import Excel for instant classification.
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-ghost btn-sm portal-flt active" onclick="portalFilter('all',this)">All</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('Central',this)">Central Govt</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('GeM',this)">GeM</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('Aggregator',this)">Aggregators</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('MSME',this)">MSME</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('Sector',this)">Sector</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('State',this)">State</button>
+      <button class="btn btn-ghost btn-sm portal-flt" onclick="portalFilter('Reference',this)">Reference</button>
+    </div>
+    <div id="portal-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+  </div>
+</div>
+
+<!-- ═══ GEM TENDERS ═══ -->
+<div id="page-gem" class="page">
+  <div class="topbar"><h1>GeM Tenders</h1>
+    <div class="topbar-actions">
+      <a href="https://gem.gov.in" target="_blank" class="btn btn-primary btn-sm">Open GeM Portal</a>
+      <a href="https://seller.gem.gov.in" target="_blank" class="btn btn-ghost btn-sm">Seller Dashboard</a>
+      <button class="btn btn-ghost btn-sm" onclick="loadGem()">↺ Refresh</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <div id="gem-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+    <div class="card" style="margin-bottom:12px;background:rgba(167,139,250,.05);border-color:rgba(167,139,250,.2)">
+      <div style="font-size:12px;color:var(--purple)">
+        💎 <b>GeM Advantages for Nascent (MSME):</b> EMD exempt · Startup/MSME preference in RA · Direct ordering available · No bid document fee · 25% MSME quota mandated
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-ghost btn-sm gem-flt active" onclick="gemFilter('all',this)">All GeM</button>
+      <button class="btn btn-ghost btn-sm gem-flt" onclick="gemFilter('bid',this)">BID</button>
+      <button class="btn btn-ghost btn-sm gem-flt" onclick="gemFilter('cond',this)">Conditional</button>
+      <button class="btn btn-ghost btn-sm gem-flt" onclick="gemFilter('urgent',this)">≤7 Days</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Brief</th><th>Org</th><th>Value (Cr)</th><th>EMD</th><th>Deadline</th><th>Verdict</th><th>Action</th></tr></thead>
+        <tbody id="gem-tbody"><tr><td colspan="8" class="empty-state">Loading GeM tenders...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONSORTIUM / JV MANAGER ═══ -->
+<div id="page-consortium" class="page">
+  <div class="topbar"><h1>Consortium / JV Manager</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-primary btn-sm" onclick="showAddPartnerForm()">+ Add Partner</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadConsortium()">↺ Refresh</button>
+    </div>
+  </div>
+  <div class="page-body">
+    <!-- Add Partner Form -->
+    <div id="add-partner-form" class="card" style="display:none">
+      <div class="card-title">Add Consortium Partner</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        <div><label>Company Name</label><input id="cp-name" placeholder="Partner name"></div>
+        <div><label>Type</label>
+          <select id="cp-type"><option>Lead</option><option>Associate</option><option>Sub-contractor</option><option>Consortium Member</option></select></div>
+        <div><label>PAN</label><input id="cp-pan" placeholder="PAN Number"></div>
+        <div><label>GSTIN</label><input id="cp-gstin" placeholder="GSTIN"></div>
+        <div><label>Avg Turnover (Cr)</label><input type="number" id="cp-turnover" placeholder="0"></div>
+        <div><label>Total Employees</label><input type="number" id="cp-emp" placeholder="0"></div>
+        <div><label>State</label><input id="cp-state" placeholder="Gujarat"></div>
+        <div><label>Contact Name</label><input id="cp-contact" placeholder="Contact person"></div>
+        <div><label>Contact Email</label><input id="cp-email" placeholder="email@company.com"></div>
+        <div><label>Contact Phone</label><input id="cp-phone" placeholder="+91-XXXXXXXXXX"></div>
+        <div style="grid-column:1/-1"><label>Certifications / Experience</label><textarea id="cp-certs" rows="2" placeholder="CMMI, ISO, similar project experience..."></textarea></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-primary" onclick="savePartner()">Save Partner</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('add-partner-form').style.display='none'">Cancel</button>
+      </div>
+    </div>
+
+    <div class="tab-row" style="margin-bottom:16px">
+      <div class="tab active" onclick="switchConsTab('partners',event)">Partners Database</div>
+      <div class="tab" onclick="switchConsTab('jvs',event)">JV / Consortiums</div>
+      <div class="tab" onclick="switchConsTab('create-jv',event)">Create JV</div>
+    </div>
+
+    <div id="cons-tab-partners" class="tab-panel active">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company</th><th>Type</th><th>Turnover (Cr)</th><th>State</th><th>Certifications</th><th>Contact</th><th>Action</th></tr></thead>
+          <tbody id="partners-tbody"><tr><td colspan="7" class="empty-state">No partners added yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="cons-tab-jvs" class="tab-panel">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>JV Name</th><th>Tender ID</th><th>Lead Firm</th><th>Partners</th><th>Nascent Share %</th><th>Value (Cr)</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="jvs-tbody"><tr><td colspan="8" class="empty-state">No JVs created yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="cons-tab-create-jv" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Create JV / Consortium</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          <div><label>JV Name</label><input id="jv-name" placeholder="JV Name e.g. NIT-XYZ Consortium"></div>
+          <div><label>Tender T247 ID</label><input id="jv-tid" placeholder="T247 ID (optional)"></div>
+          <div><label>Lead Firm</label><input id="jv-lead" value="Nascent Info Technologies Pvt. Ltd."></div>
+          <div><label>Nascent Share %</label><input type="number" id="jv-share" value="51" min="1" max="99"></div>
+          <div><label>Total JV Value (Cr)</label><input type="number" id="jv-value" placeholder="0"></div>
+        </div>
+        <div style="margin-top:12px">
+          <label>Partner Selection</label>
+          <div id="jv-partner-checkboxes" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+        </div>
+        <textarea id="jv-notes" rows="2" placeholder="Notes about this JV arrangement..." style="margin-top:12px;width:100%"></textarea>
+        <button class="btn btn-primary" onclick="saveJV()" style="margin-top:12px">Create JV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ COMPETITORS ═══ -->
+<div id="page-competitors" class="page">
+  <div class="topbar"><h1>Competitor Intelligence</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadCompetitors()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div class="alert-bar blue" style="margin-bottom:14px">
+      Record competitor names when entering Win/Loss outcomes. Data builds automatically over time.
+    </div>
+    <div id="comp-intel-list"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Add Competitor Encounter</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px"><label>T247 ID</label><input id="ci-tid" placeholder="Tender ID"></div>
+        <div style="flex:2;min-width:200px"><label>Competitor Name</label><input id="ci-name" placeholder="Company name"></div>
+        <div><label>Our Outcome</label>
+          <select id="ci-outcome"><option value="Won">We Won</option><option value="Lost">We Lost</option><option value="Submitted">Submitted</option></select></div>
+        <div><label>L1 Price (Cr)</label><input type="number" id="ci-l1" placeholder="0.00"></div>
+        <div><label>Our Price (Cr)</label><input type="number" id="ci-our" placeholder="0.00"></div>
+        <button class="btn btn-primary" onclick="saveCompetitorData()" style="align-self:flex-end">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FINANCIAL PIPELINE ═══ -->
+<div id="page-financial-pipeline" class="page">
+  <div class="topbar"><h1>Financial Pipeline</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadFinancialPipeline()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div id="fp-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">Order Book (Won)</div>
+        <div id="fp-won-list" style="font-size:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Submitted — Awaiting Result</div>
+        <div id="fp-submitted-list" style="font-size:12px"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Active Bid Pipeline (BID + Conditional)</div>
+      <div id="fp-pipeline-list" style="font-size:12px"></div>
+    </div>
+    <div class="card" style="margin-top:16px;background:var(--green-bg);border-color:rgba(34,197,94,.2)">
+      <div class="card-title" style="color:var(--green)">Revenue Projections</div>
+      <div id="fp-projections" style="font-size:12.5px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ WATCHLIST ═══ -->
+<div id="page-watchlist" class="page">
+  <div class="topbar"><h1>Watchlist</h1>
+    <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadWatchlist()">↺ Refresh</button></div>
+  </div>
+  <div class="page-body">
+    <div class="alert-bar blue" style="margin-bottom:14px">
+      Watchlist: tenders you want to monitor closely regardless of verdict. Click ⭐ on any tender card to add.
+    </div>
+    <div id="watchlist-stats" style="margin-bottom:14px;font-size:12px;color:var(--text3)"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>T247 ID</th><th>Brief</th><th>Org</th><th>Value (Cr)</th><th>Deadline</th><th>Days</th><th>Verdict</th><th>Action</th></tr></thead>
+        <tbody id="watchlist-tbody"><tr><td colspan="8" class="empty-state">Watchlist is empty. Add tenders by clicking ⭐ in the tenders list.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -6517,4 +6767,577 @@ function calDayClick(d) {
 
 </script>
 </body>
+
+<script>
+// ════════════════════════════════════════════════
+// NEW PAGES — JS
+// ════════════════════════════════════════════════
+
+// Hook showPage for new pages
+var _origShowPage = showPage;
+showPage = function(name, opts) {
+  _origShowPage(name, opts);
+  if (name === 'compliance') loadCompliance();
+  if (name === 'portals') loadPortals();
+  if (name === 'gem') loadGem();
+  if (name === 'consortium') loadConsortium();
+  if (name === 'competitors') loadCompetitors();
+  if (name === 'financial-pipeline') loadFinancialPipeline();
+  if (name === 'watchlist') loadWatchlist();
+};
+
+// ── COMPLIANCE ───────────────────────────────────────────────────────────────
+async function loadCompliance() {
+  try {
+    var r = await fetch('/compliance/alerts');
+    var d = await r.json();
+    var crit = d.critical || 0; var warn = d.warnings || 0; var ok = d.ok || 0;
+    var sumEl = document.getElementById('comp-summary');
+    if (sumEl) sumEl.innerHTML =
+      `<div class="card card-sm" style="border-color:var(--red);text-align:center"><div style="font-size:28px;font-weight:700;color:var(--red)">${crit}</div><div style="font-size:11px;color:var(--text3)">CRITICAL</div></div>` +
+      `<div class="card card-sm" style="border-color:var(--amber);text-align:center"><div style="font-size:28px;font-weight:700;color:var(--amber)">${warn}</div><div style="font-size:11px;color:var(--text3)">WARNINGS</div></div>` +
+      `<div class="card card-sm" style="border-color:var(--green);text-align:center"><div style="font-size:28px;font-weight:700;color:var(--green)">${ok}</div><div style="font-size:11px;color:var(--text3)">OK</div></div>`;
+    var listEl = document.getElementById('comp-list');
+    if (!listEl) return;
+    var alerts = d.alerts || [];
+    if (!alerts.length) { listEl.innerHTML = '<div class="empty-state">No compliance items found.</div>'; return; }
+    listEl.innerHTML = alerts.map(function(a) {
+      var col = a.urgency === 'CRITICAL' ? 'var(--red)' : a.urgency === 'WARNING' ? 'var(--amber)' : 'var(--green)';
+      var icon = a.urgency === 'CRITICAL' ? '🔴' : a.urgency === 'WARNING' ? '🟡' : '🟢';
+      return `<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:18px">${icon}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:#fff">${a.item}</div>
+          <div style="font-size:11px;color:var(--text3)">${a.category} · Expires: ${a.expiry || '—'}${a.note ? ' · ' + a.note : ''}</div>
+        </div>
+        <div style="text-align:right;min-width:80px">
+          <div style="font-size:16px;font-weight:700;color:${col}">${a.days_left < 0 ? 'EXPIRED' : a.days_left + 'd'}</div>
+          <div style="font-size:10px;color:${col};font-weight:600">${a.urgency}</div>
+        </div>
+      </div>`;
+    }).join('');
+    // Update nav badge
+    var nb = document.getElementById('nb-compliance');
+    if (nb) { nb.textContent = crit; nb.style.display = crit > 0 ? '' : 'none'; }
+  } catch(e) { document.getElementById('comp-list').innerHTML = '<div class="empty-state">Error loading compliance data.</div>'; }
+}
+
+// ── PORTAL HUB ───────────────────────────────────────────────────────────────
+var _allPortals = [];
+var _portalFilter = 'all';
+
+async function loadPortals() {
+  try {
+    var r = await fetch('/portals');
+    var d = await r.json();
+    _allPortals = d.portals || [];
+    renderPortals();
+  } catch(e) {}
+}
+
+function portalFilter(f, btn) {
+  _portalFilter = f;
+  document.querySelectorAll('.portal-flt').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderPortals();
+}
+
+function renderPortals() {
+  var filtered = _allPortals.filter(function(p) { return _portalFilter === 'all' || p.type === _portalFilter; });
+  var TAG_COLOR = {PRIMARY:'var(--green)',ACTIVE:'var(--blue)',ALT:'var(--amber)',OPS:'var(--purple)',MSME:'var(--cyan)',TARGET:'var(--green)',STATE:'var(--text2)',LAW:'var(--text3)',COMPLIANCE:'var(--amber)',PORTAL:'var(--blue)'};
+  document.getElementById('portal-cards').innerHTML = filtered.map(function(p) {
+    var col = TAG_COLOR[p.tag] || 'var(--text3)';
+    return `<div class="card card-sm" style="cursor:pointer;transition:all .15s" onclick="window.open('${p.url}','_blank')" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="font-size:16px">${p.icon || '🌐'}</div>
+        <span style="font-size:9px;font-weight:700;color:${col};background:rgba(255,255,255,.05);padding:2px 6px;border-radius:20px;border:1px solid ${col}">${p.tag}</span>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px">${p.name}</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.5">${p.desc}</div>
+      <div style="margin-top:8px;font-size:10px;color:var(--blue);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.url}</div>
+    </div>`;
+  }).join('') || '<div class="empty-state">No portals in this category.</div>';
+}
+
+// ── GEM MODULE ───────────────────────────────────────────────────────────────
+var _gemTenders = [];
+var _gemFilter = 'all';
+
+async function loadGem() {
+  try {
+    var r = await fetch('/gem/tenders');
+    var d = await r.json();
+    _gemTenders = d.tenders || [];
+    var statsEl = document.getElementById('gem-stats');
+    if (statsEl) statsEl.innerHTML =
+      `<div class="stat"><div class="stat-num c-purple">${d.total || 0}</div><div class="stat-lbl">Total GeM</div></div>` +
+      `<div class="stat"><div class="stat-num c-green">${d.bid_count || 0}</div><div class="stat-lbl">BID / Cond.</div></div>` +
+      `<div class="stat"><div class="stat-num c-blue">${fmtCr(d.total_cr)}</div><div class="stat-lbl">Total Value</div></div>` +
+      `<div class="stat"><div class="stat-num c-amber">${_gemTenders.filter(function(t){return getDaysLeft(t)<=7&&getDaysLeft(t)>=0}).length}</div><div class="stat-lbl">≤7 Days</div></div>`;
+    gemFilter(_gemFilter);
+  } catch(e) {}
+}
+
+function gemFilter(f, btn) {
+  _gemFilter = f;
+  document.querySelectorAll('.gem-flt').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var filtered = _gemTenders.filter(function(t) {
+    if (f === 'bid') return getVerdict(t) === 'BID';
+    if (f === 'cond') return getVerdict(t) === 'CONDITIONAL';
+    if (f === 'urgent') return getDaysLeft(t) <= 7 && getDaysLeft(t) >= 0;
+    return true;
+  });
+  document.getElementById('gem-tbody').innerHTML = filtered.map(function(t) {
+    return `<tr>
+      <td class="mono">${t.t247_id || '—'}</td>
+      <td class="brief-cell"><div class="brief">${(t.brief||'—').substring(0,55)}</div><div class="org">${t.org_name||''}</div></td>
+      <td>${(t.org_name||'—').substring(0,25)}</td>
+      <td>${fmtCr(t.estimated_cost_cr)}</td>
+      <td style="font-size:11px">${t.emd||'—'}</td>
+      <td style="font-size:11px">${t.deadline||'—'}</td>
+      <td><span class="badge badge-${getVerdict(t)}">${getVerdict(t)}</span></td>
+      <td class="actions-cell">
+        <button class="action-btn blue" onclick="setCtxAndAnalyse('${t.t247_id}','${esc(t.brief)}')">Analyse</button>
+        <button class="action-btn" onclick="openSidePanel('${t.t247_id}')">View</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty-state">No GeM tenders found.</td></tr>';
+}
+
+// ── CONSORTIUM ───────────────────────────────────────────────────────────────
+var _consortiumData = {partners:[], jvs:[]};
+
+function showAddPartnerForm() {
+  var f = document.getElementById('add-partner-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function switchConsTab(tab, e) {
+  document.querySelectorAll('#page-consortium .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('#page-consortium .tab-panel').forEach(function(p){p.classList.remove('active');});
+  if (e && e.target) e.target.classList.add('active');
+  var panel = document.getElementById('cons-tab-' + tab);
+  if (panel) panel.classList.add('active');
+  if (tab === 'create-jv') renderJVPartnerCheckboxes();
+}
+
+async function loadConsortium() {
+  try {
+    var r = await fetch('/consortium');
+    _consortiumData = await r.json();
+    renderPartners();
+    renderJVs();
+  } catch(e) {}
+}
+
+function renderPartners() {
+  var el = document.getElementById('partners-tbody');
+  if (!el) return;
+  var partners = _consortiumData.partners || [];
+  el.innerHTML = partners.map(function(p) {
+    return `<tr>
+      <td style="font-weight:600">${p.name}</td>
+      <td><span class="badge badge-REVIEW">${p.type}</span></td>
+      <td>${p.turnover_cr ? '₹' + p.turnover_cr + ' Cr' : '—'}</td>
+      <td>${p.state || '—'}</td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">${p.certifications || '—'}</td>
+      <td style="font-size:11px">${p.contact_name || ''}<br><span style="color:var(--text3)">${p.contact_email || ''}</span></td>
+      <td><button class="btn btn-danger btn-xs" onclick="deletePartner('${p.id}')">Del</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="empty-state">No partners added yet.</td></tr>';
+}
+
+function renderJVs() {
+  var el = document.getElementById('jvs-tbody');
+  if (!el) return;
+  var jvs = _consortiumData.jvs || [];
+  var partners = _consortiumData.partners || [];
+  el.innerHTML = jvs.map(function(jv) {
+    var partnerNames = (jv.partners || []).map(function(pid) {
+      var p = partners.find(function(x){return x.id===pid;});
+      return p ? p.name : pid;
+    }).join(', ') || '—';
+    return `<tr>
+      <td style="font-weight:600">${jv.jv_name || '—'}</td>
+      <td class="mono">${jv.tender_id || '—'}</td>
+      <td>${jv.lead_firm || '—'}</td>
+      <td style="font-size:11px">${partnerNames}</td>
+      <td style="text-align:center">${jv.nascent_share_pct || 51}%</td>
+      <td>${jv.jv_value_cr ? '₹' + jv.jv_value_cr + ' Cr' : '—'}</td>
+      <td><span class="badge badge-REVIEW">${jv.status || 'Draft'}</span></td>
+      <td><button class="btn btn-danger btn-xs" onclick="deleteJV('${jv.id}')">Del</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty-state">No JVs created yet.</td></tr>';
+}
+
+function renderJVPartnerCheckboxes() {
+  var el = document.getElementById('jv-partner-checkboxes');
+  if (!el) return;
+  var partners = _consortiumData.partners || [];
+  el.innerHTML = partners.map(function(p) {
+    return `<label style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px">
+      <input type="checkbox" value="${p.id}" style="accent-color:var(--blue)"> ${p.name}
+    </label>`;
+  }).join('') || '<div style="font-size:12px;color:var(--text3)">Add partners first in "Partners Database" tab</div>';
+}
+
+async function savePartner() {
+  var data = {
+    name: document.getElementById('cp-name').value.trim(),
+    type: document.getElementById('cp-type').value,
+    pan: document.getElementById('cp-pan').value.trim(),
+    gstin: document.getElementById('cp-gstin').value.trim(),
+    turnover_cr: parseFloat(document.getElementById('cp-turnover').value) || 0,
+    employees: parseInt(document.getElementById('cp-emp').value) || 0,
+    state: document.getElementById('cp-state').value.trim(),
+    contact_name: document.getElementById('cp-contact').value.trim(),
+    contact_email: document.getElementById('cp-email').value.trim(),
+    contact_phone: document.getElementById('cp-phone').value.trim(),
+    certifications: document.getElementById('cp-certs').value.trim(),
+  };
+  if (!data.name) { toast('Enter company name', 'error'); return; }
+  try {
+    await fetch('/consortium/partner', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
+    toast('Partner added', 'success');
+    document.getElementById('add-partner-form').style.display = 'none';
+    await loadConsortium();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deletePartner(pid) {
+  if (!confirm('Delete this partner?')) return;
+  await fetch('/consortium/partner/' + pid, {method:'DELETE'});
+  await loadConsortium();
+  toast('Partner removed', 'success');
+}
+
+async function saveJV() {
+  var selectedPartners = Array.from(document.querySelectorAll('#jv-partner-checkboxes input:checked')).map(function(i){return i.value;});
+  var data = {
+    jv_name: document.getElementById('jv-name').value.trim(),
+    tender_id: document.getElementById('jv-tid').value.trim(),
+    lead_firm: document.getElementById('jv-lead').value.trim(),
+    nascent_share_pct: parseFloat(document.getElementById('jv-share').value) || 51,
+    jv_value_cr: parseFloat(document.getElementById('jv-value').value) || 0,
+    partners: selectedPartners,
+    notes: document.getElementById('jv-notes').value.trim(),
+  };
+  if (!data.jv_name) { toast('Enter JV name', 'error'); return; }
+  try {
+    await fetch('/consortium/jv', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
+    toast('JV created', 'success');
+    await loadConsortium();
+    switchConsTab('jvs');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteJV(jvid) {
+  if (!confirm('Delete this JV?')) return;
+  await fetch('/consortium/jv/' + jvid, {method:'DELETE'});
+  await loadConsortium();
+  toast('JV removed', 'success');
+}
+
+// ── COMPETITOR INTELLIGENCE ──────────────────────────────────────────────────
+async function loadCompetitors() {
+  try {
+    var r = await fetch('/analytics/competitors');
+    var d = await r.json();
+    var competitors = d.competitors || [];
+    var el = document.getElementById('comp-intel-list');
+    if (!el) return;
+    if (!competitors.length) {
+      el.innerHTML = '<div class="card"><div class="empty-state"><div class="empty-icon">🥊</div><p>No competitor data yet. Record outcomes in Win/Loss Tracker.</p></div></div>';
+      return;
+    }
+    el.innerHTML = '<div class="table-wrap"><table>' +
+      '<thead><tr><th>Competitor</th><th>Encounters</th><th>We Won</th><th>They Won</th><th>Win Rate vs Them</th><th>Tenders</th></tr></thead>' +
+      '<tbody>' + competitors.map(function(c) {
+        var rate = c.win_rate_vs;
+        var col = rate >= 60 ? 'var(--green)' : rate >= 40 ? 'var(--amber)' : 'var(--red)';
+        var tenderLinks = (c.tenders || []).slice(0,3).map(function(t){return '<span class="mono" style="font-size:10px">'+t.t247_id+'</span>';}).join(' ');
+        return `<tr>
+          <td style="font-weight:600">${c.competitor}</td>
+          <td style="text-align:center">${c.encounters}</td>
+          <td style="text-align:center;color:var(--green);font-weight:600">${c.we_won}</td>
+          <td style="text-align:center;color:var(--red);font-weight:600">${c.they_won}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="height:6px;width:${rate}px;max-width:100px;background:${col};border-radius:3px"></div><span style="color:${col};font-weight:700">${rate}%</span></div></td>
+          <td style="font-size:11px">${tenderLinks}</td>
+        </tr>`;
+      }).join('') + '</tbody></table></div>';
+  } catch(e) {}
+}
+
+async function saveCompetitorData() {
+  var tid = document.getElementById('ci-tid').value.trim();
+  var name = document.getElementById('ci-name').value.trim();
+  var outcome = document.getElementById('ci-outcome').value;
+  var l1 = parseFloat(document.getElementById('ci-l1').value) || 0;
+  var our = parseFloat(document.getElementById('ci-our').value) || 0;
+  if (!name) { toast('Enter competitor name', 'error'); return; }
+  var payload = {outcome: outcome, competitor: name, value: our, l1_price: l1, notes: 'Competitor: ' + name};
+  if (tid) {
+    try {
+      await fetch('/tender/' + tid + '/bid-result', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      toast('Competitor data saved', 'success');
+      ['ci-tid','ci-name','ci-l1','ci-our'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+      loadCompetitors();
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+  } else { toast('Enter T247 ID to link competitor data', 'error'); }
+}
+
+// ── FINANCIAL PIPELINE ──────────────────────────────────────────────────────
+async function loadFinancialPipeline() {
+  try {
+    var r = await fetch('/analytics/financial-pipeline');
+    var d = await r.json();
+    var statsEl = document.getElementById('fp-stats');
+    if (statsEl) statsEl.innerHTML =
+      `<div class="stat"><div class="stat-num c-green">${fmtCr(d.order_book?.value_cr)}</div><div class="stat-lbl">Order Book (${d.order_book?.count || 0} tenders)</div></div>` +
+      `<div class="stat"><div class="stat-num c-amber">${fmtCr(d.submitted_awaiting?.value_cr)}</div><div class="stat-lbl">Submitted Awaiting (${d.submitted_awaiting?.count || 0})</div></div>` +
+      `<div class="stat"><div class="stat-num c-blue">${fmtCr(d.active_pipeline?.value_cr)}</div><div class="stat-lbl">Active Pipeline (${d.active_pipeline?.count || 0})</div></div>` +
+      `<div class="stat"><div class="stat-num c-purple">${fmtCr(d.total_opportunities_cr)}</div><div class="stat-lbl">Total Addressable</div></div>`;
+
+    function renderList(list, el) {
+      if (!list || !list.length) { el.innerHTML = '<div class="empty-state" style="font-size:12px">None recorded yet.</div>'; return; }
+      el.innerHTML = list.map(function(t) {
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div><span class="mono" style="font-size:11px;color:var(--blue)">${t.t247_id}</span> <span style="color:var(--text)">${(t.brief||'').substring(0,50)}</span></div>
+          <div style="font-weight:600;color:var(--green)">${fmtCr(t.value_cr)}</div>
+        </div>`;
+      }).join('');
+    }
+    renderList(d.won_list, document.getElementById('fp-won-list'));
+    renderList(d.submitted_list, document.getElementById('fp-submitted-list'));
+
+    var pipe = (d.active_pipeline?.count || 0) + ' tenders totalling ' + fmtCr(d.active_pipeline?.value_cr);
+    document.getElementById('fp-pipeline-list').innerHTML =
+      `<div style="font-size:13px;color:var(--text2)">Active BID/Conditional pipeline: <b style="color:#fff">${pipe}</b></div>`;
+
+    // Projections
+    var orderBook = parseFloat(d.order_book?.value_cr || 0);
+    var pipeVal = parseFloat(d.active_pipeline?.value_cr || 0);
+    var assumedWinRate = 0.4;
+    var projected = Math.round((pipeVal * assumedWinRate + orderBook) * 100) / 100;
+    document.getElementById('fp-projections').innerHTML =
+      `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center">
+        <div><div style="font-size:22px;font-weight:700;color:var(--green)">${fmtCr(orderBook)}</div><div style="font-size:11px;color:var(--text3)">Confirmed Order Book</div></div>
+        <div><div style="font-size:22px;font-weight:700;color:var(--amber)">${fmtCr(pipeVal * assumedWinRate)}</div><div style="font-size:11px;color:var(--text3)">Pipeline (@ 40% win rate)</div></div>
+        <div><div style="font-size:22px;font-weight:700;color:var(--blue)">${fmtCr(projected)}</div><div style="font-size:11px;color:var(--text3)">Projected Revenue</div></div>
+      </div>`;
+  } catch(e) { console.error(e); }
+}
+
+// ── WATCHLIST ───────────────────────────────────────────────────────────────
+var _watchlistIds = [];
+
+async function loadWatchlist() {
+  try {
+    var r = await fetch('/watchlist');
+    var d = await r.json();
+    _watchlistIds = d.ids || [];
+    var tenders = d.watchlist || [];
+    document.getElementById('watchlist-stats').textContent = tenders.length + ' tender(s) on watchlist';
+    document.getElementById('watchlist-tbody').innerHTML = tenders.map(function(t) {
+      var dl = getDaysLeft(t);
+      return `<tr>
+        <td class="mono">${t.t247_id}</td>
+        <td class="brief-cell"><div class="brief">${(t.brief||'').substring(0,55)}</div><div class="org">${t.org_name||''}</div></td>
+        <td>${(t.org_name||'').substring(0,25)}</td>
+        <td>${fmtCr(t.estimated_cost_cr)}</td>
+        <td style="font-size:11px">${t.deadline||'—'}</td>
+        <td>${daysDisplay(dl)}</td>
+        <td><span class="badge badge-${getVerdict(t)}">${getVerdict(t)}</span></td>
+        <td class="actions-cell">
+          <button class="action-btn blue" onclick="openSidePanel('${t.t247_id}')">View</button>
+          <button class="action-btn amber" onclick="removeFromWatchlist('${t.t247_id}')">★ Remove</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="8" class="empty-state">Watchlist is empty.</td></tr>';
+  } catch(e) {}
+}
+
+async function addToWatchlist(tid) {
+  try {
+    await fetch('/watchlist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({t247_id: tid})});
+    toast('Added to watchlist ⭐', 'success');
+  } catch(e) { toast('Error', 'error'); }
+}
+
+async function removeFromWatchlist(tid) {
+  await fetch('/watchlist/remove', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({t247_id: tid})});
+  toast('Removed from watchlist', 'info');
+  loadWatchlist();
+}
+
+// ── ENHANCED ANALYTICS ──────────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    // Load full analytics
+    var r = await fetch('/analytics/full');
+    var d = await r.json();
+
+    // Summary stats
+    var sumEl = document.getElementById('analytics-summary');
+    if (sumEl) {
+      var ws = d.win_stats || {};
+      sumEl.innerHTML =
+        `<div class="stat"><div class="stat-num c-green">${ws.won||0}</div><div class="stat-lbl">Tenders Won</div></div>` +
+        `<div class="stat"><div class="stat-num c-red">${ws.lost||0}</div><div class="stat-lbl">Tenders Lost</div></div>` +
+        `<div class="stat"><div class="stat-num c-amber">${ws.submitted||0}</div><div class="stat-lbl">Awaiting Result</div></div>` +
+        `<div class="stat"><div class="stat-num c-blue">${ws.win_rate_pct||0}%</div><div class="stat-lbl">Win Rate</div></div>` +
+        `<div class="stat"><div class="stat-num c-green">${fmtCr(ws.cr_won)}</div><div class="stat-lbl">Won (Cr)</div></div>` +
+        `<div class="stat"><div class="stat-num c-purple">${fmtCr(ws.cr_pipeline)}</div><div class="stat-lbl">Pipeline (Cr)</div></div>`;
+    }
+
+    // Verdict donut
+    var vd = d.verdict_distribution || {};
+    var verdictEl = document.getElementById('analytics-verdict-chart');
+    if (verdictEl) {
+      var total = Object.values(vd).reduce(function(a,b){return a+b;}, 0);
+      verdictEl.innerHTML = Object.entries(vd).map(function(e) {
+        var [v, cnt] = e;
+        var col = v === 'BID' ? 'var(--green)' : v === 'NO-BID' ? 'var(--red)' : v === 'CONDITIONAL' ? 'var(--amber)' : 'var(--blue)';
+        var pct = total ? Math.round(cnt/total*100) : 0;
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:10px;height:10px;border-radius:2px;background:${col};flex-shrink:0"></div>
+          <div style="flex:1;font-size:12.5px">${v}</div>
+          <div style="font-family:var(--mono);font-size:12px;font-weight:600">${cnt}</div>
+          <div style="width:80px;background:var(--bg2);border-radius:4px;height:6px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:4px"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);width:30px;text-align:right">${pct}%</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Sector breakdown
+    var secEl = document.getElementById('analytics-sector-chart');
+    if (secEl) {
+      var sectors = d.sector_breakdown || {};
+      var maxTotal = Math.max(...Object.values(sectors).map(function(s){return s.total||0;}), 1);
+      secEl.innerHTML = Object.entries(sectors).sort(function(a,b){return (b[1].total||0)-(a[1].total||0);}).map(function(e) {
+        var [sector, data] = e;
+        var pct = Math.round((data.total||0)/maxTotal*100);
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span>${sector}</span>
+            <span class="mono">${data.total} tenders · ${fmtCr(data.cr)}</span>
+          </div>
+          <div style="background:var(--bg2);border-radius:4px;height:6px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--blue);border-radius:4px"></div>
+          </div>
+        </div>`;
+      }).join('') || '<div class="empty-state" style="font-size:12px">Analyse tenders to see sector data.</div>';
+    }
+
+    // State breakdown
+    var stateEl = document.getElementById('analytics-state-chart');
+    if (stateEl) {
+      var states = d.state_distribution || {};
+      var maxS = Math.max(...Object.values(states), 1);
+      stateEl.innerHTML = Object.entries(states).slice(0,15).map(function(e) {
+        var [state, cnt] = e;
+        var pct = Math.round(cnt/maxS*100);
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="width:90px;font-size:12px;text-align:right;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${state}</div>
+          <div style="flex:1;background:var(--bg2);border-radius:4px;height:5px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--purple);border-radius:4px"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);width:25px">${cnt}</div>
+        </div>`;
+      }).join('') || '<div class="empty-state" style="font-size:12px">No state data.</div>';
+    }
+
+    // Monthly imports
+    var monthEl = document.getElementById('analytics-monthly-chart');
+    if (monthEl) {
+      var monthly = d.monthly_imports || {};
+      var maxM = Math.max(...Object.values(monthly), 1);
+      monthEl.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding-top:4px">' +
+        Object.entries(monthly).map(function(e) {
+          var [k, cnt] = e;
+          var h = Math.round(cnt/maxM*70);
+          var label = k.substring(5);
+          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px">
+            <div style="font-size:9px;color:var(--text3)">${cnt}</div>
+            <div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:${h}px;min-height:2px;transition:height .3s"></div>
+            <div style="font-size:9px;color:var(--text3)">${label}</div>
+          </div>`;
+        }).join('') + '</div>';
+    }
+
+    // Win/Loss table
+    try {
+      var r2 = await fetch('/win-loss');
+      var d2 = await r2.json();
+      var wlRows = (d2.tenders || []).filter(function(t){return t.outcome;}).map(function(t) {
+        return '<tr>' +
+          '<td class="mono">' + (t.t247_id||'—') + '</td>' +
+          '<td class="brief-cell"><div class="brief">' + (t.brief||'').substring(0,45) + '</div></td>' +
+          '<td><span class="badge badge-' + (t.outcome==='Won'?'BID':t.outcome==='Lost'?'NO-BID':'CONDITIONAL') + '">' + t.outcome + '</span></td>' +
+          '<td>' + fmtCr(t.outcome_value) + '</td>' +
+          '<td style="font-size:11px;color:var(--text3)">' + (t.outcome_competitor||'—') + '</td>' +
+        '</tr>';
+      }).join('') || '<tr><td colspan="5" class="empty-state">No outcomes recorded yet.</td></tr>';
+      var wlEl = document.getElementById('winloss-table');
+      if (wlEl) wlEl.innerHTML = wlRows;
+    } catch(e2) {}
+
+  } catch(e) { console.error('Analytics error:', e); }
+}
+
+// ── WATCHLIST BUTTON IN SIDEBAR ──────────────────────────────────────────────
+// Patch openSidePanel to add watchlist button — override the render
+var _watchlistIdsSet = new Set();
+(async function() {
+  try {
+    var r = await fetch('/watchlist');
+    var d = await r.json();
+    _watchlistIdsSet = new Set(d.ids || []);
+  } catch(e) {}
+})();
+
+// ── ANALYTICS CHARTS CONTAINERS (add to analytics page) ──────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // Enhance analytics page with chart containers if not already there
+  var aBody = document.querySelector('#page-analytics .page-body');
+  if (aBody && !document.getElementById('analytics-verdict-chart')) {
+    var extra = `
+    <div class="row" style="margin-top:16px">
+      <div class="card">
+        <div class="card-title">Verdict Distribution</div>
+        <div id="analytics-verdict-chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Monthly Tender Imports</div>
+        <div id="analytics-monthly-chart"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="card">
+        <div class="card-title">Sector Breakdown</div>
+        <div id="analytics-sector-chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top 15 States</div>
+        <div id="analytics-state-chart"></div>
+      </div>
+    </div>`;
+    aBody.insertAdjacentHTML('beforeend', extra);
+  }
+
+  // Add nav badge update for compliance on load
+  setTimeout(async function() {
+    try {
+      var r = await fetch('/compliance/alerts');
+      var d = await r.json();
+      var nb = document.getElementById('nb-compliance');
+      if (nb && d.critical > 0) { nb.textContent = d.critical; nb.style.display = ''; }
+    } catch(e) {}
+  }, 3000);
+});
+</script>
+
 </html>

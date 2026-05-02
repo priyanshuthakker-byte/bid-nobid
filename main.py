@@ -105,6 +105,7 @@ TEMP_DIR.mkdir(exist_ok=True, parents=True)
 DB_FILE = OUTPUT_DIR / "tenders_db.json"
 DRAFTS_DIR = OUTPUT_DIR / "drafts"
 LATEST_EXCEL_FILE = OUTPUT_DIR / "latest_tenders_import.xlsx"
+PROFILE_PATH = BASE_DIR / "nascent_profile.json"
 DRAFTS_DIR.mkdir(exist_ok=True, parents=True)
 
 # ── FIX 2: Threading lock for safe concurrent DB access ─────────────────────
@@ -4510,3 +4511,440 @@ async def boq_search(q: str = ""):
         if len(results) >= 50:
             break
     return {"results": results}
+
+# ══ FULL ANALYTICS ═══════════════════════════════════════════════════════════
+@app.get("/analytics/full")
+async def get_full_analytics():
+    """Comprehensive analytics: sector, state, value range, monthly trend, win rate."""
+    from collections import defaultdict, Counter
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    today_d = datetime.now().date()
+    verdict_dist: Counter = Counter()
+    state_dist: Counter = Counter()
+    sector_dist = defaultdict(lambda: {"total": 0, "bid": 0, "won": 0, "cr": 0.0})
+    vrange = {"<1Cr": 0, "1-5Cr": 0, "5-25Cr": 0, "25-100Cr": 0, ">100Cr": 0}
+    monthly: Counter = Counter()
+    won = lost = submitted = awaiting = 0
+    cr_won = cr_pipeline = cr_submitted = 0.0
+    competitors: Counter = Counter()
+
+    SECTOR_KW = [
+        ("GIS/Geospatial", ["gis","geospatial","geographic information","cadastral","mapping solution","remote sensing","survey and mapping"]),
+        ("Smart City", ["smart city","smart cities","intelligent city","city surveillance","iccc"]),
+        ("eGovernance", ["e-governance","egov","digital governance","e-gov","citizen portal","government portal","nic","diksha","digi"]),
+        ("Mobile App", ["mobile app","android app","ios app","mobile application","flutter"]),
+        ("Web Portal", ["web portal","web application","website","online portal","web-based"]),
+        ("ERP/Software", ["erp","enterprise resource","software development","it project","application development"]),
+        ("Data/Analytics", ["data analytics","dashboard","business intelligence","data platform","analytics portal"]),
+        ("Survey/Mapping", ["survey","field data","drone survey","lidar","topographic","photogrammetry"]),
+        ("IT Infrastructure", ["server","networking","datacenter","cloud hosting","noc","it infrastructure"]),
+    ]
+
+    for t in tenders:
+        brief = (t.get("brief", "") or "").lower()
+        loc = str(t.get("location", "") or "").strip()
+        v = str(t.get("verdict", "") or "").upper()
+        if v.startswith("{"):
+            try: v = json.loads(v).get("verdict", "") or ""
+            except Exception: v = ""
+        status = str(t.get("status", "") or "")
+        outcome = str(t.get("outcome", "") or "").lower()
+        val = float(t.get("estimated_cost_cr", 0) or 0)
+        imp = str(t.get("imported_at", "") or "")
+
+        verdict_dist[v or "UNKNOWN"] += 1
+        state = loc.split(",")[-1].strip() if "," in loc else loc
+        if state: state_dist[state] += 1
+
+        if val < 1: vrange["<1Cr"] += 1
+        elif val < 5: vrange["1-5Cr"] += 1
+        elif val < 25: vrange["5-25Cr"] += 1
+        elif val < 100: vrange["25-100Cr"] += 1
+        else: vrange[">100Cr"] += 1
+
+        if imp and len(imp) >= 7:
+            monthly[imp[:7]] += 1
+
+        if outcome == "won":
+            won += 1; cr_won += val
+        elif outcome == "lost":
+            lost += 1
+        elif status in ("Submitted", "Under Evaluation"):
+            submitted += 1; cr_submitted += val
+        elif status not in ("Won", "Lost", "No-Bid", "Skipped") and v in ("BID", "CONDITIONAL"):
+            cr_pipeline += val
+
+        comp = str(t.get("outcome_competitor", "") or "").strip()
+        if comp: competitors[comp] += 1
+
+        assigned = False
+        for sector, kws in SECTOR_KW:
+            if any(kw in brief for kw in kws):
+                sector_dist[sector]["total"] += 1
+                if v in ("BID", "CONDITIONAL"): sector_dist[sector]["bid"] += 1
+                if outcome == "won": sector_dist[sector]["won"] += 1
+                sector_dist[sector]["cr"] = round(sector_dist[sector]["cr"] + val, 2)
+                assigned = True; break
+        if not assigned:
+            sector_dist["Other"]["total"] += 1
+
+    total_done = won + lost
+    win_rate = round(won / total_done * 100, 1) if total_done else 0
+    sorted_monthly = dict(sorted(monthly.items())[-13:])
+
+    return {
+        "total": len(tenders),
+        "verdict_distribution": dict(verdict_dist),
+        "state_distribution": dict(state_dist.most_common(20)),
+        "sector_breakdown": {k: v for k, v in sector_dist.items() if v["total"] > 0},
+        "value_range_distribution": vrange,
+        "monthly_imports": sorted_monthly,
+        "win_stats": {
+            "won": won, "lost": lost, "submitted": submitted,
+            "win_rate_pct": win_rate,
+            "cr_won": round(cr_won, 2),
+            "cr_pipeline": round(cr_pipeline, 2),
+            "cr_submitted": round(cr_submitted, 2),
+        },
+        "top_competitors": dict(competitors.most_common(10)),
+        "gem_count": sum(1 for t in tenders if t.get("is_gem")),
+    }
+
+# ══ COMPLIANCE ALERTS ════════════════════════════════════════════════════════
+@app.get("/compliance/alerts")
+async def get_compliance_alerts():
+    """All cert / POA / doc expiry alerts from profile."""
+    try:
+        profile = json.loads(Path(PROFILE_PATH).read_text(encoding="utf-8"))
+    except Exception:
+        profile = {}
+    today_d = datetime.now().date()
+    alerts = []
+
+    def _check(name: str, date_str: str, category: str, warn_days: int = 90):
+        if not str(date_str or "").strip(): return
+        for fmt in ["%d-%b-%Y", "%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%b %Y", "%B %Y"]:
+            try:
+                exp = datetime.strptime(str(date_str).strip().replace("'", ""), fmt).date()
+                dl = (exp - today_d).days
+                urgency = "CRITICAL" if dl <= 30 else "WARNING" if dl <= warn_days else "OK"
+                alerts.append({"item": name, "category": category, "expiry": str(exp), "days_left": dl, "urgency": urgency})
+                return
+            except Exception: continue
+
+    co = profile.get("company", {}) or {}
+    certs = profile.get("certifications", {}) or {}
+    fin = profile.get("finance", {}) or {}
+
+    # POA
+    poa = str(co.get("poa_validity", "") or "")
+    if poa and "-" in poa:
+        _check("POA — Hitesh Patel (CAO)", poa.split("-")[-1].strip(), "Authorization", 120)
+
+    # Certificates
+    for key, label in [("cmmi","CMMI Level 3"), ("iso_9001","ISO 9001:2015"),
+                        ("iso_27001","ISO 27001:2022"), ("iso_20000","ISO 20000-1:2018")]:
+        c = certs.get(key) or {}
+        if isinstance(c, dict) and c.get("valid_to"):
+            _check(f"{label} Certificate", c["valid_to"], "Certification", 90)
+
+    # Udyam annual self-declaration
+    yr = today_d.year
+    yr_end = datetime(yr, 3, 31).date()
+    if yr_end < today_d: yr_end = datetime(yr + 1, 3, 31).date()
+    dl_ud = (yr_end - today_d).days
+    alerts.append({"item": "Udyam Annual Self-Declaration", "category": "MSME",
+                   "expiry": str(yr_end), "days_left": dl_ud,
+                   "urgency": "CRITICAL" if dl_ud <= 30 else "WARNING" if dl_ud <= 90 else "OK",
+                   "note": "Annual self-declaration required at Udyam portal before year-end"})
+
+    # CA certificate / Solvency (if present)
+    if fin.get("ca_udin_2024_25"):
+        alerts.append({"item": "CA Solvency Certificate (2024-25)", "category": "Financial",
+                       "expiry": "2026-03-31", "days_left": (datetime(2026, 3, 31).date() - today_d).days,
+                       "urgency": "WARNING", "note": "Renew annually from CA"})
+
+    # EMD-related: check pending tenders with upcoming deadlines
+    try:
+        deadline_alerts = get_deadline_alerts()
+        urgent_emd = [a for a in deadline_alerts if a.get("emd") and a.get("days_left", 999) <= 5]
+        for ua in urgent_emd[:5]:
+            alerts.append({"item": f"EMD/BG — {ua.get('t247_id','')} {ua.get('brief','')[:40]}",
+                           "category": "Tender", "expiry": ua.get("deadline",""),
+                           "days_left": ua.get("days_left", 0), "urgency": "CRITICAL"})
+    except Exception: pass
+
+    order = {"CRITICAL": 0, "WARNING": 1, "OK": 2}
+    alerts.sort(key=lambda x: (order.get(x.get("urgency","OK"), 3), x.get("days_left", 999)))
+    return {
+        "alerts": alerts,
+        "critical": sum(1 for a in alerts if a.get("urgency") == "CRITICAL"),
+        "warnings": sum(1 for a in alerts if a.get("urgency") == "WARNING"),
+        "ok": sum(1 for a in alerts if a.get("urgency") == "OK"),
+    }
+
+# ══ CONSORTIUM MANAGEMENT ════════════════════════════════════════════════════
+CONSORTIUM_FILE = OUTPUT_DIR / "consortium.json"
+
+def _load_consortium() -> dict:
+    if CONSORTIUM_FILE.exists():
+        try: return json.loads(CONSORTIUM_FILE.read_text(encoding="utf-8"))
+        except Exception: pass
+    return {"partners": [], "jvs": []}
+
+def _save_consortium(data: dict):
+    CONSORTIUM_FILE.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
+
+@app.get("/consortium")
+async def get_consortium():
+    return _load_consortium()
+
+@app.post("/consortium/partner")
+async def add_consortium_partner(data: dict = Body(...)):
+    c = _load_consortium()
+    p = {"id": str(uuid.uuid4())[:8], "name": data.get("name",""), "type": data.get("type","Associate"),
+         "pan": data.get("pan",""), "gstin": data.get("gstin",""), "turnover_cr": data.get("turnover_cr",0),
+         "employees": data.get("employees",0), "experience": data.get("experience",""),
+         "certifications": data.get("certifications",""), "state": data.get("state",""),
+         "contact_name": data.get("contact_name",""), "contact_email": data.get("contact_email",""),
+         "contact_phone": data.get("contact_phone",""), "added_at": datetime.now().isoformat()}
+    c["partners"].append(p)
+    _save_consortium(c)
+    return {"status": "added", "partner": p}
+
+@app.put("/consortium/partner/{pid}")
+async def update_consortium_partner(pid: str, data: dict = Body(...)):
+    c = _load_consortium()
+    for p in c["partners"]:
+        if p.get("id") == pid:
+            p.update({k: v for k, v in data.items() if k != "id"})
+            break
+    _save_consortium(c)
+    return {"status": "updated"}
+
+@app.delete("/consortium/partner/{pid}")
+async def delete_consortium_partner(pid: str):
+    c = _load_consortium()
+    c["partners"] = [p for p in c["partners"] if p.get("id") != pid]
+    _save_consortium(c)
+    return {"status": "deleted"}
+
+@app.post("/consortium/jv")
+async def create_jv(data: dict = Body(...)):
+    c = _load_consortium()
+    jv = {"id": str(uuid.uuid4())[:8], "tender_id": data.get("tender_id",""),
+          "jv_name": data.get("jv_name",""), "lead_firm": data.get("lead_firm","Nascent Info Technologies Pvt. Ltd."),
+          "partners": data.get("partners",[]), "nascent_share_pct": data.get("nascent_share_pct",51),
+          "jv_value_cr": data.get("jv_value_cr",0), "status": "Draft",
+          "notes": data.get("notes",""), "created_at": datetime.now().isoformat()}
+    c["jvs"].append(jv)
+    _save_consortium(c)
+    return {"status": "created", "jv": jv}
+
+@app.delete("/consortium/jv/{jvid}")
+async def delete_jv(jvid: str):
+    c = _load_consortium()
+    c["jvs"] = [j for j in c["jvs"] if j.get("id") != jvid]
+    _save_consortium(c)
+    return {"status": "deleted"}
+
+# ══ PORTAL LINKS ═════════════════════════════════════════════════════════════
+@app.get("/portals")
+async def get_portal_links():
+    """All Indian procurement portals with metadata."""
+    return {"portals": [
+        {"name":"GeM — Government eMarketplace","url":"https://gem.gov.in","type":"Central","tag":"PRIMARY","desc":"Central Govt marketplace — Bids, Custom Bids, Reverse Auction","icon":"🏛"},
+        {"name":"CPPP eProcure","url":"https://eprocure.gov.in/eprocure/app","type":"Central","tag":"PRIMARY","desc":"Central Public Procurement Portal — NIT / RFP downloads","icon":"📋"},
+        {"name":"NIC eProcurement","url":"https://eprocurement.gov.in","type":"Central","tag":"PORTAL","desc":"NIC eProcurement gateway — 30+ state portals connected","icon":"🔗"},
+        {"name":"Tender247 (subscribed)","url":"https://www.tender247.com","type":"Aggregator","tag":"ACTIVE","desc":"Auto-synced to this system every 3 hrs via subscription","icon":"⚡"},
+        {"name":"BidAssist","url":"https://www.bidassist.com","type":"Aggregator","tag":"ALT","desc":"Cross-validation aggregator — compare missed tenders","icon":"🔍"},
+        {"name":"TenderTiger","url":"https://www.tendertiger.com","type":"Aggregator","tag":"ALT","desc":"Alternative aggregator with email alerts","icon":"🐯"},
+        {"name":"GeM Seller Dashboard","url":"https://seller.gem.gov.in","type":"GeM","tag":"OPS","desc":"Nascent seller catalog, bid submissions, order management","icon":"🛒"},
+        {"name":"NSIC Tenders","url":"https://www.nsic.co.in/Tender.aspx","type":"MSME","tag":"MSME","desc":"NSIC Rate Contracts — MSME reserved items","icon":"🏭"},
+        {"name":"MSME Sambandh","url":"https://msme.gov.in/msme-sambandh","type":"MSME","tag":"MSME","desc":"25% MSME procurement mandate compliance tracker","icon":"📊"},
+        {"name":"Udyam Registration","url":"https://udyamregistration.gov.in","type":"MSME","tag":"COMPLIANCE","desc":"Annual self-declaration, cert download, verify status","icon":"📜"},
+        {"name":"Smart Cities Mission Tenders","url":"https://smartcities.gov.in/tenders","type":"Sector","tag":"TARGET","desc":"Smart City SPV tenders — Nascent's core domain","icon":"🏙"},
+        {"name":"MeitY Tenders","url":"https://www.meity.gov.in/tenders-public-notices","type":"Sector","tag":"TARGET","desc":"Ministry of Electronics & IT — IT/GIS/eGov projects","icon":"💻"},
+        {"name":"NIC Tenders","url":"https://www.nic.in/tenders","type":"Sector","tag":"TARGET","desc":"NIC digitization and eGovernance projects","icon":"🖥"},
+        {"name":"Gujarat eProcurement","url":"https://tender.nprocure.com","type":"State","tag":"STATE","desc":"Gujarat state tenders — primary market state","icon":"🏛"},
+        {"name":"Maharashtra Mahatenders","url":"https://mahatenders.gov.in","type":"State","tag":"STATE","desc":"Maharashtra state portal — PCMC, NMMC, state depts","icon":"🏛"},
+        {"name":"Rajasthan eProcurement","url":"https://eproc.rajasthan.gov.in","type":"State","tag":"STATE","desc":"Rajasthan state tender portal","icon":"🏛"},
+        {"name":"UP eProcurement","url":"https://etender.up.nic.in","type":"State","tag":"STATE","desc":"Uttar Pradesh state tender portal","icon":"🏛"},
+        {"name":"GFR 2017 (PDF)","url":"https://doe.gov.in/sites/default/files/GFR2017.pdf","type":"Reference","tag":"LAW","desc":"General Financial Rules — key procurement law","icon":"📖"},
+        {"name":"DPIIT MSME Circular","url":"https://dipp.gov.in","type":"Reference","tag":"LAW","desc":"DPIIT MSME startup procurement policy","icon":"📑"},
+        {"name":"CVC Procurement Guidelines","url":"https://cvc.gov.in","type":"Reference","tag":"LAW","desc":"CVC guidelines on transparency, tech neutrality","icon":"⚖"},
+    ]}
+
+# ══ TENDER ACTIVITY LOG ═══════════════════════════════════════════════════════
+@app.get("/tender/{t247_id}/activity")
+async def get_activity_log(t247_id: str):
+    t = get_tender(t247_id)
+    return {"log": t.get("activity_log", []), "t247_id": t247_id}
+
+@app.post("/tender/{t247_id}/activity")
+async def add_activity(t247_id: str, data: dict = Body(...)):
+    db = load_db()
+    t = db.get("tenders", {}).get(t247_id)
+    if not t: raise HTTPException(404, "Tender not found")
+    log = t.get("activity_log", [])
+    entry = {"ts": datetime.now().isoformat(), "user": data.get("user","Team"),
+             "type": data.get("type","note"), "note": data.get("note","")[:500]}
+    log.append(entry)
+    t["activity_log"] = log[-100:]
+    db["tenders"][t247_id] = t
+    save_db(db)
+    return {"status": "saved", "entry": entry}
+
+# ══ GEM MODULE ═══════════════════════════════════════════════════════════════
+@app.get("/gem/tenders")
+async def get_gem_tenders():
+    db = load_db()
+    gem = [t for t in db.get("tenders", {}).values() if t.get("is_gem")]
+    bid_count = sum(1 for t in gem if t.get("verdict","").upper() in ("BID","CONDITIONAL"))
+    total_cr = round(sum(float(t.get("estimated_cost_cr",0) or 0) for t in gem), 2)
+    return {"tenders": gem, "total": len(gem), "bid_count": bid_count, "total_cr": total_cr}
+
+# ══ FINANCIAL PIPELINE ═══════════════════════════════════════════════════════
+@app.get("/analytics/financial-pipeline")
+async def get_financial_pipeline():
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    def _grp(lst): return {"count": len(lst), "value_cr": round(sum(float(t.get("estimated_cost_cr",0) or 0) for t in lst),2)}
+    won   = [t for t in tenders if t.get("outcome","").lower()=="won" or t.get("status","")=="Won"]
+    sub   = [t for t in tenders if t.get("status","") in ("Submitted","Under Evaluation")]
+    pipe  = [t for t in tenders if t.get("verdict","").upper() in ("BID","CONDITIONAL") and t.get("status","") not in ("Submitted","Won","Lost","No-Bid","Skipped","Not Interested")]
+    nobid = [t for t in tenders if t.get("verdict","").upper()=="NO-BID" or t.get("status","")=="No-Bid"]
+    return {
+        "order_book": _grp(won),
+        "submitted_awaiting": _grp(sub),
+        "active_pipeline": _grp(pipe),
+        "excluded_no_bid": _grp(nobid),
+        "total_opportunities_cr": round(sum(float(t.get("estimated_cost_cr",0) or 0) for t in pipe+sub), 2),
+        "won_list": [{"t247_id":t.get("t247_id"),"brief":t.get("brief","")[:60],"value_cr":t.get("estimated_cost_cr",0),"won_at":t.get("outcome_date","")} for t in won[-10:]],
+        "submitted_list": [{"t247_id":t.get("t247_id"),"brief":t.get("brief","")[:60],"value_cr":t.get("estimated_cost_cr",0),"deadline":t.get("deadline","")} for t in sub],
+    }
+
+# ══ COMPETITOR INTELLIGENCE ═══════════════════════════════════════════════════
+@app.get("/analytics/competitors")
+async def get_competitor_intel():
+    from collections import Counter, defaultdict
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    comp_stats = defaultdict(lambda: {"encounters": 0, "we_won": 0, "they_won": 0, "tenders": []})
+    for t in tenders:
+        comp = str(t.get("outcome_competitor","") or "").strip()
+        if not comp: continue
+        cs = comp_stats[comp]
+        cs["encounters"] += 1
+        outcome = str(t.get("outcome","") or "").lower()
+        if outcome == "won": cs["we_won"] += 1
+        elif outcome == "lost": cs["they_won"] += 1
+        cs["tenders"].append({"t247_id": t.get("t247_id"), "brief": t.get("brief","")[:50], "outcome": outcome})
+    result = []
+    for name, data in sorted(comp_stats.items(), key=lambda x: -x[1]["encounters"]):
+        result.append({"competitor": name, **data, "win_rate_vs": round(data["we_won"]/data["encounters"]*100,0) if data["encounters"] else 0})
+    return {"competitors": result, "total_tracked": len(result)}
+
+# ══ SECTOR & STATE ANALYTICS ══════════════════════════════════════════════════
+@app.get("/analytics/sector")
+async def get_sector_analytics():
+    r = await get_full_analytics()
+    return {"sector_breakdown": r["sector_breakdown"], "verdict_distribution": r["verdict_distribution"]}
+
+@app.get("/analytics/state")
+async def get_state_analytics():
+    r = await get_full_analytics()
+    return {"state_distribution": r["state_distribution"]}
+
+# ══ MULTI-PORTAL STATUS ═══════════════════════════════════════════════════════
+@app.get("/portals/sync-status")
+async def get_portal_sync_status():
+    """Status of all portal integrations."""
+    cfg = load_config()
+    return {
+        "portals": [
+            {"name": "Tender247", "status": "active" if cfg.get("t247_jwt") or cfg.get("t247_username") else "not_configured",
+             "last_sync": cfg.get("t247_last_sync",""), "auto": True, "interval_min": cfg.get("t247_auto_sync_minutes",180)},
+            {"name": "GeM Portal", "status": "manual_link", "url": "https://gem.gov.in", "auto": False},
+            {"name": "CPPP eProcure", "status": "manual_link", "url": "https://eprocure.gov.in", "auto": False},
+            {"name": "NIC eProcurement", "status": "manual_link", "url": "https://eprocurement.gov.in", "auto": False},
+        ],
+        "note": "T247 is auto-synced. Other portals require manual download + import via /import-excel."
+    }
+
+# ══ CORRIGENDUM SCAN ══════════════════════════════════════════════════════════
+@app.get("/corrigendum/scan")
+async def corrigendum_scan():
+    """All tenders flagged with corrigendum."""
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    corr = [t for t in tenders if t.get("has_corrigendum") or (t.get("corrigendum_count") or 0) > 0]
+    corr_brief = [t for t in tenders if "corrigendum" in str(t.get("brief","")).lower() or "addendum" in str(t.get("brief","")).lower()]
+    merged = {t.get("t247_id"): t for t in corr + corr_brief}.values()
+    return {"corrigendum_tenders": list(merged), "total": len(list(merged))}
+
+# ══ TENDER WATCHLIST ══════════════════════════════════════════════════════════
+WATCHLIST_FILE = OUTPUT_DIR / "watchlist.json"
+
+def _load_watchlist() -> list:
+    if WATCHLIST_FILE.exists():
+        try: return json.loads(WATCHLIST_FILE.read_text(encoding="utf-8"))
+        except Exception: pass
+    return []
+
+@app.get("/watchlist")
+async def get_watchlist():
+    ids = _load_watchlist()
+    db = load_db()
+    tenders = [db["tenders"][i] for i in ids if i in db.get("tenders",{})]
+    return {"watchlist": tenders, "ids": ids}
+
+@app.post("/watchlist/add")
+async def add_to_watchlist(data: dict = Body(...)):
+    tid = str(data.get("t247_id","")).strip()
+    if not tid: raise HTTPException(400, "t247_id required")
+    ids = _load_watchlist()
+    if tid not in ids: ids.append(tid)
+    WATCHLIST_FILE.write_text(json.dumps(ids), encoding="utf-8")
+    return {"status": "added", "total": len(ids)}
+
+@app.post("/watchlist/remove")
+async def remove_from_watchlist(data: dict = Body(...)):
+    tid = str(data.get("t247_id","")).strip()
+    ids = [i for i in _load_watchlist() if i != tid]
+    WATCHLIST_FILE.write_text(json.dumps(ids), encoding="utf-8")
+    return {"status": "removed", "total": len(ids)}
+
+# ══ DASHBOARD SUMMARY (enhanced) ══════════════════════════════════════════════
+@app.get("/dashboard/summary")
+async def get_dashboard_summary():
+    """One-call comprehensive summary for dashboard."""
+    db = load_db()
+    tenders = list(db.get("tenders", {}).values())
+    today_d = datetime.now().date()
+    total = len(tenders)
+    bid = sum(1 for t in tenders if t.get("verdict","").upper()=="BID")
+    cond = sum(1 for t in tenders if t.get("verdict","").upper()=="CONDITIONAL")
+    no_bid = sum(1 for t in tenders if t.get("verdict","").upper()=="NO-BID")
+    review = sum(1 for t in tenders if t.get("verdict","").upper() in ("","REVIEW","UNKNOWN"))
+    analysed = sum(1 for t in tenders if t.get("bid_no_bid_done"))
+    gem_count = sum(1 for t in tenders if t.get("is_gem"))
+    corr_count = sum(1 for t in tenders if t.get("has_corrigendum") or (t.get("corrigendum_count") or 0) > 0)
+    won_count = sum(1 for t in tenders if t.get("outcome","").lower()=="won" or t.get("status","")=="Won")
+    urgent_count = sum(1 for t in tenders if 0 <= int(t.get("days_left",999) or 999) <= 3 and t.get("verdict","").upper() in ("BID","CONDITIONAL"))
+    pipeline_cr = round(sum(float(t.get("estimated_cost_cr",0) or 0) for t in tenders if t.get("verdict","").upper() in ("BID","CONDITIONAL") and t.get("status","") not in ("Won","Lost","Skipped","Not Interested")), 2)
+
+    # compliance check
+    comp_alerts = 0
+    try:
+        comp_data = await get_compliance_alerts()
+        comp_alerts = comp_data.get("critical", 0) + comp_data.get("warnings", 0)
+    except Exception: pass
+
+    return {
+        "total": total, "bid": bid, "conditional": cond, "no_bid": no_bid, "review": review,
+        "analysed": analysed, "gem_count": gem_count, "corrigendum": corr_count,
+        "won": won_count, "urgent": urgent_count, "pipeline_cr": pipeline_cr,
+        "compliance_alerts": comp_alerts,
+    }
