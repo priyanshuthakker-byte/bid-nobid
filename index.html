@@ -522,6 +522,13 @@ select option{background:var(--bg2)}
 ══════════════════════════════════════════════ -->
 <div id="main">
 
+<!-- OFFLINE MODE BANNER -->
+<div id="offline-mode-banner" style="display:none;background:#1e1a0e;border-bottom:2px solid #f59e0b;padding:8px 20px;font-size:12px;color:#f59e0b;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <span style="font-weight:700;letter-spacing:.5px">OFFLINE MODE</span>
+  <span style="color:#fcd34d">No Gemini API key — analysis uses rule-based engine (zero API cost). All core features work.</span>
+  <a href="#" onclick="showPage('settings');document.getElementById('offline-mode-banner').style.display='none';return false" style="color:#f59e0b;text-decoration:underline;font-weight:600;margin-left:auto">Configure API key →</a>
+</div>
+
 <!-- BREADCRUMB -->
 <div id="breadcrumb" style="display:flex">
   <span class="bc-link" onclick="showPage('dashboard')">Dashboard</span>
@@ -1134,18 +1141,23 @@ select option{background:var(--bg2)}
       <div style="flex:1">
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
-            <span style="font-weight:600;color:#fff">AI Bid Assistant</span>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">Ask anything about tenders, bidding strategy, compliance</div>
+            <span style="font-weight:600;color:#fff">Bid Assistant <span id="chat-mode-badge" style="font-size:10px;background:#f59e0b;color:#000;padding:2px 6px;border-radius:8px;margin-left:6px;display:none">OFFLINE MODE</span></span>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px" id="chat-mode-hint">Ask anything about tenders, bidding strategy, compliance</div>
           </div>
-          <div class="chat-msgs" id="assistant-msgs" style="height:420px">
-            <div class="chat-msg ai">Hi! I'm your Bid Assistant. I know your company profile and all your tenders. Ask me anything:<br><br>
-            <b>• "Which tenders should I prioritise this week?"</b><br>
-            <b>• "What is the EMD for tender T247-98765?"</b><br>
-            <b>• "Draft a cover letter for the GIS mapping tender"</b><br>
-            <b>• "What are the PQ criteria for this tender?"</b></div>
+          <div id="chat-offline-banner" style="display:none;background:#1e1a0e;border-bottom:1px solid #f59e0b;padding:8px 14px;font-size:11px;color:#f59e0b">
+            <b>Offline Mode</b> — No Gemini API key configured. Rule-based answers from company profile + tender database.
+            <a href="#" onclick="showPage('settings');return false" style="color:#f59e0b;text-decoration:underline">Add API key →</a>
+          </div>
+          <div class="chat-msgs" id="assistant-msgs" style="height:400px">
+            <div class="chat-msg ai" id="assistant-welcome">Hi! I'm your Bid Assistant. I know your company profile and all your tenders. Ask me anything:<br><br>
+            <b>• "Show pipeline stats"</b><br>
+            <b>• "Urgent deadlines this week"</b><br>
+            <b>• "Our CMMI status"</b><br>
+            <b>• "Find GIS tenders"</b><br>
+            <b>• "Move T247-12345 to Documents Ready"</b></div>
           </div>
           <div class="chat-input-row">
-            <input type="text" id="assistant-input" placeholder="Ask about tenders, strategy, documents..." onkeydown="if(event.key==='Enter')sendAssistantMsg()">
+            <input type="text" id="assistant-input" placeholder="Ask about tenders, deadlines, compliance, rules..." onkeydown="if(event.key==='Enter')sendAssistantMsg()">
             <button class="btn btn-primary" onclick="sendAssistantMsg()">Send</button>
           </div>
         </div>
@@ -2235,7 +2247,7 @@ function showPage(name, opts) {
   if (name === 'settings') { loadSettings(); loadT247ConnectionStatus(); _startUsageMeterAutoRefresh(); }
   if (name === 'profile') loadProfile();
   if (name === 'doc-editor') populateEditorSelect();
-  if (name === 'assistant') updateAssistantContext();
+  if (name === 'assistant') { updateAssistantContext(); checkAssistantMode(); }
   if (name === 'boq') initBOQ();
   if (name === 'prebid-page') pbpPopulateSelect();
 }
@@ -3080,9 +3092,13 @@ function showAnalysisResult(d) {
   else if (conf) confDisplay = 'Confidence: ' + conf;
   document.getElementById('res-conf').textContent = confDisplay;
   document.getElementById('res-reason').textContent = aiIncomplete ? 'AI did not run — check Gemini API keys in Settings' : reason;
-  document.getElementById('res-ai-badge').textContent = d.ai_used ? '✓ AI Analysed' : '⚠ Basic Extract';
-  document.getElementById('res-ai-badge').style.background = d.ai_used ? 'rgba(34,197,94,.15)' : 'rgba(251,191,36,.15)';
-  document.getElementById('res-ai-badge').style.color = d.ai_used ? '#4ade80' : '#fbbf24';
+  var isRuleBased = (td.analysis_mode === 'rule_based' || td._analysis_mode === 'RULE_BASED');
+  var badgeText = d.ai_used ? '✓ AI Analysed' : isRuleBased ? '⚙ Rule-Based (Offline)' : '⚠ Basic Extract';
+  var badgeBg   = d.ai_used ? 'rgba(34,197,94,.15)' : isRuleBased ? 'rgba(99,102,241,.2)' : 'rgba(251,191,36,.15)';
+  var badgeColor= d.ai_used ? '#4ade80' : isRuleBased ? '#a5b4fc' : '#fbbf24';
+  document.getElementById('res-ai-badge').textContent = badgeText;
+  document.getElementById('res-ai-badge').style.background = badgeBg;
+  document.getElementById('res-ai-badge').style.color = badgeColor;
   var aiWarnEl = document.getElementById('res-ai-warning');
   var aiWarn = td.ai_warning || '';
   if (aiWarn && !d.ai_used && !aiIncomplete) {
@@ -3217,6 +3233,29 @@ function showAnalysisResult(d) {
     });
     ahtml += '</tbody></table></div>';
   }
+  // Similar projects from rule-based analysis
+  var simProjs = td.similar_projects || [];
+  if (simProjs.length && !matches.length) {
+    ahtml += '<div><div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Relevant Experience (Auto-Matched)</div>';
+    ahtml += '<table class="crit-table"><thead><tr><th>Project</th><th>Client</th><th style="width:70px">Value</th><th style="width:80px">Status</th><th>Matched On</th></tr></thead><tbody>';
+    simProjs.forEach(function(p) {
+      ahtml += '<tr><td style="color:#fff;font-size:12px">' + (p.project||'') + '</td>' +
+        '<td style="font-size:12px;color:var(--blue)">' + (p.client||'') + '</td>' +
+        '<td style="font-size:11px;color:var(--green)">Rs.' + (p.value_cr||0) + 'Cr</td>' +
+        '<td style="font-size:11px;color:var(--text3)">' + (p.status||'') + '</td>' +
+        '<td style="font-size:11px;color:var(--text2)">' + (p.matched_on||'') + '</td></tr>';
+    });
+    ahtml += '</tbody></table></div>';
+  }
+  // Corrigendum alert
+  var corr = td.corrigendum || {};
+  if (corr.detected) {
+    ahtml = '<div style="background:rgba(245,158,11,.1);border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin-bottom:14px">' +
+      '<div style="color:#f59e0b;font-weight:700;font-size:13px">CORRIGENDUM DETECTED: ' + (corr.type||'') + '</div>' +
+      (corr.notes||[]).map(function(n) { return '<div style="font-size:12px;color:var(--text2);margin-top:4px">• ' + n + '</div>'; }).join('') +
+      (corr.action ? '<div style="font-size:11.5px;color:#fbbf24;margin-top:8px;font-style:italic">' + corr.action + '</div>' : '') +
+      '</div>' + ahtml;
+  }
   if (!ahtml) ahtml = '<div class="empty-state">Run analysis to see assessment.</div>';
   document.getElementById('res-assessment-body').innerHTML = ahtml;
 
@@ -3283,34 +3322,75 @@ function showAnalysisResult(d) {
   document.getElementById('res-penalty-body').innerHTML = penhtml;
 
   // ── Checklist Tab ──
-  var checklist = td.submission_checklist || [];
+  // Accept both AI format (submission_checklist) and rule-based format (checklist)
+  var checklist = td.submission_checklist || td.checklist || [];
   document.getElementById('tab-badge-checklist').textContent = checklist.length;
   var clhtml = '';
   if (checklist.length) {
-    // Group by category
-    var cats = {};
-    checklist.forEach(function(item) {
-      var cat = item.category || 'Other';
-      if (!cats[cat]) cats[cat] = [];
-      cats[cat].push(item);
-    });
-    Object.keys(cats).forEach(function(cat) {
-      clhtml += '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:14px 0 6px">' + cat + '</div>';
-      clhtml += '<table class="crit-table"><thead><tr><th>#</th><th>Document</th><th style="width:80px">Annexure</th><th style="width:80px">Clause</th><th style="width:110px">Status</th><th>Note</th></tr></thead><tbody>';
-      cats[cat].forEach(function(item, i) {
-        var st = (item.status||'Prepare').replace('CRITICAL-verify','CRITICAL');
-        var sc = st === 'Ready' ? 'MET' : st === 'CRITICAL' ? 'NOT-MET' : st === 'Prepare' ? 'CONDITIONAL' : 'REVIEW';
-        clhtml += '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
-          '<td style="color:#fff;font-size:12.5px">' + (item.document||'') + '</td>' +
-          '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.annexure||'—') + '</td>' +
-          '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.clause_ref||'—') + '</td>' +
-          '<td><span class="crit-pill ' + sc + '">' + st + '</span></td>' +
-          '<td style="font-size:11.5px;color:' + (st==='CRITICAL'?'#fbbf24':'var(--text3)') + '">' + (item.nascent_note||'') + '</td></tr>';
+    // Detect format: rule-based has {document, mandatory, hint} vs AI {document, category, status}
+    var isRuleChecklist = checklist.length && checklist[0].hint !== undefined;
+    if (isRuleChecklist) {
+      // Rule-based checklist: split Mandatory vs Optional
+      var mandatory = checklist.filter(function(i) { return i.mandatory !== false; });
+      var optional  = checklist.filter(function(i) { return i.mandatory === false; });
+      function _clTable(items, title, color) {
+        if (!items.length) return '';
+        var h = '<div style="font-size:11px;color:' + color + ';text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:14px 0 6px">' + title + ' (' + items.length + ')</div>';
+        h += '<table class="crit-table"><thead><tr><th>#</th><th>Document</th><th style="width:90px">Status</th><th>Hint / Note</th></tr></thead><tbody>';
+        items.forEach(function(item, i) {
+          var st = item.status || 'Prepare';
+          var sc = st === 'Ready' ? 'MET' : st === 'Verify' ? 'CONDITIONAL' : st === 'Prepare' ? 'REVIEW' : 'REVIEW';
+          h += '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
+            '<td style="color:#fff;font-size:12.5px">' + (item.document||'') + '</td>' +
+            '<td><span class="crit-pill ' + sc + '">' + st + '</span></td>' +
+            '<td style="font-size:11.5px;color:var(--text3)">' + (item.hint||'') + '</td></tr>';
+        });
+        h += '</tbody></table>';
+        return h;
+      }
+      clhtml += _clTable(mandatory, 'Mandatory Documents', 'var(--green)');
+      clhtml += _clTable(optional, 'Conditional / Optional', 'var(--amber)');
+      clhtml += '<div style="font-size:11px;color:var(--text3);margin-top:12px;padding:10px;background:var(--bg4);border-radius:8px">Rule-based checklist — verify each document requirement against original tender document. Mandatory list covers standard Govt procurement requirements.</div>';
+    } else {
+      // AI format — group by category
+      var cats = {};
+      checklist.forEach(function(item) {
+        var cat = item.category || 'Other';
+        if (!cats[cat]) cats[cat] = [];
+        cats[cat].push(item);
       });
-      clhtml += '</tbody></table>';
-    });
+      Object.keys(cats).forEach(function(cat) {
+        clhtml += '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:14px 0 6px">' + cat + '</div>';
+        clhtml += '<table class="crit-table"><thead><tr><th>#</th><th>Document</th><th style="width:80px">Annexure</th><th style="width:80px">Clause</th><th style="width:110px">Status</th><th>Note</th></tr></thead><tbody>';
+        cats[cat].forEach(function(item, i) {
+          var st = (item.status||'Prepare').replace('CRITICAL-verify','CRITICAL');
+          var sc = st === 'Ready' ? 'MET' : st === 'CRITICAL' ? 'NOT-MET' : st === 'Prepare' ? 'CONDITIONAL' : 'REVIEW';
+          clhtml += '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
+            '<td style="color:#fff;font-size:12.5px">' + (item.document||'') + '</td>' +
+            '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.annexure||'—') + '</td>' +
+            '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.clause_ref||'—') + '</td>' +
+            '<td><span class="crit-pill ' + sc + '">' + st + '</span></td>' +
+            '<td style="font-size:11.5px;color:' + (st==='CRITICAL'?'#fbbf24':'var(--text3)') + '">' + (item.nascent_note||'') + '</td></tr>';
+        });
+        clhtml += '</tbody></table>';
+      });
+    }
   } else {
     clhtml = '<div class="empty-state">No checklist generated yet.</div>';
+  }
+  // Add similar projects if available (from rule-based analysis)
+  var simProj = td.similar_projects || [];
+  if (simProj.length) {
+    clhtml += '<div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:20px 0 6px">Qualifying Experience — Similar Projects</div>';
+    clhtml += '<table class="crit-table"><thead><tr><th>Project</th><th>Client</th><th style="width:70px">Value</th><th style="width:80px">Role</th><th>Matched On</th></tr></thead><tbody>';
+    simProj.forEach(function(p) {
+      clhtml += '<tr><td style="color:#fff;font-size:12px">' + (p.project||'') + '</td>' +
+        '<td style="font-size:12px;color:var(--blue)">' + (p.client||'') + '</td>' +
+        '<td style="font-size:11px;color:var(--green)">Rs. ' + (p.value_cr||0) + ' Cr</td>' +
+        '<td style="font-size:11px;color:var(--text3)">' + (p.role||'Solo') + '</td>' +
+        '<td style="font-size:11px;color:var(--text2)">' + (p.matched_on||'') + '</td></tr>';
+    });
+    clhtml += '</tbody></table>';
   }
   document.getElementById('res-checklist-body').innerHTML = clhtml;
 
@@ -4160,28 +4240,55 @@ async function sendAssistantMsg() {
   if (!msg) return;
   input.value = '';
   appendAssistantMsg(msg, 'user');
-  var thinkingEl = appendAssistantMsg('Thinking...', 'ai');
-
-  // Build context
-  var total = allTenders.length;
-  var bid = allTenders.filter(t => getVerdict(t) === 'BID').length;
-  var nobid = allTenders.filter(t => getVerdict(t) === 'NO-BID').length;
-  var urgent = allTenders.filter(t => { var d = getDaysLeft(t); return d >= 0 && d <= 7 && getVerdict(t) === 'BID'; });
-  var urgentStr = urgent.map(t => t.t247_id + ' (' + getDaysLeft(t) + 'd, ' + fmtCr(t.estimated_cost_cr) + ')').join(', ');
-
-  var context = 'You are a bid management assistant for Nascent Info Technologies Pvt. Ltd., an IT company in Ahmedabad, India specialising in GIS, software development, and e-governance.\n\n' +
-    'Current tender database: ' + total + ' total, ' + bid + ' BID, ' + nobid + ' NO-BID.\n' +
-    'Urgent BID tenders (≤7 days): ' + (urgentStr || 'None') + '\n\n' +
-    'Answer concisely and practically. If asked about specific tenders, use the data provided.';
+  var thinkingEl = appendAssistantMsg('...', 'ai');
 
   try {
     var r = await fetch('/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message: msg})});
     var d = await r.json();
-    var reply = d.reply || d.message || d.response || d.content || 'No response from assistant.';
+    var reply = d.reply || d.message || d.response || d.content || 'No response.';
+    // Mark offline mode in UI
+    if (d.offline_mode) {
+      var badge = document.getElementById('chat-mode-badge');
+      var banner = document.getElementById('chat-offline-banner');
+      var hint = document.getElementById('chat-mode-hint');
+      if (badge) badge.style.display = 'inline';
+      if (banner) banner.style.display = 'block';
+      if (hint) hint.textContent = 'Rule-based offline mode — no API key needed';
+    }
+    // Action result append
+    if (d.action_result) reply += '\n\n[Action: ' + d.action_result + ']';
     thinkingEl.innerHTML = reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
   } catch(e) {
     thinkingEl.innerHTML = 'Error: ' + e.message;
   }
+}
+
+// Check offline mode on assistant page load
+async function checkAssistantMode() {
+  try {
+    var r = await fetch('/api/mode');
+    var d = await r.json();
+    var key = d.has_gemini_key ? 'set' : '';
+    if (!key) {
+      var badge = document.getElementById('chat-mode-badge');
+      var banner = document.getElementById('chat-offline-banner');
+      var hint = document.getElementById('chat-mode-hint');
+      var welcome = document.getElementById('assistant-welcome');
+      if (badge) badge.style.display = 'inline';
+      if (banner) banner.style.display = 'block';
+      if (hint) hint.textContent = 'Rule-based offline mode — no API key needed';
+      if (welcome) welcome.innerHTML = 'Offline Bid Assistant — no API key required.<br><br>' +
+        '<b>Commands I understand:</b><br>' +
+        '<b>• "show pipeline stats"</b> — total / BID / CONDITIONAL / NO-BID counts<br>' +
+        '<b>• "urgent deadlines this week"</b> — tenders due in 7 days<br>' +
+        '<b>• "our CMMI status"</b> / <b>"our turnover"</b> / <b>"our projects"</b><br>' +
+        '<b>• "find GIS tenders"</b> — search database<br>' +
+        '<b>• "move T247-XXXXX to Documents Ready"</b> — update stage<br>' +
+        '<b>• "we won T247-XXXXX"</b> — record outcome<br>' +
+        '<b>• "add rule: no hardware supply"</b> — update bid rules<br>' +
+        'Type <b>"help"</b> for full command list.';
+    }
+  } catch(e) {}
 }
 
 function appendAssistantMsg(text, who) {
@@ -5940,6 +6047,17 @@ document.addEventListener('DOMContentLoaded', async function() {
   await loadOpsDailyReport();
   refreshProfileKeywords();
   updateTokenMeter();
+  // Check offline mode — show banner if no API key
+  (async function() {
+    try {
+      var r = await fetch('/api/mode');
+      var d = await r.json();
+      if (d.offline_mode) {
+        var banner = document.getElementById('offline-mode-banner');
+        if (banner) banner.style.display = 'flex';
+      }
+    } catch(e) {}
+  })();
   setInterval(updateStatusBar, 30000);
   setInterval(checkDeadlineNotifications, 60000);
   setInterval(updateTokenMeter, 120000);
