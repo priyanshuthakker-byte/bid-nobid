@@ -1,12 +1,11 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python3
 """
-╔══════════════════════════════════════════════════════════════════╗
-║          NASCENT PROJECT DATA SCANNER v1.0                       ║
-║  Scans H:\Nascent\backup vt - external hard disk                ║
-║  Extracts ALL project data → Excel + CSV for Google Sheet        ║
-║  Runs OFFLINE — no internet, no API key needed                   ║
-║  RESUME-SAFE: saves progress every 10 folders                    ║
-╚══════════════════════════════════════════════════════════════════╝
+NASCENT PROJECT DATA SCANNER v1.0
+  Scans H:/Nascent/backup vt - external hard disk
+  Extracts ALL project data -> Excel + CSV for Google Sheet
+  Runs OFFLINE - no internet, no API key needed
+  RESUME-SAFE: saves progress every 10 folders
 
 HOW TO RUN:
   1. Make sure H: drive is connected
@@ -24,7 +23,7 @@ from datetime import datetime
 from typing import Optional, Dict, List, Tuple
 
 # ══ CONFIG ════════════════════════════════════════════════════════════════════
-ROOT_DIR       = r"H:\Nascent\backup vt - external hard disk"
+ROOT_DIR       = r"H:\Nascent\backup vt"
 DESKTOP        = os.path.join(os.path.expanduser("~"), "Desktop")
 OUTPUT_CSV     = os.path.join(DESKTOP, "nascent_projects.csv")
 OUTPUT_XLSX    = os.path.join(DESKTOP, "nascent_projects.xlsx")

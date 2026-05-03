@@ -20,7 +20,7 @@
     "authorised_signatory": "Hitesh Patel, Chief Administrative Officer",
     "md": "Maulik Bhagat",
     "poa_validity": "01/04/2025 - 31/03/2026",
-    "poa_alert": "!! POA EXPIRES 31-MAR-2026 — RENEW IMMEDIATELY BEFORE SUBMITTING ANY BID !!"
+    "poa_alert": "!! POA EXPIRES 31-MAR-2026 \u2014 RENEW IMMEDIATELY BEFORE SUBMITTING ANY BID !!"
   },
   "finance": {
     "turnover_by_year": {
@@ -31,7 +31,7 @@
       "2023-24": 16.36,
       "2024-25": 18.83
     },
-    "avg_turnover_last_2_fy": 17.60,
+    "avg_turnover_last_2_fy": 17.6,
     "avg_turnover_last_3_fy": 17.18,
     "avg_turnover_last_5_fy": 16.23,
     "net_worth_cr": 26.09,
@@ -93,14 +93,46 @@
     "it_dev_staff": 21
   },
   "technology": {
-    "gis": ["QGIS", "ArcGIS (use only — not authorised reseller)", "GeoServer", "PostGIS", "CityLayers 2.0", "OpenLayers", "Leaflet"],
-    "backend": ["Java", "Spring Boot (PRIMARY)", "Python", "Node.js"],
-    "frontend": ["React.js", "Angular"],
-    "mobile": ["Android Native", "iOS Native", "Flutter (verify with tech team)"],
-    "database": ["PostgreSQL", "MySQL", "Oracle DB"],
-    "database_check_first": ["Microsoft SQL Server (verify team capability before claiming)"],
-    "cloud": ["AWS", "Azure"],
-    "not_primary": [".NET / C# / ASP.NET (verify before claiming)", "Microsoft SQL Server (verify before claiming)"]
+    "gis": [
+      "QGIS",
+      "ArcGIS (use only \u2014 not authorised reseller)",
+      "GeoServer",
+      "PostGIS",
+      "CityLayers 2.0",
+      "OpenLayers",
+      "Leaflet"
+    ],
+    "backend": [
+      "Java",
+      "Spring Boot (PRIMARY)",
+      "Python",
+      "Node.js"
+    ],
+    "frontend": [
+      "React.js",
+      "Angular"
+    ],
+    "mobile": [
+      "Android Native",
+      "iOS Native",
+      "Flutter (verify with tech team)"
+    ],
+    "database": [
+      "PostgreSQL",
+      "MySQL",
+      "Oracle DB"
+    ],
+    "database_check_first": [
+      "Microsoft SQL Server (verify team capability before claiming)"
+    ],
+    "cloud": [
+      "AWS",
+      "Azure"
+    ],
+    "not_primary": [
+      ".NET / C# / ASP.NET (verify before claiming)",
+      "Microsoft SQL Server (verify before claiming)"
+    ]
   },
   "projects": [
     {
@@ -108,7 +140,12 @@
       "client": "Ahmedabad Municipal Corporation",
       "client_type": "Govt - ULB",
       "state": "Gujarat",
-      "tags": ["GIS Survey", "GIS Mapping", "Web GIS", "Property Survey"],
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Web GIS",
+        "Property Survey"
+      ],
       "status": "Completed",
       "role": "Solo",
       "value_cr": 10.55,
@@ -121,7 +158,13 @@
       "client": "Pimpri-Chinchwad Smart City Ltd.",
       "client_type": "Govt - Smart City SPV",
       "state": "Maharashtra",
-      "tags": ["GIS Survey", "GIS Mapping", "ERP", "Smart City", "Mobile App"],
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "ERP",
+        "Smart City",
+        "Mobile App"
+      ],
       "status": "Ongoing",
       "role": "Consortium Member",
       "value_cr": 61.19,
@@ -134,7 +177,12 @@
       "client": "Khadi & Village Industries Commission",
       "client_type": "Govt - Central PSU",
       "state": "National",
-      "tags": ["GIS Portal", "Mobile App", "Geo-tagging", "Web GIS"],
+      "tags": [
+        "GIS Portal",
+        "Mobile App",
+        "Geo-tagging",
+        "Web GIS"
+      ],
       "status": "Completed",
       "role": "Solo",
       "value_cr": 5.15,
@@ -147,7 +195,13 @@
       "client": "Tourism Corporation of Gujarat Ltd.",
       "client_type": "Govt - PSU",
       "state": "Gujarat",
-      "tags": ["Web Portal", "Mobile App", "Tourism", "GIS", "Analytics"],
+      "tags": [
+        "Web Portal",
+        "Mobile App",
+        "Tourism",
+        "GIS",
+        "Analytics"
+      ],
       "status": "Completed",
       "role": "Solo",
       "value_cr": 9.31,
@@ -160,7 +214,12 @@
       "client": "Junagadh Municipal Corporation",
       "client_type": "Govt - ULB",
       "state": "Gujarat",
-      "tags": ["GIS Survey", "GIS Mapping", "Web GIS", "O&M"],
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Web GIS",
+        "O&M"
+      ],
       "status": "Ongoing",
       "role": "Solo",
       "value_cr": 9.78,
@@ -173,7 +232,12 @@
       "client": "Vadodara Municipal Corporation",
       "client_type": "Govt - ULB",
       "state": "Gujarat",
-      "tags": ["GIS Survey", "GIS Mapping", "Web GIS", "ERP"],
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Web GIS",
+        "ERP"
+      ],
       "status": "Completed",
       "role": "Consortium Member",
       "value_cr": 20.5,
@@ -186,7 +250,12 @@
       "client": "Bhavnagar Municipal Corporation",
       "client_type": "Govt - ULB",
       "state": "Gujarat",
-      "tags": ["GIS Survey", "GIS Mapping", "Utility Mapping", "Mobile App"],
+      "tags": [
+        "GIS Survey",
+        "GIS Mapping",
+        "Utility Mapping",
+        "Mobile App"
+      ],
       "status": "Completed",
       "role": "Solo",
       "value_cr": 4.2,
@@ -199,7 +268,11 @@
       "client": "Ahmedabad Municipal Corporation",
       "client_type": "Govt - ULB",
       "state": "Gujarat",
-      "tags": ["Mobile App", "Web Portal", "Smart City"],
+      "tags": [
+        "Mobile App",
+        "Web Portal",
+        "Smart City"
+      ],
       "status": "Completed",
       "role": "Solo",
       "value_cr": 4.72,
@@ -212,7 +285,12 @@
       "client": "Chief Electrical Inspector, Gandhinagar",
       "client_type": "Govt - State Dept.",
       "state": "Gujarat",
-      "tags": ["eGovernance", "Web Portal", "Mobile App", "O&M"],
+      "tags": [
+        "eGovernance",
+        "Web Portal",
+        "Mobile App",
+        "O&M"
+      ],
       "status": "Ongoing",
       "role": "Solo",
       "value_cr": 3.59,
@@ -303,7 +381,8 @@
       "extension of existing contract",
       "operation and maintenance only",
       "facility management",
-      "support only"
+      "support only",
+      "no supply of furniture"
     ],
     "conditional": [
       "office in state",
@@ -380,7 +459,10 @@
     ],
     "min_project_value_cr": 0.25,
     "max_project_value_cr": 100,
-    "msme_note": "Nascent is MSME — always raise EMD exemption query if EMD > 0",
-    "poa_note": "Always verify POA validity (Hitesh Patel) before signing bid documents — expires 31-Mar-2026"
+    "msme_note": "Nascent is MSME \u2014 always raise EMD exemption query if EMD > 0",
+    "poa_note": "Always verify POA validity (Hitesh Patel) before signing bid documents \u2014 expires 31-Mar-2026",
+    "do_not_bid_remarks": {
+      "no supply of furniture": "Added via chat"
+    }
   }
 }
