@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -625,6 +625,30 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
   .topbar-actions .btn-ghost{display:none}
   .topbar-actions .btn-primary{display:inline-flex}
 }
+
+/* ── LIGHT THEME: fix hardcoded white text in analysis result panels ── */
+body:not(.dark-mode) #analysis-result td,
+body:not(.dark-mode) #analysis-result .scope-item-title,
+body:not(.dark-mode) #res-snapshot-body td,
+body:not(.dark-mode) .crit-table td,
+body:not(.dark-mode) #res-scope-body .scope-item-title,
+body:not(.dark-mode) #res-assessment td,
+body:not(.dark-mode) .an-tabpanel td,
+body:not(.dark-mode) #pq-results-body td,
+body:not(.dark-mode) .doc-table td {
+  color: var(--text) !important;
+}
+body:not(.dark-mode) .postaward-table td,
+body:not(.dark-mode) #similar-work-tbody td,
+body:not(.dark-mode) #work-schedule-tbody td,
+body:not(.dark-mode) #checklist-tbody td {
+  color: var(--text) !important;
+}
+/* Portal card names on light — override dark-only hardcoded text */
+body:not(.dark-mode) #portal-cards .card > div[style*="color:#fff"],
+body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
+  color: var(--text) !important;
+}
 </style>
 </head>
 <body>
@@ -751,7 +775,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
     <!-- Today's Snapshot -->
     <div id="today-snapshot" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:12px;font-weight:600;color:#fff">📅 Today — <span id="today-date-label"></span></span>
+        <span style="font-size:12px;font-weight:600;color:var(--text)">📅 Today — <span id="today-date-label"></span></span>
         <button class="btn btn-ghost btn-xs" onclick="document.getElementById('today-snapshot').style.display='none'">✕</button>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap" id="today-stats"></div>
@@ -890,7 +914,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
       <div id="side-panel" style="width:340px;flex-shrink:0;display:none;overflow-y:auto;max-height:calc(100vh - 200px);position:sticky;top:0">
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <span style="font-size:13px;font-weight:600;color:#fff">Tender Detail</span>
+            <span style="font-size:13px;font-weight:600;color:var(--text)">Tender Detail</span>
             <button class="btn-icon" onclick="closeSidePanel()" title="Close">✕</button>
           </div>
           <div id="side-panel-content"><div class="empty-state" style="padding:20px 0">Click a row to preview</div></div>
@@ -1155,7 +1179,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
   <div class="page-body">
     <div class="card" style="margin-bottom:12px;background:var(--blue-glow);border-color:rgba(59,130,246,.25)">
       <div style="font-size:12px;color:var(--text2);line-height:1.8">
-        <b style="color:#fff">📋 Pre-bid Query Codes:</b>&nbsp;&nbsp;
+        <b style="color:var(--text)">📋 Pre-bid Query Codes:</b>&nbsp;&nbsp;
         <code style="color:var(--blue)">PBQ-ELG</code> Eligibility &nbsp;·&nbsp;
         <code style="color:var(--blue)">PBQ-FIN</code> Financial &nbsp;·&nbsp;
         <code style="color:var(--blue)">PBQ-TEC</code> Technical &nbsp;·&nbsp;
@@ -1189,7 +1213,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
       <div style="flex:1.3;min-width:0">
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:600;color:#fff">Report Document</span>
+            <span style="font-weight:600;color:var(--text)">Report Document</span>
             <div style="display:flex;gap:6px">
               <button class="btn-icon btn-xs" onclick="execFmt('bold')" title="Bold"><b>B</b></button>
               <button class="btn-icon btn-xs" onclick="execFmt('italic')" title="Italic"><i>I</i></button>
@@ -1207,7 +1231,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
       <div style="flex:0.7;min-width:280px">
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
-            <span style="font-weight:600;color:#fff">AI Edit Assistant</span>
+            <span style="font-weight:600;color:var(--text)">AI Edit Assistant</span>
             <div style="font-size:11px;color:var(--text3);margin-top:2px">Tell AI what to change in the document</div>
           </div>
           <div class="chat-msgs" id="editor-chat-msgs">
@@ -1368,7 +1392,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
         <div class="card card-sm">
           <div class="card-title" style="font-size:12px">Context</div>
           <div style="font-size:11.5px;color:var(--text2)">
-            <div style="margin-bottom:6px">Tenders loaded: <b id="ast-total" style="color:#fff">—</b></div>
+            <div style="margin-bottom:6px">Tenders loaded: <b id="ast-total" style="color:var(--text)">—</b></div>
             <div style="margin-bottom:6px">BID: <b class="c-green" id="ast-bid">—</b></div>
             <div>Deadline alerts: <b class="c-red" id="ast-alerts">—</b></div>
           </div>
@@ -1394,7 +1418,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
       <div style="flex:1;min-width:0">
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:600;color:#fff;font-size:13px">Line Items</span>
+            <span style="font-weight:600;color:var(--text);font-size:13px">Line Items</span>
             <div style="display:flex;gap:6px;align-items:center">
               <div class="search-wrap" style="margin:0"><span class="search-icon">🔍</span><input id="boq-search" placeholder="Search items..." oninput="boqFilter()" style="width:160px"></div>
               <button class="btn btn-ghost btn-sm" onclick="boqAddRow()">+ Add Row</button>
@@ -1452,7 +1476,32 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
     <div class="topbar-actions"><button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↺ Refresh</button></div>
   </div>
   <div class="page-body">
-    <div id="analytics-summary" class="analytics-grid"></div>
+    <!-- Summary Stats -->
+    <div id="analytics-summary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px"></div>
+
+    <!-- Charts Row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">Verdict Distribution</div>
+        <div id="analytics-verdict-chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Monthly Tender Imports</div>
+        <div id="analytics-monthly-chart"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">Sector Breakdown</div>
+        <div id="analytics-sector-chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top States</div>
+        <div id="analytics-state-chart"></div>
+      </div>
+    </div>
+
+    <!-- Record Result + History -->
     <div class="row">
       <div class="card">
         <div class="card-title">Record Bid Result</div>
@@ -1472,7 +1521,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
       <div class="card" style="flex:2">
         <div class="card-title">Win/Loss History</div>
         <div class="table-wrap"><table>
-          <thead><tr><th>T247 ID</th><th>Brief</th><th>Outcome</th><th>Value</th><th>L1 Gap</th><th>Competitor</th></tr></thead>
+          <thead><tr><th>T247 ID</th><th>Brief</th><th>Outcome</th><th>Value</th><th>Competitor</th><th>Date</th></tr></thead>
           <tbody id="winloss-table"><tr><td colspan="6" class="empty-state">No results yet.</td></tr></tbody>
         </table></div>
       </div>
@@ -1785,10 +1834,10 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
     <div class="card">
       <div class="card-title">System Info</div>
       <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12.5px">
-        <span>Version: <b style="color:#fff">7.0</b></span>
-        <span>Drive: <b id="sys-drive" style="color:#fff">checking...</b></span>
-        <span>Tenders: <b id="sys-tenders" style="color:#fff">—</b></span>
-        <span>AI Keys: <b id="sys-keys" style="color:#fff">—</b></span>
+        <span>Version: <b style="color:var(--text)">7.0</b></span>
+        <span>Drive: <b id="sys-drive" style="color:var(--text)">checking...</b></span>
+        <span>Tenders: <b id="sys-tenders" style="color:var(--text)">—</b></span>
+        <span>AI Keys: <b id="sys-keys" style="color:var(--text)">—</b></span>
       </div>
       <div style="margin-top:12px;display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="syncDrive()">☁ Sync Drive</button>
@@ -2048,7 +2097,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
   <div class="topbar"><h1>Deadline Calendar</h1>
     <div class="topbar-actions">
       <button class="btn btn-ghost btn-sm" onclick="calPrev()">‹ Prev</button>
-      <span id="cal-month-label" style="font-size:14px;font-weight:600;color:#fff;padding:0 12px"></span>
+      <span id="cal-month-label" style="font-size:14px;font-weight:600;color:var(--text);padding:0 12px"></span>
       <button class="btn btn-ghost btn-sm" onclick="calNext()">Next ›</button>
       <button class="btn btn-primary btn-sm" onclick="calToday()">Today</button>
     </div>
@@ -2067,7 +2116,7 @@ body.dark-mode .action-btn.amber{background:rgba(217,119,6,.15);color:#fbbf24}
     <div id="cal-cells" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
     <div id="cal-day-detail" style="margin-top:16px;display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span id="cal-day-title" style="font-size:14px;font-weight:600;color:#fff"></span>
+        <span id="cal-day-title" style="font-size:14px;font-weight:600;color:var(--text)"></span>
         <button class="btn btn-ghost btn-xs" onclick="document.getElementById('cal-day-detail').style.display='none'">✕</button>
       </div>
       <div class="table-wrap">
@@ -2442,6 +2491,18 @@ function showPage(name, opts) {
   if (name === 'assistant') { updateAssistantContext(); checkAssistantMode(); }
   if (name === 'boq') initBOQ();
   if (name === 'prebid-page') pbpPopulateSelect();
+  if (name === 'compliance') loadCompliance();
+  if (name === 'portals') loadPortals();
+  if (name === 'gem') loadGem();
+  if (name === 'consortium') loadConsortium();
+  if (name === 'competitors') loadCompetitors();
+  if (name === 'financial-pipeline') loadFinancialPipeline();
+  if (name === 'watchlist') loadWatchlist();
+  if (name === 'winloss') loadWinLoss();
+  if (name === 'alerts') loadAlertsPage();
+  if (name === 'emd') loadEMDPage();
+  if (name === 'skipped') loadSkipped();
+  if (name === 'vault') loadVault();
 }
 
 window.addEventListener('popstate', function(e) {
@@ -3347,7 +3408,7 @@ function showAnalysisResult(d) {
         if (typeof s === 'string') {
           // Plain string format (v5 single-prompt output)
           return '<div class="scope-item">' +
-            '<div class="scope-item-title" style="font-size:12px;font-weight:500;color:#fff">' +
+            '<div class="scope-item-title" style="font-size:12px;font-weight:500;color:var(--text)">' +
               '<span style="color:var(--blue);margin-right:8px">' + (i+1) + '.</span>' + s +
             '</div></div>';
         }
@@ -3376,7 +3437,7 @@ function showAnalysisResult(d) {
   ];
   document.getElementById('res-snapshot-body').innerHTML = snapRows
     .filter(([,val]) => { var s = _fv(val); return s && s !== '—'; })
-    .map(([k,val]) => '<tr><td style="color:var(--text3);white-space:nowrap">' + k + '</td><td style="color:#fff">' + _fv(val) + '</td></tr>')
+    .map(([k,val]) => '<tr><td style="color:var(--text3);white-space:nowrap">' + k + '</td><td style="color:var(--text)">' + _fv(val) + '</td></tr>')
     .join('');
 
   // ── Assessment Tab ──
@@ -3417,7 +3478,7 @@ function showAnalysisResult(d) {
     ahtml += '<table class="crit-table"><thead><tr><th>Tender Requirement</th><th>Matching Project</th><th style="width:80px">Value</th><th style="width:90px">Strength</th></tr></thead><tbody>';
     matches.forEach(function(m) {
       var sc = m.strength === 'STRONG' ? 'MET' : m.strength === 'MODERATE' ? 'CONDITIONAL' : 'REVIEW';
-      ahtml += '<tr><td><div style="color:#fff;font-size:12px">' + (m.tender_requirement||'') + '</div>' +
+      ahtml += '<tr><td><div style="color:var(--text);font-size:12px">' + (m.tender_requirement||'') + '</div>' +
         '<div style="font-size:11px;color:var(--text3);margin-top:2px">' + (m.relevance||'') + '</div></td>' +
         '<td style="color:var(--blue);font-size:12px">' + (m.matching_project||'') + '</td>' +
         '<td style="font-size:11px;color:var(--text3)">' + (m.project_value||'—') + '</td>' +
@@ -3431,7 +3492,7 @@ function showAnalysisResult(d) {
     ahtml += '<div><div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px">Relevant Experience (Auto-Matched)</div>';
     ahtml += '<table class="crit-table"><thead><tr><th>Project</th><th>Client</th><th style="width:70px">Value</th><th style="width:80px">Status</th><th>Matched On</th></tr></thead><tbody>';
     simProjs.forEach(function(p) {
-      ahtml += '<tr><td style="color:#fff;font-size:12px">' + (p.project||'') + '</td>' +
+      ahtml += '<tr><td style="color:var(--text);font-size:12px">' + (p.project||'') + '</td>' +
         '<td style="font-size:12px;color:var(--blue)">' + (p.client||'') + '</td>' +
         '<td style="font-size:11px;color:var(--green)">Rs.' + (p.value_cr||0) + 'Cr</td>' +
         '<td style="font-size:11px;color:var(--text3)">' + (p.status||'') + '</td>' +
@@ -3463,7 +3524,7 @@ function showAnalysisResult(d) {
       var bc = n.priority === 'HIGH' ? 'rgba(239,68,68,.08)' : n.priority === 'MEDIUM' ? 'rgba(245,158,11,.08)' : 'var(--bg4)';
       var tc = n.priority === 'HIGH' ? '#f87171' : n.priority === 'MEDIUM' ? '#fbbf24' : 'var(--text3)';
       nhtml += '<div style="background:' + bc + ';border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:7px">' +
-        '<div style="font-size:12.5px;font-weight:600;color:#fff;margin-bottom:3px">' +
+        '<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:3px">' +
           '<span style="color:' + tc + ';font-size:10px;margin-right:6px">' + (n.priority||'') + '</span>' + (n.title||'') +
         '</div>' +
         '<div style="font-size:12px;color:var(--text2)">' + (n.detail||'') + '</div>' +
@@ -3476,7 +3537,7 @@ function showAnalysisResult(d) {
     ? actions.map(function(a, i) {
         var pc = a.priority === 'URGENT' ? 'NOT-MET' : a.priority === 'HIGH' ? 'CONDITIONAL' : 'REVIEW';
         return '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
-          '<td style="color:#fff;font-size:12.5px">' + (a.action||'') + '</td>' +
+          '<td style="color:var(--text);font-size:12.5px">' + (a.action||'') + '</td>' +
           '<td style="color:var(--text3);font-size:12px">' + (a.responsible||'') + '</td>' +
           '<td style="font-size:12px;color:var(--text2);white-space:nowrap">' + (a.target_date||'') + '</td>' +
           '<td><span class="crit-pill ' + pc + '">' + (a.priority||'') + '</span></td></tr>';
@@ -3488,7 +3549,7 @@ function showAnalysisResult(d) {
   if (payments.length) {
     pmhtml = '<table class="crit-table"><thead><tr><th>Milestone</th><th style="width:80px">%</th><th>Details</th></tr></thead><tbody>';
     payments.forEach(function(p) {
-      pmhtml += '<tr><td style="color:#fff;font-size:12px">' + (p.milestone||p.event||'') + '</td>' +
+      pmhtml += '<tr><td style="color:var(--text);font-size:12px">' + (p.milestone||p.event||'') + '</td>' +
         '<td style="color:var(--green);font-weight:600">' + (p.percentage||p.amount||'—') + '</td>' +
         '<td style="font-size:11.5px;color:var(--text2)">' + (p.details||p.condition||'') + '</td></tr>';
     });
@@ -3503,7 +3564,7 @@ function showAnalysisResult(d) {
   if (penalties.length) {
     penhtml = '<table class="crit-table"><thead><tr><th>Event / Trigger</th><th style="width:100px">Penalty</th><th>Cap / Limit</th></tr></thead><tbody>';
     penalties.forEach(function(p) {
-      penhtml += '<tr><td style="color:#fff;font-size:12px">' + (p.event||p.trigger||p.clause||'') + '</td>' +
+      penhtml += '<tr><td style="color:var(--text);font-size:12px">' + (p.event||p.trigger||p.clause||'') + '</td>' +
         '<td style="color:var(--red);font-size:12px;font-weight:600">' + (p.penalty||p.rate||'—') + '</td>' +
         '<td style="font-size:11.5px;color:var(--text3)">' + (p.cap||p.limit||p.maximum||'—') + '</td></tr>';
     });
@@ -3533,7 +3594,7 @@ function showAnalysisResult(d) {
           var st = item.status || 'Prepare';
           var sc = st === 'Ready' ? 'MET' : st === 'Verify' ? 'CONDITIONAL' : st === 'Prepare' ? 'REVIEW' : 'REVIEW';
           h += '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
-            '<td style="color:#fff;font-size:12.5px">' + (item.document||'') + '</td>' +
+            '<td style="color:var(--text);font-size:12.5px">' + (item.document||'') + '</td>' +
             '<td><span class="crit-pill ' + sc + '">' + st + '</span></td>' +
             '<td style="font-size:11.5px;color:var(--text3)">' + (item.hint||'') + '</td></tr>';
         });
@@ -3558,7 +3619,7 @@ function showAnalysisResult(d) {
           var st = (item.status||'Prepare').replace('CRITICAL-verify','CRITICAL');
           var sc = st === 'Ready' ? 'MET' : st === 'CRITICAL' ? 'NOT-MET' : st === 'Prepare' ? 'CONDITIONAL' : 'REVIEW';
           clhtml += '<tr><td style="color:var(--text3)">' + (i+1) + '</td>' +
-            '<td style="color:#fff;font-size:12.5px">' + (item.document||'') + '</td>' +
+            '<td style="color:var(--text);font-size:12.5px">' + (item.document||'') + '</td>' +
             '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.annexure||'—') + '</td>' +
             '<td style="font-size:11px;color:var(--text3);font-family:var(--mono)">' + (item.clause_ref||'—') + '</td>' +
             '<td><span class="crit-pill ' + sc + '">' + st + '</span></td>' +
@@ -3576,7 +3637,7 @@ function showAnalysisResult(d) {
     clhtml += '<div style="font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin:20px 0 6px">Qualifying Experience — Similar Projects</div>';
     clhtml += '<table class="crit-table"><thead><tr><th>Project</th><th>Client</th><th style="width:70px">Value</th><th style="width:80px">Role</th><th>Matched On</th></tr></thead><tbody>';
     simProj.forEach(function(p) {
-      clhtml += '<tr><td style="color:#fff;font-size:12px">' + (p.project||'') + '</td>' +
+      clhtml += '<tr><td style="color:var(--text);font-size:12px">' + (p.project||'') + '</td>' +
         '<td style="font-size:12px;color:var(--blue)">' + (p.client||'') + '</td>' +
         '<td style="font-size:11px;color:var(--green)">Rs. ' + (p.value_cr||0) + ' Cr</td>' +
         '<td style="font-size:11px;color:var(--text3)">' + (p.role||'Solo') + '</td>' +
@@ -3679,7 +3740,7 @@ function _critRow(idx, c) {
   var queryIcon = (c.raises_query === 'YES' || c.raises_query === true) ? ' <span style="color:var(--amber);font-size:10px" title="Raises pre-bid query">⚑</span>' : '';
   return '<tr>' +
     '<td style="color:var(--text3);font-size:11px">' + idx + '</td>' +
-    '<td><div style="color:#fff;font-size:12.5px">' + criterion + queryIcon + '</div>' +
+    '<td><div style="color:var(--text);font-size:12.5px">' + criterion + queryIcon + '</div>' +
       (clauseStr ? '<div class="crit-clause">' + clauseStr + '</div>' : '') +
     '</td>' +
     '<td><span class="crit-clause">' + (clause||'—') + '</span></td>' +
@@ -4094,7 +4155,7 @@ function renderPrebidList(queries) {
   var cnt = {pending:0,submitted:0,answered:0};
   coded.forEach(function(q){ cnt[_pbqStatusStore[q._code]||'pending']++; });
   var summary = '<div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 12px;background:var(--bg4);border-radius:8px;margin-bottom:12px;align-items:center">' +
-    '<span style="font-size:11px;font-weight:700;color:#fff">'+coded.length+' Queries</span>' +
+    '<span style="font-size:11px;font-weight:700;color:var(--text)">'+coded.length+' Queries</span>' +
     '<span style="font-size:11px;color:var(--text3)">⏳ '+cnt.pending+' Pending</span>' +
     '<span style="font-size:11px;color:var(--blue)">📤 '+cnt.submitted+' Submitted</span>' +
     '<span style="font-size:11px;color:var(--green)">✅ '+cnt.answered+' Answered</span>' +
@@ -4168,7 +4229,7 @@ async function runCompliance() {
       document.getElementById('compliance-result').innerHTML = issues.map(function(v) {
         var sc = v.severity === 'HIGH' ? 'var(--red)' : v.severity === 'MEDIUM' ? 'var(--amber)' : 'var(--text3)';
         return '<div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">' +
-          '<div style="font-size:12.5px;font-weight:600;color:#fff">' + (v.clause_no||'') + ' <span style="color:'+sc+';font-size:11px">['+v.severity+']</span></div>' +
+          '<div style="font-size:12.5px;font-weight:600;color:var(--text)">' + (v.clause_no||'') + ' <span style="color:'+sc+';font-size:11px">['+v.severity+']</span></div>' +
           '<div style="font-size:12px;color:var(--text2);margin-top:3px">' + (v.issue_type||'') + '</div>' +
           '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">' + (v.what_law_says||'') + '</div></div>';
       }).join('');
@@ -4364,7 +4425,7 @@ function renderRiskContent(t, serverData) {
     '</div>' +
     '<div style="padding:14px;background:var(--bg2);border-radius:var(--radius);display:flex;align-items:center;gap:14px">' +
       '<div style="font-size:32px;font-weight:700;color:' + overallColor + ';font-family:var(--mono)">' + overallRisk + '</div>' +
-      '<div><div style="font-size:13px;font-weight:600;color:#fff">Overall Risk: <span style="color:' + overallColor + '">' + overallClass.toUpperCase() + '</span></div>' +
+      '<div><div style="font-size:13px;font-weight:600;color:var(--text)">Overall Risk: <span style="color:' + overallColor + '">' + overallClass.toUpperCase() + '</span></div>' +
         '<div style="font-size:12px;color:var(--text2);margin-top:3px">Score out of 100</div></div>' +
     '</div>' +
   '</div>';
@@ -4816,7 +4877,7 @@ function buildSidePanelContent(t) {
     '<span class="badge badge-' + v + '" style="font-size:12px;padding:4px 10px">' + v + '</span>' +
     (t.is_gem ? ' <span class="gem-tag">GeM</span>' : '') +
   '</div>' +
-  '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:6px;line-height:1.4">' + (t.brief || '—') + '</div>' +
+  '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.4">' + (t.brief || '—') + '</div>' +
   '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">' + (t.org_name || '') + (t.location ? ' · ' + t.location : '') + '</div>';
 
   if (matchTags) html += '<div style="margin-bottom:12px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Project Match</div>' + matchTags + '</div>';
@@ -5187,7 +5248,7 @@ function boqRecalc() {
   var sumEl = document.getElementById('boq-summary');
   if (sumEl) {
     sumEl.innerHTML =
-      '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Base Cost</span><span style="color:#fff;font-weight:600">₹' + totalBase.toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Base Cost</span><span style="color:var(--text);font-weight:600">₹' + totalBase.toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
       '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">With Margin</span><span style="color:var(--amber);font-weight:600">₹' + (totalFinal / (1 + (parseFloat(document.getElementById('boq-default-gst').value)||18)/100)).toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
       '<div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--text3)">Total (incl. GST)</span><span style="color:var(--green);font-weight:700;font-size:14px">₹' + totalFinal.toLocaleString('en-IN', {maximumFractionDigits:0}) + '</span></div>' +
       '<div style="color:var(--text3);font-size:11px">' + _boqItems.length + ' line items</div>';
@@ -5473,10 +5534,10 @@ function renderCertifications(list) {
     var validTo = c.valid_to || c.expiry || '';
     return '<div style="background:var(--bg4);border:1px solid ' + (isActive?'var(--green)':'var(--border)') + ';border-radius:8px;padding:12px">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
-        '<div style="font-size:12.5px;font-weight:600;color:#fff">' + name + '</div>' +
+        '<div style="font-size:12.5px;font-weight:600;color:var(--text)">' + name + '</div>' +
         '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:' + (isActive?'var(--green-bg)':'var(--bg3)') + ';color:' + (isActive?'var(--green)':'var(--text3)') + ';font-weight:600">' + (isActive?'✓ ACTIVE':'○ INACTIVE') + '</span>' +
       '</div>' +
-      (c.level ? '<div style="font-size:11px;color:var(--text2)">Level: <b style="color:#fff">' + c.level + '</b>' + (c.version?' ('+c.version+')':'') + '</div>' : '') +
+      (c.level ? '<div style="font-size:11px;color:var(--text2)">Level: <b style="color:var(--text)">' + c.level + '</b>' + (c.version?' ('+c.version+')':'') + '</div>' : '') +
       (c.cert_no ? '<div style="font-size:11px;color:var(--text3)">Cert No: ' + c.cert_no + '</div>' : '') +
       (c.issuer ? '<div style="font-size:11px;color:var(--text3)">Issuer: ' + c.issuer + '</div>' : '') +
       (validTo ? '<div style="font-size:11px;color:' + (isActive?'var(--green)':'var(--red)') + ';margin-top:4px">Valid until: ' + validTo + '</div>' : '') +
@@ -6957,7 +7018,7 @@ function renderTodaySnapshot() {
   // List due-today tenders briefly
   var dueEl = document.getElementById('today-due-list');
   if (dueToday.length && dueEl) {
-    dueEl.innerHTML = '🔴 Due today: ' + dueToday.slice(0,4).map(function(t){ return '<b style="color:#fff">' + t.t247_id + '</b> ' + (t.brief||'').substring(0,30); }).join(' | ') + (dueToday.length>4?' +' + (dueToday.length-4) + ' more':'');
+    dueEl.innerHTML = '🔴 Due today: ' + dueToday.slice(0,4).map(function(t){ return '<b style="color:var(--primary)">' + t.t247_id + '</b> ' + (t.brief||'').substring(0,30); }).join(' | ') + (dueToday.length>4?' +' + (dueToday.length-4) + ' more':'');
   } else if (dueEl) {
     dueEl.innerHTML = '';
   }
@@ -7083,18 +7144,7 @@ function calDayClick(d) {
 // NEW PAGES — JS
 // ════════════════════════════════════════════════
 
-// Hook showPage for new pages
-var _origShowPage = showPage;
-showPage = function(name, opts) {
-  _origShowPage(name, opts);
-  if (name === 'compliance') loadCompliance();
-  if (name === 'portals') loadPortals();
-  if (name === 'gem') loadGem();
-  if (name === 'consortium') loadConsortium();
-  if (name === 'competitors') loadCompetitors();
-  if (name === 'financial-pipeline') loadFinancialPipeline();
-  if (name === 'watchlist') loadWatchlist();
-};
+// All page load triggers now handled inside showPage() directly.
 
 // ── COMPLIANCE ───────────────────────────────────────────────────────────────
 async function loadCompliance() {
@@ -7117,7 +7167,7 @@ async function loadCompliance() {
       return `<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)">
         <span style="font-size:18px">${icon}</span>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:#fff">${a.item}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${a.item}</div>
           <div style="font-size:11px;color:var(--text3)">${a.category} · Expires: ${a.expiry || '—'}${a.note ? ' · ' + a.note : ''}</div>
         </div>
         <div style="text-align:right;min-width:80px">
@@ -7162,7 +7212,7 @@ function renderPortals() {
         <div style="font-size:16px">${p.icon || '🌐'}</div>
         <span style="font-size:9px;font-weight:700;color:${col};background:rgba(255,255,255,.05);padding:2px 6px;border-radius:20px;border:1px solid ${col}">${p.tag}</span>
       </div>
-      <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px">${p.name}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${p.name}</div>
       <div style="font-size:11px;color:var(--text3);line-height:1.5">${p.desc}</div>
       <div style="margin-top:8px;font-size:10px;color:var(--blue);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.url}</div>
     </div>`;
@@ -7423,7 +7473,7 @@ async function loadFinancialPipeline() {
 
     var pipe = (d.active_pipeline?.count || 0) + ' tenders totalling ' + fmtCr(d.active_pipeline?.value_cr);
     document.getElementById('fp-pipeline-list').innerHTML =
-      `<div style="font-size:13px;color:var(--text2)">Active BID/Conditional pipeline: <b style="color:#fff">${pipe}</b></div>`;
+      `<div style="font-size:13px;color:var(--text2)">Active BID/Conditional pipeline: <b style="color:var(--text)">${pipe}</b></div>`;
 
     // Projections
     var orderBook = parseFloat(d.order_book?.value_cr || 0);
@@ -7589,8 +7639,9 @@ async function loadAnalytics() {
           '<td><span class="badge badge-' + (t.outcome==='Won'?'BID':t.outcome==='Lost'?'NO-BID':'CONDITIONAL') + '">' + t.outcome + '</span></td>' +
           '<td>' + fmtCr(t.outcome_value) + '</td>' +
           '<td style="font-size:11px;color:var(--text3)">' + (t.outcome_competitor||'—') + '</td>' +
+          '<td style="font-size:11px;color:var(--text3)">' + (t.outcome_date ? t.outcome_date.substring(0,10) : '—') + '</td>' +
         '</tr>';
-      }).join('') || '<tr><td colspan="5" class="empty-state">No outcomes recorded yet.</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="empty-state">No outcomes recorded yet.</td></tr>';
       var wlEl = document.getElementById('winloss-table');
       if (wlEl) wlEl.innerHTML = wlRows;
     } catch(e2) {}
@@ -7651,3 +7702,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </html>
+
+
