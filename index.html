@@ -793,46 +793,30 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
       <div class="stat" onclick="setFilter('starred')"><div class="stat-num" id="s-starred" style="color:#fbbf24">—</div><div class="stat-lbl">★ Starred</div></div>
     </div>
 
-    <!-- Quick filter buttons -->
-    <div class="filters">
-      <button class="fbtn active" id="fb-all" onclick="setFilter('')">All</button>
-      <button class="fbtn" id="fb-bid" onclick="setFilter('BID')">✓ BID</button>
-      <button class="fbtn" id="fb-cond" onclick="setFilter('CONDITIONAL')">△ Conditional</button>
-      <button class="fbtn" id="fb-nobid" onclick="setFilter('NO-BID')">✗ No-Bid</button>
-      <button class="fbtn" id="fb-review" onclick="setFilter('REVIEW')">? Review</button>
-      <button class="fbtn" id="fb-urgent" onclick="setFilter('urgent')">🔴 Urgent ≤7d</button>
-      <button class="fbtn" id="fb-analysed" onclick="setFilter('analysed')">🔬 Analysed</button>
-      <button class="fbtn" id="fb-gem" onclick="setFilter('gem')">💎 GeM</button>
-      <button class="fbtn" id="fb-starred" onclick="setFilter('starred')">★ Starred</button>
-      <button class="fbtn" id="fb-closed" onclick="setFilter('closed')" style="color:#6b7280">⊠ Closed</button>
-      <button class="fbtn" id="fb-corr" onclick="setFilter('corrigendum')" style="color:#f59e0b">📋 Corrigendum</button>
-      <button class="fbtn" style="margin-left:auto;border-color:var(--blue);color:var(--blue)" onclick="toggleAdvSearch()">⚙ Advanced Search</button>
-    </div>
-
     <!-- Advanced Search Panel -->
-    <div id="adv-search-panel" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
+    <div id="adv-search-panel" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px">
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">STATE</label>
-          <select id="af-state" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <select id="af-state" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
             <option value="">All States</option>
           </select>
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CITY / DISTRICT</label>
-          <select id="af-city" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <select id="af-city" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
             <option value="">All Cities</option>
           </select>
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">PORTAL / WEBSITE</label>
-          <select id="af-portal" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <select id="af-portal" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
             <option value="">All Portals</option>
           </select>
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">OWNERSHIP TYPE</label>
-          <select id="af-ownership" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <select id="af-ownership" onchange="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
             <option value="">All Types</option>
             <option value="central">Central Govt</option>
             <option value="state">State Govt</option>
@@ -843,19 +827,19 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">VALUE FROM (Cr)</label>
-          <input type="number" id="af-val-min" placeholder="e.g. 1" min="0" step="0.5" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="number" id="af-val-min" placeholder="e.g. 1" min="0" step="0.5" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">VALUE TO (Cr)</label>
-          <input type="number" id="af-val-max" placeholder="e.g. 50" min="0" step="0.5" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="number" id="af-val-max" placeholder="e.g. 50" min="0" step="0.5" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CLOSING DATE FROM</label>
-          <input type="date" id="af-date-from" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="date" id="af-date-from" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
         </div>
         <div>
           <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CLOSING DATE TO</label>
-          <input type="date" id="af-date-to" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:#fff;font-size:12px">
+          <input type="date" id="af-date-to" oninput="renderDash()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
         </div>
       </div>
       <!-- Checkboxes row -->
@@ -882,7 +866,7 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
     <div id="dash-count" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
     <div id="dash-sync-meta" style="font-size:11px;color:var(--text3);margin-bottom:6px"></div>
     <div id="dash-ops-meta" style="font-size:11px;color:var(--text3);margin-bottom:8px"></div>
-    <!-- Sort + Page controls -->
+    <!-- Sort controls only (per-page + pagination moved below table) -->
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--text3)">Sort:</span>
       <button class="fbtn active" id="sort-deadline" onclick="setSort('deadline')" style="font-size:11px;padding:3px 10px">⏰ Deadline</button>
@@ -891,17 +875,6 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
       <button class="fbtn" id="sort-org" onclick="setSort('org')" style="font-size:11px;padding:3px 10px">🏛 Org</button>
       <button class="fbtn" id="sort-added" onclick="setSort('added')" style="font-size:11px;padding:3px 10px">🕐 Recent</button>
       <span id="sort-dir-btn" onclick="toggleSortDir()" style="cursor:pointer;font-size:13px;color:var(--blue);padding:3px 6px;border:1px solid var(--border);border-radius:4px" title="Toggle asc/desc">↑</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--text3)">Show:
-        <select id="page-size-sel" onchange="renderDash()" style="background:var(--bg3);border:1px solid var(--border);color:#fff;border-radius:4px;padding:2px 5px;font-size:11px">
-          <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option>
-        </select>
-        per page
-      </span>
-      <div style="display:flex;gap:4px">
-        <button class="fbtn" id="pg-prev" onclick="changePage(-1)" style="font-size:11px;padding:3px 8px">‹</button>
-        <span id="pg-label" style="font-size:11px;color:var(--text3);align-self:center"></span>
-        <button class="fbtn" id="pg-next" onclick="changePage(1)" style="font-size:11px;padding:3px 8px">›</button>
-      </div>
     </div>
     <div style="display:flex;gap:14px;min-width:0">
       <div class="table-wrap" id="dash-table-wrap" style="flex:1;min-width:0">
@@ -921,6 +894,20 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
         </div>
       </div>
     </div>
+    <!-- Per-page selector + pagination BELOW table -->
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text3)">Show:
+        <select id="page-size-sel" onchange="renderDash()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 5px;font-size:11px">
+          <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option>
+        </select>
+        per page
+      </span>
+      <div style="display:flex;gap:4px;margin-left:auto">
+        <button class="fbtn" id="pg-prev" onclick="changePage(-1)" style="font-size:11px;padding:3px 8px">‹</button>
+        <span id="pg-label" style="font-size:11px;color:var(--text3);align-self:center"></span>
+        <button class="fbtn" id="pg-next" onclick="changePage(1)" style="font-size:11px;padding:3px 8px">›</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -932,12 +919,82 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
     </div>
   </div>
   <div class="page-body">
-    <div class="search-wrap"><span class="search-icon">🔍</span><input id="tl-search" placeholder="Search..." oninput="renderTenders()"></div>
-    <div class="table-wrap">
+    <!-- Quick verdict filter buttons -->
+    <div class="filters" style="margin-bottom:10px">
+      <button class="fbtn active" id="tl-fb-all" onclick="setTlFilter('')">All</button>
+      <button class="fbtn" id="tl-fb-bid" onclick="setTlFilter('BID')">✓ BID</button>
+      <button class="fbtn" id="tl-fb-cond" onclick="setTlFilter('CONDITIONAL')">△ Conditional</button>
+      <button class="fbtn" id="tl-fb-nobid" onclick="setTlFilter('NO-BID')">✗ No-Bid</button>
+      <button class="fbtn" id="tl-fb-review" onclick="setTlFilter('REVIEW')">? Review</button>
+      <button class="fbtn" id="tl-fb-urgent" onclick="setTlFilter('urgent')">🔴 Urgent ≤7d</button>
+      <button class="fbtn" id="tl-fb-analysed" onclick="setTlFilter('analysed')">🔬 Analysed</button>
+    </div>
+    <!-- Advanced Search Panel for All Tenders -->
+    <div id="tl-adv-search-panel" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">STATE</label>
+          <select id="tl-af-state" onchange="renderTenders()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
+            <option value="">All States</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">PORTAL / WEBSITE</label>
+          <select id="tl-af-portal" onchange="renderTenders()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
+            <option value="">All Portals</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">VALUE FROM (Cr)</label>
+          <input type="number" id="tl-af-val-min" placeholder="e.g. 1" min="0" step="0.5" oninput="renderTenders()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">VALUE TO (Cr)</label>
+          <input type="number" id="tl-af-val-max" placeholder="e.g. 50" min="0" step="0.5" oninput="renderTenders()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CLOSING DATE FROM</label>
+          <input type="date" id="tl-af-date-from" oninput="renderTenders()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px">CLOSING DATE TO</label>
+          <input type="date" id="tl-af-date-to" oninput="renderTenders()" style="width:100%;padding:6px 8px;border-radius:6px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:12px">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="resetTlAdvSearch()">✕ Clear Filters</button>
+        <span id="tl-adv-match-count" style="font-size:12px;color:var(--text3);align-self:center"></span>
+      </div>
+    </div>
+    <!-- Search -->
+    <div class="search-wrap"><span class="search-icon">🔍</span><input id="tl-search" placeholder="Search tenders..." oninput="renderTenders()"></div>
+    <!-- Sort controls -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text3)">Sort:</span>
+      <button class="fbtn active" id="tl-sort-deadline" onclick="setTlSort('deadline')" style="font-size:11px;padding:3px 10px">⏰ Deadline</button>
+      <button class="fbtn" id="tl-sort-value" onclick="setTlSort('value')" style="font-size:11px;padding:3px 10px">💰 Value</button>
+      <button class="fbtn" id="tl-sort-verdict" onclick="setTlSort('verdict')" style="font-size:11px;padding:3px 10px">📊 Verdict</button>
+      <button class="fbtn" id="tl-sort-added" onclick="setTlSort('added')" style="font-size:11px;padding:3px 10px">🕐 Recent</button>
+    </div>
+    <div class="table-wrap" id="tl-table-wrap">
       <table>
         <thead><tr><th>T247 ID</th><th>Ref No</th><th>Brief / Org</th><th>Value (Cr)</th><th>EMD</th><th>Deadline</th><th>Verdict</th><th>Actions</th></tr></thead>
         <tbody id="tenders-table"><tr><td colspan="8" class="empty-state">Loading...</td></tr></tbody>
       </table>
+    </div>
+    <!-- Per-page + pagination below table -->
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text3)">Show:
+        <select id="tl-page-size-sel" onchange="renderTenders()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:2px 5px;font-size:11px">
+          <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option>
+        </select>
+        per page
+      </span>
+      <div style="display:flex;gap:4px;margin-left:auto">
+        <button class="fbtn" id="tl-pg-prev" onclick="changeTlPage(-1)" style="font-size:11px;padding:3px 8px">‹</button>
+        <span id="tl-pg-label" style="font-size:11px;color:var(--text3);align-self:center"></span>
+        <button class="fbtn" id="tl-pg-next" onclick="changeTlPage(1)" style="font-size:11px;padding:3px 8px">›</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1041,6 +1098,13 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
       <div id="res-ai-warning" style="display:none;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 14px;margin-top:10px;font-size:12.5px;color:#fbbf24"></div>
       <!-- KPI Row -->
       <div id="res-kpi-row" class="verdict-kpi-row" style="margin-bottom:16px"></div>
+      <!-- Workflow Action Bar -->
+      <div id="workflow-action-bar" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:16px;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">Next step:</span>
+        <button class="btn btn-primary btn-sm" onclick="markApprovalPending()">✅ Send for Boss Approval</button>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('prebid-page')">📝 Go to Pre-bid Queries</button>
+        <button class="btn btn-ghost btn-sm" onclick="markSubmitted()">📤 Mark as Submitted</button>
+      </div>
       <!-- Tabs -->
       <div class="card" style="padding:0;overflow:hidden">
         <div class="an-tabs" id="res-tabs">
@@ -1192,6 +1256,37 @@ body:not(.dark-mode) #portal-cards [style*="color:#fff"] {
       </div>
     </div>
     <div id="pbp-list"><div class="empty-state"><div class="empty-icon">❓</div><p>Select a tender and click "Load Queries" to view pre-bid queries.</p></div></div>
+
+    <!-- Pre-bid Response Tracker -->
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="card-title" style="margin:0">📥 Client Response Tracker</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="resetTlAdvSearch && renderPbrList()">↺ Refresh</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:0 0 100px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Query #</label>
+          <input id="pbr-qno" type="text" placeholder="e.g. PBQ-ELG-01" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:12px">
+        </div>
+        <div style="flex:0 0 130px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Status</label>
+          <select id="pbr-status" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:12px">
+            <option value="Awaited">Awaited</option>
+            <option value="Received">Received</option>
+            <option value="Partial">Partial</option>
+            <option value="Clarification Needed">Clarification Needed</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Client Response / Note</label>
+          <input id="pbr-note" type="text" placeholder="Paste client's response or note..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:12px">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="savePrebidResponse()">+ Save</button>
+      </div>
+      <div id="pbr-list"><div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0">No responses recorded yet.</div></div>
+    </div>
   </div>
 </div>
 
@@ -2869,13 +2964,72 @@ function renderDash() {
   document.getElementById('dash-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders match current filters</td></tr>';
 }
 
-function renderTenders() {
-  var search = (document.getElementById('tl-search').value || '').toLowerCase();
-  var list = allTenders.filter(t => {
-    if (!search) return true;
-    return ['t247_id','brief','org_name','ref_no','verdict','location'].some(k => (t[k]||'').toLowerCase().includes(search));
+// ── ALL TENDERS — state + filter ──────────────────────────────────────────────
+var _tlFilter = '';
+var _tlSort   = 'deadline';
+var _tlPage   = 1;
+
+function setTlFilter(f) {
+  _tlFilter = f; _tlPage = 1;
+  document.querySelectorAll('[id^="tl-fb-"]').forEach(function(b){ b.classList.remove('active'); });
+  var key = f ? f.toLowerCase() : 'all';
+  var btn = document.getElementById('tl-fb-' + key);
+  if (btn) btn.classList.add('active');
+  renderTenders();
+}
+function setTlSort(s) {
+  _tlSort = s;
+  document.querySelectorAll('[id^="tl-sort-"]').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.getElementById('tl-sort-' + s);
+  if (btn) btn.classList.add('active');
+  renderTenders();
+}
+function changeTlPage(dir) {
+  _tlPage = Math.max(1, _tlPage + dir);
+  renderTenders();
+}
+function resetTlAdvSearch() {
+  ['tl-af-state','tl-af-portal','tl-af-val-min','tl-af-val-max','tl-af-date-from','tl-af-date-to'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
   });
-  var rows = list.slice(0, 500).map(t => {
+  _tlPage = 1; renderTenders();
+}
+
+function renderTenders() {
+  var search   = ((document.getElementById('tl-search')||{}).value||'').toLowerCase();
+  var afState  = (document.getElementById('tl-af-state')||{}).value||'';
+  var afPortal = (document.getElementById('tl-af-portal')||{}).value||'';
+  var afValMin = parseFloat((document.getElementById('tl-af-val-min')||{}).value)||0;
+  var afValMax = parseFloat((document.getElementById('tl-af-val-max')||{}).value)||0;
+  var pageSize = parseInt(((document.getElementById('tl-page-size-sel')||{}).value)||25);
+
+  var list = allTenders.filter(function(t) {
+    var v = getVerdict(t); var dl = getDaysLeft(t);
+    if (_tlFilter === 'urgent') { if (!(dl <= 7 && dl >= 0)) return false; }
+    else if (_tlFilter === 'analysed') { if (!t.bid_no_bid_done) return false; }
+    else if (_tlFilter) { if (v !== _tlFilter) return false; }
+    if (search && !['t247_id','brief','org_name','ref_no','location','state'].some(function(k){ return (t[k]||'').toLowerCase().includes(search); })) return false;
+    if (afState && !(t.state||'').toLowerCase().includes(afState.toLowerCase())) return false;
+    if (afPortal && !(t.portal||t.source_website||'').toLowerCase().includes(afPortal.toLowerCase())) return false;
+    var val = parseFloat(t.estimated_cost_cr)||0;
+    if (afValMin && val < afValMin) return false;
+    if (afValMax > 0 && val > afValMax) return false;
+    return true;
+  });
+
+  list.sort(function(a,b){
+    if (_tlSort==='value') return (parseFloat(b.estimated_cost_cr)||0)-(parseFloat(a.estimated_cost_cr)||0);
+    if (_tlSort==='verdict') { var o={BID:0,CONDITIONAL:1,REVIEW:2,'NO-BID':3}; return (o[getVerdict(a)]||9)-(o[getVerdict(b)]||9); }
+    if (_tlSort==='added') return (b._idx||0)-(a._idx||0);
+    return getDaysLeft(a)-getDaysLeft(b);
+  });
+
+  var total = list.length;
+  var totalPages = Math.max(1, Math.ceil(total/pageSize));
+  _tlPage = Math.min(_tlPage, totalPages);
+  var paged = list.slice((_tlPage-1)*pageSize, _tlPage*pageSize);
+
+  var rows = paged.map(function(t) {
     var v = getVerdict(t);
     return '<tr>' +
       '<td class="mono">' + (t.t247_id||'—') + '</td>' +
@@ -2888,10 +3042,13 @@ function renderTenders() {
       '<td class="actions-cell">' +
         '<button class="action-btn blue" onclick="setCtxAndAnalyse(\'' + t.t247_id + '\',\'' + esc(t.brief) + '\')">Analyse</button>' +
         (t.bid_no_bid_done ? '<button class="action-btn green" onclick="downloadTenderDoc(\'' + t.t247_id + '\')">Report</button>' : '') +
-      '</td>' +
-    '</tr>';
+      '</td></tr>';
   }).join('');
-  document.getElementById('tenders-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders</td></tr>';
+  document.getElementById('tenders-table').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenders match your filters</td></tr>';
+  var lbl = document.getElementById('tl-pg-label');
+  if (lbl) lbl.textContent = 'Page ' + _tlPage + ' / ' + totalPages + ' (' + total + ')';
+  var mc = document.getElementById('tl-adv-match-count');
+  if (mc) mc.textContent = total + ' tender' + (total!==1?'s':'') + ' shown';
 }
 
 function esc(s) { return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;').substring(0,80); }
@@ -3661,6 +3818,7 @@ function showAnalysisResult(d) {
 
   switchAnTab('pq');
   toast('Analysis complete — Verdict: ' + v, v === 'BID' ? 'success' : v === 'NO-BID' ? 'error' : 'info');
+  showWorkflowBar();
 
   // Auto-link to T247 tender if not already linked
   setTimeout(function() { tryAutoLinkT247(td); }, 500);
@@ -4562,7 +4720,7 @@ async function loadPipeline() {
     var r = await fetch('/pipeline');
     var d = await r.json();
     var stages = d.stages || {};
-    var stageList = d.stage_list || ['Identified','Pre-bid Sent','Bid Submitted','L1 Awaited','Won','Lost'];
+    var stageList = d.stage_list || ['Identified','Analysed','Approval Pending','Pre-bid Sent','Pre-bid Closed','Documents Ready','Submitted','L1 Awaited','Won','Lost','No-Bid'];
     var colors = d.stage_colors || {};
 
     var html = '';
@@ -7699,8 +7857,93 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e) {}
   }, 3000);
 });
+
+// ════════════════════════════════════════════════════════════════
+// WORKFLOW ACTION BUTTONS — Approval, Submit, Pre-bid flow
+// ════════════════════════════════════════════════════════════════
+async function markApprovalPending() {
+  var tid = lastAnalysisTid || '';
+  if (!tid) { toast('Analyse a tender first to get a T247 ID', 'error'); return; }
+  try {
+    await fetch('/tender/' + tid + '/stage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stage:'Approval Pending'})});
+    toast('✅ ' + tid + ' moved to Approval Pending — inform your boss', 'success');
+    loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function markApproved() {
+  var tid = lastAnalysisTid || '';
+  if (!tid) { toast('No tender selected', 'error'); return; }
+  try {
+    await fetch('/tender/' + tid + '/stage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stage:'Analysed'})});
+    toast('✅ Approved — proceed to Pre-bid Queries', 'success');
+    loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function markSubmitted() {
+  var tid = lastAnalysisTid || document.getElementById('an-tid') && document.getElementById('an-tid').value.trim();
+  if (!tid) { toast('No tender selected', 'error'); return; }
+  var ref = prompt('Enter submission reference / acknowledgement number (or press OK to skip):');
+  try {
+    await fetch('/tender/' + tid + '/stage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({stage:'Submitted', notes: ref ? 'Ref: ' + ref : ''})});
+    toast('📤 ' + tid + ' marked as Submitted' + (ref ? ' — ref: ' + ref : ''), 'success');
+    loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// Show/hide workflow bar after analysis result renders
+function showWorkflowBar() {
+  var bar = document.getElementById('workflow-action-bar');
+  if (bar) bar.style.display = 'flex';
+}
+
+// ════════════════════════════════════════════════════════════════
+// PRE-BID RESPONSE TRACKER
+// ════════════════════════════════════════════════════════════════
+var _pbrStore = {};
+
+function savePrebidResponse() {
+  var qno    = (document.getElementById('pbr-qno')||{}).value.trim();
+  var status = (document.getElementById('pbr-status')||{}).value || 'Awaited';
+  var note   = (document.getElementById('pbr-note')||{}).value.trim();
+  if (!qno) { toast('Enter query number (e.g. Q3)', 'error'); return; }
+  var tid = currentTenderId || lastAnalysisTid || 'general';
+  if (!_pbrStore[tid]) _pbrStore[tid] = {};
+  _pbrStore[tid][qno] = {status: status, note: note, date: new Date().toLocaleDateString('en-IN')};
+  renderPbrList();
+  document.getElementById('pbr-qno').value = '';
+  document.getElementById('pbr-note').value = '';
+  toast('Response recorded for ' + qno, 'success');
+}
+
+function renderPbrList() {
+  var el = document.getElementById('pbr-list');
+  if (!el) return;
+  var tid = currentTenderId || lastAnalysisTid || 'general';
+  var records = _pbrStore[tid] || {};
+  var entries = Object.entries(records);
+  if (!entries.length) { el.innerHTML = '<span style="color:var(--text3)">No responses recorded yet.</span>'; return; }
+  var colorMap = {Received:'var(--green)', Awaited:'var(--amber)', Partial:'var(--blue)', Clarified:'var(--purple)'};
+  el.innerHTML = '<div style="display:grid;gap:6px">' + entries.map(function(e) {
+    var qno = e[0]; var r = e[1];
+    return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">' +
+      '<span style="font-weight:700;color:var(--primary);font-size:12px;min-width:32px">' + qno + '</span>' +
+      '<span style="font-size:11px;color:' + (colorMap[r.status]||'var(--text2)') + ';font-weight:600;min-width:80px">' + r.status + '</span>' +
+      '<span style="font-size:12px;color:var(--text2);flex:1">' + (r.note||'—') + '</span>' +
+      '<span style="font-size:10px;color:var(--text3)">' + r.date + '</span>' +
+      '<button onclick="deletePbrEntry(\'' + qno + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0 4px">✕</button>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function deletePbrEntry(qno) {
+  var tid = currentTenderId || lastAnalysisTid || 'general';
+  if (_pbrStore[tid]) { delete _pbrStore[tid][qno]; renderPbrList(); }
+}
 </script>
 
 </html>
+
 
 
