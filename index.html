@@ -1331,7 +1331,14 @@ function loadDashboard() {
   var dateEl = document.getElementById('dash-date');
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
-  fetch('/dashboard').then(function(r){ return r.json(); }).then(function(data) {
+  // Show loading state
+  var tbody = document.getElementById('dash-tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading tenders…</div></div></td></tr>';
+
+  fetch('/dashboard').then(function(r){
+    if (!r.ok) throw new Error('Server returned ' + r.status);
+    return r.json();
+  }).then(function(data) {
     var tenders = data.tenders || data || [];
     S.dashTenders = tenders;
     if (!S.tenders.length) S.tenders = tenders;
@@ -1397,7 +1404,11 @@ function loadDashboard() {
     }
 
     renderDash();
-  }).catch(function(e){ toast('Dashboard load failed: ' + e.message, 'error'); });
+  }).catch(function(e){
+    var tbody = document.getElementById('dash-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-ico">⚠️</div><div class="empty-title">Cannot connect to server</div><div class="empty-sub" style="color:var(--text3);font-size:12px;margin-top:6px">'+e.message+'<br><br>If on Render: wait 30s (cold start) then refresh.<br>Check Render dashboard → Deploys for errors.</div></div></td></tr>';
+    toast('Dashboard load failed: ' + e.message, 'error');
+  });
 
   // Win/loss
   fetch('/win-loss').then(function(r){ return r.json(); }).then(function(d){

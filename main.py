@@ -768,7 +768,18 @@ async def serve_js():
 
 @app.get("/healthz")
 async def healthz():
-    return {"status": "ok"}
+    try:
+        db = load_db()
+        count = len(db.get("tenders", {}))
+    except Exception:
+        count = -1
+    return {
+        "status": "ok",
+        "tenders": count,
+        "supabase": _SUPABASE_OK,
+        "db_file": DB_FILE.exists(),
+        "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
+    }
 
 
 @app.get("/health/deep")
