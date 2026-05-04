@@ -155,7 +155,12 @@ body{
   flex:1;
   height:100vh;
   overflow-y:auto;
+  transition:margin-left var(--dur) var(--ease);
   overflow-x:hidden;
+}
+/* Push content when sidebar expands — modern browsers */
+body:has(#sidebar:hover) #app{
+  margin-left:var(--sidebar-ex);
 }
 
 /* ── Pages ── */
