@@ -754,6 +754,18 @@ async def root():
         return HTMLResponse(content=index.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>Bid/No-Bid v6.2</h1>")
 
+# ── Serve static files directly — no aiofiles dependency ─────────────────────
+from fastapi.responses import Response as _Resp
+@app.get("/static/style.css")
+async def serve_css():
+    f = BASE_DIR / "static" / "style.css"
+    return _Resp(content=f.read_bytes() if f.exists() else b"", media_type="text/css")
+
+@app.get("/static/app.js")
+async def serve_js():
+    f = BASE_DIR / "static" / "app.js"
+    return _Resp(content=f.read_bytes() if f.exists() else b"", media_type="application/javascript")
+
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
