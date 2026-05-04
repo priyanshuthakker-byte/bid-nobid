@@ -115,6 +115,51 @@ db_lock = _db_lock
 import time as _time
 _last_drive_restore = 0.0  # rate-limit Drive calls in load_db to once per minute
 
+# ── Supabase helpers ─────────────────────────────────────────────────────────
+_SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+_SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+_SUPABASE_OK  = bool(_SUPABASE_URL and _SUPABASE_KEY)
+_SB_TABLE     = "app_storage"
+
+def _sb_headers():
+    return {
+        "apikey": _SUPABASE_KEY,
+        "Authorization": "Bearer " + _SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+
+def _sb_load() -> dict:
+    """Load tenders_db from Supabase. Returns {} on any error."""
+    if not _SUPABASE_OK:
+        return {}
+    try:
+        import urllib.request as _ur
+        url = f"{_SUPABASE_URL}/rest/v1/{_SB_TABLE}?id=eq.tenders_db&select=data"
+        req = _ur.Request(url, headers={k:v for k,v in _sb_headers().items() if k != "Prefer"})
+        with _ur.urlopen(req, timeout=8) as r:
+            rows = json.loads(r.read().decode())
+            if rows and rows[0].get("data"):
+                return rows[0]["data"]
+    except Exception as e:
+        print(f"⚠️ Supabase load error: {e}")
+    return {}
+
+def _sb_save(db: dict):
+    """Upsert tenders_db to Supabase. Silent on error."""
+    if not _SUPABASE_OK:
+        return
+    try:
+        import urllib.request as _ur
+        url = f"{_SUPABASE_URL}/rest/v1/{_SB_TABLE}"
+        hdrs = _sb_headers()
+        hdrs["Prefer"] = "resolution=merge-duplicates"
+        payload = json.dumps({"id": "tenders_db", "data": db}).encode()
+        req = _ur.Request(url, data=payload, headers=hdrs, method="POST")
+        _ur.urlopen(req, timeout=10)
+    except Exception as e:
+        print(f"⚠️ Supabase save error: {e}")
+
 # ── Background Job Store — file-based (survives OOM restarts) ──────────────
 JOBS_DIR = OUTPUT_DIR / "jobs"
 JOBS_DIR.mkdir(exist_ok=True, parents=True)
@@ -583,7 +628,18 @@ app.add_middleware(
 # ── DB helpers ───────────────────────────────────────────────────────────────
 def load_db() -> dict:
     global _last_drive_restore
-    # Fast path: local disk has data
+    # ── Supabase (primary, if configured) ──────────────────────────────
+    if _SUPABASE_OK:
+        sb = _sb_load()
+        if sb.get("tenders"):
+            # Mirror to local disk for speed on next in-process call
+            try:
+                DB_FILE.parent.mkdir(exist_ok=True, parents=True)
+                DB_FILE.write_text(json.dumps(sb), encoding="utf-8")
+            except Exception:
+                pass
+            return sb
+    # ── Local disk fast path ────────────────────────────────────────────
     with _db_lock:
         if DB_FILE.exists():
             try:
@@ -593,31 +649,24 @@ def load_db() -> dict:
                     return parsed
             except Exception:
                 pass
-    # Slow path: Drive restore — rate-limited to once per 60s to stop log spam
-    now = _time.time()
-    if drive_available() and (now - _last_drive_restore) > 60.0:
-        _last_drive_restore = now
-        try:
-            DB_FILE.parent.mkdir(exist_ok=True, parents=True)
-            if load_from_drive(DB_FILE):
-                data = json.loads(DB_FILE.read_text(encoding="utf-8"))
-                if data.get("tenders"):
-                    print(f"🔄 load_db: restored {len(data['tenders'])} tenders from Drive")
-                    return data
-        except Exception:
-            pass
     return {"tenders": {}}
 
 def save_db(db: dict):
+    # ── Always write local disk first (fast, safe) ──────────────────────
     with _db_lock:
         DB_FILE.parent.mkdir(exist_ok=True, parents=True)
         DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
-    try:
-        ok = save_to_drive(DB_FILE)
-        if not ok and drive_available():
-            print(f"⚠️ Drive sync skipped/failed — {len(db.get('tenders', {}))} tenders on disk only")
-    except Exception as _e:
-        print(f"⚠️ Drive sync exception: {_e}")
+    # ── Supabase (persistent across restarts, cross-device) ────────────
+    if _SUPABASE_OK:
+        _sb_save(db)
+    else:
+        # Legacy Drive fallback only when Supabase not configured
+        try:
+            ok = save_to_drive(DB_FILE)
+            if not ok and drive_available():
+                print(f"⚠️ Drive sync skipped — {len(db.get('tenders', {}))} tenders on disk only")
+        except Exception as _e:
+            print(f"⚠️ Drive sync exception: {_e}")
 
 def get_tender(t247_id: str) -> dict:
     return load_db()["tenders"].get(str(t247_id), {})
