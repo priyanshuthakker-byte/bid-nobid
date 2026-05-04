@@ -23,6 +23,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Reques
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import text
 from extractor import TenderExtractor, read_document
@@ -564,6 +565,11 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+
+# ── Static files (CSS, JS) ────────────────────────────────────────────────────
+_static_dir = BASE_DIR / "static"
+_static_dir.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 # ── FIX 5: CORS locked to env var, not wildcard ──────────────────────────────
 _allowed_origin = os.environ.get("ALLOWED_ORIGIN", "*")

@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+aiofiles
 python-multipart
 python-docx
 mammoth
