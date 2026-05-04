@@ -23,7 +23,6 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Reques
 from typing import List
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import text
 from extractor import TenderExtractor, read_document
@@ -114,51 +113,6 @@ _db_lock = threading.RLock()
 db_lock = _db_lock
 import time as _time
 _last_drive_restore = 0.0  # rate-limit Drive calls in load_db to once per minute
-
-# ── Supabase helpers ─────────────────────────────────────────────────────────
-_SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-_SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-_SUPABASE_OK  = bool(_SUPABASE_URL and _SUPABASE_KEY)
-_SB_TABLE     = "app_storage"
-
-def _sb_headers():
-    return {
-        "apikey": _SUPABASE_KEY,
-        "Authorization": "Bearer " + _SUPABASE_KEY,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal",
-    }
-
-def _sb_load() -> dict:
-    """Load tenders_db from Supabase. Returns {} on any error."""
-    if not _SUPABASE_OK:
-        return {}
-    try:
-        import urllib.request as _ur
-        url = f"{_SUPABASE_URL}/rest/v1/{_SB_TABLE}?id=eq.tenders_db&select=data"
-        req = _ur.Request(url, headers={k:v for k,v in _sb_headers().items() if k != "Prefer"})
-        with _ur.urlopen(req, timeout=8) as r:
-            rows = json.loads(r.read().decode())
-            if rows and rows[0].get("data"):
-                return rows[0]["data"]
-    except Exception as e:
-        print(f"⚠️ Supabase load error: {e}")
-    return {}
-
-def _sb_save(db: dict):
-    """Upsert tenders_db to Supabase. Silent on error."""
-    if not _SUPABASE_OK:
-        return
-    try:
-        import urllib.request as _ur
-        url = f"{_SUPABASE_URL}/rest/v1/{_SB_TABLE}"
-        hdrs = _sb_headers()
-        hdrs["Prefer"] = "resolution=merge-duplicates"
-        payload = json.dumps({"id": "tenders_db", "data": db}).encode()
-        req = _ur.Request(url, data=payload, headers=hdrs, method="POST")
-        _ur.urlopen(req, timeout=10)
-    except Exception as e:
-        print(f"⚠️ Supabase save error: {e}")
 
 # ── Background Job Store — file-based (survives OOM restarts) ──────────────
 JOBS_DIR = OUTPUT_DIR / "jobs"
@@ -611,11 +565,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
 
-# ── Static files (CSS, JS) ────────────────────────────────────────────────────
-_static_dir = BASE_DIR / "static"
-_static_dir.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
-
 # ── FIX 5: CORS locked to env var, not wildcard ──────────────────────────────
 _allowed_origin = os.environ.get("ALLOWED_ORIGIN", "*")
 app.add_middleware(
@@ -628,18 +577,7 @@ app.add_middleware(
 # ── DB helpers ───────────────────────────────────────────────────────────────
 def load_db() -> dict:
     global _last_drive_restore
-    # ── Supabase (primary, if configured) ──────────────────────────────
-    if _SUPABASE_OK:
-        sb = _sb_load()
-        if sb.get("tenders"):
-            # Mirror to local disk for speed on next in-process call
-            try:
-                DB_FILE.parent.mkdir(exist_ok=True, parents=True)
-                DB_FILE.write_text(json.dumps(sb), encoding="utf-8")
-            except Exception:
-                pass
-            return sb
-    # ── Local disk fast path ────────────────────────────────────────────
+    # Fast path: local disk has data
     with _db_lock:
         if DB_FILE.exists():
             try:
@@ -649,24 +587,31 @@ def load_db() -> dict:
                     return parsed
             except Exception:
                 pass
+    # Slow path: Drive restore — rate-limited to once per 60s to stop log spam
+    now = _time.time()
+    if drive_available() and (now - _last_drive_restore) > 60.0:
+        _last_drive_restore = now
+        try:
+            DB_FILE.parent.mkdir(exist_ok=True, parents=True)
+            if load_from_drive(DB_FILE):
+                data = json.loads(DB_FILE.read_text(encoding="utf-8"))
+                if data.get("tenders"):
+                    print(f"🔄 load_db: restored {len(data['tenders'])} tenders from Drive")
+                    return data
+        except Exception:
+            pass
     return {"tenders": {}}
 
 def save_db(db: dict):
-    # ── Always write local disk first (fast, safe) ──────────────────────
     with _db_lock:
         DB_FILE.parent.mkdir(exist_ok=True, parents=True)
         DB_FILE.write_text(json.dumps(db, indent=2, default=str), encoding="utf-8")
-    # ── Supabase (persistent across restarts, cross-device) ────────────
-    if _SUPABASE_OK:
-        _sb_save(db)
-    else:
-        # Legacy Drive fallback only when Supabase not configured
-        try:
-            ok = save_to_drive(DB_FILE)
-            if not ok and drive_available():
-                print(f"⚠️ Drive sync skipped — {len(db.get('tenders', {}))} tenders on disk only")
-        except Exception as _e:
-            print(f"⚠️ Drive sync exception: {_e}")
+    try:
+        ok = save_to_drive(DB_FILE)
+        if not ok and drive_available():
+            print(f"⚠️ Drive sync skipped/failed — {len(db.get('tenders', {}))} tenders on disk only")
+    except Exception as _e:
+        print(f"⚠️ Drive sync exception: {_e}")
 
 def get_tender(t247_id: str) -> dict:
     return load_db()["tenders"].get(str(t247_id), {})
@@ -754,32 +699,9 @@ async def root():
         return HTMLResponse(content=index.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>Bid/No-Bid v6.2</h1>")
 
-# ── Serve static files directly — no aiofiles dependency ─────────────────────
-from fastapi.responses import Response as _Resp
-@app.get("/static/style.css")
-async def serve_css():
-    f = BASE_DIR / "static" / "style.css"
-    return _Resp(content=f.read_bytes() if f.exists() else b"", media_type="text/css")
-
-@app.get("/static/app.js")
-async def serve_js():
-    f = BASE_DIR / "static" / "app.js"
-    return _Resp(content=f.read_bytes() if f.exists() else b"", media_type="application/javascript")
-
 @app.get("/healthz")
 async def healthz():
-    try:
-        db = load_db()
-        count = len(db.get("tenders", {}))
-    except Exception:
-        count = -1
-    return {
-        "status": "ok",
-        "tenders": count,
-        "supabase": _SUPABASE_OK,
-        "db_file": DB_FILE.exists(),
-        "db_size_kb": round(DB_FILE.stat().st_size / 1024) if DB_FILE.exists() else 0,
-    }
+    return {"status": "ok"}
 
 
 @app.get("/health/deep")
@@ -1416,16 +1338,9 @@ async def sync_excel_latest():
 
 # ══ DASHBOARD ═══════════════════════════════════════════════════════════════
 @app.get("/dashboard")
-async def dashboard(limit: int = 200):
+async def dashboard():
     db = load_db()
     tenders = list(db["tenders"].values())
-    # Sort all by deadline for stats
-    sorted_all = sorted(tenders, key=lambda t: days_left(t.get("deadline", t.get("bid_submission_date", "")) or "999"))
-    # Return only slim records for dashboard table (fast load)
-    _DASH_KEYS = {"t247_id","ref_no","tender_name","brief","org_name","organization",
-                  "estimated_cost","bid_submission_date","deadline","state","location",
-                  "source","tender_type","stage","verdict","msme_exempt","emd"}
-    slim = [{k: v for k, v in t.items() if k in _DASH_KEYS} for t in sorted_all[:limit]]
     return {"stats": {
         "total": len(tenders),
         "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
@@ -1436,7 +1351,7 @@ async def dashboard(limit: int = 200):
         "deadline_today": sum(1 for t in tenders if days_left(t.get("deadline", "")) == 0),
         "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline", "")) <= 3),
         "has_boq": sum(1 for t in tenders if t.get("boq")),
-    }, "tenders": slim}
+    }, "tenders": sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))}
 
 @app.get("/ops/daily-report")
 async def ops_daily_report():
@@ -1552,27 +1467,8 @@ def _build_daily_digest() -> dict:
     return digest
 
 @app.get("/tenders")
-async def get_all_tenders(page: int = 1, per_page: int = 250, search: str = "", state: str = "", source: str = "", verdict: str = ""):
-    db = load_db()
-    tenders = list(db["tenders"].values())
-    # Filter
-    if search:
-        q = search.lower()
-        tenders = [t for t in tenders if q in (t.get("tender_name","") + t.get("brief","") + t.get("org_name","") + t.get("organization","")).lower()]
-    if state:
-        tenders = [t for t in tenders if (t.get("state","") or t.get("location","")) == state]
-    if source:
-        tenders = [t for t in tenders if source.lower() in (t.get("source","") + t.get("tender_type","")).lower()]
-    if verdict:
-        tenders = [t for t in tenders if (t.get("verdict","") or "").upper() == verdict.upper()]
-    total = len(tenders)
-    tenders = sorted(tenders, key=lambda t: days_left(t.get("deadline", t.get("bid_submission_date","")) or "999"))
-    start = (page - 1) * per_page
-    _KEYS = {"t247_id","ref_no","tender_name","brief","org_name","organization",
-             "estimated_cost","bid_submission_date","deadline","state","location",
-             "source","tender_type","stage","verdict","msme_exempt","emd","msme_exemption"}
-    slim = [{k: v for k, v in t.items() if k in _KEYS} for t in tenders[start:start+per_page]]
-    return {"tenders": slim, "total": total, "page": page, "per_page": per_page, "pages": max(1,(total+per_page-1)//per_page)}
+async def get_all_tenders():
+    return {"tenders": list(load_db()["tenders"].values())}
 
 # ══ TENDER OPS ══════════════════════════════════════════════════════════════
 @app.post("/prebid-queries")
