@@ -1521,18 +1521,27 @@ function renderDash() {
 /* ════════════════════════════════════════════════════════
    ALL TENDERS
 ════════════════════════════════════════════════════════ */
-function loadTenders() {
-  showLoading('Loading all tenders…');
-  fetch('/tenders').then(function(r){ return r.json(); }).then(function(data){
+function loadTenders(page) {
+  page = page || S.tlPage || 1;
+  var search = (document.getElementById('tl-search')||{}).value||'';
+  var state  = (document.getElementById('tl-state')||{}).value||'';
+  var perPage = parseInt((document.getElementById('tl-per-page')||{}).value||25);
+  var url = '/tenders?page='+page+'&per_page=250';
+  if (search) url += '&search='+encodeURIComponent(search);
+  if (state) url += '&state='+encodeURIComponent(state);
+  showLoading('Loading tenders…');
+  fetch(url).then(function(r){ return r.json(); }).then(function(data){
     S.tenders = Array.isArray(data) ? data : (data.tenders||[]);
+    S.tlTotal = data.total || S.tenders.length;
     hideLoading();
-    // Populate state filter
-    var states = {};
-    S.tenders.forEach(function(t){ var s=t.state||t.location||''; if(s) states[s]=1; });
-    var sel = document.getElementById('tl-state');
-    if (sel) {
-      sel.innerHTML = '<option value="">All States</option>';
-      Object.keys(states).sort().forEach(function(s){ var o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o); });
+    // Populate state filter (only on first load)
+    if (page === 1) {
+      var states = {};
+      S.tenders.forEach(function(t){ var s=t.state||t.location||''; if(s) states[s]=1; });
+      var sel = document.getElementById('tl-state');
+      if (sel && sel.options.length <= 1) {
+        Object.keys(states).sort().forEach(function(s){ var o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o); });
+      }
     }
     renderTenders();
   }).catch(function(e){ hideLoading(); toast('Failed to load tenders: '+e.message,'error'); });

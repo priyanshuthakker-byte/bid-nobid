@@ -1416,9 +1416,16 @@ async def sync_excel_latest():
 
 # ══ DASHBOARD ═══════════════════════════════════════════════════════════════
 @app.get("/dashboard")
-async def dashboard():
+async def dashboard(limit: int = 200):
     db = load_db()
     tenders = list(db["tenders"].values())
+    # Sort all by deadline for stats
+    sorted_all = sorted(tenders, key=lambda t: days_left(t.get("deadline", t.get("bid_submission_date", "")) or "999"))
+    # Return only slim records for dashboard table (fast load)
+    _DASH_KEYS = {"t247_id","ref_no","tender_name","brief","org_name","organization",
+                  "estimated_cost","bid_submission_date","deadline","state","location",
+                  "source","tender_type","stage","verdict","msme_exempt","emd"}
+    slim = [{k: v for k, v in t.items() if k in _DASH_KEYS} for t in sorted_all[:limit]]
     return {"stats": {
         "total": len(tenders),
         "bid": sum(1 for t in tenders if t.get("verdict") == "BID"),
@@ -1429,7 +1436,7 @@ async def dashboard():
         "deadline_today": sum(1 for t in tenders if days_left(t.get("deadline", "")) == 0),
         "deadline_3days": sum(1 for t in tenders if 0 < days_left(t.get("deadline", "")) <= 3),
         "has_boq": sum(1 for t in tenders if t.get("boq")),
-    }, "tenders": sorted(tenders, key=lambda t: days_left(t.get("deadline", "999")))}
+    }, "tenders": slim}
 
 @app.get("/ops/daily-report")
 async def ops_daily_report():
@@ -1545,8 +1552,27 @@ def _build_daily_digest() -> dict:
     return digest
 
 @app.get("/tenders")
-async def get_all_tenders():
-    return {"tenders": list(load_db()["tenders"].values())}
+async def get_all_tenders(page: int = 1, per_page: int = 250, search: str = "", state: str = "", source: str = "", verdict: str = ""):
+    db = load_db()
+    tenders = list(db["tenders"].values())
+    # Filter
+    if search:
+        q = search.lower()
+        tenders = [t for t in tenders if q in (t.get("tender_name","") + t.get("brief","") + t.get("org_name","") + t.get("organization","")).lower()]
+    if state:
+        tenders = [t for t in tenders if (t.get("state","") or t.get("location","")) == state]
+    if source:
+        tenders = [t for t in tenders if source.lower() in (t.get("source","") + t.get("tender_type","")).lower()]
+    if verdict:
+        tenders = [t for t in tenders if (t.get("verdict","") or "").upper() == verdict.upper()]
+    total = len(tenders)
+    tenders = sorted(tenders, key=lambda t: days_left(t.get("deadline", t.get("bid_submission_date","")) or "999"))
+    start = (page - 1) * per_page
+    _KEYS = {"t247_id","ref_no","tender_name","brief","org_name","organization",
+             "estimated_cost","bid_submission_date","deadline","state","location",
+             "source","tender_type","stage","verdict","msme_exempt","emd","msme_exemption"}
+    slim = [{k: v for k, v in t.items() if k in _KEYS} for t in tenders[start:start+per_page]]
+    return {"tenders": slim, "total": total, "page": page, "per_page": per_page, "pages": max(1,(total+per_page-1)//per_page)}
 
 # ══ TENDER OPS ══════════════════════════════════════════════════════════════
 @app.post("/prebid-queries")
